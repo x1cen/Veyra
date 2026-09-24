@@ -25,6 +25,10 @@ on:
                     - Multipass
                     - Korben Dallas
                 default: 'Multipass'
+            prerelease:
+                description: 'Mark as pre-release?'
+                type: boolean
+                default: false
 
 permissions:
     contents: write
@@ -167,6 +171,7 @@ jobs:
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
+                    prerelease: ${{inputs.prerelease || false}}
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
                         **AGram** `${{inputs.agram-version}}`
