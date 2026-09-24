@@ -1,16 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient
+        android:type="linear"
         android:angle="270"
-<<<<<<< Updated upstream
-        android:startColor="#18233C"
-        android:centerColor="#0E1626"
-        android:endColor="#06090F"
-=======
         android:startColor="#0D1322"
         android:centerColor="#080B14"
-        android:endColor="#040508"
->>>>>>> Stashed changes
-        android:type="linear"/>
+        android:endColor="#040508" />
 </shape>
