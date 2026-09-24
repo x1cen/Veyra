@@ -10461,7 +10461,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         privacyRow = -1;
         dataRow = -1;
         chatRow = -1;
-        killMeLabelRow = -1;
         filtersRow = -1;
         liteModeRow = -1;
         stickersRow = -1;
@@ -14311,7 +14310,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return position == notificationRow || position == numberRow || position == privacyRow ||
                         position == languageRow || position == setUsernameRow || position == bioRow || position == idRow ||
                         position == versionRow || position == dataRow || position == chatRow ||
-                        position == killMeLabelRow ||
                         position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
                         position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
@@ -14358,7 +14356,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     position == addMemberRow || position == joinRow || position == unblockRow ||
                     position == sendMessageRow || position == notificationRow || position == privacyRow ||
                     position == languageRow || position == dataRow || position == chatRow ||
-                    position == killMeLabelRow ||
                     position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
                     position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
                     position == clearLogsRow || position == switchBackendRow || position == setAvatarRow || position == addToGroupButtonRow ||
@@ -15725,7 +15722,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             put(++pointer, dataRow, sparseIntArray);
             put(++pointer, liteModeRow, sparseIntArray);
             put(++pointer, chatRow, sparseIntArray);
-            put(++pointer, killMeLabelRow, sparseIntArray);
             put(++pointer, filtersRow, sparseIntArray);
             put(++pointer, stickersRow, sparseIntArray);
             put(++pointer, devicesRow, sparseIntArray);
