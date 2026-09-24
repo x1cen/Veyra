@@ -1,11 +1,26 @@
-# Veyra
+<p align="center">
+  <img src="assets/icon.png" width="160" height="160" alt="Veyra Icon" />
+</p>
+
+<h1 align="center">Veyra</h1>
+
+<p align="center">
+  <b>Executive Privacy-First Telegram Client for Android</b><br>
+  Built on official upstream Telegram v12.9.2 architecture
+</p>
+
+<p align="center">
+  <a href="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml"><img src="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml/badge.svg?branch=dev" alt="Build Status"></a>
+  <a href="https://github.com/x1cen/Veyra/releases"><img src="https://img.shields.io/github/v/release/x1cen/Veyra?include_prereleases&label=Testing%20Build" alt="Pre-release"></a>
+  <a href="https://github.com/DrKLO/Telegram"><img src="https://img.shields.io/badge/Upstream%20Base-v12.9.2-2481CC.svg" alt="Upstream Base"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--2.0-blue.svg" alt="License"></a>
+</p>
+
+---
+
+## Overview
 
 Veyra is an advanced, privacy-first Android client built on the official upstream Telegram v12.9.2 architecture. It merges Telegram core reliability with essential power-user capabilities, enhanced privacy controls, an ad-free messaging experience, and an executive luxury visual identity.
-
-[![Build and Release Veyra APK](https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml/badge.svg?branch=dev)](https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml)
-[![Pre-release](https://img.shields.io/github/v/release/x1cen/Veyra?include_prereleases&label=Testing%20Build)](https://github.com/x1cen/Veyra/releases)
-[![Upstream Telegram Base](https://img.shields.io/badge/Upstream%20Base-v12.9.2-2481CC.svg)](https://github.com/DrKLO/Telegram)
-[![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0-blue.svg)](LICENSE)
 
 ---
 
