@@ -13580,8 +13580,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 }
                                 if (u.photo != null && u.photo.dc_id != 0) {
                                     dc = u.photo.dc_id;
-                                } else if (UserObject.isUserSelf(u) && getMessagesController().thisDc > 0) {
-                                    dc = getMessagesController().thisDc;
+                                } else if (UserObject.isUserSelf(u) && getConnectionsManager().getCurrentDatacenterId() > 0) {
+                                    dc = getConnectionsManager().getCurrentDatacenterId();
                                 }
                             }
                         } else if (chatId != 0) {
