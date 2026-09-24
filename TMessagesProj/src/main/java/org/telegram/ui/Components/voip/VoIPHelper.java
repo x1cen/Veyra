@@ -74,6 +74,23 @@ public class VoIPHelper {
 	private static final int VOIP_SUPPORT_ID = 4244000;
 
 	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
+		startCall(user, videoCall, canVideoCall, activity, userFull, accountInstance, false);
+	}
+
+	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance, boolean confirmed) {
+		if (user == null || activity == null) {
+			return;
+		}
+		if (!confirmed) {
+			String name = ContactsController.formatName(user.first_name, user.last_name);
+			new AlertDialog.Builder(activity)
+					.setTitle(LocaleController.getString("ConfirmCallTitle", R.string.Call))
+					.setMessage(LocaleController.formatString("ConfirmCallUser", R.string.ConfirmCallUser, name))
+					.setPositiveButton(LocaleController.getString(R.string.Call), (dialog, which) -> startCall(user, videoCall, canVideoCall, activity, userFull, accountInstance, true))
+					.setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+					.show();
+			return;
+		}
 		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
 			AccountFrozenAlert.show(accountInstance == null ? UserConfig.selectedAccount : accountInstance.getCurrentAccount());
 			return;

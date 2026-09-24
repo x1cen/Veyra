@@ -1453,6 +1453,26 @@ public class LocaleController {
                 return "Restart App";
             }
         }
+        if ("ConfirmCallTitle".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "تأیید تماس";
+                return "Confirm Call";
+            } catch (Exception ignored) {
+                return "Confirm Call";
+            }
+        }
+        if ("ConfirmCallUser".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "آیا از برقراری تماس با %s اطمینان دارید؟";
+                return "Are you sure you want to call %s?";
+            } catch (Exception ignored) {
+                return "Are you sure you want to call %s?";
+            }
+        }
         String value = BuildVars.USE_CLOUD_STRINGS ? localeValues.get(key) : null;
         if (value == null) {
             if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {

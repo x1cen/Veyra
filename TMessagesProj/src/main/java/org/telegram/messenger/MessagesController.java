@@ -1562,9 +1562,9 @@ public class MessagesController extends BaseController implements NotificationCe
         secretWebpagePreview = mainPreferences.getInt("secretWebpage2", 2);
         maxGroupCount = mainPreferences.getInt("maxGroupCount", 200);
         maxMegagroupCount = mainPreferences.getInt("maxMegagroupCount", 10000);
-        maxRecentGifsCount = mainPreferences.getInt("maxRecentGifsCount", 200);
-        maxRecentStickersCount = mainPreferences.getInt("maxRecentStickersCount", 30);
-        maxFaveStickersCount = mainPreferences.getInt("maxFaveStickersCount", 5);
+        maxRecentGifsCount = mainPreferences.getInt("maxRecentGifsCount", 500);
+        maxRecentStickersCount = mainPreferences.getInt("maxRecentStickersCount", 100);
+        maxFaveStickersCount = mainPreferences.getInt("maxFaveStickersCount", 500);
         maxEditTime = mainPreferences.getInt("maxEditTime", 3600);
         ratingDecay = mainPreferences.getInt("ratingDecay", 2419200);
         linkPrefix = mainPreferences.getString("linkPrefix", "t.me");
@@ -1622,20 +1622,18 @@ public class MessagesController extends BaseController implements NotificationCe
         dismissedSuggestions = mainPreferences.getStringSet("dismissedSuggestions", null);
         channelsLimitDefault = mainPreferences.getInt("channelsLimitDefault", 500);
         channelsLimitPremium = mainPreferences.getInt("channelsLimitPremium", 2 * channelsLimitDefault);
-        savedGifsLimitDefault = mainPreferences.getInt("savedGifsLimitDefault", 200);
-        savedGifsLimitPremium = mainPreferences.getInt("savedGifsLimitPremium", 400);
-        stickersFavedLimitDefault = mainPreferences.getInt("stickersFavedLimitDefault", 5);
-        stickersFavedLimitPremium = mainPreferences.getInt("stickersFavedLimitPremium", 200);
-        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 5);
-        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 5);
-        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 5);
-        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 5);
-        dialogFiltersLimitDefault = mainPreferences.getInt("dialogFiltersLimitDefault", 10);
-        dialogFiltersLimitPremium = mainPreferences.getInt("dialogFiltersLimitPremium", 20);
-        dialogFiltersChatsLimitDefault = mainPreferences.getInt("dialogFiltersChatsLimitDefault", 100);
-        dialogFiltersChatsLimitPremium = mainPreferences.getInt("dialogFiltersChatsLimitPremium", 200);
-        dialogFiltersPinnedLimitDefault = mainPreferences.getInt("dialogFiltersPinnedLimitDefault", 5);
-        dialogFiltersPinnedLimitPremium = mainPreferences.getInt("dialogFiltersPinnedLimitPremium", 10);
+        savedGifsLimitDefault = mainPreferences.getInt("savedGifsLimitDefault", 1000);
+        savedGifsLimitPremium = mainPreferences.getInt("savedGifsLimitPremium", 1000);
+        stickersFavedLimitDefault = mainPreferences.getInt("stickersFavedLimitDefault", 500);
+        stickersFavedLimitPremium = mainPreferences.getInt("stickersFavedLimitPremium", 500);
+        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 100);
+        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 100);
+        dialogFiltersLimitDefault = mainPreferences.getInt("dialogFiltersLimitDefault", 30);
+        dialogFiltersLimitPremium = mainPreferences.getInt("dialogFiltersLimitPremium", 30);
+        dialogFiltersChatsLimitDefault = mainPreferences.getInt("dialogFiltersChatsLimitDefault", 500);
+        dialogFiltersChatsLimitPremium = mainPreferences.getInt("dialogFiltersChatsLimitPremium", 500);
+        dialogFiltersPinnedLimitDefault = mainPreferences.getInt("dialogFiltersPinnedLimitDefault", 100);
+        dialogFiltersPinnedLimitPremium = mainPreferences.getInt("dialogFiltersPinnedLimitPremium", 100);
         publicLinksLimitDefault = mainPreferences.getInt("publicLinksLimitDefault", 10);
         publicLinksLimitPremium = mainPreferences.getInt("publicLinksLimitPremium", 20);
         captionLengthLimitDefault = mainPreferences.getInt("captionLengthLimitDefault", 1024);
@@ -6710,6 +6708,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isUserNoForwards(TLRPC.UserFull userFull) {
+        if (true) return false;
         if (userFull == null) {
             return false;
         }
