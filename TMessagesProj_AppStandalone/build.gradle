@@ -94,12 +94,14 @@ android {
         afat {
             ndk {
                 def envArch = System.getenv("TARGET_ARCH")
-                if (envArch == "all") {
-                    abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-                } else if (envArch != null && !envArch.trim().isEmpty()) {
-                    abiFilters envArch.split(",")*.trim()
-                } else {
+                if (envArch == "arm64-v8a") {
+                    abiFilters "arm64-v8a"
+                } else if (envArch == "arm64-v8a,armeabi-v7a" || envArch == "arm64-v8a, armeabi-v7a") {
                     abiFilters "arm64-v8a", "armeabi-v7a"
+                } else if (envArch == "all") {
+                    abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                } else {
+                    abiFilters "arm64-v8a"
                 }
             }
             ext {
