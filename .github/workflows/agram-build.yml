@@ -1,0 +1,179 @@
+name: Build and Release AGram APK
+
+on:
+    workflow_dispatch:
+        inputs:
+            agram-version:
+                description: 'AGram version'
+                type: string
+                default: '12.92.10'
+            agram-changes:
+                description: 'Changelog / Release notes'
+                type: string
+                default: 'AGram official build'
+            use-cache:
+                description: 'Use ccache for build?'
+                type: choice
+                options:
+                    - Yep
+                    - Nah
+                default: 'Nah'
+            multi-pass:
+                description: 'Signing mode'
+                type: choice
+                options:
+                    - Multipass
+                    - Korben Dallas
+                default: 'Multipass'
+
+permissions:
+    contents: write
+
+run-name: Building AGram ${{inputs.agram-version}}
+
+jobs:
+    apk:
+        name: Generate APK
+        runs-on: ubuntu-latest
+        env:
+            CCACHE_DIR: ${{github.workspace}}/.ccache
+            CCACHE_MAXSIZE: 2G
+            CCACHE_COMPILERCHECK: content
+            CCACHE_NOHASHDIR: "1"
+            CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v6
+
+            -   name: Set up AWS Corretto 21
+                uses: actions/setup-java@v5
+                with:
+                    java-version: '21'
+                    distribution: 'corretto'
+                    architecture: x64
+
+            -   name: Setup Gradle 8.14.5
+                uses: gradle/actions/setup-gradle@v6
+                with:
+                    gradle-version: '8.14.5'
+
+            -   name: Pin CMake 3.22.1 and NDK 27.2.12479018
+                run: |
+                    set -euo pipefail
+                    SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+                    CMAKE_DIR="${ANDROID_HOME}/cmake/3.22.1"
+                    NDK_DIR="${ANDROID_HOME}/ndk/27.2.12479018"
+                    install_pkg() {
+                      set +o pipefail
+                      echo y | "${SDKMANAGER}" --install "$1"
+                      set -o pipefail
+                    }
+                    if [ ! -x "${CMAKE_DIR}/bin/cmake" ]; then install_pkg "cmake;3.22.1"; fi
+                    if [ ! -d "${NDK_DIR}" ]; then install_pkg "ndk;27.2.12479018"; fi
+                    printf 'sdk.dir=%s\ncmake.dir=%s\n' "${ANDROID_HOME}" "${CMAKE_DIR}" > local.properties
+                    echo "ANDROID_NDK_HOME=${NDK_DIR}" >> "${GITHUB_ENV}"
+                    "${CMAKE_DIR}/bin/cmake" --version
+
+            -   name: Install ccache
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y ccache
+                    mkdir -p "${CCACHE_DIR}"
+                    ccache -s
+
+            -   name: Cache ccache
+                if: ${{inputs.use-cache == 'Yep'}}
+                uses: actions/cache@v5
+                with:
+                    path: ${{github.workspace}}/.ccache
+                    key: ${{runner.os}}-ccache-ws-ndk-27.2.12479018-${{hashFiles('TMessagesProj/jni/**', 'TMessagesProj/**/CMakeLists.txt')}}
+                    restore-keys: |
+                        ${{runner.os}}-ccache-ws-ndk-27.2.12479018-
+
+            -   name: ccache before build
+                if: ${{inputs.use-cache == 'Yep'}}
+                run: |
+                    ccache -z
+                    echo "CCACHE_DIR=${CCACHE_DIR}"
+                    du -sh "${CCACHE_DIR}" || true
+                    ccache -s
+
+            -   name: Inject API Secrets
+                env:
+                    APP_ID: ${{secrets.APP_ID || secrets.API_ID}}
+                    APP_HASH: ${{secrets.APP_HASH || secrets.API_HASH}}
+                run: |
+                    set +x
+                    if [ -n "$APP_ID" ] && [ -n "$APP_HASH" ]; then
+                        echo "Configuring APP_ID and APP_HASH from repository secrets..."
+                        sed -i "s/public static int APP_ID = .*/public static int APP_ID = $APP_ID;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                        sed -i "s/public static String APP_HASH = .*/public static String APP_HASH = \"$APP_HASH\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+
+            -   name: Enable Custom Keystore
+                if: ${{inputs.multi-pass == 'Korben Dallas'}}
+                env:
+                    AGRAM_KEYSTORE_BASE64: ${{secrets.AGRAM_KEYSTORE_BASE64}}
+                    AGRAM_RELEASE_STORE_PASSWORD: ${{secrets.AGRAM_RELEASE_STORE_PASSWORD}}
+                    AGRAM_RELEASE_KEY_ALIAS: ${{secrets.AGRAM_RELEASE_KEY_ALIAS}}
+                    AGRAM_RELEASE_KEY_PASSWORD: ${{secrets.AGRAM_RELEASE_KEY_PASSWORD}}
+                run: |
+                    if [ -n "$AGRAM_KEYSTORE_BASE64" ]; then
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"
+                        echo "$AGRAM_KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                        cp "${GITHUB_WORKSPACE}/gradle.properties" "${GITHUB_WORKSPACE}/gradle.properties.old"
+                        sed -i "s/RELEASE_STORE_PASSWORD=android/RELEASE_STORE_PASSWORD=$AGRAM_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_ALIAS=androidkey/RELEASE_KEY_ALIAS=$AGRAM_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_PASSWORD=android/RELEASE_KEY_PASSWORD=$AGRAM_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                    fi
+
+            -   name: Build APK
+                run: gradle :TMessagesProj_AppStandalone:assembleStandalone
+
+            -   name: ccache stats
+                if: ${{always()}}
+                run: |
+                    echo "CCACHE_DIR=${CCACHE_DIR}"
+                    du -sh "${CCACHE_DIR}" || true
+                    ccache -s || true
+
+            -   name: Restore Default Keystore
+                if: ${{always() && inputs.multi-pass == 'Korben Dallas'}}
+                run: |
+                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old" ]; then
+                        rm -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                    fi
+                    if [ -f "${GITHUB_WORKSPACE}/gradle.properties.old" ]; then
+                        rm -f "${GITHUB_WORKSPACE}/gradle.properties"
+                        mv "${GITHUB_WORKSPACE}/gradle.properties.old" "${GITHUB_WORKSPACE}/gradle.properties"
+                    fi
+
+            -   name: Verify APK exists
+                id: locate_apk
+                run: |
+                    APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
+                    if [ ! -f "$APK_PATH" ]; then
+                       find "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs" -type f >&2
+                       exit 1
+                    fi
+                    AGRAMAPK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/AGram.${{inputs.agram-version}}.apk"
+                    mv "$APK_PATH" "$AGRAMAPK"
+                    echo "apk_path=$AGRAMAPK" >> "$GITHUB_OUTPUT"
+                    echo "apk_sha256=$(sha256sum "$AGRAMAPK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+            -   name: Create Release and Upload APK
+                uses: softprops/action-gh-release@v3
+                with:
+                    tag_name: ${{env.TNAME}}
+                    name: ${{env.RNAME}}
+                    files: ${{steps.locate_apk.outputs.apk_path}}
+                    body: |
+                        **AGram** `${{inputs.agram-version}}`
+                        SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
+
+                        ${{inputs.agram-changes}}
+                env:
+                    GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+                    RNAME: AGram ${{inputs.agram-version}}
+                    TNAME: v${{inputs.agram-version}}
