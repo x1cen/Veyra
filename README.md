@@ -14,6 +14,36 @@ It uses an independent application ID (`org.agram.messanger`), so you can instal
 - **Telemetry and Billing Removed:** Google Play Billing and unnecessary vendor analytics libraries have been stripped out.
 - **Custom Keystore Support:** Can be signed with an independent private release keystore to avoid Google Play Protect signature conflicts.
 
+## Comparison with Official Telegram
+
+| Feature / Behavior | Official Telegram | AGram |
+| :--- | :--- | :--- |
+| Deleted Messages | Permanently purged on sender deletion | Retained locally with deletion history |
+| View-Once / TTL Media | Cannot be saved, screenshots blocked | Save directly to storage, view anytime |
+| Secret Chat Screenshots | Blocked via Android FLAG_SECURE | Allowed (FLAG_SECURE removed) |
+| System Dynamic Colors | Telegram custom themes only | Full Android 12+ Monet engine integration |
+| Side-by-Side Install | Overwrites or conflicts with official APK | Coexists via package `org.agram.messanger` |
+| Trackers & Telemetry | Google Play and Firebase analytics | Stripped; clean standalone operation |
+| Play Store Billing | Google Play Billing library bundled | Removed for lightweight builds |
+| Passkey Authentication | Supported through official assetlinks | Disabled (not supported on custom package IDs) |
+
+### Detailed Differences
+
+1. **Message Retention (Anti-Delete):**  
+   In official Telegram, when a user deletes a message for everyone, the client erases it immediately from the local database. AGram hooks into message deletion events, marks the message as retracted, and preserves the text and media in a local SQLite table so you can review what was deleted.
+
+2. **Unrestricted Media Export:**  
+   Official Telegram enforces self-destruct timers and view-once limits by preventing export and capturing. AGram bypasses these checks, letting you save expiring photos, videos, and voice notes straight to your local media directories.
+
+3. **Window Security Flags (FLAG_SECURE):**  
+   Android allows apps to block screenshots and screen recording by setting `FLAG_SECURE`. Official Telegram turns this on for secret chats, passcode screens, and expiring media. AGram disables this flag, so you have full control over capturing and sharing your screen.
+
+4. **Monet Dynamic Palette:**  
+   AGram integrates a native Material You Monet theming helper that extracts color tones directly from your system wallpaper on Android 12 and newer, styling the interface to match your device accents.
+
+5. **Independent Package ID:**  
+   Because AGram uses `org.agram.messanger` instead of `org.telegram.messenger`, you do not need to uninstall your official Telegram client, Telegram Beta, or work profiles. Both apps live independently on the device with separate data directories.
+
 ### Note on Passkey Login
 
 Logging in via Passkeys (FIDO2 / WebAuthn) is intentionally disabled. Android Credential Manager restricts `telegram.org` passkeys to Telegram's official signing certificates through Google Digital Asset Links (`/.well-known/assetlinks.json`). Third-party forks with custom package names cannot claim that origin. Use your phone number and login code (SMS or active session) to sign in.
