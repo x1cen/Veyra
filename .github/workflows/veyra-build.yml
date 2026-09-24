@@ -4,6 +4,10 @@ on:
     push:
         branches:
             - dev
+        paths-ignore:
+            - '**.md'
+            - 'assets/**'
+            - 'LICENSE'
     workflow_dispatch:
         inputs:
             veyra-version:
