@@ -88,7 +88,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import org.agram.client.AGramSecurity;
+import org.veyra.client.VeyraSecurity;
 import com.google.android.gms.common.api.Status;
 import com.google.common.primitives.Longs;
 
@@ -168,7 +168,7 @@ import org.telegram.ui.ActionBar.DrawerLayoutContainer;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
 
-import org.agram.helpers.MonetHelper;
+import org.veyra.helpers.MonetHelper;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Cells.LanguageCell;
 import org.telegram.ui.Components.ActivityWindowEmptyBackgroundDrawable;
@@ -5980,7 +5980,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         }
         final TLRPC.TL_help_getAppUpdate req = new TLRPC.TL_help_getAppUpdate();
         try {
-            req.source = AGramSecurity.getVendor();
+            req.source = VeyraSecurity.getVendor();
         } catch (Exception ignore) {
 
         }

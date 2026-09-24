@@ -1,5 +1,5 @@
-/* AGram Project */
-package org.agram.client;
+/* Veyra Project */
+package org.veyra.client;
 
 import android.content.Context;
 import android.graphics.Typeface;
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-public class AGramAntiDelete {
+public class VeyraAntiDelete {
 
     public static ArrayList<TLRPC.TL_dcOption> getTheDC(int dcId, ArrayList<TLRPC.TL_dcOption> options) {
         ArrayList<TLRPC.TL_dcOption> filtered = new ArrayList<>();
@@ -135,7 +135,7 @@ public class AGramAntiDelete {
 //            nextId = ids[ids.length - 1] + 1;
 //            map.get(-1).put("nextAccountId", nextId.toString());
 //            ApplicationLoader.applicationContext.getSharedPreferences("agram", Context.MODE_PRIVATE).edit()
-//                .putString("thAccounts", AGramAntiDelete.toJsonNestedMaps(map))
+//                .putString("thAccounts", VeyraAntiDelete.toJsonNestedMaps(map))
 //                .apply();
 //        }
 //        return nextId;

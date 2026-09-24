@@ -1,6 +1,6 @@
-/* AGram Project */
+/* Veyra Project */
 
-package org.agram.client;
+package org.veyra.client;
 
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.MessageObject;
@@ -55,7 +55,7 @@ public final class SecretMediaExport implements AutoCloseable {
             File enc = new File(plain.getAbsolutePath() + ".enc");
             File key = new File(FileLoader.getInternalCacheDir(), plain.getName() + ".enc.key");
             if (enc.isFile() && key.isFile()) {
-                File tmp = File.createTempFile("agram_ttl_", "." + extension(message, plain), FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
+                File tmp = File.createTempFile("veyra_ttl_", "." + extension(message, plain), FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
                 decryptCtrCopy(enc, key, tmp);
                 return new SecretMediaExport(tmp, true);
             }

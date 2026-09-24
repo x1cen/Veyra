@@ -1,6 +1,6 @@
-/* AGram Project */
+/* Veyra Project */
 
-package org.agram.client;
+package org.veyra.client;
 
 import android.app.ActivityManager;
 import android.content.Context;
@@ -15,7 +15,7 @@ import android.widget.Toast;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 
-public class AGramSecurity {
+public class VeyraSecurity {
     public static String getVendor() {
         if (true) return BuildVars.BUILD_VENDOR;
         return getVendor(ApplicationLoader.applicationContext.getPackageName());
@@ -40,7 +40,7 @@ public class AGramSecurity {
     }
 
     public static String modConfigPatch(String configPath) {
-        return configPath.replace(BuildVars.BUILD_AGRAM, BuildVars.BUILD_DUROV);
+        return configPath.replace(BuildVars.BUILD_VEYRA, BuildVars.BUILD_DUROV);
     }
 
 

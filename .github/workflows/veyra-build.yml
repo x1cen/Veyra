@@ -1,16 +1,16 @@
-name: Build and Release AGram APK
+name: Build and Release Veyra APK
 
 on:
     workflow_dispatch:
         inputs:
-            agram-version:
-                description: 'AGram version'
+            veyra-version:
+                description: 'Veyra version'
                 type: string
-                default: '12.92.10'
-            agram-changes:
+                default: '0.1.0-alpha'
+            veyra-changes:
                 description: 'Changelog / Release notes'
                 type: string
-                default: 'AGram official build'
+                default: 'Veyra Initial Preview Build (Unstable Alpha Testing)'
             use-cache:
                 description: 'Use ccache for build?'
                 type: choice
@@ -28,12 +28,12 @@ on:
             prerelease:
                 description: 'Mark as pre-release?'
                 type: boolean
-                default: false
+                default: true
 
 permissions:
     contents: write
 
-run-name: Building AGram ${{inputs.agram-version}}
+run-name: Building Veyra ${{inputs.veyra-version}}
 
 jobs:
     apk:
@@ -117,18 +117,18 @@ jobs:
             -   name: Enable Custom Keystore
                 if: ${{inputs.multi-pass == 'Korben Dallas'}}
                 env:
-                    AGRAM_KEYSTORE_BASE64: ${{secrets.AGRAM_KEYSTORE_BASE64}}
-                    AGRAM_RELEASE_STORE_PASSWORD: ${{secrets.AGRAM_RELEASE_STORE_PASSWORD}}
-                    AGRAM_RELEASE_KEY_ALIAS: ${{secrets.AGRAM_RELEASE_KEY_ALIAS}}
-                    AGRAM_RELEASE_KEY_PASSWORD: ${{secrets.AGRAM_RELEASE_KEY_PASSWORD}}
+                    VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64 || secrets.AGRAM_KEYSTORE_BASE64}}
+                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || secrets.AGRAM_RELEASE_STORE_PASSWORD}}
+                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || secrets.AGRAM_RELEASE_KEY_ALIAS}}
+                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || secrets.AGRAM_RELEASE_KEY_PASSWORD}}
                 run: |
-                    if [ -n "$AGRAM_KEYSTORE_BASE64" ]; then
+                    if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
                         mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"
-                        echo "$AGRAM_KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                        echo "$VEYRA_KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
                         cp "${GITHUB_WORKSPACE}/gradle.properties" "${GITHUB_WORKSPACE}/gradle.properties.old"
-                        sed -i "s/RELEASE_STORE_PASSWORD=android/RELEASE_STORE_PASSWORD=$AGRAM_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
-                        sed -i "s/RELEASE_KEY_ALIAS=androidkey/RELEASE_KEY_ALIAS=$AGRAM_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
-                        sed -i "s/RELEASE_KEY_PASSWORD=android/RELEASE_KEY_PASSWORD=$AGRAM_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_STORE_PASSWORD=android/RELEASE_STORE_PASSWORD=$VEYRA_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_ALIAS=androidkey/RELEASE_KEY_ALIAS=$VEYRA_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_PASSWORD=android/RELEASE_KEY_PASSWORD=$VEYRA_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
                     fi
 
             -   name: Build APK
@@ -161,24 +161,24 @@ jobs:
                        find "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs" -type f >&2
                        exit 1
                     fi
-                    AGRAMAPK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/AGram.${{inputs.agram-version}}.apk"
-                    mv "$APK_PATH" "$AGRAMAPK"
-                    echo "apk_path=$AGRAMAPK" >> "$GITHUB_OUTPUT"
-                    echo "apk_sha256=$(sha256sum "$AGRAMAPK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+                    VEYRA_APK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.${{inputs.veyra-version}}.apk"
+                    mv "$APK_PATH" "$VEYRA_APK"
+                    echo "apk_path=$VEYRA_APK" >> "$GITHUB_OUTPUT"
+                    echo "apk_sha256=$(sha256sum "$VEYRA_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
             -   name: Create Release and Upload APK
                 uses: softprops/action-gh-release@v3
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
-                    prerelease: ${{inputs.prerelease || false}}
+                    prerelease: ${{inputs.prerelease || true}}
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
-                        **AGram** `${{inputs.agram-version}}`
+                        **Veyra** `${{inputs.veyra-version}}` (Pre-release)
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{inputs.agram-changes}}
+                        ${{inputs.veyra-changes}}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    RNAME: AGram ${{inputs.agram-version}}
-                    TNAME: v${{inputs.agram-version}}
+                    RNAME: Veyra ${{inputs.veyra-version}}
+                    TNAME: v${{inputs.veyra-version}}

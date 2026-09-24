@@ -46,7 +46,7 @@ import androidx.biometric.BiometricManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.agram.client.AGramSecurity;
+import org.veyra.client.VeyraSecurity;
 import org.telegram.messenger.*;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
@@ -1064,10 +1064,10 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetPasscode);
             });
         } else if (type == TYPE_ENTER_CODE_TO_MANAGE_SETTINGS || type == TYPE_ENTER_DURESS_TO_MANAGE_SETTINGS) {
-            if (SharedConfig.checkDuress(password)) AGramSecurity.kaboomPIG(getContext(), 64);
+            if (SharedConfig.checkDuress(password)) VeyraSecurity.kaboomPIG(getContext(), 64);
             if (!SharedConfig.checkPasscode(password)) {
                 SharedConfig.increaseBadPasscodeTries();
-                AGramSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
+                VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
                 passwordEditText.setText("");
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setText("");
