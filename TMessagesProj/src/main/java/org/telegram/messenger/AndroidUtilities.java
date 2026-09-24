@@ -3586,8 +3586,35 @@ public class AndroidUtilities {
         return false;
     }
 
+    public static String cleanUrl(String text) {
+        if (text == null || (!text.startsWith("http://") && !text.startsWith("https://"))) {
+            return text;
+        }
+        try {
+            android.net.Uri uri = android.net.Uri.parse(text);
+            if (uri.isHierarchical()) {
+                android.net.Uri.Builder builder = uri.buildUpon().clearQuery();
+                for (String param : uri.getQueryParameterNames()) {
+                    if (param == null) continue;
+                    String lower = param.toLowerCase();
+                    if (lower.startsWith("utm_") || lower.equals("si") || lower.equals("igsh") || lower.equals("fbclid") || lower.equals("gclid")) {
+                        continue;
+                    }
+                    for (String val : uri.getQueryParameters(param)) {
+                        builder.appendQueryParameter(param, val);
+                    }
+                }
+                return builder.build().toString();
+            }
+        } catch (Exception ignored) {}
+        return text;
+    }
+
     public static boolean addToClipboard(CharSequence str) {
         try {
+            if (str != null && (str.toString().startsWith("http://") || str.toString().startsWith("https://"))) {
+                str = cleanUrl(str.toString());
+            }
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
 
             if (str instanceof Spanned) {

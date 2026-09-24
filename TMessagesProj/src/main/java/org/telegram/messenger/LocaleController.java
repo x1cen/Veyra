@@ -2220,6 +2220,17 @@ public class LocaleController {
         }
     }
 
+    public static boolean isPersianCalendar() {
+        try {
+            LocaleInfo info = getInstance().getCurrentLocaleInfo();
+            if (info != null && info.shortName != null && "fa".equalsIgnoreCase(info.shortName)) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     public static String formatDateChat(long date) {
         return formatDateChat(date, false);
     }
@@ -2230,6 +2241,16 @@ public class LocaleController {
             calendar.setTimeInMillis(System.currentTimeMillis());
             int currentYear = calendar.get(Calendar.YEAR);
             date *= 1000;
+
+            if (isPersianCalendar()) {
+                org.telegram.messenger.shamsicalendar.PersianDate persianDate = new org.telegram.messenger.shamsicalendar.PersianDate(date);
+                calendar.setTimeInMillis(date);
+                if (checkYear && currentYear == calendar.get(Calendar.YEAR) || !checkYear && Math.abs(System.currentTimeMillis() - date) < 31536000000L) {
+                    return persianDate.getPersianMonthDay();
+                } else {
+                    return persianDate.getPersianNormalDate();
+                }
+            }
 
             calendar.setTimeInMillis(date);
             if (checkYear && currentYear == calendar.get(Calendar.YEAR) || !checkYear && Math.abs(System.currentTimeMillis() - date) < 31536000000L) {
@@ -2251,6 +2272,15 @@ public class LocaleController {
             calendar.setTimeInMillis(System.currentTimeMillis());
             int currentYear = calendar.get(Calendar.YEAR);
             date *= 1000;
+
+            if (isPersianCalendar()) {
+                org.telegram.messenger.shamsicalendar.PersianDate persianDate = new org.telegram.messenger.shamsicalendar.PersianDate(date);
+                calendar.setTimeInMillis(date);
+                if (!full && currentYear == calendar.get(Calendar.YEAR)) {
+                    return persianDate.getPersianMonthDay();
+                }
+                return persianDate.getPersianNormalDate();
+            }
 
             calendar.setTimeInMillis(date);
             if (!full && currentYear == calendar.get(Calendar.YEAR)) {
@@ -2283,6 +2313,13 @@ public class LocaleController {
                 return getInstance().getFormatterDay().format(new Date(date));
             } else if (dateDay + 1 == day && year == dateYear) {
                 return getString("Yesterday", R.string.Yesterday);
+            } else if (isPersianCalendar()) {
+                org.telegram.messenger.shamsicalendar.PersianDate persianDate = new org.telegram.messenger.shamsicalendar.PersianDate(date);
+                if (Math.abs(System.currentTimeMillis() - date) < 31536000000L) {
+                    return persianDate.getPersianMonthDay();
+                } else {
+                    return persianDate.getPersianNormalDate();
+                }
             } else if (Math.abs(System.currentTimeMillis() - date) < 31536000000L) {
                 return getInstance().getFormatterDayMonth().format(new Date(date));
             } else {

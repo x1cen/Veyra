@@ -17535,7 +17535,7 @@ public class MessagesController extends BaseController implements NotificationCe
     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
-                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false);
+                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, true);
                 if (channelId == 0) {
                     for (int b = 0, size2 = ids.size(); b < size2; b++) {
                         Integer id = ids.get(b);
@@ -20876,7 +20876,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int msdIg : arrayList) {
                         ids.add(MessageObject.ephemeralMessageIdPack(msdIg));
                     }
-                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, -dialogId, false);
+                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, -dialogId, false, false, false, 0, null, true);
                 }
             }
 
@@ -23006,7 +23006,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     getMessagesStorage().markMessagesAsIsDeleted(dialogId, dbMessages, false);
                     getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, 0, dbMessages, null);
                     AndroidUtilities.runOnUIThread(() -> {
-                        getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, dbMessages, channelId, false);
+                        getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, dbMessages, channelId, false, false, false, 0, null, true);
                         if (res.offset > 0) {
                             deleteMessagesRange(dialogId, channelId, minDate, maxDate, forAll, callback);
                         } else {
