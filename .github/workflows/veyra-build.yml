@@ -1,6 +1,9 @@
 name: Build and Release Veyra APK
 
 on:
+    push:
+        branches:
+            - dev
     workflow_dispatch:
         inputs:
             veyra-version:
@@ -24,7 +27,7 @@ on:
                 options:
                     - Multipass
                     - Korben Dallas
-                default: 'Multipass'
+                default: 'Korben Dallas'
             prerelease:
                 description: 'Mark as pre-release?'
                 type: boolean
@@ -33,7 +36,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{inputs.veyra-version}}
+run-name: Building Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }}
 
 jobs:
     apk:
@@ -86,7 +89,7 @@ jobs:
                     ccache -s
 
             -   name: Cache ccache
-                if: ${{inputs.use-cache == 'Yep'}}
+                if: ${{ (inputs.use-cache || 'Nah') == 'Yep' }}
                 uses: actions/cache@v5
                 with:
                     path: ${{github.workspace}}/.ccache
@@ -95,7 +98,7 @@ jobs:
                         ${{runner.os}}-ccache-ws-ndk-27.2.12479018-
 
             -   name: ccache before build
-                if: ${{inputs.use-cache == 'Yep'}}
+                if: ${{ (inputs.use-cache || 'Nah') == 'Yep' }}
                 run: |
                     ccache -z
                     echo "CCACHE_DIR=${CCACHE_DIR}"
@@ -115,7 +118,7 @@ jobs:
                     fi
 
             -   name: Enable Custom Keystore
-                if: ${{inputs.multi-pass == 'Korben Dallas'}}
+                if: ${{ (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
                 env:
                     VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64 || secrets.AGRAM_KEYSTORE_BASE64}}
                     VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || secrets.AGRAM_RELEASE_STORE_PASSWORD}}
@@ -142,7 +145,7 @@ jobs:
                     ccache -s || true
 
             -   name: Restore Default Keystore
-                if: ${{always() && inputs.multi-pass == 'Korben Dallas'}}
+                if: ${{ always() && (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
                 run: |
                     if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old" ]; then
                         rm -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
@@ -155,13 +158,15 @@ jobs:
 
             -   name: Verify APK exists
                 id: locate_apk
+                env:
+                    VERSION_NAME: ${{ inputs.veyra-version || '0.1.0-alpha' }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
                        find "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs" -type f >&2
                        exit 1
                     fi
-                    VEYRA_APK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.${{inputs.veyra-version}}.apk"
+                    VEYRA_APK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.${VERSION_NAME}.apk"
                     mv "$APK_PATH" "$VEYRA_APK"
                     echo "apk_path=$VEYRA_APK" >> "$GITHUB_OUTPUT"
                     echo "apk_sha256=$(sha256sum "$VEYRA_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
@@ -171,14 +176,15 @@ jobs:
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
-                    prerelease: ${{inputs.prerelease || true}}
+                    prerelease: true
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
-                        **Veyra** `${{inputs.veyra-version}}` (Pre-release)
+                        **Veyra** `${{ env.VERSION_NAME }}` (Initial Unstable Testing Build)
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{inputs.veyra-changes}}
+                        ${{ inputs.veyra-changes || 'Veyra v0.1.0-alpha: Initial preview testing build featuring Telegram ID in profile, ad suppression, anti-delete, forced copy, and custom V-wing luxury identity.' }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    RNAME: Veyra ${{inputs.veyra-version}}
-                    TNAME: v${{inputs.veyra-version}}
+                    VERSION_NAME: ${{ inputs.veyra-version || '0.1.0-alpha' }}
+                    RNAME: Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }}
+                    TNAME: v${{ inputs.veyra-version || '0.1.0-alpha' }}
