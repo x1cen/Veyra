@@ -14,17 +14,18 @@ on:
                 description: 'Veyra version'
                 type: string
                 default: '0.1.0-alpha'
+            arch:
+                description: 'Target Architecture (arm64-v8a is fastest for phones)'
+                type: choice
+                options:
+                    - 'arm64-v8a'
+                    - 'arm64-v8a,armeabi-v7a'
+                    - 'all'
+                default: 'arm64-v8a'
             veyra-changes:
                 description: 'Changelog / Release notes'
                 type: string
                 default: 'Veyra Initial Preview Build (Unstable Alpha Testing)'
-            use-cache:
-                description: 'Use ccache for build?'
-                type: choice
-                options:
-                    - Yep
-                    - Nah
-                default: 'Nah'
             multi-pass:
                 description: 'Signing mode'
                 type: choice
@@ -40,18 +41,20 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }}
+run-name: Building Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
         name: Generate APK
         runs-on: ubuntu-latest
         env:
+            TARGET_ARCH: ${{ inputs.arch || 'arm64-v8a' }}
             CCACHE_DIR: ${{github.workspace}}/.ccache
-            CCACHE_MAXSIZE: 2G
+            CCACHE_MAXSIZE: 3G
             CCACHE_COMPILERCHECK: content
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
+            CMAKE_BUILD_PARALLEL_LEVEL: "4"
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
@@ -67,6 +70,7 @@ jobs:
                 uses: gradle/actions/setup-gradle@v6
                 with:
                     gradle-version: '8.14.5'
+                    cache-read-only: false
 
             -   name: Pin CMake 3.22.1 and NDK 27.2.12479018
                 run: |
@@ -93,18 +97,15 @@ jobs:
                     ccache -s
 
             -   name: Cache ccache
-                if: ${{ (inputs.use-cache || 'Nah') == 'Yep' }}
                 uses: actions/cache@v5
                 with:
                     path: ${{github.workspace}}/.ccache
-                    key: ${{runner.os}}-ccache-ws-ndk-27.2.12479018-${{hashFiles('TMessagesProj/jni/**', 'TMessagesProj/**/CMakeLists.txt')}}
+                    key: ${{runner.os}}-ccache-ndk27-${{hashFiles('TMessagesProj/jni/**', 'TMessagesProj/**/CMakeLists.txt')}}
                     restore-keys: |
-                        ${{runner.os}}-ccache-ws-ndk-27.2.12479018-
+                        ${{runner.os}}-ccache-ndk27-
 
             -   name: ccache before build
-                if: ${{ (inputs.use-cache || 'Nah') == 'Yep' }}
                 run: |
-                    ccache -z
                     echo "CCACHE_DIR=${CCACHE_DIR}"
                     du -sh "${CCACHE_DIR}" || true
                     ccache -s
@@ -125,21 +126,23 @@ jobs:
                 if: ${{ (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
                 env:
                     VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64 || secrets.AGRAM_KEYSTORE_BASE64}}
-                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || secrets.AGRAM_RELEASE_STORE_PASSWORD}}
-                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || secrets.AGRAM_RELEASE_KEY_ALIAS}}
-                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || secrets.AGRAM_RELEASE_KEY_PASSWORD}}
+                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || secrets.AGRAM_RELEASE_STORE_PASSWORD || 'agram_release_pass_2026'}}
+                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || secrets.AGRAM_RELEASE_KEY_ALIAS || 'agram'}}
+                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || secrets.AGRAM_RELEASE_KEY_PASSWORD || 'agram_release_pass_2026'}}
                 run: |
                     if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
                         mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"
                         echo "$VEYRA_KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
                         cp "${GITHUB_WORKSPACE}/gradle.properties" "${GITHUB_WORKSPACE}/gradle.properties.old"
-                        sed -i "s/RELEASE_STORE_PASSWORD=android/RELEASE_STORE_PASSWORD=$VEYRA_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
-                        sed -i "s/RELEASE_KEY_ALIAS=androidkey/RELEASE_KEY_ALIAS=$VEYRA_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
-                        sed -i "s/RELEASE_KEY_PASSWORD=android/RELEASE_KEY_PASSWORD=$VEYRA_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_STORE_PASSWORD=.*/RELEASE_STORE_PASSWORD=$VEYRA_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_ALIAS=.*/RELEASE_KEY_ALIAS=$VEYRA_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_PASSWORD=.*/RELEASE_KEY_PASSWORD=$VEYRA_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
                     fi
 
             -   name: Build APK
-                run: gradle :TMessagesProj_AppStandalone:assembleStandalone
+                run: |
+                    echo "Target Architecture: ${TARGET_ARCH}"
+                    gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=4
 
             -   name: ccache stats
                 if: ${{always()}}
@@ -184,6 +187,7 @@ jobs:
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
                         **Veyra** `${{ env.VERSION_NAME }}` (Initial Unstable Testing Build)
+                        Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
                         ${{ inputs.veyra-changes || 'Veyra v0.1.0-alpha: Initial preview testing build featuring Telegram ID in profile, ad suppression, anti-delete, forced copy, and custom V-wing luxury identity.' }}
