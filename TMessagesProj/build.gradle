@@ -105,7 +105,8 @@ android {
                 arguments '-DANDROID_STL=c++_static',
                     '-DANDROID_PLATFORM=android-21',
                     '-DCMAKE_C_COMPILER_LAUNCHER=ccache',
-                    '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+                    '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache',
+                    '-DCMAKE_BUILD_PARALLEL_LEVEL=4'
             }
         }
     }
