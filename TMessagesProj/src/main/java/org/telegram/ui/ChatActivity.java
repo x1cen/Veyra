@@ -26205,7 +26205,14 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }
-                obj.deleted = true;
+                if (obj.scheduled) {
+                    obj.deleted = true;
+                } else {
+                    obj.deleted = false;
+                    if (obj.messageOwner != null) {
+                        obj.messageOwner.isDeleted = true;
+                    }
+                }
                 if (obj.scheduled && sent) {
                     obj.scheduledSent = true;
                 }
@@ -26221,6 +26228,12 @@ public class ChatActivity extends BaseFragment implements
                     if (selectedMessagesIds[loadIndex].indexOfKey(mid) >= 0) {
                         updatedSelected = true;
                         addToSelectedMessages(obj, false, updatedSelectedLast = (a == size - 1));
+                    }
+                    if (!obj.scheduled) {
+                        if (chatAdapter != null) {
+                            chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+                        }
+                        continue;
                     }
                     MessageObject removed = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.remove(index) : messages.remove(index);
                     if (chatAdapter != null) {

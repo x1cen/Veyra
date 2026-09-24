@@ -1431,6 +1431,28 @@ public class LocaleController {
     }
 
     private String getStringInternal(String key, String fallback, int fallbackRes, int res) {
+        if ("DeletedMessage".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "حذف شده";
+                if (lang.startsWith("ar")) return "تم الحذف";
+                if (lang.startsWith("ru")) return "удалено";
+                return "deleted";
+            } catch (Exception ignored) {
+                return "deleted";
+            }
+        }
+        if ("THKillTheAPP".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "راه‌اندازی مجدد برنامه";
+                return "Restart App";
+            } catch (Exception ignored) {
+                return "Restart App";
+            }
+        }
         String value = BuildVars.USE_CLOUD_STRINGS ? localeValues.get(key) : null;
         if (value == null) {
             if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {
