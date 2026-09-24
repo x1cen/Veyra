@@ -3,8 +3,14 @@
     android:shape="rectangle">
     <gradient
         android:angle="270"
+<<<<<<< Updated upstream
         android:startColor="#18233C"
         android:centerColor="#0E1626"
         android:endColor="#06090F"
+=======
+        android:startColor="#0D1322"
+        android:centerColor="#080B14"
+        android:endColor="#040508"
+>>>>>>> Stashed changes
         android:type="linear"/>
 </shape>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" width="160" height="160" alt="Veyra Icon" />
+  <img src="assets/logo.png" width="220" alt="Veyra Logo" />
 </p>
 
 <h1 align="center">Veyra</h1>
