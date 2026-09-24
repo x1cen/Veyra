@@ -9322,6 +9322,10 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int a = 0, N = messages.size(); a < N; a++) {
                     Integer mid = messages.get(a);
                     if (mid > 0) {
+                        MessageObject obj = dialogMessagesByIds.get(mid);
+                        if (obj != null && obj.messageOwner != null && obj.messageOwner.isDeleted) {
+                            continue;
+                        }
                         toSend.add(mid);
                     }
                 }
@@ -9348,7 +9352,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId); // TODO: 8/11/26 rework for agram mark
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
             }
-            getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId);
+            getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId, null, false);
         } else {
             if (taskRequest instanceof TLRPC.TL_channels_deleteMessages) {
                 channelId = ((TLRPC.TL_channels_deleteMessages) taskRequest).channel.channel_id;
@@ -9426,6 +9430,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             });
         } else if (channelId != 0) {
+            if (toSend == null || toSend.isEmpty()) {
+                return;
+            }
             TLRPC.TL_channels_deleteMessages req;
             if (taskRequest != null) {
                 req = (TLRPC.TL_channels_deleteMessages) taskRequest;
@@ -9459,6 +9466,9 @@ public class MessagesController extends BaseController implements NotificationCe
         } else {
             if (randoms != null && encryptedChat != null && !randoms.isEmpty()) {
                 getSecretChatHelper().sendMessagesDeleteMessage(encryptedChat, randoms, null);
+            }
+            if (toSend == null || toSend.isEmpty()) {
+                return;
             }
             TLRPC.TL_messages_deleteMessages req;
             if (taskRequest instanceof TLRPC.TL_messages_deleteMessages) {
@@ -20997,7 +21007,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (arrayList == null) {
                         continue;
                     }
-                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, arrayList, -dialogId, false);
+                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, arrayList, -dialogId, false, false, false, 0, null, true);
                     if (dialogId == 0) {
                         for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                             Integer id = arrayList.get(b);

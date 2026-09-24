@@ -4940,6 +4940,7 @@ public class ChatActivity extends BaseFragment implements
                         if (
                             chatMode != 0 && chatMode != MODE_QUICK_REPLIES && chatMode != MODE_SUGGESTIONS && (chatMode != MODE_SAVED || threadMessageId != getUserConfig().getClientUserId()) ||
                             threadMessageObjects != null && threadMessageObjects.contains(message) ||
+                            message == null || message.deleted || (message.messageOwner != null && message.messageOwner.isDeleted) ||
                             getMessageType(message) == 1 && (message.getDialogId() == mergeDialogId || message.needDrawBluredPreview()) ||
                             currentEncryptedChat == null && message.getId() < 0 ||
                             currentChat != null && ChatObject.isForum(currentChat) && !allowReplyOnOpenTopic ||
@@ -8052,6 +8053,9 @@ public class ChatActivity extends BaseFragment implements
                 selectedMessagesCanStarIds[a].clear();
             }
             hideActionMode();
+            if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+                return;
+            }
             if (messageObject != null && (messageObject.messageOwner.id > 0 || messageObject.messageOwner.id < 0 && currentEncryptedChat != null)) {
                 showFieldPanelForReply(messageObject);
             }
@@ -12133,6 +12137,14 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void openForward(boolean fromActionBar) {
+        for (int a = 0; a < 2; a++) {
+            for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
+                if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+                    return;
+                }
+            }
+        }
         if (isPeerNoForwards() || hasSelectedNoforwardsMessage()) {
             // We should update text if user changed locale without re-opening chat activity
             String str;
@@ -14598,15 +14610,33 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void showFieldPanelForForward(boolean show, ArrayList<MessageObject> messageObjectsToForward) {
+        if (messageObjectsToForward != null) {
+            for (int i = 0; i < messageObjectsToForward.size(); i++) {
+                MessageObject msg = messageObjectsToForward.get(i);
+                if (msg != null && (msg.deleted || (msg.messageOwner != null && msg.messageOwner.isDeleted))) {
+                    messageObjectsToForward.remove(i);
+                    i--;
+                }
+            }
+            if (messageObjectsToForward.isEmpty()) {
+                return;
+            }
+        }
         showFieldPanel(show, null, null, messageObjectsToForward, null, true, 0, null, false, 0, true);
     }
 
     public void showFieldPanelForReply(MessageObject messageObjectToReply) {
+        if (messageObjectToReply != null && (messageObjectToReply.deleted || (messageObjectToReply.messageOwner != null && messageObjectToReply.messageOwner.isDeleted))) {
+            return;
+        }
         showFieldPanel(true, messageObjectToReply, null, null, null, true, 0, null, false, 0, true);
     }
 
     private Runnable onHideFieldPanelRunnable;
     public void showFieldPanelForReplyQuote(MessageObject messageObjectToReply, ReplyQuote quote) {
+        if (messageObjectToReply != null && (messageObjectToReply.deleted || (messageObjectToReply.messageOwner != null && messageObjectToReply.messageOwner.isDeleted))) {
+            return;
+        }
         showFieldPanel(true, messageObjectToReply, null, null, null, true, 0, quote, false, 0, true);
     }
 
@@ -22148,6 +22178,7 @@ public class ChatActivity extends BaseFragment implements
             ArrayList<Integer> sentMessages = null;
             if (args.length > 6) sentMessages = (ArrayList<Integer>) args[6];
             boolean movedToScheduled = args.length > 4 && (boolean) args[4] || sentMessages != null && !sentMessages.isEmpty();
+            boolean isRemotePeerRevoke = args.length > 7 && Boolean.TRUE.equals(args[7]);
             final ArrayList<MessageObject> messages = new ArrayList<>();
             MessageObject conversionMessage = null;
             boolean conversion = false;
@@ -22169,7 +22200,7 @@ public class ChatActivity extends BaseFragment implements
                 scheduleNowDialog.dismiss();
                 scheduleNowDialog = null;
             }
-            processDeletedMessages(markAsDeletedMessages, channelId, sent, !movedToScheduled);
+            processDeletedMessages(markAsDeletedMessages, channelId, sent, !movedToScheduled, isRemotePeerRevoke);
             if (movedToScheduled && chatMode != ChatActivity.MODE_SCHEDULED) {
                 getMessagesController().forceNoReload(dialog_id, ChatActivity.MODE_SCHEDULED);
                 openScheduledMessages(scheduledMessageId, true);
@@ -26113,6 +26144,10 @@ public class ChatActivity extends BaseFragment implements
         processDeletedMessages(markAsDeletedMessages, channelId, sent, true);
     }
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent, boolean thanos) {
+        processDeletedMessages(markAsDeletedMessages, channelId, sent, thanos, false);
+    }
+
+    private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent, boolean thanos, boolean isRemotePeerRevoke) {
 //        if (true) return; //honestly it's quite sucks + waiting for feedbacks
         ArrayList<Integer> removedIndexes = new ArrayList<>();
         ArrayList<Integer> thanosMessagesIndexes = new ArrayList<>();
@@ -26205,21 +26240,26 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }
-                if (obj.scheduled) {
-                    obj.deleted = true;
-                } else {
+                int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
+
+                if (isRemotePeerRevoke && !obj.scheduled) {
                     obj.deleted = false;
                     if (obj.messageOwner != null) {
                         obj.messageOwner.isDeleted = true;
                     }
+                    if (index != -1 && chatAdapter != null) {
+                        chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+                    }
+                    continue;
                 }
+
+                obj.deleted = true;
                 if (obj.scheduled && sent) {
                     obj.scheduledSent = true;
                 }
                 if (editingMessageObject == obj) {
                     hideFieldPanel(true);
                 }
-                int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
                 if (index != -1) {
                     if (obj.scheduled) {
                         scheduledMessagesCount--;
@@ -26228,12 +26268,6 @@ public class ChatActivity extends BaseFragment implements
                     if (selectedMessagesIds[loadIndex].indexOfKey(mid) >= 0) {
                         updatedSelected = true;
                         addToSelectedMessages(obj, false, updatedSelectedLast = (a == size - 1));
-                    }
-                    if (!obj.scheduled) {
-                        if (chatAdapter != null) {
-                            chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
-                        }
-                        continue;
                     }
                     MessageObject removed = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.remove(index) : messages.remove(index);
                     if (chatAdapter != null) {
@@ -30781,6 +30815,23 @@ public class ChatActivity extends BaseFragment implements
                 selectedObject = message;
                 selectedObjectGroup = groupedMessages;
                 fillMessageMenu(primaryMessage, icons, items, options);
+            }
+
+            if (selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted))) {
+                for (int i = 0; i < options.size(); ++i) {
+                    final int option = options.get(i);
+                    switch (option) {
+                        case OPTION_FORWARD:
+                        case OPTION_REPLY:
+                        case OPTION_SHARE:
+                        case OPTION_EDIT:
+                            options.remove(i);
+                            items.remove(i);
+                            icons.remove(i);
+                            i--;
+                            break;
+                    }
+                }
             }
 
             if (selectedObject != null && selectedObject.isHiddenSensitive() && !selectedObject.isMediaSpoilersRevealed) {
