@@ -650,6 +650,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int userInfoRow;
     private int channelInfoRow;
     private int usernameRow;
+    private int idRow;
     private int notificationsDividerRow;
     private int notificationsRow;
     private int bizHoursRow;
@@ -4449,6 +4450,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 openAddMember();
             } else if (position == usernameRow) {
                 processOnClickOrPress(position, view, x, y);
+            } else if (position == idRow) {
+                long copyId = userId != 0 ? userId : chatId;
+                if (isTopic && topicId != 0) copyId = topicId;
+                if (copyId != 0) {
+                    AndroidUtilities.addToClipboard(String.valueOf(copyId));
+                    if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
+                        BulletinFactory.of(ProfileActivity.this).createCopyBulletin(LocaleController.formatString("TextCopied", R.string.TextCopied)).show();
+                    }
+                }
             } else if (position == linkedCommunityRow) {
                 if (currentChat != null) {
                     showDialog(new CommunitySheet(this, currentChat.linked_community_id));
@@ -7267,6 +7277,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private boolean processOnClickOrPress(final int position, final View view, final float x, final float y) {
+        if (position == idRow) {
+            long copyId = userId != 0 ? userId : chatId;
+            if (isTopic && topicId != 0) copyId = topicId;
+            if (copyId != 0) {
+                AndroidUtilities.addToClipboard(String.valueOf(copyId));
+                if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
+                    BulletinFactory.of(ProfileActivity.this).createCopyBulletin(LocaleController.formatString("TextCopied", R.string.TextCopied)).show();
+                }
+                return true;
+            }
+            return false;
+        }
         if (position == usernameRow || position == setUsernameRow) {
             final String username;
             final TLRPC.TL_username usernameObj;
@@ -10483,6 +10505,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         locationRow = -1;
         channelInfoRow = -1;
         usernameRow = -1;
+        idRow = -1;
         settingsTimerRow = -1;
         settingsKeyRow = -1;
         notificationsDividerRow = -1;
@@ -10586,6 +10609,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 numberRow = rowCount++;
                 setUsernameRow = rowCount++;
                 bioRow = rowCount++;
+                idRow = rowCount++;
 
                 settingsSectionRow = rowCount++;
 
@@ -10677,6 +10701,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && username != null) {
                     usernameRow = rowCount++;
                 }
+                idRow = rowCount++;
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
                         birthdayRow = rowCount++;
@@ -10801,6 +10826,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             }
             usernameRow = rowCount++;
+            if (topicId != 0) {
+                idRow = rowCount++;
+            }
             if (actionsView == null) {
                 notificationsSimpleRow = rowCount++;
             }
@@ -10812,30 +10840,29 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 sharedMediaRow = rowCount++;
             }
         } else if (chatId != 0) {
-            if (chatInfo != null && (!TextUtils.isEmpty(chatInfo.about) || chatInfo.location instanceof TLRPC.TL_channelLocation) || ChatObject.isPublic(currentChat)) {
-                if (emptyRow < 0 && emptyRow2 < 0) {
-                    if (hasMusic || peerColor != null || actionsView == null) {
-                        emptyRow2 = rowCount++;
-                    } else {
-                        emptyRow = rowCount++;
-                    }
-                }
-
-                if (actionsView == null) {
-                    infoHeaderRow = rowCount++;
-                }
-                if (chatInfo != null) {
-                    if (!TextUtils.isEmpty(chatInfo.about)) {
-                        channelInfoRow = rowCount++;
-                    }
-                    if (chatInfo.location instanceof TLRPC.TL_channelLocation) {
-                        locationRow = rowCount++;
-                    }
-                }
-                if (ChatObject.isPublic(currentChat)) {
-                    usernameRow = rowCount++;
+            if (emptyRow < 0 && emptyRow2 < 0) {
+                if (hasMusic || peerColor != null || actionsView == null) {
+                    emptyRow2 = rowCount++;
+                } else {
+                    emptyRow = rowCount++;
                 }
             }
+
+            if (actionsView == null) {
+                infoHeaderRow = rowCount++;
+            }
+            if (chatInfo != null) {
+                if (!TextUtils.isEmpty(chatInfo.about)) {
+                    channelInfoRow = rowCount++;
+                }
+                if (chatInfo.location instanceof TLRPC.TL_channelLocation) {
+                    locationRow = rowCount++;
+                }
+            }
+            if (ChatObject.isPublic(currentChat)) {
+                usernameRow = rowCount++;
+            }
+            idRow = rowCount++;
             if (emptyRow < 0 && emptyRow2 < 0) {
                 if (hasMusic || peerColor != null || actionsView == null) {
                     emptyRow2 = rowCount++;
@@ -13536,6 +13563,50 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             usernames = new ArrayList<>();
                         }
                         detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0);
+                    } else if (position == idRow) {
+                        long displayId = 0;
+                        int dc = 0;
+                        String label = "ID";
+                        if (userId != 0) {
+                            displayId = userId;
+                            TLRPC.User u = getMessagesController().getUser(userId);
+                            if (u != null) {
+                                if (u.bot) {
+                                    label = "Bot ID";
+                                } else if (UserObject.isUserSelf(u)) {
+                                    label = "My ID";
+                                } else {
+                                    label = "User ID";
+                                }
+                                if (u.photo != null && u.photo.dc_id != 0) {
+                                    dc = u.photo.dc_id;
+                                } else if (UserObject.isUserSelf(u) && getMessagesController().thisDc > 0) {
+                                    dc = getMessagesController().thisDc;
+                                }
+                            }
+                        } else if (chatId != 0) {
+                            displayId = chatId;
+                            TLRPC.Chat c = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
+                            if (c != null) {
+                                if (ChatObject.isChannel(c)) {
+                                    label = c.megagroup ? "Group ID" : "Channel ID";
+                                } else {
+                                    label = "Group ID";
+                                }
+                                if (c.photo != null && c.photo.dc_id != 0) {
+                                    dc = c.photo.dc_id;
+                                } else if (chatInfo != null && chatInfo.stats_dc != 0) {
+                                    dc = chatInfo.stats_dc;
+                                }
+                            }
+                        } else if (isTopic && topicId != 0) {
+                            displayId = topicId;
+                            label = "Topic ID";
+                        }
+                        String text = String.valueOf(displayId);
+                        String value = dc > 0 ? label + " (DC " + dc + ")" : label;
+                        boolean needDivider = myProfile ? false : (position < infoEndRow);
+                        detailCell.setTextAndValue(text, value, needDivider);
                     } else if (position == locationRow) {
                         if (chatInfo != null && chatInfo.location instanceof TLRPC.TL_channelLocation) {
                             TLRPC.TL_channelLocation location = (TLRPC.TL_channelLocation) chatInfo.location;
@@ -14241,7 +14312,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (notificationRow != -1) {
                 int position = holder.getAdapterPosition();
                 return position == notificationRow || position == numberRow || position == privacyRow ||
-                        position == languageRow || position == setUsernameRow || position == bioRow ||
+                        position == languageRow || position == setUsernameRow || position == bioRow || position == idRow ||
                         position == versionRow || position == dataRow || position == chatRow ||
                         position == killMeLabelRow ||
                         position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
@@ -14277,7 +14348,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (position == infoHeaderRow || position == membersHeaderRow || position == settingsSectionRow2 ||
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow) {
+            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;
@@ -15637,6 +15708,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             put(++pointer, numberRow, sparseIntArray);
             put(++pointer, setUsernameRow, sparseIntArray);
             put(++pointer, bioRow, sparseIntArray);
+            put(++pointer, idRow, sparseIntArray);
             put(++pointer, phoneSuggestionRow, sparseIntArray);
             put(++pointer, phoneSuggestionSectionRow, sparseIntArray);
             put(++pointer, passwordSuggestionRow, sparseIntArray);
@@ -15684,6 +15756,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             put(++pointer, userInfoRow, sparseIntArray);
             put(++pointer, channelInfoRow, sparseIntArray);
             put(++pointer, usernameRow, sparseIntArray);
+            put(++pointer, idRow, sparseIntArray);
             put(++pointer, notificationsDividerRow, sparseIntArray);
             put(++pointer, reportDividerRow, sparseIntArray);
             put(++pointer, notificationsRow, sparseIntArray);
@@ -16290,6 +16363,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             textToCopy = user.phone;
         } else if (position == birthdayRow) {
             textToCopy = UserInfoActivity.birthdayString(userInfo.birthday);
+        } else if (position == idRow) {
+            textToCopy = String.valueOf(user.id);
+            copyButton = getString(R.string.Copy);
         }
 
         final ItemOptions itemOptions = ItemOptions.makeOptions(this, cell);
