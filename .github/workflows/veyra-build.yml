@@ -125,10 +125,10 @@ jobs:
             -   name: Enable Custom Keystore
                 if: ${{ (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
                 env:
-                    VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64 || secrets.AGRAM_KEYSTORE_BASE64}}
-                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || secrets.AGRAM_RELEASE_STORE_PASSWORD || 'agram_release_pass_2026'}}
-                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || secrets.AGRAM_RELEASE_KEY_ALIAS || 'agram'}}
-                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || secrets.AGRAM_RELEASE_KEY_PASSWORD || 'agram_release_pass_2026'}}
+                    VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64}}
+                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || 'veyra_release_pass_2026'}}
+                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || 'veyra'}}
+                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || 'veyra_release_pass_2026'}}
                 run: |
                     if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
                         mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"

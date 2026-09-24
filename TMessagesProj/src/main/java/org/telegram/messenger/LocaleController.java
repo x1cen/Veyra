@@ -1473,6 +1473,26 @@ public class LocaleController {
                 return "Are you sure you want to call %s?";
             }
         }
+        if ("UseProxyWeb".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "پروکسی وب (WEB)";
+                return "WEB Proxy";
+            } catch (Exception ignored) {
+                return "WEB Proxy";
+            }
+        }
+        if ("UseProxyWebInfo".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "پروکسی وب از ارتباط امن HTTPS در بستر وب‌ویو برای دور زدن فیلترینگ استفاده می‌کند. آدرس هاست و سکرت ۱۶ بایتی را وارد کنید.";
+                return "WEB proxy uses an HTTPS page inside a private WebView. Enter a hostname without a scheme or path and a 16-byte MTProxy secret.";
+            } catch (Exception ignored) {
+                return "WEB proxy uses an HTTPS page inside a private WebView.";
+            }
+        }
         String value = BuildVars.USE_CLOUD_STRINGS ? localeValues.get(key) : null;
         if (value == null) {
             if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {
