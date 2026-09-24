@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">AGram</string>
-    <string name="AppNameBeta">AGram Beta</string>
+    <string name="AppName">Veyra</string>
+    <string name="AppNameBeta">Veyra Preview</string>
     <string name="LanguageName">English</string>
     <string name="English">English</string>
     <string name="LanguageNameInEnglish">English</string>

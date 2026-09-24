@@ -1,4 +1,4 @@
-package org.agram.helpers;
+package org.veyra.helpers;
 
 import android.graphics.Color;
 import android.os.Build;

@@ -56,7 +56,7 @@ import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
-import org.agram.client.AGramSecurity;
+import org.veyra.client.VeyraSecurity;
 import org.telegram.messenger.*;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Stories.recorder.KeyboardNotifier;
@@ -789,10 +789,10 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 onPasscodeError();
                 return;
             }
-            if (SharedConfig.checkDuress(password)) AGramSecurity.kaboomPIG(getContext(), 64);
+            if (SharedConfig.checkDuress(password)) VeyraSecurity.kaboomPIG(getContext(), 64);
             if (!SharedConfig.checkPasscode(password)) {
                 SharedConfig.increaseBadPasscodeTries();
-                AGramSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
+                VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
                 if (SharedConfig.passcodeRetryInMs > 0) {
                     checkRetryTextView();
                 }

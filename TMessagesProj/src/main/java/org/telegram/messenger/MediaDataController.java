@@ -128,7 +128,7 @@ public class MediaDataController extends BaseController {
             SPOILER_PATTERN = Pattern.compile("\\|\\|(.+?)\\|\\|"),
             STRIKE_PATTERN = Pattern.compile("~~(.+?)~~");
 
-    public static String SHORTCUT_CATEGORY = BuildVars.BUILD_AGRAM + ".SHORTCUT_SHARE";
+    public static String SHORTCUT_CATEGORY = BuildVars.BUILD_VEYRA + ".SHORTCUT_SHARE";
 
     private static final ConcurrentHashMap<Integer, MediaDataController> Instance = new ConcurrentHashMap<>();
 
@@ -5978,7 +5978,7 @@ public class MediaDataController extends BaseController {
             long selfUserId = getUserConfig().clientUserId;
 
 //            SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT data, mid, date FROM messages_v2 WHERE mid IN (%s) AND uid = %d", longIds, dialogId));
-            SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, m.mid, m.date, tmd.isdel FROM messages_v2 as m LEFT JOIN agram_message_deletions as tmd ON tmd.mid=m.mid AND tmd.uid=m.uid WHERE m.mid IN (%s) AND m.uid = %d", longIds, dialogId));
+            SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, m.mid, m.date, tmd.isdel FROM messages_v2 as m LEFT JOIN veyra_message_deletions as tmd ON tmd.mid=m.mid AND tmd.uid=m.uid WHERE m.mid IN (%s) AND m.uid = %d", longIds, dialogId));
             while (cursor.next()) {
                 NativeByteBuffer data = cursor.byteBufferValue(0);
                 if (data != null) {
@@ -6205,7 +6205,7 @@ public class MediaDataController extends BaseController {
                 try {
                     ArrayList<MessageObject> loadedMessages = new ArrayList<>();
 //                    SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, m.mid, m.date, r.random_id FROM randoms_v2 as r INNER JOIN messages_v2 as m ON r.mid = m.mid AND r.uid = m.uid WHERE r.random_id IN(%s)", TextUtils.join(",", replyMessages)));
-                    SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, m.mid, m.date, r.random_id, tmd.isdel FROM randoms_v2 as r INNER JOIN messages_v2 as m ON r.mid = m.mid AND r.uid = m.uid LEFT JOIN agram_message_deletions as tmd ON tmd.mid=m.mid AND tmd.uid=m.uid WHERE r.random_id IN(%s)", TextUtils.join(",", replyMessages)));
+                    SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, m.mid, m.date, r.random_id, tmd.isdel FROM randoms_v2 as r INNER JOIN messages_v2 as m ON r.mid = m.mid AND r.uid = m.uid LEFT JOIN veyra_message_deletions as tmd ON tmd.mid=m.mid AND tmd.uid=m.uid WHERE r.random_id IN(%s)", TextUtils.join(",", replyMessages)));
                     while (cursor.next()) {
                         NativeByteBuffer data = cursor.byteBufferValue(0);
                         if (data != null) {

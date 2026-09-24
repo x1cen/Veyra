@@ -27,11 +27,11 @@ public class BuildVars {
     public static int BUILD_VERSION = 6991;
     public static int BUILD_VERSION_FULL = 69919;
 //    public static String BUILD_VENDOR = "com.android.vending";
-//    public static String BUILD_AGRAM = "org.agram.client3";
+//    public static String BUILD_VEYRA = "org.veyra.messenger";
     public static String BUILD_VENDOR = "com.google.android.packageinstaller";
     public static String BUILD_DUROV = "org.telegram.messenger.web";
     public static String BUILD_DUROV_TG = "org.telegram.messenger";
-    public static String BUILD_AGRAM = "org.agram.messanger";
+    public static String BUILD_VEYRA = "org.veyra.messenger";
     public static String BUILD_VERSION_STRING = "12.9.2";
     public static final List<String> fuLabel = new ArrayList<>() {{
         add("Free");
@@ -44,7 +44,7 @@ public class BuildVars {
     public static int APP_ID = 4;
     public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
 
-    public static String PLAYSTORE_APP_URL = "https://github.com/agram/agram/releases/latest";
+    public static String PLAYSTORE_APP_URL = "https://github.com/x1cen/Veyra/releases/latest";
     public static String GOOGLE_AUTH_CLIENT_ID = "760348033671-81kmi3pi84p11ub8hp9a1funsv0rn2p9.apps.googleusercontent.com";
 
     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)

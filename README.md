@@ -1,115 +1,105 @@
-# AGram
+# Veyra
 
-AGram is a modified Telegram client for Android based on Telegram upstream 12.9.2. It adds local anti-delete logging, view-once media export, and system Monet colors while keeping the original Telegram UI and launcher icon intact.
+Veyra is an advanced, privacy-first Android client built on the official upstream Telegram v12.9.2 architecture. It merges Telegram core reliability with essential power-user capabilities, enhanced privacy controls, an ad-free messaging experience, and an executive luxury visual identity.
 
-It uses an independent application ID (`org.agram.messanger`), so you can install and run it alongside the official Telegram app, Telegram Beta, or web wrappers without conflicts.
+[![Build and Release Veyra APK](https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml/badge.svg?branch=dev)](https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml)
+[![Pre-release](https://img.shields.io/github/v/release/x1cen/Veyra?include_prereleases&label=Testing%20Build)](https://github.com/x1cen/Veyra/releases)
+[![Upstream Telegram Base](https://img.shields.io/badge/Upstream%20Base-v12.9.2-2481CC.svg)](https://github.com/DrKLO/Telegram)
+[![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0-blue.svg)](LICENSE)
 
-## Modifications and Features
+---
 
-- **Local Anti-Delete:** Incoming messages that get deleted by the sender remain visible in your local chat history, marked with an indicator. Deletion history is stored in your device's local database.
-- **Expiring Media Export:** View-once and self-destructing photos and videos can be saved directly to local storage without restrictions.
-- **Parallel Installation:** Uses the package name `org.agram.messanger`. It does not replace or interfere with any other Telegram installation on the same device.
-- **Stock Launcher Design:** Retains the official Telegram paper plane launcher icon and branding assets.
-- **Monet Dynamic Theming:** Adapts interface accent colors to your Android 12+ wallpaper palette.
-- **Telemetry and Billing Removed:** Google Play Billing and unnecessary vendor analytics libraries have been stripped out.
-- **Custom Keystore Support:** Can be signed with an independent private release keystore to avoid Google Play Protect signature conflicts.
+## Key Highlights
 
-## Comparison with Official Telegram
+* **Telegram ID & DC Inspection:** Direct display of Telegram User ID, Group ID, Channel ID, Bot ID, Topic ID, and Datacenter (DC) inside the standard Profile details column across all chat types, complete with instant one-tap copy functionality.
+* **Ad-Free Communication:** Complete removal of unsolicited sponsored messages in public channels, suppression of sponsored search results in global dialog search, and elimination of video advertising.
+* **Content Freedom (Forced Copy):** Unrestricted text selection, message copying, and media forwarding across protected groups and channels (`isChatNoForwards` override).
+* **Anti-Revoke Protection:** Local preservation of messages and time-limited media deleted by counterparties in private and group conversations.
+* **Security & Screen Capture Rights:** Clean removal of restrictive `FLAG_SECURE` window limitations, allowing screenshots, screen sharing, and screen recording when permitted by the user.
+* **Sovereign Luxury Identity:** Custom sculpted metallic gold and obsidian emblem designed specifically for Veyra, available as an adaptive icon across all modern Android versions (Android 8.0 through Android 15).
+* **Google Play Protect Compliance:** Clean native build signed with standard RSA-2048 keys and free from heuristic-triggering test routines or anti-tamper crashes.
 
-| Feature / Behavior | Official Telegram | AGram |
-| :--- | :--- | :--- |
-| Deleted Messages | Permanently purged on sender deletion | Retained locally with deletion history |
-| View-Once / TTL Media | Cannot be saved, screenshots blocked | Save directly to storage, view anytime |
-| Secret Chat Screenshots | Blocked via Android FLAG_SECURE | Allowed (FLAG_SECURE removed) |
-| System Dynamic Colors | Telegram custom themes only | Full Android 12+ Monet engine integration |
-| Side-by-Side Install | Overwrites or conflicts with official APK | Coexists via package `org.agram.messanger` |
-| Trackers & Telemetry | Google Play and Firebase analytics | Stripped; clean standalone operation |
-| Play Store Billing | Google Play Billing library bundled | Removed for lightweight builds |
-| Passkey Authentication | Supported through official assetlinks | Disabled (not supported on custom package IDs) |
+---
 
-### Detailed Differences
+## Feature Comparison Matrix
 
-1. **Message Retention (Anti-Delete):**  
-   In official Telegram, when a user deletes a message for everyone, the client erases it immediately from the local database. AGram hooks into message deletion events, marks the message as retracted, and preserves the text and media in a local SQLite table so you can review what was deleted.
+| Capability | Official Telegram | Standard Third-Party Forks | Veyra |
+| :--- | :---: | :---: | :---: |
+| Official Upstream 12.9.2 Base | Yes | Partial | Yes |
+| Profile Telegram ID & DC Display | No | Top Banner / Header | Integrated Profile Column |
+| Complete Channel Ad Suppression | No (Premium Required) | Partial | Built-in Free |
+| Global Search Ad Suppression | No | No | Built-in Free |
+| Unrestricted Forward & Copy (`NoForwards`) | Blocked | Add-on | Seamless Built-in |
+| Screenshot Protection Override | Blocked | Modded | Built-in Unrestricted |
+| Anti-Delete Message Cache | No | Modded | Native Local SQLite |
+| Clean Signing (No Heuristic Warnings) | Yes | Variable | Verified RSA-2048 Clean |
 
-2. **Unrestricted Media Export:**  
-   Official Telegram enforces self-destruct timers and view-once limits by preventing export and capturing. AGram bypasses these checks, letting you save expiring photos, videos, and voice notes straight to your local media directories.
+---
 
-3. **Window Security Flags (FLAG_SECURE):**  
-   Android allows apps to block screenshots and screen recording by setting `FLAG_SECURE`. Official Telegram turns this on for secret chats, passcode screens, and expiring media. AGram disables this flag, so you have full control over capturing and sharing your screen.
+## Architecture & Codebase Structure
 
-4. **Monet Dynamic Palette:**  
-   AGram integrates a native Material You Monet theming helper that extracts color tones directly from your system wallpaper on Android 12 and newer, styling the interface to match your device accents.
+The project maintains upstream synchronization with official Telegram while isolating enhancements cleanly within structured packages:
 
-5. **Independent Package ID:**  
-   Because AGram uses `org.agram.messanger` instead of `org.telegram.messenger`, you do not need to uninstall your official Telegram client, Telegram Beta, or work profiles. Both apps live independently on the device with separate data directories.
+* `org.veyra.client.VeyraSecurity`: Security verification, keystore hash validation, and safe integrity checks.
+* `org.veyra.client.VeyraAntiDelete`: Local SQLite storage and recovery helpers for deleted messages and media.
+* `org.veyra.helpers.MonetHelper`: Dynamic theme extraction and Android Material You palette adaptation.
+* `org.telegram.ui.ProfileActivity`: Native UI integration for chat identifiers and datacenter diagnostics.
+* `org.telegram.messenger.MessagesController`: Ad-suppression rules and content-restriction bypass logic.
 
-### Note on Passkey Login
+---
 
-Logging in via Passkeys (FIDO2 / WebAuthn) is intentionally disabled. Android Credential Manager restricts `telegram.org` passkeys to Telegram's official signing certificates through Google Digital Asset Links (`/.well-known/assetlinks.json`). Third-party forks with custom package names cannot claim that origin. Use your phone number and login code (SMS or active session) to sign in.
+## Building from Source
 
-## Project Structure
+### Prerequisites
+* JDK 21 (Amazon Corretto or OpenJDK)
+* Android SDK 35 (Platform 35, Build-Tools 35.0.0)
+* Android NDK 27.2.12479018
+* CMake 3.22.1
+* Gradle 8.14.5
 
-```
-.
-|-- TMessagesProj/                  # Main Telegram Android client source
-|   |-- src/main/java/org/agram/    # AGram custom mod implementations
-|   |   |-- client/                 # Anti-delete, media export, and security logic
-|   |   \-- helpers/                # Monet dynamic color engine
-|   \-- config/                     # Build configuration and signing keys
-|-- TMessagesProj_App/              # Standard application module
-|-- TMessagesProj_AppStandalone/    # Standalone APK build module (no Google Play dependencies)
-\-- .github/workflows/              # Automated CI/CD pipelines
-```
+### Local Compilation
 
-## Building
-
-### Requirements
-
-- Android Studio Jellyfish (or newer) / command-line tools
-- JDK 21 (Amazon Corretto 21 recommended)
-- Android SDK with Platform 35
-- Android NDK 27.2.12479018
-- CMake 3.22.1
-
-### Local Build
-
-1. Clone the repository:
+1. Clone the repository and checkout the `dev` branch:
    ```bash
-   git clone https://github.com/x1cen/agram.git
-   cd agram
+   git clone https://github.com/x1cen/Veyra.git -b dev
+   cd Veyra
    ```
 
-2. Make sure `local.properties` contains your Android SDK path:
+2. Configure environment and signing properties in `local.properties`:
    ```properties
-   sdk.dir=/path/to/your/android-sdk
+   sdk.dir=/path/to/android-sdk
+   cmake.dir=/path/to/android-sdk/cmake/3.22.1
    ```
 
-3. Build the standalone release APK:
+3. Assemble the standalone universal APK:
    ```bash
    ./gradlew :TMessagesProj_AppStandalone:assembleStandalone
    ```
 
-The compiled APK will be generated at:
-`TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/`
+4. The compiled package will be located at:
+   ```
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk
+   ```
 
-### Automated CI with GitHub Actions
+---
 
-The repository includes a GitHub Actions workflow (`.github/workflows/agram-build.yml`) that compiles and signs the standalone APK on Ubuntu runners.
+## Automated CI/CD (GitHub Actions)
 
-To run builds with your own credentials, configure these repository secrets in **Settings -> Secrets and variables -> Actions**:
+Continuous integration and artifact distribution are automated via GitHub Actions:
+* **Workflow:** `.github/workflows/veyra-build.yml`
+* **Signing:** Automates custom keystore injection via encrypted repository secrets.
+* **Pre-release Testing:** Development artifacts are automatically published as tagged pre-releases for preview testing.
 
-- `API_ID`: Your Telegram API ID from my.telegram.org
-- `API_HASH`: Your Telegram API Hash from my.telegram.org
-- `APP_ID`: Application ID string
-- `APP_HASH`: Application Hash string
-- `AGRAM_KEYSTORE_BASE64`: Base64-encoded release `.keystore` file
-- `AGRAM_RELEASE_STORE_PASSWORD`: Keystore store password
-- `AGRAM_RELEASE_KEY_ALIAS`: Keystore alias
-- `AGRAM_RELEASE_KEY_PASSWORD`: Keystore key password
+---
 
-Trigger the workflow from the **Actions** tab using the **Run workflow** button. Completed APK artifacts are automatically attached to GitHub Releases.
+## Security & Privacy Boundary
+
+* No personal data or credentials are intercepted, proxied, or transmitted to any third-party infrastructure.
+* All network traffic communicates directly with official Telegram MTProto datacenters.
+* Sensitive repository secrets (keystores, passwords, API identifiers) must remain stored in GitHub Secrets and should never be committed into source control.
+
+---
 
 ## License
 
-AGram is distributed under the GNU General Public License v2.0 or later, matching upstream Telegram for Android. See the `LICENSE` file for full terms.
+This project is licensed under the GNU General Public License v2.0 (GPLv2), in compliance with Telegram for Android upstream licensing terms.

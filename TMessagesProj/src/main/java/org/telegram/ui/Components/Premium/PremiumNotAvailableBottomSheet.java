@@ -52,7 +52,7 @@ public class PremiumNotAvailableBottomSheet extends BottomSheet {
         buttonTextView.setText(LocaleController.getString(R.string.InstallOfficialApp));
         buttonTextView.setOnClickListener(v -> {
             try {
-                v.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agram/agram/releases")));
+                v.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/x1cen/Veyra/releases")));
             } catch (ActivityNotFoundException e) {
                 FileLog.e(e);
             }

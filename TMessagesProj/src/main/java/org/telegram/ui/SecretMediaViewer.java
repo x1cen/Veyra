@@ -72,7 +72,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.agram.client.SecretMediaExport;
+import org.veyra.client.SecretMediaExport;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
@@ -600,7 +600,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         if (!dir.exists() && !dir.mkdirs()) {
             throw new IOException("no external cache");
         }
-        return File.createTempFile("agram_ttl_", "." + ext, dir);
+        return File.createTempFile("veyra_ttl_", "." + ext, dir);
     }
 
     private static File stagePublicCopy(File src) throws IOException {
