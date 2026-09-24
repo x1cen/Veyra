@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/icon_background_sa" />
-    <item android:drawable="@mipmap/icon_background_clip" />
-</layer-list>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#18233C"
+        android:centerColor="#0E1626"
+        android:endColor="#06090F"
+        android:type="linear"/>
+</shape>

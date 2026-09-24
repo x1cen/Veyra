@@ -126,7 +126,5 @@ public class AGramSecurity {
 
     public static void kaboomPIG(Context context, int fails) {
         gimmeRopeAndFindATree(context, fails);
-        if (fails >= BuildVars.KABOOM_PIN_FAILS)
-            ((ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE)).clearApplicationUserData();
     }
 }
