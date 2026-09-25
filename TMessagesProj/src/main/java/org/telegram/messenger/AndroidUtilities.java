@@ -3610,6 +3610,17 @@ public class AndroidUtilities {
         return text;
     }
 
+    public static String getTextOrBase64(byte[] data) {
+        if (data == null) {
+            return "";
+        }
+        try {
+            return java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(data)).toString();
+        } catch (Exception e) {
+            return android.util.Base64.encodeToString(data, android.util.Base64.NO_PADDING | android.util.Base64.NO_WRAP);
+        }
+    }
+
     public static boolean addToClipboard(CharSequence str) {
         try {
             if (str != null && (str.toString().startsWith("http://") || str.toString().startsWith("https://"))) {
@@ -6583,6 +6594,7 @@ public class AndroidUtilities {
     }
 
     public static void vibrateCursor(View view) {
+        if (VeyraConfig.disableVibration) return;
         try {
             if (view == null || view.getContext() == null) return;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
@@ -6592,6 +6604,7 @@ public class AndroidUtilities {
     }
 
     public static void vibrate(View view) {
+        if (VeyraConfig.disableVibration) return;
         try {
             if (view == null || view.getContext() == null) return;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;

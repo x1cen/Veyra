@@ -1249,6 +1249,7 @@ public class MessagesController extends BaseController implements NotificationCe
         public int maxId;
         public int maxDate;
         public long sendRequestTime;
+        public boolean fromSendReply;
     }
 
     public static class PrintingUser {
@@ -14491,7 +14492,36 @@ public class MessagesController extends BaseController implements NotificationCe
         }
     }
 
+    private final androidx.collection.LongSparseArray<ReadTask> pendingReadOnReply = new androidx.collection.LongSparseArray<>();
+
+    public void sendPendingReadOnReply(long dialogId) {
+        if (!VeyraConfig.readOnReply) {
+            return;
+        }
+        Utilities.stageQueue.postRunnable(() -> {
+            ReadTask task = pendingReadOnReply.get(dialogId);
+            if (task != null) {
+                pendingReadOnReply.remove(dialogId);
+                task.fromSendReply = true;
+                completeReadTask(task);
+            } else {
+                Integer maxId = dialogs_read_inbox_max.get(dialogId);
+                if (maxId != null && maxId > 0) {
+                    ReadTask newTask = new ReadTask();
+                    newTask.dialogId = dialogId;
+                    newTask.maxId = maxId;
+                    newTask.fromSendReply = true;
+                    completeReadTask(newTask);
+                }
+            }
+        });
+    }
+
     private void completeReadTask(ReadTask task) {
+        if (VeyraConfig.readOnReply && DialogObject.isUserDialog(task.dialogId) && !task.fromSendReply) {
+            pendingReadOnReply.put(task.dialogId, task);
+            return;
+        }
         if (task.replyId != 0 && task.monoForumPeerId == 0) {
             TLRPC.TL_messages_readDiscussion req = new TLRPC.TL_messages_readDiscussion();
             req.msg_id = (int) task.replyId;

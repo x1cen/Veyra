@@ -4189,6 +4189,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         TLRPC.TL_messageMediaToDo todo = sendMessageParams.todo;
         TLRPC.TL_messageMediaInvoice invoice = sendMessageParams.invoice;
         long peer = sendMessageParams.peer;
+        MessagesController.getInstance(currentAccount).sendPendingReadOnReply(peer);
         String path = sendMessageParams.path;
         MessageObject replyToMsg = sendMessageParams.replyToMsg;
         MessageObject replyToTopMsg = sendMessageParams.replyToTopMsg;
@@ -7757,6 +7758,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     protected void performSendMessageRequest(final TLObject req, final MessageObject msgObj, final String originalPath, DelayedMessage parentMessage, boolean check, DelayedMessage delayedMessage, Object parentObject, HashMap<String, String> params, boolean scheduled) {
+        if (msgObj != null) {
+            MessagesController.getInstance(currentAccount).sendPendingReadOnReply(msgObj.getDialogId());
+        }
         if (req instanceof TLRPC.TL_messages_addPollAnswer) {
             TLRPC.TL_messages_addPollAnswer r = (TLRPC.TL_messages_addPollAnswer) req;
             if (r.answer.input_media instanceof TLRPC.TL_inputMediaUploadedDocument || r.answer.input_media instanceof TLRPC.TL_inputMediaUploadedPhoto) {

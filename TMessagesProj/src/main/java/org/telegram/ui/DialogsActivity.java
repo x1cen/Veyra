@@ -13765,6 +13765,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 presentFragment(new SettingsActivity());
             });
         }
+        io.add(R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings), () -> {
+            presentFragment(new VeyraSettingsActivity());
+        });
 
         if (proxyMenuSubItem != null) {
             proxyMenuSubItem.subtextView.setTextColor(getThemedColor(Theme.key_groupcreate_sectionText));

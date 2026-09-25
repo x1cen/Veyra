@@ -194,6 +194,7 @@ public class ApplicationLoader extends Application {
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
 
         SharedConfig.loadConfig();
+        VeyraConfig.loadConfig();
         SharedPrefsHelper.init(applicationContext);
 
         try {

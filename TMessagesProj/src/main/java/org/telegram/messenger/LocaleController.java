@@ -1483,6 +1483,66 @@ public class LocaleController {
                 return "WEB Proxy";
             }
         }
+        if ("VeyraSettings".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "تنظیمات ویرا";
+                return "Veyra Settings";
+            } catch (Exception ignored) {
+                return "Veyra Settings";
+            }
+        }
+        if ("MessageDetails".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "جزئیات پیام";
+                return "Message Details";
+            } catch (Exception ignored) {
+                return "Message Details";
+            }
+        }
+        if ("ExportAsJson".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "خروجی به فرمت JSON";
+                return "Export as JSON";
+            } catch (Exception ignored) {
+                return "Export as JSON";
+            }
+        }
+        if ("CopyCallback".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "کپی داده کال‌بک";
+                return "Copy Callback Data";
+            } catch (Exception ignored) {
+                return "Copy Callback Data";
+            }
+        }
+        if ("CopyInlineQuery".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "کپی کوئری اینلاین";
+                return "Copy Inline Query";
+            } catch (Exception ignored) {
+                return "Copy Inline Query";
+            }
+        }
+        if ("CopyID".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "کپی شناسه کاربر";
+                return "Copy User ID";
+            } catch (Exception ignored) {
+                return "Copy User ID";
+            }
+        }
         if ("UseProxyWebInfo".equals(key)) {
             try {
                 LocaleInfo info = getCurrentLocaleInfo();

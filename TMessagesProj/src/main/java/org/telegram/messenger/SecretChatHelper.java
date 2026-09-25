@@ -179,6 +179,10 @@ public class SecretChatHelper extends BaseController {
         TLRPC.EncryptedChat existingChat = getMessagesController().getEncryptedChatDB(newChat.id, false);
 
         if (newChat instanceof TLRPC.TL_encryptedChatRequested && existingChat == null) {
+            if (VeyraConfig.blockSecretChat) {
+                declineSecretChat(newChat.id, false);
+                return;
+            }
             long userId = newChat.participant_id;
             if (userId == getUserConfig().getClientUserId()) {
                 userId = newChat.admin_id;

@@ -1218,6 +1218,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_TRANSCRIBE = 30;
     public final static int OPTION_HIDE_SPONSORED_MESSAGE = 31;
     public final static int OPTION_VIEW_IN_TOPIC = 32;
+    public final static int OPTION_MESSAGE_DETAILS = 199;
     public final static int OPTION_ABOUT_REVENUE_SHARING_ADS = 33;
     public final static int OPTION_REPORT_AD = 34;
     public final static int OPTION_REMOVE_ADS = 35;
@@ -1602,6 +1603,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int copy = 10;
     private final static int forward = 11;
     private final static int delete = 12;
+    private final static int message_details = 99;
     private final static int chat_enc_timer = 13;
     private final static int chat_menu_attach = 14;
     private final static int chat_menu_search = -1;
@@ -3719,6 +3721,17 @@ public class ChatActivity extends BaseFragment implements
                         AndroidUtilities.addToClipboard(str);
                         createUndoView();
                         undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
+                    }
+                    clearSelectionMode();
+                } else if (id == message_details) {
+                    for (int a = 0; a < 2; a++) {
+                        if (selectedMessagesIds[a].size() > 0) {
+                            MessageObject msg = messagesDict[a].get(selectedMessagesIds[a].keyAt(0));
+                            if (msg != null) {
+                                presentFragment(new MessageDetailsActivity(msg));
+                                break;
+                            }
+                        }
                     }
                     clearSelectionMode();
                 } else if (id == delete) {
@@ -33744,6 +33757,12 @@ public class ChatActivity extends BaseFragment implements
                 getMediaDataController().addRecentSticker(MediaDataController.TYPE_FAVE, selectedObject, selectedObject.getDocument(), (int) (System.currentTimeMillis() / 1000), true);
                 break;
             }
+            case OPTION_MESSAGE_DETAILS: {
+                if (selectedObject != null) {
+                    presentFragment(new MessageDetailsActivity(selectedObject));
+                }
+                break;
+            }
             case OPTION_COPY_LINK: {
                 TLRPC.TL_channels_exportMessageLink req = new TLRPC.TL_channels_exportMessageLink();
                 if (selectedObject == replyingMessageObject && isComments) {
@@ -39869,24 +39888,58 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didLongPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
-            if (chatMode == MODE_QUICK_REPLIES) return;
-            if (getParentActivity() == null || bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
+            if (chatMode == MODE_QUICK_REPLIES || getParentActivity() == null) return;
+            if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
                     !(button instanceof TLRPC.TL_keyboardButtonSwitchInline) && !(button instanceof TLRPC.TL_keyboardButtonCallback) &&
                     !(button instanceof TLRPC.TL_keyboardButtonGame) && !(button instanceof TLRPC.TL_keyboardButtonUrl) &&
                     !(button instanceof TLRPC.TL_keyboardButtonBuy) && !(button instanceof TLRPC.TL_keyboardButtonUrlAuth) &&
                     !(button instanceof TLRPC.TL_keyboardButtonUserProfile) && !(button instanceof TLRPC.TL_keyboardButtonCopy)) {
                 return;
             }
-            if (button instanceof TLRPC.TL_keyboardButtonCopy) {
-                didLongPressCopyButton(((TLRPC.TL_keyboardButtonCopy) button).copy_text);
-                return;
-            }
-            if (button instanceof TLRPC.TL_keyboardButtonUrl) {
-                openClickableLink(null, button.url, true, cell, cell.getMessageObject(), false);
+
+            if (!org.telegram.messenger.VeyraConfig.disableVibration) {
                 try {
                     cell.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                 } catch (Exception ignore) {}
             }
+
+            Utilities.Callback<String> copyCallback = (text) -> {
+                AndroidUtilities.addToClipboard(text);
+                BulletinFactory.of(ChatActivity.this).createCopyBulletin(formatString(R.string.ExactTextCopied, text)).show();
+            };
+
+            ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
+            if (!TextUtils.isEmpty(button.text)) {
+                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
+            }
+
+            if (button instanceof TLRPC.TL_keyboardButtonUrl) {
+                final String url = ((TLRPC.TL_keyboardButtonUrl) button).url;
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
+                options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, url, true, cell, cell.getMessageObject(), false));
+            } else if (button instanceof TLRPC.TL_keyboardButtonUrlAuth) {
+                final String url = ((TLRPC.TL_keyboardButtonUrlAuth) button).url;
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
+            } else if (button instanceof TLRPC.TL_keyboardButtonCallback) {
+                final String callbackData = AndroidUtilities.getTextOrBase64(((TLRPC.TL_keyboardButtonCallback) button).data);
+                if (!TextUtils.isEmpty(callbackData)) {
+                    options.add(R.drawable.msg_copy, LocaleController.getString("CopyCallback", R.string.CopyCallback), () -> copyCallback.run(callbackData));
+                }
+            } else if (button instanceof TLRPC.TL_keyboardButtonSwitchInline) {
+                final String query = ((TLRPC.TL_keyboardButtonSwitchInline) button).query;
+                if (!TextUtils.isEmpty(query)) {
+                    options.add(R.drawable.msg_copy, LocaleController.getString("CopyInlineQuery", R.string.CopyInlineQuery), () -> copyCallback.run(query));
+                }
+            } else if (button instanceof TLRPC.TL_keyboardButtonUserProfile) {
+                final long userId = ((TLRPC.TL_keyboardButtonUserProfile) button).user_id;
+                options.add(R.drawable.msg_copy, LocaleController.getString("CopyID", R.string.CopyID), () -> copyCallback.run(String.valueOf(userId)));
+            } else if (button instanceof TLRPC.TL_keyboardButtonCopy) {
+                final String copyText = ((TLRPC.TL_keyboardButtonCopy) button).copy_text;
+                if (!TextUtils.isEmpty(copyText)) {
+                    options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(copyText));
+                }
+            }
+            options.show();
         }
 
         @Override
@@ -45801,6 +45854,11 @@ public class ChatActivity extends BaseFragment implements
                         icons.add(R.drawable.msg_report);
                     }
                 }
+                if (selectedObject != null) {
+                    items.add(LocaleController.getString("MessageDetails", R.string.MessageDetails));
+                    options.add(OPTION_MESSAGE_DETAILS);
+                    icons.add(R.drawable.msg_info);
+                }
                 if (message.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat) && (threadMessageObjects == null || !threadMessageObjects.contains(message))) {
                     items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                     options.add(OPTION_DELETE);
@@ -45891,6 +45949,11 @@ public class ChatActivity extends BaseFragment implements
                         options.add(OPTION_CALL);
                         icons.add(R.drawable.msg_callback);
                     }
+                }
+                if (selectedObject != null) {
+                    items.add(LocaleController.getString("MessageDetails", R.string.MessageDetails));
+                    options.add(OPTION_MESSAGE_DETAILS);
+                    icons.add(R.drawable.msg_info);
                 }
                 items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                 options.add(OPTION_DELETE);

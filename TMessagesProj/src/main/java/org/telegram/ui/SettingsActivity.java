@@ -544,7 +544,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         subtitleView.setText(sb);
 
-        versionView.setText(getVersionName());
+        versionView.setText("Veyra " + getVersionName() + "\ngithub.com/x1cen/Veyra");
     }
 
 
@@ -688,6 +688,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
+        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings)));
+        items.add(UItem.asShadow(null));
+
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
         items.add(SettingCell.Factory.of(3, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_privacy, getString(R.string.SettingsPrivacySecurity), getString(R.string.SettingsPrivacySecurityInfo)));
@@ -741,6 +744,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(18, IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom, R.drawable.settings_faq, getString(R.string.TelegramFAQ)));
         items.add(SettingCell.Factory.of(23, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, getString(R.string.TelegramFeatures)));
         items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
+        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "Veyra GitHub", "https://github.com/x1cen/Veyra"));
 
         if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
             items.add(UItem.asShadow(null));
@@ -809,6 +813,15 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             return;
         }
         switch (item.id) {
+            case 100:
+                presentSettingFragment(new VeyraSettingsActivity());
+                break;
+            case 101:
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/x1cen/Veyra"));
+                    getParentActivity().startActivity(intent);
+                } catch (Exception ignore) {}
+                break;
             case 1:
                 presentSettingFragment(new UserInfoActivity());
                 break;
