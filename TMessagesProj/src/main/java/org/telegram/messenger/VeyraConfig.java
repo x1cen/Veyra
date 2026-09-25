@@ -22,6 +22,13 @@ public class VeyraConfig {
     public static boolean blockSecretChat = false;
     // 0 = normal (show online), 1 = hide online (always appear offline), 2 = always appear online
     public static int onlineMode = 0;
+    // Dialog sorting
+    public static boolean sortByUnread = false;
+    public static boolean sortByUnmuted = true;
+    // Disable trending stickers/emoji
+    public static boolean disableTrending = false;
+    // Keep original filename on download
+    public static boolean keepOriginalFilename = false;
 
     public static void loadConfig() {
         if (configLoaded) return;
@@ -41,6 +48,10 @@ public class VeyraConfig {
         ignoreContentRestrictions = preferences.getBoolean("ignoreContentRestrictions", true);
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
         onlineMode = preferences.getInt("onlineMode", 0);
+        sortByUnread = preferences.getBoolean("sortByUnread", false);
+        sortByUnmuted = preferences.getBoolean("sortByUnmuted", true);
+        disableTrending = preferences.getBoolean("disableTrending", false);
+        keepOriginalFilename = preferences.getBoolean("keepOriginalFilename", false);
         configLoaded = true;
     }
 
@@ -106,6 +117,22 @@ public class VeyraConfig {
             preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
         }
         preferences.edit().putInt("onlineMode", val).apply();
+    }
+    public static void setSortByUnread(boolean val) {
+        sortByUnread = val;
+        save("sortByUnread", val);
+    }
+    public static void setSortByUnmuted(boolean val) {
+        sortByUnmuted = val;
+        save("sortByUnmuted", val);
+    }
+    public static void setDisableTrending(boolean val) {
+        disableTrending = val;
+        save("disableTrending", val);
+    }
+    public static void setKeepOriginalFilename(boolean val) {
+        keepOriginalFilename = val;
+        save("keepOriginalFilename", val);
     }
 
     private static void save(String key, boolean val) {

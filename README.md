@@ -35,19 +35,35 @@
 * **Block Incoming Secret Chats:** Auto-declines secret chat initiation requests from other users.
 
 ### ⚙️ Power Controls & Interaction
-* **Message Details Inspector:** Inspect any message to view Message ID, Datacenter (DC), Sender ID, Forward details, exact media bytes, timestamps, and export complete message metadata as structured JSON.
+* **Message Details Inspector:** Inspect any message to view Message ID, Datacenter (DC), Sender ID, Forward details, exact media bytes, timestamps, and export complete message metadata as structured JSON directly to the `Downloads/Veyra/` directory with instant system sharing.
+* **Bulk Message Operations:** Bulk forward multiple selected messages directly to "Saved Messages" or unpin multiple pinned messages simultaneously from the action mode dropdown.
 * **Rich Inline Button Actions:** Long-press any bot inline button to copy callback data (`callback_data` in UTF-8 or Base64), inline queries, user IDs, or URLs.
+* **Add @Name on Username Long-Press:** Quickly append `@username` mention directly into the chat input bar from the long-press menu.
 * **Call Confirmation Dialog:** Prompts for user confirmation before launching VoIP voice or video calls to prevent accidental calls.
 * **External Link Confirmation:** Safeguards against unvetted URLs by confirming external link launches before opening in a browser.
 * **Automatic Tracker Stripper (`Clean URLs`):** Automatically cleans marketing and analytics trackers (`utm_*`, `fbclid`, `gclid`, `si`, `igsh`) when copying links.
 * **Skip 5-Second Undo Toast:** Executes delete, clear, or archive actions instantly without waiting on the 5-second countdown timer.
 * **Disable Vibration:** Global switch to completely turn off all haptic feedbacks and vibrations.
 * **Disable Link Previews by Default:** Stops automatic webpage search when drafting links to maintain privacy.
+* **Custom Storage & Cache Path:** Direct access to internal storage and external SD card cache configuration.
+
+### 👥 Group Moderation & Administration
+* **Delete All Messages in Group:** Purge entire group chat histories with a single confirmation dialog (available for group creators and administrators).
+* **Upgrade Group to Supergroup:** Convert standard basic groups directly into supergroups to unlock megagroup capacities, admin roles, and public links.
+* **Auto-Delete Timer for Private Chats & Groups:** Configure message auto-deletion countdown timers seamlessly across 1-on-1 chats and private groups.
+
+### 📱 QR Code Integration & Sharing
+* **Login via QR Code:** Log into your Telegram account by generating a QR code on the phone screen for another client to scan (`TL_auth_exportLoginToken`).
+* **Direct QR Login Confirmation:** Instant scan and approval of login QR codes (`TL_auth_acceptLoginToken`).
+* **Share via QR Code:** Export and share sticker packs, channels, groups, and proxies as beautiful native QR codes with a single tap.
 
 ### 🌐 Network & Anti-Censorship
 * **Native WEB Proxy Tunnel:** Full Web Proxy transport implementation based on an isolated background Android System WebView session, enabling bypass of aggressive DPI and network restrictions without native C++ overhead.
 
 ### 🎨 UI & Regional Features
+* **Dialog Priority Sorting:** Sort and prioritize unread chats or unmuted dialogs dynamically at the top of your chat list.
+* **Disable Trending Stickers:** Hide the trending and featured sticker suggestions tab from the sticker picker.
+* **Unblock All / Deleted Users:** Batch unblock all blocked users or specifically filter and unblock deleted accounts from the Privacy settings.
 * **Native Persian Solar Calendar (گاه‌شمار خورشیدی):** Automatically displays dates and numbers using the Persian Solar Hijri (Shamsi) calendar when Persian language (`fa`) is selected.
 * **Telegram ID & DC in Profiles:** Displays clickable User ID, Group/Channel ID, and Datacenter (DC) inside profile pages with one-tap copy.
 * **Permanent Ad Suppression:** Completely disables sponsored channel posts and sponsored search ads without requiring a Telegram Premium subscription.
@@ -122,7 +138,7 @@ The enhancements in Veyra are modularized to preserve upstream stability:
 
 4. The built package will be located at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.2.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.3.apk
    ```
 
 ---

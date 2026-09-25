@@ -1456,6 +1456,14 @@ public class MessagesController extends BaseController implements NotificationCe
         MediaDataController mediaDataController = getMediaDataController();
         long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
         long date2 = DialogObject.getLastMessageOrDraftDate(dialog2, mediaDataController.getDraft(dialog2.id, 0));
+        // Veyra: optional sort by unread/unmuted priority
+        if (org.telegram.messenger.VeyraConfig.sortByUnread || org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+            int score1 = dialogSortScore(dialog1);
+            int score2 = dialogSortScore(dialog2);
+            if (score1 != score2) {
+                return score2 - score1;
+            }
+        }
         if (date1 < date2) {
             return 1;
         } else if (date1 > date2) {
@@ -1463,6 +1471,13 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         return 0;
     };
+
+    private int dialogSortScore(TLRPC.Dialog d) {
+        int score = 0;
+        if (org.telegram.messenger.VeyraConfig.sortByUnread && d.unread_count > 0) score += 2;
+        if (org.telegram.messenger.VeyraConfig.sortByUnmuted && !isDialogMuted(d.id, 0)) score += 1;
+        return score;
+    }
 
     private Comparator<CommunityPeerDialog> communityPeerDialogComparator = (peer1, peer2) -> {
         if (peer1.dialog != null && peer2.dialog != null) {
@@ -8938,6 +8953,47 @@ public class MessagesController extends BaseController implements NotificationCe
                 getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
             }
         }));
+    }
+
+    // Veyra: unblock all (or just deleted-account) blocked users
+    public void unblockAllUsers(boolean isDeleted, boolean retry) {
+        if (totalBlockedCount == 0) {
+            return;
+        }
+        if (blockePeers.size() == 0) {
+            getBlockedPeers(true);
+        }
+        LongSparseIntArray blockedCopy = blockePeers.clone();
+        if (blockedCopy.size() == 0) {
+            return;
+        }
+        for (int index = 0; index < blockedCopy.size(); index++) {
+            final long peerId = blockedCopy.keyAt(index);
+            if (isDeleted) {
+                if (peerId > 0) {
+                    TLRPC.User user = getUser(peerId);
+                    if (!UserObject.isDeleted(user)) {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+            TLRPC.TL_contacts_unblock req = new TLRPC.TL_contacts_unblock();
+            req.id = getInputPeer(peerId);
+            getConnectionsManager().sendRequest(req, (response, error) -> {
+                totalBlockedCount--;
+                blockePeers.delete(peerId);
+                AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad));
+            });
+            try {
+                Thread.sleep(233);
+            } catch (InterruptedException ignored) {
+            }
+        }
+        if (retry) {
+            unblockAllUsers(isDeleted, false);
+        }
     }
 
     public void deleteUserPhoto(TLRPC.InputPhoto photo) {
@@ -18859,6 +18915,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                     arrayList2.addAll(update.sent_messages);
                 }
+            } else if (baseUpdate instanceof TL_update.TL_updateLoginToken) {
+                getNotificationCenter().postNotificationName(NotificationCenter.updateLoginToken);
             } else if (baseUpdate instanceof TL_update.TL_updateUserTyping || baseUpdate instanceof TL_update.TL_updateChatUserTyping || baseUpdate instanceof TL_update.TL_updateChannelUserTyping) {
                 long userId;
                 long chatId;

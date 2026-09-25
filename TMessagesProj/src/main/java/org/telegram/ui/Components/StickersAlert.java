@@ -100,6 +100,7 @@ import org.telegram.ui.PhotoViewer;
 import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.ui.ProfileActivity;
 import org.telegram.ui.Stories.recorder.StoryEntry;
+import org.telegram.ui.Components.QRCodeBottomSheet;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -1121,6 +1122,7 @@ public class StickersAlert extends BottomSheet implements NotificationCenter.Not
         containerView.addView(optionsButton, LayoutHelper.createFrame(40, 40, Gravity.TOP | Gravity.RIGHT, 0, 5, 5, 0));
         optionsButton.addSubItem(1, R.drawable.msg_share, LocaleController.getString(R.string.StickersShare));
         optionsButton.addSubItem(2, R.drawable.msg_link, LocaleController.getString(R.string.CopyLink));
+        optionsButton.addSubItem(6, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
 
         optionsButton.setOnClickListener(v -> {
             checkOptions();
@@ -1422,6 +1424,8 @@ public class StickersAlert extends BottomSheet implements NotificationCenter.Not
                 dismiss();
                 MediaDataController.getInstance(currentAccount).toggleStickerSet(getContext(), stickerSet, 1, parentFragment, false, false);
             });
+        } else if (id == 6) {
+            new QRCodeBottomSheet(getContext(), LocaleController.getString(R.string.GetQRCode), stickersUrl, null, true, resourcesProvider).show();
         }
     }
 

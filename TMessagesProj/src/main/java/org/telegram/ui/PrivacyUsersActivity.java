@@ -27,6 +27,8 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -60,6 +62,10 @@ public class PrivacyUsersActivity extends BaseFragment implements NotificationCe
     private int usersEndRow;
     private int usersDetailRow;
     private int deleteAllRow;
+
+    // Veyra: unblock all users menu ids
+    private static final int veyra_unblock_all = 101;
+    private static final int veyra_unblock_deleted = 102;
 
     private boolean blockedUsersActivity;
 
@@ -151,9 +157,45 @@ public class PrivacyUsersActivity extends BaseFragment implements NotificationCe
             public void onItemClick(int id) {
                 if (id == -1) {
                     finishFragment();
+                } else if (id == veyra_unblock_all) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                    builder.setTitle("Unblock All");
+                    if (getMessagesController().totalBlockedCount > 0) {
+                        builder.setMessage("Unblock all users on your blocklist?");
+                        builder.setPositiveButton(LocaleController.getString(R.string.Unblock), (dialog, which) -> {
+                            new Thread(() -> getMessagesController().unblockAllUsers(false, true)).start();
+                        });
+                        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                    } else {
+                        builder.setMessage(LocaleController.getString(R.string.NoBlocked));
+                        builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
+                    }
+                    showDialog(builder.create());
+                } else if (id == veyra_unblock_deleted) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                    builder.setTitle("Unblock Deleted Accounts");
+                    if (getMessagesController().totalBlockedCount > 0) {
+                        builder.setMessage("Unblock only deleted accounts on your blocklist?");
+                        builder.setPositiveButton("Unblock", (dialog, which) -> {
+                            new Thread(() -> getMessagesController().unblockAllUsers(true, true)).start();
+                        });
+                        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                    } else {
+                        builder.setMessage(LocaleController.getString(R.string.NoBlocked));
+                        builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
+                    }
+                    showDialog(builder.create());
                 }
             }
         });
+
+        if (blockedUsersActivity) {
+            ActionBarMenu menu = actionBar.createMenu();
+            ActionBarMenuItem otherItem = menu.addItem(0, R.drawable.ic_ab_other);
+            otherItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+            otherItem.addSubItem(veyra_unblock_all, "Unblock All");
+            otherItem.addSubItem(veyra_unblock_deleted, "Unblock Deleted Accounts");
+        }
 
         fragmentView = new FrameLayout(context);
         FrameLayout frameLayout = (FrameLayout) fragmentView;

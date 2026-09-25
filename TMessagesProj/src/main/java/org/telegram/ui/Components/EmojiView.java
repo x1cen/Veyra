@@ -5546,12 +5546,14 @@ public class EmojiView extends FrameLayout implements
             trendingAdapter.notifyDataSetChanged();
         }
         if (!featured.isEmpty() && (featuredStickerSets.isEmpty() || preferences.getLong("featured_hidden", 0) == featured.get(0).set.id)) {
-            final int id = mediaDataController.getUnreadStickerSets().isEmpty() ? 2 : 3;
-            final StickerTabView trendingStickersTabView = stickersTab.addStickerIconTab(id, stickerIcons[id]);
-            trendingStickersTabView.textView.setText(getString(R.string.FeaturedStickersShort));
-            trendingStickersTabView.setContentDescription(getString(R.string.FeaturedStickers));
-            trendingTabNum = stickersTabOffset;
-            stickersTabOffset++;
+            if (!org.telegram.messenger.VeyraConfig.disableTrending) {
+                final int id = mediaDataController.getUnreadStickerSets().isEmpty() ? 2 : 3;
+                final StickerTabView trendingStickersTabView = stickersTab.addStickerIconTab(id, stickerIcons[id]);
+                trendingStickersTabView.textView.setText(getString(R.string.FeaturedStickersShort));
+                trendingStickersTabView.setContentDescription(getString(R.string.FeaturedStickers));
+                trendingTabNum = stickersTabOffset;
+                stickersTabOffset++;
+            }
         }
 
         if (!favouriteStickers.isEmpty()) {

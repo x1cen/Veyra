@@ -14,7 +14,7 @@ on:
             veyra-version:
                 description: 'Veyra version'
                 type: string
-                default: '1.0.2'
+                default: '1.0.3'
             arch:
                 description: 'Target Architecture (arm64-v8a is fastest for phones)'
                 type: choice
@@ -26,7 +26,7 @@ on:
             veyra-changes:
                 description: 'Changelog / Release notes'
                 type: string
-                default: 'Veyra Stable Release'
+                default: 'Veyra Release'
             multi-pass:
                 description: 'Signing mode'
                 type: choice
@@ -42,7 +42,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.2' || '0.1.1-alpha') }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta1') }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
@@ -167,7 +167,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.2' || '0.1.1-alpha') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta1') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -191,9 +191,9 @@ jobs:
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.2 — Stable Release. Disables Reply button on deleted messages in action mode, adds optional default-enabled 5s undo skip, and online status controls.' || 'Veyra dev build.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.3 — Stable Release. Added bulk message actions, group moderation tools, QR code logins and sharing, custom cache and dialog sorting.' || 'Veyra v1.0.3-beta1 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.2' || '0.1.1-alpha') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.2' || '0.1.1-alpha') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.2' || '0.1.1-alpha') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta1') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta1') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta1') }}

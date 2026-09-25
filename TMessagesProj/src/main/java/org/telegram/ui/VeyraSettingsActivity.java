@@ -53,6 +53,7 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int disableUndoRow;
     private int disableLinkPreviewRow;
     private int disableVibrationRow;
+    private int customCacheDirRow;
     private int controlsSectionRow;
 
     // UI section
@@ -60,6 +61,9 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int persianCalendarRow;
     private int showProfileIdRow;
     private int bypassRestrictionsRow;
+    private int sortByUnreadRow;
+    private int sortByUnmutedRow;
+    private int disableTrendingRow;
     private int noAdsRow;
     private int unlimitedLimitsRow;
     private int uiSectionRow;
@@ -96,12 +100,16 @@ public class VeyraSettingsActivity extends BaseFragment {
         disableUndoRow = rowCount++;
         disableLinkPreviewRow = rowCount++;
         disableVibrationRow = rowCount++;
+        customCacheDirRow = rowCount++;
         controlsSectionRow = rowCount++;
 
         uiHeaderRow = rowCount++;
         persianCalendarRow = rowCount++;
         showProfileIdRow = rowCount++;
         bypassRestrictionsRow = rowCount++;
+        sortByUnreadRow = rowCount++;
+        sortByUnmutedRow = rowCount++;
+        disableTrendingRow = rowCount++;
         noAdsRow = rowCount++;
         unlimitedLimitsRow = rowCount++;
         uiSectionRow = rowCount++;
@@ -190,6 +198,8 @@ public class VeyraSettingsActivity extends BaseFragment {
             } else if (position == disableVibrationRow) {
                 VeyraConfig.setDisableVibration(!VeyraConfig.disableVibration);
                 ((TextCheckCell) view).setChecked(VeyraConfig.disableVibration);
+            } else if (position == customCacheDirRow) {
+                presentFragment(new DataSettingsActivity());
             } else if (position == persianCalendarRow) {
                 VeyraConfig.setPersianCalendar(!VeyraConfig.persianCalendar);
                 ((TextCheckCell) view).setChecked(VeyraConfig.persianCalendar);
@@ -199,6 +209,17 @@ public class VeyraSettingsActivity extends BaseFragment {
             } else if (position == bypassRestrictionsRow) {
                 VeyraConfig.setIgnoreContentRestrictions(!VeyraConfig.ignoreContentRestrictions);
                 ((TextCheckCell) view).setChecked(VeyraConfig.ignoreContentRestrictions);
+            } else if (position == sortByUnreadRow) {
+                VeyraConfig.setSortByUnread(!VeyraConfig.sortByUnread);
+                ((TextCheckCell) view).setChecked(VeyraConfig.sortByUnread);
+                MessagesController.getInstance(currentAccount).sortDialogs(null);
+            } else if (position == sortByUnmutedRow) {
+                VeyraConfig.setSortByUnmuted(!VeyraConfig.sortByUnmuted);
+                ((TextCheckCell) view).setChecked(VeyraConfig.sortByUnmuted);
+                MessagesController.getInstance(currentAccount).sortDialogs(null);
+            } else if (position == disableTrendingRow) {
+                VeyraConfig.setDisableTrending(!VeyraConfig.disableTrending);
+                ((TextCheckCell) view).setChecked(VeyraConfig.disableTrending);
             } else if (position == githubRow) {
                 Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
             } else if (position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
@@ -366,6 +387,24 @@ public class VeyraSettingsActivity extends BaseFragment {
                                 isFarsi ? "نمایش کانال‌ها و محتوای فیلترشده مخصوص اندروید" : "View channels and content restricted only on Android",
                                 VeyraConfig.ignoreContentRestrictions, true, false
                         );
+                    } else if (position == sortByUnreadRow) {
+                        checkCell.setTextAndValueAndCheck(
+                                isFarsi ? "اولویت خوانده‌نشده‌ها در لیست" : "Prioritize Unread Chats",
+                                isFarsi ? "نمایش گفتگوهای خوانده‌نشده در بالای لیست" : "Sort unread dialogs to the top of the chat list",
+                                VeyraConfig.sortByUnread, true, true
+                        );
+                    } else if (position == sortByUnmutedRow) {
+                        checkCell.setTextAndValueAndCheck(
+                                isFarsi ? "اولویت گفتگوهای بی‌صدا نشده" : "Prioritize Unmuted Chats",
+                                isFarsi ? "نمایش گفتگوهایی که بی‌صدا نیستند در بالای لیست" : "Sort non-muted dialogs above muted ones",
+                                VeyraConfig.sortByUnmuted, true, true
+                        );
+                    } else if (position == disableTrendingRow) {
+                        checkCell.setTextAndValueAndCheck(
+                                isFarsi ? "غیرفعال کردن استیکرهای ترند" : "Disable Trending Stickers",
+                                isFarsi ? "حذف تب استیکرهای ترند/پیشنهادی از صفحه استیکرها" : "Hide the trending stickers tab",
+                                VeyraConfig.disableTrending, true, false
+                        );
                     }
                     break;
                 }
@@ -403,8 +442,14 @@ public class VeyraSettingsActivity extends BaseFragment {
                     } else if (position == versionRow) {
                         detailCell.setTextAndValue(
                                 isFarsi ? "نسخه Veyra" : "Veyra Version",
-                                "1.0.2 (arm64-v8a)",
+                                "1.0.3 (arm64-v8a)",
                                 true
+                        );
+                    } else if (position == customCacheDirRow) {
+                        detailCell.setTextAndValue(
+                                isFarsi ? "مسیر ذخیره‌سازی و کش" : "Storage & Cache Path",
+                                isFarsi ? "مدیریت حافظه کش و انتخاب کارت SD" : "Internal / SD Card storage path",
+                                false
                         );
                     }
                     break;
@@ -423,11 +468,13 @@ public class VeyraSettingsActivity extends BaseFragment {
                     position == confirmLinkRow || position == cleanUrlsRow ||
                     position == disableUndoRow || position == disableLinkPreviewRow ||
                     position == disableVibrationRow || position == persianCalendarRow ||
-                    position == showProfileIdRow || position == bypassRestrictionsRow) {
+                    position == showProfileIdRow || position == bypassRestrictionsRow ||
+                    position == sortByUnreadRow || position == sortByUnmutedRow ||
+                    position == disableTrendingRow) {
                 return 2;
             } else if (position == githubRow) {
                 return 3;
-            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
+            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow || position == customCacheDirRow) {
                 return 4;
             } else {
                 return 0;

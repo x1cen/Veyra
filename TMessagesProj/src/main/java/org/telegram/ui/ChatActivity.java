@@ -1666,6 +1666,11 @@ public class ChatActivity extends BaseFragment implements
 
     private final static int chat_menu_topic_create = 73;
 
+    // Veyra: bulk actions on multi-selected messages
+    private final static int veyra_save_to_saved = 80;
+    private final static int veyra_unpin_selected = 81;
+    private final static int veyra_action_mode_other = 82;
+
     private final static int id_chat_compose_panel = 1000;
 
     RecyclerListView.OnItemLongClickListenerExtended onItemLongClickListener = new RecyclerListView.OnItemLongClickListenerExtended() {
@@ -3739,6 +3744,52 @@ public class ChatActivity extends BaseFragment implements
                         return;
                     }
                     createDeleteMessagesAlert(null, null);
+                } else if (id == veyra_save_to_saved) {
+                    // Veyra: forward all selected messages to Saved Messages
+                    ArrayList<MessageObject> veyraSelected = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        ArrayList<Integer> ids = new ArrayList<>();
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            ids.add(selectedMessagesIds[a].keyAt(b));
+                        }
+                        Collections.sort(ids);
+                        for (int b = 0; b < ids.size(); b++) {
+                            MessageObject messageObject = selectedMessagesIds[a].get(ids.get(b));
+                            if (messageObject != null) {
+                                veyraSelected.add(messageObject);
+                            }
+                        }
+                    }
+                    if (!veyraSelected.isEmpty()) {
+                        long savedMessagesPeer = getUserConfig().getClientUserId();
+                        getSendMessagesHelper().sendMessage(veyraSelected, savedMessagesPeer, false, false, true, 0, 0);
+                        if (undoView != null) {
+                            undoView.showWithAction(savedMessagesPeer, UndoView.ACTION_FWD_MESSAGES, veyraSelected.size());
+                        }
+                    }
+                    clearSelectionMode();
+                } else if (id == veyra_unpin_selected) {
+                    // Veyra: unpin every currently selected & pinned message
+                    ArrayList<MessageObject> veyraSelected = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
+                            if (messageObject != null) {
+                                veyraSelected.add(messageObject);
+                            }
+                        }
+                    }
+                    int veyraUnpinnedCount = 0;
+                    for (MessageObject messageObject : veyraSelected) {
+                        if (messageObject.messageOwner != null && messageObject.messageOwner.pinned) {
+                            getMessagesController().pinMessage(currentChat, currentUser, messageObject.getId(), true, false, false);
+                            veyraUnpinnedCount++;
+                        }
+                    }
+                    if (veyraUnpinnedCount > 0 && pinBulletin == null) {
+                        pinBulletin = BulletinFactory.createUnpinMessageBulletin(this, null, null, themeDelegate).show();
+                    }
+                    clearSelectionMode();
                 } else if (id == forward) {
                     openForward(true);
                 } else if (id == share) {
@@ -4416,6 +4467,9 @@ public class ChatActivity extends BaseFragment implements
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
                     LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
+            }
+            if (!isTopic && (currentUser != null && !currentUser.bot && !currentUser.self || (currentChat != null && (!ChatObject.isChannel(currentChat) || (chatInfo != null && chatInfo.can_delete_channel))))) {
+                headerItem.lazilyAddSubItem(auto_delete_timer, R.drawable.msg_autodelete, LocaleController.getString(R.string.AutoDeletePopupTitle));
             }
             boolean addedSettings = false;
             if (!isTopic) {
@@ -10253,6 +10307,11 @@ public class ChatActivity extends BaseFragment implements
             }
             actionModeViews.add(actionMode.addItemWithWidth(share, R.drawable.msg_shareout, dp(48), LocaleController.getString(R.string.ShareFile)));
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(48), LocaleController.getString(R.string.Delete)));
+            // Veyra: "more" menu with bulk unpin / save-to-saved for multi-selection
+            ActionBarMenuItem veyraOtherItem = actionMode.addItemWithWidth(veyra_action_mode_other, R.drawable.ic_ab_other, dp(48));
+            veyraOtherItem.addSubItem(veyra_save_to_saved, R.drawable.msg_saved, "Save to Saved Messages");
+            veyraOtherItem.addSubItem(veyra_unpin_selected, R.drawable.msg_unpin, "Unpin Selected");
+            actionModeViews.add(veyraOtherItem);
         } else {
             actionModeViews.add(actionMode.addItemWithWidth(edit, R.drawable.msg_edit, dp(48), LocaleController.getString(R.string.Edit)));
             actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(48), LocaleController.getString(R.string.AddToFavorites)));
@@ -44484,6 +44543,13 @@ public class ChatActivity extends BaseFragment implements
                 dialog.dismiss();
                 AndroidUtilities.addToClipboard("@" + username);
                 BulletinFactory.of(ChatActivity.this).createCopyBulletin(getString(R.string.UsernameCopied)).show();
+            });
+            // Veyra: quick-insert "@username" into the chat input field
+            options.add(R.drawable.msg_reply, "Add @" + username, () -> {
+                dialog.dismiss();
+                if (chatActivityEnterView != null) {
+                    chatActivityEnterView.setFieldText("@" + username + " ");
+                }
             });
             if (selling) {
                 options.add(R.drawable.outline_gram_24, getString(R.string.BuyUsernameOnFragment), () -> {

@@ -193,11 +193,81 @@ public class MessageDetailsActivity extends BaseFragment {
                             json.put("channel_id", messageObject.messageOwner.peer_id.channel_id);
                             json.put("chat_id", messageObject.messageOwner.peer_id.chat_id);
                         }
+                        if (fromUser != null) {
+                            JSONObject sender = new JSONObject();
+                            sender.put("id", fromUser.id);
+                            sender.put("first_name", fromUser.first_name != null ? fromUser.first_name : "");
+                            sender.put("last_name", fromUser.last_name != null ? fromUser.last_name : "");
+                            sender.put("username", fromUser.username != null ? fromUser.username : "");
+                            json.put("sender", sender);
+                        }
+                        if (fromChat != null) {
+                            JSONObject chat = new JSONObject();
+                            chat.put("id", fromChat.id);
+                            chat.put("title", fromChat.title != null ? fromChat.title : "");
+                            chat.put("username", fromChat.username != null ? fromChat.username : "");
+                            json.put("chat", chat);
+                        }
+                        if (messageObject.messageOwner.edit_date != 0) {
+                            json.put("edit_date", messageObject.messageOwner.edit_date);
+                        }
+                        if (messageObject.messageOwner.views > 0) {
+                            json.put("views", messageObject.messageOwner.views);
+                        }
+                        if (messageObject.messageOwner.forwards > 0) {
+                            json.put("forwards", messageObject.messageOwner.forwards);
+                        }
+                        if (!TextUtils.isEmpty(fileName)) {
+                            json.put("file_name", fileName);
+                        }
+                        if (messageObject.getSize() > 0) {
+                            json.put("file_size", messageObject.getSize());
+                        }
                     }
-                    AndroidUtilities.addToClipboard(json.toString(2));
-                    BulletinFactory.of(this).createCopyBulletin(LocaleController.getString(R.string.TextCopied)).show();
+                    String jsonStr = json.toString(2);
+
+                    // Save to Downloads
+                    String outFileName = "veyra_msg_" + (messageObject != null ? messageObject.messageOwner.id : "0") + ".json";
+                    java.io.File downloadsDir;
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        downloadsDir = getParentActivity().getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);
+                    } else {
+                        downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                    }
+                    if (downloadsDir != null && !downloadsDir.exists()) downloadsDir.mkdirs();
+                    java.io.File outFile = new java.io.File(downloadsDir, outFileName);
+                    try (java.io.FileWriter fw = new java.io.FileWriter(outFile)) {
+                        fw.write(jsonStr);
+                    }
+
+                    // Share via intent
+                    Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                        getParentActivity(),
+                        ApplicationLoader.getApplicationId() + ".provider",
+                        outFile
+                    );
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("application/json");
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getParentActivity().startActivity(Intent.createChooser(shareIntent, "Share JSON"));
+
+                    BulletinFactory.of(this).createSimpleBulletin(
+                        org.telegram.messenger.R.raw.ic_done,
+                        "Saved to Downloads: " + outFileName
+                    ).show();
                 } catch (Exception e) {
                     FileLog.e(e);
+                    // Fallback: copy to clipboard
+                    try {
+                        JSONObject json = new JSONObject();
+                        if (messageObject != null && messageObject.messageOwner != null) {
+                            json.put("id", messageObject.messageOwner.id);
+                            json.put("message", messageObject.messageOwner.message);
+                        }
+                        AndroidUtilities.addToClipboard(json.toString(2));
+                        BulletinFactory.of(this).createCopyBulletin(LocaleController.getString(R.string.TextCopied)).show();
+                    } catch (Exception ignored) {}
                 }
             }
         });

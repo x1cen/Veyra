@@ -67,6 +67,7 @@ import android.text.style.ImageSpan;
 import android.text.style.ReplacementSpan;
 import android.util.Base64;
 import android.util.TypedValue;
+import org.telegram.ui.Components.QRCodeBottomSheet;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -347,6 +348,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     private ImageView proxyButtonView;
     private ProxyDrawable proxyDrawable;
 
+    // Veyra: QR Login
+    private ImageView qrLoginButtonView;
+    private TLRPC.TL_auth_exportLoginToken exportLoginTokenRequest;
+    private AlertDialog exportLoginTokenProgress;
+    private QRCodeBottomSheet exportLoginTokenDialog;
+
     // Open animation stuff
     private LinearLayout keyboardLinearLayout;
     private FrameLayout slideViewsContainer;
@@ -515,6 +522,15 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
         getNotificationCenter().removeObserver(this, NotificationCenter.didUpdateConnectionState);
         getNotificationCenter().removeObserver(this, NotificationCenter.newSuggestionsAvailable);
+        getNotificationCenter().removeObserver(this, NotificationCenter.updateLoginToken);
+        if (exportLoginTokenDialog != null && exportLoginTokenDialog.isShowing()) {
+            exportLoginTokenDialog.dismiss();
+            exportLoginTokenDialog = null;
+        }
+        if (exportLoginTokenProgress != null) {
+            exportLoginTokenProgress.dismiss();
+            exportLoginTokenProgress = null;
+        }
     }
 
     @Override
@@ -572,6 +588,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
                 marginLayoutParams = (MarginLayoutParams) proxyButtonView.getLayoutParams();
                 marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
+
+                if (qrLoginButtonView != null) {
+                    marginLayoutParams = (MarginLayoutParams) qrLoginButtonView.getLayoutParams();
+                    marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
+                }
 
                 marginLayoutParams = (MarginLayoutParams) radialProgressView.getLayoutParams();
                 marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
@@ -761,6 +782,18 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         proxyButtonView.setVisibility(View.GONE);
         sizeNotifierFrameLayout.addView(proxyButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 16, 16));
         updateProxyButton(false, true);
+
+        qrLoginButtonView = new ImageView(context);
+        qrLoginButtonView.setImageResource(R.drawable.msg_qrcode);
+        qrLoginButtonView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
+        qrLoginButtonView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
+        qrLoginButtonView.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+        qrLoginButtonView.setContentDescription(LocaleController.getString(R.string.AuthAnotherClient));
+        qrLoginButtonView.setOnClickListener(v -> {
+            getConnectionsManager().cleanup(false);
+            regenerateLoginToken(false);
+        });
+        sizeNotifierFrameLayout.addView(qrLoginButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 56, 16));
 
         radialProgressView = new RadialProgressView(context);
         radialProgressView.setSize(AndroidUtilities.dp(20));
@@ -8635,6 +8668,134 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (emailChangeIsSuggestion && !getMessagesController().hasSetupEmailSuggestion()) {
                 finishFragment();
             }
+        } else if (id == NotificationCenter.updateLoginToken) {
+            regenerateLoginToken(false);
+        }
+    }
+
+    private void regenerateLoginToken(boolean refresh) {
+        getNotificationCenter().removeObserver(this, NotificationCenter.updateLoginToken);
+        if (getParentActivity() == null || isFinished) return;
+        if (exportLoginTokenDialog != null && exportLoginTokenDialog.isShowing()) {
+            exportLoginTokenDialog.dismiss();
+        } else if (refresh) {
+            return;
+        }
+        exportLoginTokenProgress = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+        exportLoginTokenProgress.setCanCancel(true);
+        exportLoginTokenProgress.show();
+        if (exportLoginTokenRequest == null) {
+            exportLoginTokenRequest = new TLRPC.TL_auth_exportLoginToken();
+            exportLoginTokenRequest.api_id = BuildVars.APP_ID;
+            exportLoginTokenRequest.api_hash = BuildVars.APP_HASH;
+            for (int a : SharedConfig.activeAccounts) {
+                UserConfig userConfig = UserConfig.getInstance(a);
+                if (!userConfig.isClientActivated()) {
+                    continue;
+                }
+                exportLoginTokenRequest.except_ids.add(userConfig.clientUserId);
+            }
+        }
+        getNotificationCenter().addObserver(this, NotificationCenter.updateLoginToken);
+        getConnectionsManager().sendRequest(exportLoginTokenRequest, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            if (getParentActivity() == null) return;
+            try {
+                if (exportLoginTokenProgress != null) {
+                    exportLoginTokenProgress.dismiss();
+                }
+            } catch (Exception ignore) {
+            }
+            if (response instanceof TLRPC.TL_auth_loginToken) {
+                byte[] tokenBytes = ((TLRPC.TL_auth_loginToken) response).token;
+                String tokenStr = Base64.encodeToString(tokenBytes, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+                String qrUrl = "tg://login?token=" + tokenStr;
+                exportLoginTokenDialog = new QRCodeBottomSheet(getParentActivity(), LocaleController.getString(R.string.AuthAnotherClient), qrUrl, LocaleController.getString(R.string.AuthAnotherClientUrl), false);
+                exportLoginTokenDialog.show();
+                int delay = (int) (((TLRPC.TL_auth_loginToken) response).expires - System.currentTimeMillis() / 1000);
+                if (delay < 0 || delay > 20) delay = 20;
+                AndroidUtilities.runOnUIThread(() -> regenerateLoginToken(true), delay * 1000L);
+            } else if (response instanceof TLRPC.TL_auth_loginTokenMigrateTo) {
+                checkMigrateTo((TLRPC.TL_auth_loginTokenMigrateTo) response);
+            } else if (response instanceof TLRPC.TL_auth_loginTokenSuccess) {
+                processLoginByTokenFinish((TLRPC.TL_auth_loginTokenSuccess) response);
+            } else if (error != null) {
+                processLoginTokenError(error);
+            }
+        }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized);
+    }
+
+    private void checkMigrateTo(TLRPC.TL_auth_loginTokenMigrateTo response) {
+        getNotificationCenter().removeObserver(this, NotificationCenter.updateLoginToken);
+        ConnectionsManager.getInstance(currentAccount).setDefaultDatacenterId(response.dc_id);
+        if (exportLoginTokenProgress != null) {
+            exportLoginTokenProgress.show();
+        }
+        TLRPC.TL_auth_importLoginToken request = new TLRPC.TL_auth_importLoginToken();
+        request.token = response.token;
+        getConnectionsManager().sendRequest(request, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {
+            if (exportLoginTokenProgress != null) {
+                try {
+                    exportLoginTokenProgress.dismiss();
+                } catch (Exception ignore) {}
+            }
+            if (error1 != null) {
+                processLoginTokenError(error1);
+            } else if (response1 instanceof TLRPC.TL_auth_loginTokenSuccess) {
+                processLoginByTokenFinish((TLRPC.TL_auth_loginTokenSuccess) response1);
+            }
+        }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized);
+    }
+
+    private void processLoginTokenError(TLRPC.TL_error error) {
+        if (error.text != null && error.text.contains("SESSION_PASSWORD_NEEDED")) {
+            if (exportLoginTokenProgress != null) {
+                exportLoginTokenProgress.show();
+            }
+            TL_account.getPassword req2 = new TL_account.getPassword();
+            ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {
+                if (exportLoginTokenProgress != null) {
+                    try {
+                        exportLoginTokenProgress.dismiss();
+                    } catch (Exception ignore) {}
+                }
+                showDoneButton(false, true);
+                if (error1 == null) {
+                    TL_account.Password password = (TL_account.Password) response1;
+                    if (!TwoStepVerificationActivity.canHandleCurrentPassword(password, true)) {
+                        AlertsCreator.showUpdateAppAlert(getParentActivity(), LocaleController.getString(R.string.UpdateAppAlert), true);
+                        return;
+                    }
+                    Bundle bundle = new Bundle();
+                    SerializedData data = new SerializedData(password.getObjectSize());
+                    password.serializeToStream(data);
+                    bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
+                    setPage(LoginActivity.VIEW_PASSWORD, true, bundle, false);
+                } else {
+                    needShowAlert(LocaleController.getString(R.string.AppName), error1.text);
+                }
+            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+        } else {
+            exportLoginTokenRequest = null;
+            if (error.text != null && !error.text.contains("CONNECTION_NOT_INITED")) {
+                regenerateLoginToken(false);
+            }
+        }
+    }
+
+    private void processLoginByTokenFinish(TLRPC.TL_auth_loginTokenSuccess authLoginTokenSuccess) {
+        getNotificationCenter().removeObserver(this, NotificationCenter.updateLoginToken);
+        if (exportLoginTokenDialog != null && exportLoginTokenDialog.isShowing()) {
+            exportLoginTokenDialog.dismiss();
+        }
+        TLRPC.auth_Authorization authorization = authLoginTokenSuccess.authorization;
+        if (authorization instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
+            TLRPC.TL_auth_authorizationSignUpRequired authorizationI = (TLRPC.TL_auth_authorizationSignUpRequired) authorization;
+            if (authorizationI.terms_of_service != null) {
+                currentTermsOfService = authorizationI.terms_of_service;
+            }
+            setPage(VIEW_REGISTER, true, new Bundle(), false);
+        } else {
+            onAuthSuccess((TLRPC.TL_auth_authorization) authorization);
         }
     }
 
