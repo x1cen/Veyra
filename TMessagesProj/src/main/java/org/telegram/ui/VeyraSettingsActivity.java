@@ -377,7 +377,7 @@ public class VeyraSettingsActivity extends BaseFragment {
                     } else if (position == versionRow) {
                         detailCell.setTextAndValue(
                                 isFarsi ? "نسخه Veyra" : "Veyra Version",
-                                "0.1.1-alpha (arm64-v8a)",
+                                "1.0.0 (arm64-v8a)",
                                 true
                         );
                     }
