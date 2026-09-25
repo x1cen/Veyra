@@ -379,7 +379,6 @@ public class VeyraSettingsActivity extends BaseFragment {
                 case 4: {
                     TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
                     if (position == onlineModeRow) {
-                        boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
                         String[] modeNames = isFarsi
                                 ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "همیشه آنلاین"}
                                 : new String[]{"Show Online (Default)", "Hide Online", "Always Online"};
