@@ -3787,7 +3787,7 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                     if (veyraUnpinnedCount > 0 && pinBulletin == null) {
-                        pinBulletin = BulletinFactory.createUnpinMessageBulletin(this, null, null, themeDelegate).show();
+                        pinBulletin = BulletinFactory.createUnpinMessageBulletin(ChatActivity.this, null, null, themeDelegate).show();
                     }
                     clearSelectionMode();
                 } else if (id == forward) {
@@ -44545,7 +44545,7 @@ public class ChatActivity extends BaseFragment implements
                 BulletinFactory.of(ChatActivity.this).createCopyBulletin(getString(R.string.UsernameCopied)).show();
             });
             // Veyra: quick-insert "@username" into the chat input field
-            options.add(R.drawable.msg_reply, "Add @" + username, () -> {
+            options.add(R.drawable.ic_ab_reply, "Add @" + username, () -> {
                 dialog.dismiss();
                 if (chatActivityEnterView != null) {
                     chatActivityEnterView.setFieldText("@" + username + " ");

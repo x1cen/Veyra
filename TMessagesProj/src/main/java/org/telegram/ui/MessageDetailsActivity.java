@@ -253,7 +253,7 @@ public class MessageDetailsActivity extends BaseFragment {
                     getParentActivity().startActivity(Intent.createChooser(shareIntent, "Share JSON"));
 
                     BulletinFactory.of(this).createSimpleBulletin(
-                        org.telegram.messenger.R.raw.ic_done,
+                        org.telegram.messenger.R.raw.done,
                         "Saved to Downloads: " + outFileName
                     ).show();
                 } catch (Exception e) {
