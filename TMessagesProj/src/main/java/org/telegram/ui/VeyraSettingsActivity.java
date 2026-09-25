@@ -1,17 +1,15 @@
 package org.telegram.ui;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
@@ -29,14 +27,14 @@ import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
-import java.util.ArrayList;
-
 public class VeyraSettingsActivity extends BaseFragment {
 
     private RecyclerListView listView;
     private ListAdapter listAdapter;
 
     private int rowCount;
+
+    // Privacy section
     private int privacyHeaderRow;
     private int readOnReplyRow;
     private int antiDeleteRow;
@@ -45,6 +43,7 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int blockSecretChatRow;
     private int privacySectionRow;
 
+    // Controls section
     private int controlsHeaderRow;
     private int confirmCallRow;
     private int confirmLinkRow;
@@ -54,6 +53,7 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int disableVibrationRow;
     private int controlsSectionRow;
 
+    // UI section
     private int uiHeaderRow;
     private int persianCalendarRow;
     private int showProfileIdRow;
@@ -62,10 +62,7 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int unlimitedLimitsRow;
     private int uiSectionRow;
 
-    private int proxyHeaderRow;
-    private int webProxyRow;
-    private int proxySectionRow;
-
+    // About section
     private int aboutHeaderRow;
     private int versionRow;
     private int githubRow;
@@ -105,10 +102,6 @@ public class VeyraSettingsActivity extends BaseFragment {
         noAdsRow = rowCount++;
         unlimitedLimitsRow = rowCount++;
         uiSectionRow = rowCount++;
-
-        proxyHeaderRow = rowCount++;
-        webProxyRow = rowCount++;
-        proxySectionRow = rowCount++;
 
         aboutHeaderRow = rowCount++;
         versionRow = rowCount++;
@@ -191,14 +184,12 @@ public class VeyraSettingsActivity extends BaseFragment {
             } else if (position == bypassRestrictionsRow) {
                 VeyraConfig.setIgnoreContentRestrictions(!VeyraConfig.ignoreContentRestrictions);
                 ((TextCheckCell) view).setChecked(VeyraConfig.ignoreContentRestrictions);
-            } else if (position == webProxyRow) {
-                presentFragment(new ProxyListActivity());
             } else if (position == githubRow) {
                 Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
             } else if (position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
                 BulletinFactory.of(VeyraSettingsActivity.this).createSimpleBulletin(
                         R.drawable.msg_info,
-                        isFarsi ? "این قابلیت به طور پیش‌فرض فعال و فعال‌سازی شده است" : "This feature is active and permanently optimized"
+                        isFarsi ? "این قابلیت به طور پیش‌فرض فعال و بهینه‌سازی شده است" : "This feature is active and permanently optimized"
                 ).show();
             }
         });
@@ -225,7 +216,6 @@ public class VeyraSettingsActivity extends BaseFragment {
             return position != privacyHeaderRow && position != privacySectionRow &&
                     position != controlsHeaderRow && position != controlsSectionRow &&
                     position != uiHeaderRow && position != uiSectionRow &&
-                    position != proxyHeaderRow && position != proxySectionRow &&
                     position != aboutHeaderRow && position != aboutSectionRow;
         }
 
@@ -266,11 +256,9 @@ public class VeyraSettingsActivity extends BaseFragment {
                     if (position == privacyHeaderRow) {
                         headerCell.setText(isFarsi ? "امنیت و حریم خصوصی" : "Privacy & Security");
                     } else if (position == controlsHeaderRow) {
-                        headerCell.setText(isFarsi ? "کنترل‌ها و عملکرد تعاملی" : "Controls & Interaction");
+                        headerCell.setText(isFarsi ? "کنترل‌ها و تعاملات" : "Controls & Interaction");
                     } else if (position == uiHeaderRow) {
-                        headerCell.setText(isFarsi ? "رابط کاربری و امکانات ویژه" : "UI & Features");
-                    } else if (position == proxyHeaderRow) {
-                        headerCell.setText(isFarsi ? "شبکه و عبور از فیلترینگ" : "Network & Proxy");
+                        headerCell.setText(isFarsi ? "رابط کاربری و ویژگی‌ها" : "UI & Features");
                     } else if (position == aboutHeaderRow) {
                         headerCell.setText(isFarsi ? "درباره ویرا" : "About Veyra");
                     }
@@ -281,85 +269,85 @@ public class VeyraSettingsActivity extends BaseFragment {
                     if (position == readOnReplyRow) {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "سین فقط با پاسخ دادن" : "Mark as Read on Reply",
-                                isFarsi ? "پیام‌های دریافتی تا زمان ارسال پاسخ برای مخاطب خوانده (سین) نمی‌شوند" : "Incoming messages are not marked as read until you send a reply",
+                                isFarsi ? "پیام‌های دریافتی تا ارسال پاسخ برای مخاطب خوانده نمی‌شوند" : "Messages are not marked as read until you reply",
                                 VeyraConfig.readOnReply, true, true
                         );
                     } else if (position == antiDeleteRow) {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "آنتی‌دیلیت پیام‌ها" : "Anti-Delete Messages",
-                                isFarsi ? "حفظ پیام‌های پاک شده با برچسب 'حذف شده'" : "Retain deleted messages with 'Deleted' badge",
+                                isFarsi ? "نگه‌داری پیام‌های حذف‌شده با برچسب قرمز 'حذف شده'" : "Keep deleted messages with 'Deleted' label",
                                 VeyraConfig.antiDelete, true, true
                         );
                     } else if (position == ghostModeRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "حالت روح کامل" : "Full Ghost Mode",
-                                isFarsi ? "عدم ارسال وضعیت خوانده شدن برای کلیه پیام‌ها" : "Never send read receipts for any messages",
+                                isFarsi ? "حالت روح (Ghost Mode)" : "Full Ghost Mode",
+                                isFarsi ? "عدم ارسال وضعیت خوانده شدن برای هیچ پیامی" : "Never send read receipts",
                                 VeyraConfig.ghostMode, true, true
                         );
                     } else if (position == hideTypingRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "مخفی کردن وضعیت نوشتن" : "Hide Typing Status",
-                                isFarsi ? "جلوگیری از ارسال وضعیت 'در حال نوشتن...' به دیگران" : "Do not broadcast 'typing...' status",
+                                isFarsi ? "مخفی‌سازی وضعیت نوشتن" : "Hide Typing Status",
+                                isFarsi ? "جلوگیری از ارسال وضعیت 'در حال نوشتن...' به دیگران" : "Don't broadcast 'typing...' status",
                                 VeyraConfig.hideTyping, true, true
                         );
                     } else if (position == blockSecretChatRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "مسدودسازی سکرت چت" : "Block Secret Chats",
-                                isFarsi ? "رد خودکار درخواست شروع سکرت چت از دیگران" : "Automatically decline incoming secret chat requests",
+                                isFarsi ? "مسدودسازی سکرت چت ورودی" : "Block Incoming Secret Chats",
+                                isFarsi ? "رد خودکار درخواست‌های سکرت چت از دیگران" : "Auto-decline incoming secret chat requests",
                                 VeyraConfig.blockSecretChat, true, false
                         );
                     } else if (position == confirmCallRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "تأییدیه پیش از تماس" : "Confirm VoIP Calls",
-                                isFarsi ? "نمایش هشدار تایید قبل از شروع تماس صوتی یا تصویری" : "Show confirmation dialog before making voice or video calls",
+                                isFarsi ? "تأییدیه قبل از تماس" : "Confirm Before Calling",
+                                isFarsi ? "نمایش هشدار تأیید قبل از شروع تماس صوتی یا تصویری" : "Show confirmation dialog before voice/video calls",
                                 VeyraConfig.confirmCall, true, true
                         );
                     } else if (position == confirmLinkRow) {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "تأییدیه باز کردن لینک‌ها" : "Confirm External Links",
-                                isFarsi ? "درخواست تایید کاربر قبل از باز شدن لینک در مرورگر" : "Require user confirmation before opening external links",
+                                isFarsi ? "نیاز به تأیید کاربر قبل از باز شدن لینک در مرورگر" : "Require confirmation before opening links",
                                 VeyraConfig.confirmLink, true, true
                         );
                     } else if (position == cleanUrlsRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "پاک‌سازی ترکرها از لینک" : "Clean Copied URLs",
-                                isFarsi ? "حذف خودکار پارامترهای ردیابی (utm, fbclid, si) از لینک‌های کپی شده" : "Automatically strip tracking parameters from copied URLs",
+                                isFarsi ? "پاک‌سازی ترکر از لینک‌ها" : "Clean Tracking Parameters",
+                                isFarsi ? "حذف خودکار utm_*, fbclid, gclid, si هنگام کپی لینک" : "Auto-strip utm_*, fbclid, gclid, si from copied URLs",
                                 VeyraConfig.cleanUrls, true, true
                         );
                     } else if (position == disableUndoRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "حذف انتظار ۵ ثانیه‌ای دکمه لغو" : "Skip 5s Undo Countdown",
-                                isFarsi ? "حذف نوار معطلی ۵ ثانیه برای پاک‌سازی یا لغو عملیات" : "Instantly execute actions without waiting for the 5-second undo toast",
+                                isFarsi ? "حذف تأخیر ۵ ثانیه‌ای لغو عملیات" : "Skip 5s Undo Countdown",
+                                isFarsi ? "اجرای فوری عملیات بدون نوار انتظار ۵ ثانیه" : "Execute actions instantly without undo toast",
                                 VeyraConfig.disableUndo, true, true
                         );
                     } else if (position == disableLinkPreviewRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "غیرفعال‌سازی پیش‌نمایش لینک به طور پیش‌فرض" : "Disable Link Preview by Default",
-                                isFarsi ? "جلوگیری از ارسال درخواست پیش‌نمایش لینک به سرور" : "Prevent server from fetching previews when pasting links",
+                                isFarsi ? "غیرفعال‌سازی پیش‌نمایش لینک به‌طور پیش‌فرض" : "Disable Link Preview by Default",
+                                isFarsi ? "جلوگیری از ارسال درخواست پیش‌نمایش به سرور هنگام تایپ لینک" : "Prevent server from fetching link previews while typing",
                                 VeyraConfig.disableLinkPreviewByDefault, true, true
                         );
                     } else if (position == disableVibrationRow) {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "غیرفعال کردن ویبره" : "Disable Vibration",
-                                isFarsi ? "قطع کلیه فیدبک‌های لرزشی و هپتیک اپلیکیشن" : "Globally disable all haptic feedback and vibrations",
+                                isFarsi ? "قطع تمام فیدبک‌های لرزشی و هپتیک اپلیکیشن" : "Disable all haptic feedback and vibrations globally",
                                 VeyraConfig.disableVibration, true, false
                         );
                     } else if (position == persianCalendarRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "تقویم خورشیدی (شمسی)" : "Persian Solar Hijri Calendar",
-                                isFarsi ? "نمایش تاریخ‌ها با ماه و ارقام خورشیدی" : "Display dates in Persian Solar calendar",
+                                isFarsi ? "تقویم خورشیدی (شمسی)" : "Persian Solar Calendar",
+                                isFarsi ? "نمایش تاریخ‌ها با ماه‌های خورشیدی و ارقام فارسی" : "Display dates in Persian Solar Hijri calendar",
                                 VeyraConfig.persianCalendar, true, true
                         );
                     } else if (position == showProfileIdRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "شناسه تلگرام و DC در پروفایل" : "Show Telegram ID & DC in Profile",
-                                isFarsi ? "دسترسی و کپی سریع User ID و شناسه دیتاسنتر کاربر" : "Show clickable User ID and Datacenter in user profiles",
+                                isFarsi ? "نمایش شناسه تلگرام و DC در پروفایل" : "Show Telegram ID & Datacenter",
+                                isFarsi ? "دسترسی و کپی سریع User ID و دیتاسنتر در پروفایل کاربران" : "Show and copy User ID and DC in user profiles",
                                 VeyraConfig.showProfileId, true, true
                         );
                     } else if (position == bypassRestrictionsRow) {
                         checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "رد محدودیت‌های محتوایی اندروید" : "Ignore Content Restrictions",
-                                isFarsi ? "رفع فیلتر محتوای حساس و کانال‌های محدودشده در اندروید" : "Bypass Android-only sensitive content and channel restrictions",
+                                isFarsi ? "نادیده گرفتن محدودیت‌های محتوایی اندروید" : "Bypass Android Content Restrictions",
+                                isFarsi ? "نمایش کانال‌ها و محتوای فیلترشده مخصوص اندروید" : "View channels and content restricted only on Android",
                                 VeyraConfig.ignoreContentRestrictions, true, false
                         );
                     }
@@ -367,10 +355,8 @@ public class VeyraSettingsActivity extends BaseFragment {
                 }
                 case 3: {
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
-                    if (position == webProxyRow) {
-                        textCell.setText(isFarsi ? "پروکسی وب (WEB Proxy Tunnel)" : "WEB Proxy Tunnel Settings", true);
-                    } else if (position == githubRow) {
-                        textCell.setText(isFarsi ? "مخزن رسمی گیت‌هاب (x1cen/Veyra)" : "GitHub Repository (x1cen/Veyra)", false);
+                    if (position == githubRow) {
+                        textCell.setText(isFarsi ? "مخزن گیت‌هاب (x1cen/Veyra)" : "GitHub Repository (x1cen/Veyra)", false);
                     }
                     break;
                 }
@@ -378,19 +364,19 @@ public class VeyraSettingsActivity extends BaseFragment {
                     TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
                     if (position == noAdsRow) {
                         detailCell.setTextAndValue(
-                                isFarsi ? "حذف کامل تبلیغات اسپانسر" : "Permanent Ad-Free",
-                                isFarsi ? "تمام پست‌های تبلیغاتی اسپانسری بدون نیاز به پرمیوم حذف شده‌اند" : "All sponsored channel ads permanently disabled",
+                                isFarsi ? "بدون تبلیغات اسپانسری" : "Ad-Free Experience",
+                                isFarsi ? "تمام پست‌های اسپانسری بدون نیاز به پرمیوم حذف شده‌اند" : "All sponsored ads permanently disabled",
                                 true
                         );
                     } else if (position == unlimitedLimitsRow) {
                         detailCell.setTextAndValue(
-                                isFarsi ? "ارتقای سقف پین، استیکر و فولدرها" : "Unlocked Telegram Limits",
-                                isFarsi ? "۱۰۰ پین چت، ۵۰۰ استیکر دلخواه، ۱۰۰۰ گیف، ۳۰ فولدر" : "100 pinned chats, 500 fave stickers, 1000 gifs, 30 folders",
+                                isFarsi ? "سقف‌های ارتقاء یافته" : "Unlocked Limits",
+                                isFarsi ? "۱۰۰ پین، ۵۰۰ استیکر دلخواه، ۱۰۰۰ گیف، ۳۰ فولدر" : "100 pins, 500 stickers, 1000 GIFs, 30 folders",
                                 false
                         );
                     } else if (position == versionRow) {
                         detailCell.setTextAndValue(
-                                isFarsi ? "نسخه کلاینت ویرا" : "Veyra Client Version",
+                                isFarsi ? "نسخه Veyra" : "Veyra Version",
                                 "0.1.1-alpha (arm64-v8a)",
                                 true
                         );
@@ -402,13 +388,18 @@ public class VeyraSettingsActivity extends BaseFragment {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == privacyHeaderRow || position == controlsHeaderRow || position == uiHeaderRow || position == proxyHeaderRow || position == aboutHeaderRow) {
+            if (position == privacyHeaderRow || position == controlsHeaderRow ||
+                    position == uiHeaderRow || position == aboutHeaderRow) {
                 return 1;
-            } else if (position == readOnReplyRow || position == antiDeleteRow || position == ghostModeRow || position == hideTypingRow || position == blockSecretChatRow ||
-                    position == confirmCallRow || position == confirmLinkRow || position == cleanUrlsRow || position == disableUndoRow || position == disableLinkPreviewRow ||
-                    position == disableVibrationRow || position == persianCalendarRow || position == showProfileIdRow || position == bypassRestrictionsRow) {
+            } else if (position == readOnReplyRow || position == antiDeleteRow ||
+                    position == ghostModeRow || position == hideTypingRow ||
+                    position == blockSecretChatRow || position == confirmCallRow ||
+                    position == confirmLinkRow || position == cleanUrlsRow ||
+                    position == disableUndoRow || position == disableLinkPreviewRow ||
+                    position == disableVibrationRow || position == persianCalendarRow ||
+                    position == showProfileIdRow || position == bypassRestrictionsRow) {
                 return 2;
-            } else if (position == webProxyRow || position == githubRow) {
+            } else if (position == githubRow) {
                 return 3;
             } else if (position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
                 return 4;

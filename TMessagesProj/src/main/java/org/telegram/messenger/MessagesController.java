@@ -17565,24 +17565,27 @@ public class MessagesController extends BaseController implements NotificationCe
     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
-                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, true);
-                if (channelId == 0) {
-                    for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                        Integer id = ids.get(b);
-                        MessageObject obj = dialogMessagesByIds.get(id);
-                        if (obj != null) {
-                            obj.messageOwner.isDeleted = true;
+                boolean isRemotePeerRevoke = true;
+                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, VeyraConfig.antiDelete ? isRemotePeerRevoke : false);
+                if (VeyraConfig.antiDelete) {
+                    if (channelId == 0) {
+                        for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                            Integer id = ids.get(b);
+                            MessageObject obj = dialogMessagesByIds.get(id);
+                            if (obj != null) {
+                                obj.messageOwner.isDeleted = true;
+                            }
                         }
-                    }
-                } else {
-                    ArrayList<MessageObject> objs = dialogMessage.get(-channelId);
-                    if (objs != null) {
-                        for (int i = 0; i < objs.size(); ++i) {
-                            MessageObject obj = objs.get(i);
-                            for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                                if (obj.getId() == ids.get(b)) {
-                                    obj.messageOwner.isDeleted = true;
-                                    break;
+                    } else {
+                        ArrayList<MessageObject> objs = dialogMessage.get(-channelId);
+                        if (objs != null) {
+                            for (int i = 0; i < objs.size(); ++i) {
+                                MessageObject obj = objs.get(i);
+                                for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                                    if (obj.getId() == ids.get(b)) {
+                                        obj.messageOwner.isDeleted = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -22515,10 +22518,12 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public String getRestrictionReason(ArrayList<TLRPC.RestrictionReason> reasons) {
+        if (VeyraConfig.ignoreContentRestrictions) return null;
         return null;
     }
 
     public boolean isSensitive(ArrayList<TLRPC.RestrictionReason> reasons) {
+        if (VeyraConfig.ignoreContentRestrictions) return false;
         if (reasons == null || reasons.isEmpty()) {
             return false;
         }

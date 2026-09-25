@@ -10606,7 +10606,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 numberRow = rowCount++;
                 setUsernameRow = rowCount++;
                 bioRow = rowCount++;
-                idRow = rowCount++;
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
 
                 settingsSectionRow = rowCount++;
 
@@ -10698,7 +10700,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && username != null) {
                     usernameRow = rowCount++;
                 }
-                idRow = rowCount++;
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
                         birthdayRow = rowCount++;
@@ -10824,7 +10828,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             usernameRow = rowCount++;
             if (topicId != 0) {
-                idRow = rowCount++;
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
             }
             if (actionsView == null) {
                 notificationsSimpleRow = rowCount++;
@@ -10859,7 +10865,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (ChatObject.isPublic(currentChat)) {
                 usernameRow = rowCount++;
             }
-            idRow = rowCount++;
+            if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                idRow = rowCount++;
+            }
             if (emptyRow < 0 && emptyRow2 < 0) {
                 if (hasMusic || peerColor != null || actionsView == null) {
                     emptyRow2 = rowCount++;

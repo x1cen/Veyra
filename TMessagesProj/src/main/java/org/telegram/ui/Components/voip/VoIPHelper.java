@@ -81,7 +81,7 @@ public class VoIPHelper {
 		if (user == null || activity == null) {
 			return;
 		}
-		if (!confirmed) {
+		if (!confirmed && org.telegram.messenger.VeyraConfig.confirmCall) {
 			String name = ContactsController.formatName(user.first_name, user.last_name);
 			new AlertDialog.Builder(activity)
 					.setTitle(LocaleController.getString("ConfirmCallTitle", R.string.Call))

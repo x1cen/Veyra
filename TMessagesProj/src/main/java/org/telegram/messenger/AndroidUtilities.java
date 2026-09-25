@@ -3623,7 +3623,7 @@ public class AndroidUtilities {
 
     public static boolean addToClipboard(CharSequence str) {
         try {
-            if (str != null && (str.toString().startsWith("http://") || str.toString().startsWith("https://"))) {
+            if (str != null && VeyraConfig.cleanUrls && (str.toString().startsWith("http://") || str.toString().startsWith("https://"))) {
                 str = cleanUrl(str.toString());
             }
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);

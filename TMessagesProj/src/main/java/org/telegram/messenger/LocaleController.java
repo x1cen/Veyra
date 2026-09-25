@@ -2281,6 +2281,7 @@ public class LocaleController {
     }
 
     public static boolean isPersianCalendar() {
+        if (!org.telegram.messenger.VeyraConfig.persianCalendar) return false;
         try {
             LocaleInfo info = getInstance().getCurrentLocaleInfo();
             if (info != null && info.shortName != null && "fa".equalsIgnoreCase(info.shortName)) {

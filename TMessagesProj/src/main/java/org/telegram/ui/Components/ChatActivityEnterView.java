@@ -741,7 +741,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     private ChatActivity.ReplyQuote replyingQuote;
     private MessageObject botMessageObject;
     private TLRPC.WebPage messageWebPage;
-    private boolean messageWebPageSearch = true;
+    private boolean messageWebPageSearch = !org.telegram.messenger.VeyraConfig.disableLinkPreviewByDefault;
     private ChatActivityEnterViewDelegate delegate;
     private TrendingStickersAlert trendingStickersAlert;
 
