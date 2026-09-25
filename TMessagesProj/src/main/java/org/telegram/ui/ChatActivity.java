@@ -1670,6 +1670,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_save_to_saved = 80;
     private final static int veyra_unpin_selected = 81;
     private final static int veyra_action_mode_other = 82;
+    private final static int veyra_view_details = 83;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3933,6 +3934,8 @@ public class ChatActivity extends BaseFragment implements
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
+                } else if (id == veyra_view_details) {
+                    showDetailsJson();
                 } else if (id == boost_group) {
                     if (ChatObject.hasAdminRights(currentChat)) {
                         BoostsActivity boostsActivity = new BoostsActivity(dialog_id);
@@ -4566,6 +4569,10 @@ public class ChatActivity extends BaseFragment implements
 
         if (BuildVars.DEBUG_PRIVATE_VERSION && headerItem != null) {
             headerItem.addSubItem(888, R.drawable.menu_download_round, "Dump Canvas");
+        }
+
+        if (headerItem != null) {
+            headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
         }
 
         actionModeViews.clear();
@@ -12208,6 +12215,38 @@ public class ChatActivity extends BaseFragment implements
         updateSelectedMessageReactions();
     }
 
+    private void showDetailsJson() {
+        if (currentUser != null) {
+            final TLRPC.User user = currentUser;
+            final TLRPC.UserFull uInfo = userInfo != null ? userInfo : getMessagesController().getUserFull(user.id);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("user", MessageDetailsActivity.gson.toJsonTree(user));
+                if (uInfo != null) {
+                    root.add("full_user", MessageDetailsActivity.gson.toJsonTree(uInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (currentChat != null) {
+            final TLRPC.Chat chat = currentChat;
+            final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chat.id);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
+                if (cInfo != null) {
+                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (currentEncryptedChat != null) {
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("encrypted_chat", MessageDetailsActivity.gson.toJsonTree(currentEncryptedChat));
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        }
+    }
+
     private void openForward(boolean fromActionBar) {
         for (int a = 0; a < 2; a++) {
             for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
@@ -19165,12 +19204,13 @@ public class ChatActivity extends BaseFragment implements
                 ActionBarMenuItem shareItem = actionBar.createActionMode().getItem(share);
 
                 boolean noforwards = isPeerNoForwards() || hasSelectedNoforwardsMessage();
+                boolean canForward = cantForwardMessagesCount == 0 && !noforwards;
                 if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
                     forwardButtonAnimation = new AnimatorSet();
                     ArrayList<Animator> animators = new ArrayList<>();
                     if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0 || noforwards);
-                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                        forwardItem.setEnabled(canForward);
+                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, canForward ? 1.0f : 0.5f));
 
                         if (noforwards && forwardItem.getBackground() != null) {
                             forwardItem.setBackground(null);
@@ -19179,7 +19219,7 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                     if (actionsButtonsLayout != null) {
-                        actionsButtonsLayout.setForwardButtonEnabled(cantForwardMessagesCount == 0 || noforwards, true);
+                        actionsButtonsLayout.setForwardButtonEnabled(canForward, true);
                     }
                     forwardButtonAnimation.playTogether(animators);
                     forwardButtonAnimation.setDuration(100);
@@ -19192,15 +19232,15 @@ public class ChatActivity extends BaseFragment implements
                     forwardButtonAnimation.start();
                 } else {
                     if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0 || noforwards);
-                        forwardItem.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
+                        forwardItem.setEnabled(canForward);
+                        forwardItem.setAlpha(canForward ? 1.0f : 0.5f);
                         if (noforwards) {
                         } else if (forwardItem.getBackground() == null) {
                             forwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 3));
                         }
                     }
                     if (actionsButtonsLayout != null) {
-                        actionsButtonsLayout.setForwardButtonEnabled(cantForwardMessagesCount == 0 || noforwards, false);
+                        actionsButtonsLayout.setForwardButtonEnabled(canForward, false);
                     }
                 }
                 if (saveItem != null) {

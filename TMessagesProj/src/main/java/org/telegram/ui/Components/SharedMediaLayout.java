@@ -3896,6 +3896,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             return;
         }
         boolean noforwards = profileActivity.getMessagesController().isPeerNoForwards(dialog_id) || hasNoforwardsMessage();
+        forwardItem.setEnabled(!noforwards);
         forwardItem.setAlpha(noforwards ? 0.5f : 1f);
         if (noforwards && forwardItem.getBackground() != null) {
             forwardItem.setBackground(null);

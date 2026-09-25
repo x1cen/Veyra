@@ -98,7 +98,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
     private class AnimatingTextView extends FrameLayout {
 
-        private final static int DOTS_COUNT = 4;
+        private final static int DOTS_COUNT = 8;
         private final StringBuilder stringBuilder = new StringBuilder(DOTS_COUNT);
         private final float[] dotProgress = new float[DOTS_COUNT];
         private final float[] dotScale = new float[DOTS_COUNT];
@@ -110,7 +110,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             super(context);
             setWillNotDraw(false);
             emptyPaint.setStyle(Paint.Style.STROKE);
-            emptyPaint.setStrokeWidth(AndroidUtilities.dp(2f));
+            emptyPaint.setStrokeWidth(AndroidUtilities.dp(1.75f));
             emptyPaint.setColor(0x55ffffff);
             fillPaint.setStyle(Paint.Style.FILL);
             fillPaint.setColor(0xffffffff);
@@ -131,10 +131,10 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             int width = getMeasuredWidth();
             int height = getMeasuredHeight();
             float centerY = height / 2f;
-            float dotSpacing = AndroidUtilities.dp(30);
+            float dotSpacing = AndroidUtilities.dp(22);
             float totalWidth = (DOTS_COUNT - 1) * dotSpacing;
             float startX = (width - totalWidth) / 2f;
-            float radius = AndroidUtilities.dp(8f);
+            float radius = AndroidUtilities.dp(6f);
 
             for (int i = 0; i < DOTS_COUNT; i++) {
                 float cx = startX + i * dotSpacing;
@@ -474,7 +474,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == 4 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                if (passwordEditText.length() == 8 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
                     processDone(false);
                 }
             }

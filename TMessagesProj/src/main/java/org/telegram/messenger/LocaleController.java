@@ -1453,6 +1453,16 @@ public class LocaleController {
                 return "Restart App";
             }
         }
+        if ("ViewDetails".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "مشاهده جزئیات (JSON)";
+                return "View Details";
+            } catch (Exception ignored) {
+                return "View Details";
+            }
+        }
         if ("ConfirmCallTitle".equals(key)) {
             try {
                 LocaleInfo info = getCurrentLocaleInfo();

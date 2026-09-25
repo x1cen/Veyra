@@ -43,6 +43,7 @@ public class JsonViewerActivity extends BaseFragment {
 
     private final JsonSupplier jsonSupplier;
     private final long messageId;
+    private String customTitle;
 
     private ScrollView scrollView;
     private TextView jsonTextView;
@@ -55,11 +56,18 @@ public class JsonViewerActivity extends BaseFragment {
         this.messageId = messageId;
     }
 
+    public JsonViewerActivity(JsonSupplier jsonSupplier, String customTitle) {
+        super();
+        this.jsonSupplier = jsonSupplier;
+        this.messageId = 0;
+        this.customTitle = customTitle;
+    }
+
     @SuppressLint("RtlHardcoded")
     @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitle(LocaleController.getString(R.string.MessageDetails));
+        actionBar.setTitle(customTitle != null ? customTitle : LocaleController.getString(R.string.MessageDetails));
         actionBar.setSubtitle("JSON");
         actionBar.setAllowOverlayTitle(true);
 
@@ -159,7 +167,7 @@ public class JsonViewerActivity extends BaseFragment {
     private void shareJson() {
         if (cachedJson.isEmpty() || getParentActivity() == null) return;
         try {
-            String outFileName = "veyra_msg_" + messageId + ".json";
+            String outFileName = (messageId != 0 ? "veyra_msg_" + messageId : "veyra_details_" + System.currentTimeMillis()) + ".json";
             File downloadsDir;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 downloadsDir = getParentActivity().getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS);

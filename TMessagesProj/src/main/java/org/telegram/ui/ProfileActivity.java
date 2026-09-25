@@ -598,6 +598,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_delete_all_messages = 60;
     private final static int veyra_upgrade_to_supergroup = 61;
     private final static int veyra_qr_code = 62;
+    private final static int veyra_view_details = 63;
 
     private Rect rect = new Rect();
 
@@ -2757,6 +2758,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     onShareClicked();
                 } else if (id == veyra_qr_code) {
                     showProfileQrCode();
+                } else if (id == veyra_view_details) {
+                    showDetailsJson();
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -6257,6 +6260,42 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } catch (Exception e) {
             FileLog.e(e);
+        }
+    }
+
+    private void showDetailsJson() {
+        if (userId != 0) {
+            final TLRPC.User user = getMessagesController().getUser(userId);
+            final TLRPC.UserFull uInfo = userInfo != null ? userInfo : getMessagesController().getUserFull(userId);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (user != null) {
+                    root.add("user", MessageDetailsActivity.gson.toJsonTree(user));
+                }
+                if (uInfo != null) {
+                    root.add("full_user", MessageDetailsActivity.gson.toJsonTree(uInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (chatId != 0) {
+            final TLRPC.Chat chat = getMessagesController().getChat(chatId);
+            final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chatId);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (chat != null) {
+                    root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
+                }
+                if (cInfo != null) {
+                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (currentEncryptedChat != null) {
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("encrypted_chat", MessageDetailsActivity.gson.toJsonTree(currentEncryptedChat));
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         }
     }
 
@@ -12178,6 +12217,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     linkItem = otherItem.addSubItem(copy_link_profile, R.drawable.msg_link2, getString(R.string.ProfileCopyLink));
                     updateItemsUsername();
                 }
+                otherItem.addSubItem(kill_app_item, R.drawable.msg_retry, LocaleController.getString(R.string.THKillTheAPP));
                 selfUser = true;
             } else {
                 if (user.bot && user.bot_can_edit) {
@@ -12261,7 +12301,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
                 }
             }
-            otherItem.addSubItem(kill_app_item, R.drawable.msg_retry, LocaleController.getString(R.string.THKillTheAPP));
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
             hasVoiceChatItem = false;
@@ -12419,6 +12458,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.showSubItem(add_photo);
             otherItem.hideSubItem(edit_avatar);
             otherItem.hideSubItem(delete_avatar);
+        }
+
+        if (otherItem != null) {
+            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
         }
 
         isCallAvailable = callItemVisible;
