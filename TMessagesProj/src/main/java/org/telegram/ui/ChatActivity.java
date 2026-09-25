@@ -19227,7 +19227,21 @@ public class ChatActivity extends BaseFragment implements
                             }
                         }
                     }
+                    boolean hasDeletedForReply = false;
+                    for (int a = 0; a < 2; a++) {
+                        for (int b = 0, N = selectedMessagesIds[a].size(); b < N; b++) {
+                            MessageObject message = selectedMessagesIds[a].valueAt(b);
+                            if (message != null && !message.canReplyMessage()) {
+                                hasDeletedForReply = true;
+                                break;
+                            }
+                        }
+                        if (hasDeletedForReply) {
+                            break;
+                        }
+                    }
                     actionsButtonsLayout.showReplyButton(newVisibility == View.VISIBLE, true);
+                    actionsButtonsLayout.setReplyButtonEnabled(!hasDeletedForReply, true);
                 }
 
                 if (editItem != null) {
@@ -33417,6 +33431,9 @@ public class ChatActivity extends BaseFragment implements
                 break;
             }
             case OPTION_REPLY: {
+                if (selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted))) {
+                    return;
+                }
                 if (selectedObject != null && selectedObject.messageOwner != null && selectedObject.messageOwner.noforwards) {
                     return;
                 }

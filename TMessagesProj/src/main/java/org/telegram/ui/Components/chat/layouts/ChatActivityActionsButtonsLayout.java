@@ -107,7 +107,7 @@ public class ChatActivityActionsButtonsLayout extends LinearLayout {
 
     public void setReplyButtonEnabled(boolean enabled, boolean animated) {
         replyButton.enabledAnimator.setValue(enabled, animated);
-        replyButton.button.setEnabled(enabled);
+        replyButton.button.setEnabled(enabled, animated);
     }
 
     public void showForwardButton(boolean visible, boolean animated) {
@@ -116,7 +116,7 @@ public class ChatActivityActionsButtonsLayout extends LinearLayout {
 
     public void setForwardButtonEnabled(boolean enabled, boolean animated) {
         forwardButton.enabledAnimator.setValue(enabled, animated);
-        forwardButton.button.setEnabled(enabled);
+        forwardButton.button.setEnabled(enabled, animated);
     }
 
 

@@ -122,7 +122,7 @@ The enhancements in Veyra are modularized to preserve upstream stability:
 
 4. The built package will be located at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.1.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.2.apk
    ```
 
 ---

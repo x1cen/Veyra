@@ -11532,6 +11532,11 @@ public class MessageObject {
         return !(messageOwner instanceof TLRPC.TL_message_secret) && !needDrawBluredPreview() && !isLiveLocation() && type != MessageObject.TYPE_PHONE_CALL && !isSponsored();
     }
 
+    public boolean canReplyMessage() {
+        if (deleted || (messageOwner != null && messageOwner.isDeleted)) return false;
+        return true;
+    }
+
     public boolean canEditMedia() {
         if (true) return true;
         if (isSecretMedia() || isEphemeral()) {
