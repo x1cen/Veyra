@@ -441,12 +441,6 @@ public class VeyraSettingsActivity extends BaseFragment {
                                 "1.0.3 (arm64-v8a)",
                                 true
                         );
-                    } else if (position == customCacheDirRow) {
-                        detailCell.setTextAndValue(
-                                isFarsi ? "مسیر ذخیره‌سازی و کش" : "Storage & Cache Path",
-                                isFarsi ? "مدیریت حافظه کش و انتخاب کارت SD" : "Internal / SD Card storage path",
-                                false
-                        );
                     }
                     break;
                 }
@@ -470,7 +464,7 @@ public class VeyraSettingsActivity extends BaseFragment {
                 return 2;
             } else if (position == githubRow) {
                 return 3;
-            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow || position == customCacheDirRow) {
+            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
                 return 4;
             } else {
                 return 0;

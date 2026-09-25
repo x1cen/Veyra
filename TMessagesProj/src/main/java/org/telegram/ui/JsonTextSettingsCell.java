@@ -10,13 +10,13 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import android.widget.TextView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.CodeHighlighting;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
-import org.telegram.ui.Components.EmojiTextView;
 import org.telegram.ui.Components.LayoutHelper;
 
 public class JsonTextSettingsCell extends TextDetailSettingsCell {
@@ -31,7 +31,7 @@ public class JsonTextSettingsCell extends TextDetailSettingsCell {
     private static final int MAX_POLL_RETRIES = 60;
     private static final long POLL_INTERVAL_MS = 100L;
 
-    private final EmojiTextView jsonTextView;
+    private final TextView jsonTextView;
     private boolean needDivider;
     private int currentRequestId;
     private String currentChunkText;
@@ -42,7 +42,7 @@ public class JsonTextSettingsCell extends TextDetailSettingsCell {
     public JsonTextSettingsCell(Context context) {
         super(context);
 
-        jsonTextView = new EmojiTextView(context);
+        jsonTextView = new TextView(context);
         jsonTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
         jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         jsonTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
