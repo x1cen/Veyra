@@ -135,28 +135,33 @@ Continuous integration and artifact distribution are automated via GitHub Action
 
 ---
 
-## 💖 Donations & Support
+## Donations & Support
 
 If you find Veyra useful and would like to support ongoing development and maintenance, contributions are gratefully welcomed:
 
-* **Bitcoin (BTC):**
+* **GRAM:**
   ```
-  bc1qr4njyyu9a3w5lckhlws68xrfy0d0dy7vdfy2qa
+  UQCyGgaTKVc4U2db4fO6T2HlhEcRjDrCzQudpLjRdOYnAlye
   ```
 
-* **Ethereum / EVM (ETH, USDT-ERC20, USDC):**
+* **USDT (BEP-20):**
   ```
   0xfB7e73F63C3A22BcbffF5A9f5452D9f6c95a2772
   ```
 
-* **TRON (TRX, USDT-TRC20):**
+* **BTC:**
+  ```
+  bc1qr4njyyu9a3w5lckhlws68xrfy0d0dy7vdfy2qa
+  ```
+
+* **TRX:**
   ```
   TNaktPgTmzpz8LUYexmTY9Tfi5yK6JLbVp
   ```
 
-* **TON (The Open Network):**
+* **ETH:**
   ```
-  UQCyGgaTKVc4U2db4fO6T2HlhEcRjDrCzQudpLjRdOYnAlye
+  0xfB7e73F63C3A22BcbffF5A9f5452D9f6c95a2772
   ```
 
 ---
