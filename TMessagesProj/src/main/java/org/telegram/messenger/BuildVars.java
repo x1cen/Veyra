@@ -38,7 +38,7 @@ public class BuildVars {
     }};
 
     public static final int PIN_MIN_SIZE = 4;
-    public static final int PIN_MAX_SIZE = 16;
+    public static final int PIN_MAX_SIZE = 4;
     public static final int KABOOM_PIN_FAILS = 10;
 
     public static int APP_ID = 4;

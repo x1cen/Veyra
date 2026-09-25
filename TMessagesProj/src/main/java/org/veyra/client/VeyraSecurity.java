@@ -130,12 +130,7 @@ public class VeyraSecurity {
     }
 
     public static void kaboomPIG(Context context, int fails) {
-        if (fails >= 64) {
-            wipeAllDataAndReset(context);
-            return;
-        }
-        gimmeRopeAndFindATree(context, fails);
-        if (fails >= BuildVars.KABOOM_PIN_FAILS) {
+        if (fails >= 64 || fails >= BuildVars.KABOOM_PIN_FAILS) {
             wipeAllDataAndReset(context);
         }
     }

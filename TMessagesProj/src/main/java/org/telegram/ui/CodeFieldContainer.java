@@ -188,9 +188,9 @@ public class CodeFieldContainer extends LinearLayout {
                 int height;
                 int gapSize;
                 if (currentType == TYPE_PASSCODE) {
-                    width = 17;
-                    height = 22;
-                    gapSize = 2;
+                    width = 44;
+                    height = 50;
+                    gapSize = 12;
                 } else if (currentType == LoginActivity.AUTH_TYPE_MISSED_CALL) {
                     width = 28;
                     height = 34;

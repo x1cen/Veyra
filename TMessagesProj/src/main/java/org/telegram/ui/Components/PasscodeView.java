@@ -98,51 +98,64 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
     private class AnimatingTextView extends FrameLayout {
 
-        private ArrayList<TextView> characterTextViews;
-        private ArrayList<TextView> dotTextViews;
-        private StringBuilder stringBuilder;
-        private final static String DOT = "\u2022";
-        private AnimatorSet currentAnimation;
-        private Runnable dotRunnable;
+        private final static int DOTS_COUNT = 4;
+        private final StringBuilder stringBuilder = new StringBuilder(DOTS_COUNT);
+        private final float[] dotProgress = new float[DOTS_COUNT];
+        private final float[] dotScale = new float[DOTS_COUNT];
+        private final ValueAnimator[] animators = new ValueAnimator[DOTS_COUNT];
+        private final Paint emptyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         public AnimatingTextView(Context context) {
             super(context);
-            characterTextViews = new ArrayList<>(BuildVars.PIN_MAX_SIZE);
-            dotTextViews = new ArrayList<>(BuildVars.PIN_MAX_SIZE);
-            stringBuilder = new StringBuilder(BuildVars.PIN_MAX_SIZE);
-
-            for (int a = 0; a < BuildVars.PIN_MAX_SIZE; a++) {
-                TextView textView = new TextView(context);
-                textView.setTextColor(0xffffffff);
-                textView.setTypeface(AndroidUtilities.bold());
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 36);
-                textView.setGravity(Gravity.CENTER);
-                textView.setAlpha(0);
-                textView.setPivotX(AndroidUtilities.dp(25));
-                textView.setPivotY(AndroidUtilities.dp(25));
-                addView(textView, LayoutHelper.createFrame(50, 50, Gravity.TOP | Gravity.LEFT));
-                characterTextViews.add(textView);
-
-                textView = new TextView(context);
-                textView.setTextColor(0xffffffff);
-                textView.setTypeface(AndroidUtilities.bold());
-                textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 36);
-                textView.setGravity(Gravity.CENTER);
-                textView.setAlpha(0);
-                textView.setText(DOT);
-                textView.setPivotX(AndroidUtilities.dp(25));
-                textView.setPivotY(AndroidUtilities.dp(25));
-                addView(textView, LayoutHelper.createFrame(50, 50, Gravity.TOP | Gravity.LEFT));
-                dotTextViews.add(textView);
+            setWillNotDraw(false);
+            emptyPaint.setStyle(Paint.Style.STROKE);
+            emptyPaint.setStrokeWidth(AndroidUtilities.dp(2f));
+            emptyPaint.setColor(0x55ffffff);
+            fillPaint.setStyle(Paint.Style.FILL);
+            fillPaint.setColor(0xffffffff);
+            for (int i = 0; i < DOTS_COUNT; i++) {
+                dotProgress[i] = 0f;
+                dotScale[i] = 1f;
             }
         }
 
-        private int getXForTextView(int pos) {
-            return (getMeasuredWidth() - stringBuilder.length() * dp(30)) / 2 + pos * dp(30) - dp(10);
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(50), MeasureSpec.EXACTLY));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int width = getMeasuredWidth();
+            int height = getMeasuredHeight();
+            float centerY = height / 2f;
+            float dotSpacing = AndroidUtilities.dp(30);
+            float totalWidth = (DOTS_COUNT - 1) * dotSpacing;
+            float startX = (width - totalWidth) / 2f;
+            float radius = AndroidUtilities.dp(8f);
+
+            for (int i = 0; i < DOTS_COUNT; i++) {
+                float cx = startX + i * dotSpacing;
+                float p = dotProgress[i];
+                float s = dotScale[i];
+
+                // Outer modern ring for empty slot
+                emptyPaint.setColor(0x55ffffff);
+                canvas.drawCircle(cx, centerY, radius, emptyPaint);
+
+                // Filled dot when entered
+                if (p > 0.001f) {
+                    fillPaint.setColor(0xffffffff);
+                    fillPaint.setAlpha((int) (255 * p));
+                    canvas.drawCircle(cx, centerY, radius * s * p, fillPaint);
+                }
+            }
         }
 
         public void appendCharacter(String c) {
-            if (stringBuilder.length() == BuildVars.PIN_MAX_SIZE) {
+            if (stringBuilder.length() >= DOTS_COUNT) {
                 return;
             }
             try {
@@ -151,117 +164,15 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 FileLog.e(e);
             }
 
-
-            ArrayList<Animator> animators = new ArrayList<>();
-            final int newPos = stringBuilder.length();
+            final int pos = stringBuilder.length();
             stringBuilder.append(c);
 
-            TextView textView = characterTextViews.get(newPos);
-            textView.setText(c);
-            textView.setTranslationX(getXForTextView(newPos));
-            animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0, 1));
-            animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0, 1));
-            animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0, 1));
-            animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, dp(20), 0));
-            textView = dotTextViews.get(newPos);
-            textView.setTranslationX(getXForTextView(newPos));
-            textView.setAlpha(0);
-            animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0, 1));
-            animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0, 1));
-            animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, dp(20), 0));
-
-            for (int a = newPos + 1; a < BuildVars.PIN_MAX_SIZE; a++) {
-                textView = characterTextViews.get(a);
-                if (textView.getAlpha() != 0) {
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                }
-
-                textView = dotTextViews.get(a);
-                if (textView.getAlpha() != 0) {
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                }
-            }
-
-            if (dotRunnable != null) {
-                AndroidUtilities.cancelRunOnUIThread(dotRunnable);
-            }
-            dotRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if (dotRunnable != this) {
-                        return;
-                    }
-                    ArrayList<Animator> animators = new ArrayList<>();
-
-                    TextView textView = characterTextViews.get(newPos);
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                    textView = dotTextViews.get(newPos);
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 1));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 1));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 1));
-
-                    currentAnimation = new AnimatorSet();
-                    currentAnimation.setDuration(150);
-                    currentAnimation.playTogether(animators);
-                    currentAnimation.addListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            if (currentAnimation != null && currentAnimation.equals(animation)) {
-                                currentAnimation = null;
-                            }
-                        }
-                    });
-                    currentAnimation.start();
-                }
-            };
-            AndroidUtilities.runOnUIThread(dotRunnable, 1500);
-
-            for (int a = 0; a < newPos; a++) {
-                textView = characterTextViews.get(a);
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-                animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, 0));
-                textView = dotTextViews.get(a);
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-                animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 1));
-                animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 1));
-                animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 1));
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, 0));
-            }
-
-            if (currentAnimation != null) {
-                currentAnimation.cancel();
-            }
-            currentAnimation = new AnimatorSet();
-            currentAnimation.setDuration(150);
-            currentAnimation.playTogether(animators);
-            currentAnimation.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    if (currentAnimation != null && currentAnimation.equals(animation)) {
-                        currentAnimation = null;
-                    }
-                }
-            });
-            currentAnimation.start();
-
+            animateDot(pos, 1f, true);
             checkTitle();
-        }
 
-        public String getString() {
-            return stringBuilder.toString();
-        }
-
-        public int length() {
-            return stringBuilder.length();
+            if (stringBuilder.length() == DOTS_COUNT) {
+                AndroidUtilities.runOnUIThread(() -> processDone(false), 120);
+            }
         }
 
         public boolean eraseLastCharacter() {
@@ -274,155 +185,73 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 FileLog.e(e);
             }
 
-            ArrayList<Animator> animators = new ArrayList<>();
-            int deletingPos = stringBuilder.length() - 1;
-            if (deletingPos != 0) {
-                stringBuilder.deleteCharAt(deletingPos);
-            }
+            final int pos = stringBuilder.length() - 1;
+            stringBuilder.deleteCharAt(pos);
 
-            for (int a = deletingPos; a < 4; a++) {
-                TextView textView = characterTextViews.get(a);
-                if (textView.getAlpha() != 0) {
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-                }
-
-                textView = dotTextViews.get(a);
-                if (textView.getAlpha() != 0) {
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, 0));
-                    animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-                }
-            }
-
-            if (deletingPos == 0) {
-                stringBuilder.deleteCharAt(deletingPos);
-            }
-
-            for (int a = 0; a < deletingPos; a++) {
-                TextView textView = characterTextViews.get(a);
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-                textView = dotTextViews.get(a);
-                animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, getXForTextView(a)));
-            }
-
-            if (dotRunnable != null) {
-                AndroidUtilities.cancelRunOnUIThread(dotRunnable);
-                dotRunnable = null;
-            }
-
-            if (currentAnimation != null) {
-                currentAnimation.cancel();
-            }
-            currentAnimation = new AnimatorSet();
-            currentAnimation.setDuration(150);
-            currentAnimation.playTogether(animators);
-            currentAnimation.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    if (currentAnimation != null && currentAnimation.equals(animation)) {
-                        currentAnimation = null;
-                    }
-                }
-            });
-            currentAnimation.start();
-
+            animateDot(pos, 0f, false);
             checkTitle();
 
             return true;
         }
 
-        private void eraseAllCharacters(final boolean animated) {
+        public void eraseAllCharacters(boolean animated) {
             if (stringBuilder.length() == 0) {
                 return;
             }
-            if (dotRunnable != null) {
-                AndroidUtilities.cancelRunOnUIThread(dotRunnable);
-                dotRunnable = null;
-            }
-            if (currentAnimation != null) {
-                currentAnimation.cancel();
-                currentAnimation = null;
-            }
-            stringBuilder.delete(0, stringBuilder.length());
-            if (animated) {
-                ArrayList<Animator> animators = new ArrayList<>();
-
-                for (int a = 0; a < 4; a++) {
-                    TextView textView = characterTextViews.get(a);
-                    if (textView.getAlpha() != 0) {
-                        animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                        animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                        animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
+            stringBuilder.setLength(0);
+            for (int i = 0; i < DOTS_COUNT; i++) {
+                if (animated) {
+                    animateDot(i, 0f, false);
+                } else {
+                    if (animators[i] != null) {
+                        animators[i].cancel();
+                        animators[i] = null;
                     }
-
-                    textView = dotTextViews.get(a);
-                    if (textView.getAlpha() != 0) {
-                        animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
-                        animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0));
-                        animators.add(ObjectAnimator.ofFloat(textView, View.ALPHA, 0));
-                    }
-                }
-
-                currentAnimation = new AnimatorSet();
-                currentAnimation.setDuration(150);
-                currentAnimation.playTogether(animators);
-                currentAnimation.addListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        if (currentAnimation != null && currentAnimation.equals(animation)) {
-                            currentAnimation = null;
-                        }
-                    }
-                });
-                currentAnimation.start();
-            } else {
-                for (int a = 0; a < 4; a++) {
-                    characterTextViews.get(a).setAlpha(0);
-                    dotTextViews.get(a).setAlpha(0);
+                    dotProgress[i] = 0f;
+                    dotScale[i] = 1f;
                 }
             }
-
+            invalidate();
             checkTitle();
         }
 
-        @Override
-        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-            if (dotRunnable != null) {
-                AndroidUtilities.cancelRunOnUIThread(dotRunnable);
-                dotRunnable = null;
+        private void animateDot(final int index, final float target, final boolean bounce) {
+            if (animators[index] != null) {
+                animators[index].cancel();
             }
-            if (currentAnimation != null) {
-                currentAnimation.cancel();
-                currentAnimation = null;
-            }
-
-            for (int a = 0; a < 4; a++) {
-                if (a < stringBuilder.length()) {
-                    TextView textView = characterTextViews.get(a);
-                    textView.setAlpha(0);
-                    textView.setScaleX(1);
-                    textView.setScaleY(1);
-                    textView.setTranslationY(0);
-                    textView.setTranslationX(getXForTextView(a));
-
-                    textView = dotTextViews.get(a);
-                    textView.setAlpha(1);
-                    textView.setScaleX(1);
-                    textView.setScaleY(1);
-                    textView.setTranslationY(0);
-                    textView.setTranslationX(getXForTextView(a));
+            final float startProgress = dotProgress[index];
+            ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+            anim.setDuration(160);
+            anim.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            anim.addUpdateListener(animation -> {
+                float v = (Float) animation.getAnimatedValue();
+                dotProgress[index] = AndroidUtilities.lerp(startProgress, target, v);
+                if (bounce) {
+                    dotScale[index] = 1f + 0.25f * (float) Math.sin(v * Math.PI);
                 } else {
-                    characterTextViews.get(a).setAlpha(0);
-                    dotTextViews.get(a).setAlpha(0);
+                    dotScale[index] = 1f;
                 }
-            }
-            super.onLayout(changed, left, top, right, bottom);
+                invalidate();
+            });
+            anim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    dotProgress[index] = target;
+                    dotScale[index] = 1f;
+                    animators[index] = null;
+                    invalidate();
+                }
+            });
+            animators[index] = anim;
+            anim.start();
+        }
+
+        public String getString() {
+            return stringBuilder.toString();
+        }
+
+        public int length() {
+            return stringBuilder.length();
         }
     }
 
@@ -645,7 +474,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == BuildVars.PIN_MAX_SIZE && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                if (passwordEditText.length() == 4 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
                     processDone(false);
                 }
             }
@@ -961,11 +790,11 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 frameLayout.setContentDescription(LocaleController.getString(R.string.AccDescrBackspace));
                 setNextFocus(frameLayout, R.id.passcode_btn_0);
             } else if (a == 10) {
-                // Fingerprint / Unlock button
+                // Done / Submit button
                 fingerprintView = frameLayout;
                 frameLayout.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(30), 0, 0x26ffffff));
-                frameLayout.setContentDescription(LocaleController.getString(R.string.Unlock));
-                frameLayout.setImage(R.drawable.msg_report_violence);
+                frameLayout.setContentDescription(LocaleController.getString(R.string.Done));
+                frameLayout.setImage(R.drawable.passcode_check);
                 setNextFocus(frameLayout, R.id.passcode_btn_1);
             } else {
                 // Number buttons 0-9
