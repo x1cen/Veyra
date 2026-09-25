@@ -4,6 +4,7 @@ on:
     push:
         branches:
             - dev
+            - main
         paths-ignore:
             - '**.md'
             - 'assets/**'
@@ -13,7 +14,7 @@ on:
             veyra-version:
                 description: 'Veyra version'
                 type: string
-                default: '0.1.0-alpha'
+                default: '1.0.0'
             arch:
                 description: 'Target Architecture (arm64-v8a is fastest for phones)'
                 type: choice
@@ -25,7 +26,7 @@ on:
             veyra-changes:
                 description: 'Changelog / Release notes'
                 type: string
-                default: 'Veyra Initial Preview Build (Unstable Alpha Testing)'
+                default: 'Veyra Stable Release'
             multi-pass:
                 description: 'Signing mode'
                 type: choice
@@ -36,12 +37,12 @@ on:
             prerelease:
                 description: 'Mark as pre-release?'
                 type: boolean
-                default: true
+                default: false
 
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.0' || '0.1.1-alpha') }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
@@ -166,7 +167,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || '0.1.0-alpha' }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.0' || '0.1.1-alpha') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -183,16 +184,16 @@ jobs:
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
-                    prerelease: true
+                    prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || github.ref_name != 'main' }}
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
-                        **Veyra** `${{ env.VERSION_NAME }}` (Initial Unstable Testing Build)
+                        **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || 'Veyra v0.1.0-alpha: Initial preview testing build featuring Telegram ID in profile, ad suppression, anti-delete, forced copy, and custom V-wing luxury identity.' }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.0 — First stable release. All settings fully wired, anti-delete, ghost mode, read-on-reply, Persian calendar, message details, bot button long-press copy, and more.' || 'Veyra dev build.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || '0.1.0-alpha' }}
-                    RNAME: Veyra ${{ inputs.veyra-version || '0.1.0-alpha' }}
-                    TNAME: v${{ inputs.veyra-version || '0.1.0-alpha' }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.0' || '0.1.1-alpha') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.0' || '0.1.1-alpha') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.0' || '0.1.1-alpha') }}

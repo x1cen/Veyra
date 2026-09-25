@@ -1,4 +1,4 @@
-# AGram Build Instructions
+# Veyra Build Instructions
 
 ## Requirements
 - Android SDK (API 34+)
