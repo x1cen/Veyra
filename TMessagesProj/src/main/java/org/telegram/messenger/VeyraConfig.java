@@ -20,11 +20,11 @@ public class VeyraConfig {
     public static boolean disableLinkPreviewByDefault = false;
     public static boolean ignoreContentRestrictions = true;
     public static boolean blockSecretChat = false;
-    // 0 = normal (show online), 1 = hide online (always appear offline), 2 = always appear online
+    // 0 = normal (show online), 1 = hide online, 2 = hide online + offline after sending message, 3 = always appear online
     public static int onlineMode = 0;
     // Dialog sorting
     public static boolean sortByUnread = false;
-    public static boolean sortByUnmuted = true;
+    public static boolean sortByUnmuted = false;
     // Disable trending stickers/emoji
     public static boolean disableTrending = false;
     // Keep original filename on download
@@ -49,7 +49,7 @@ public class VeyraConfig {
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
         onlineMode = preferences.getInt("onlineMode", 0);
         sortByUnread = preferences.getBoolean("sortByUnread", false);
-        sortByUnmuted = preferences.getBoolean("sortByUnmuted", true);
+        sortByUnmuted = preferences.getBoolean("sortByUnmuted", false);
         disableTrending = preferences.getBoolean("disableTrending", false);
         keepOriginalFilename = preferences.getBoolean("keepOriginalFilename", false);
         configLoaded = true;

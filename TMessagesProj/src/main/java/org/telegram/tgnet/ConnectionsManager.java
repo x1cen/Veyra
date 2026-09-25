@@ -403,7 +403,7 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
-        if (org.telegram.messenger.VeyraConfig.onlineMode == 1 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+        if ((org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2) && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
             org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
             if (!statusReq.offline) {
                 if (onComplete != null) {
@@ -412,7 +412,7 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
-        if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 3 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
             org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
             if (statusReq.offline) {
                 if (onComplete != null) {
@@ -420,6 +420,19 @@ public class ConnectionsManager extends BaseController {
                 }
                 return;
             }
+        }
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && (object instanceof TLRPC.TL_messages_sendMessage || object instanceof TLRPC.TL_messages_sendMedia || object instanceof TLRPC.TL_messages_sendMultiMedia)) {
+            final RequestDelegate origDelegate = onComplete;
+            onComplete = (response, error) -> {
+                if (origDelegate != null) {
+                    origDelegate.run(response, error);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    org.telegram.tgnet.tl.TL_account.updateStatus offlineReq = new org.telegram.tgnet.tl.TL_account.updateStatus();
+                    offlineReq.offline = true;
+                    sendRequest(offlineReq, null);
+                }, 500);
+            };
         }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);

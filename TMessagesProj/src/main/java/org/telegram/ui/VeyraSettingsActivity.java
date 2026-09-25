@@ -53,7 +53,6 @@ public class VeyraSettingsActivity extends BaseFragment {
     private int disableUndoRow;
     private int disableLinkPreviewRow;
     private int disableVibrationRow;
-    private int customCacheDirRow;
     private int controlsSectionRow;
 
     // UI section
@@ -100,7 +99,6 @@ public class VeyraSettingsActivity extends BaseFragment {
         disableUndoRow = rowCount++;
         disableLinkPreviewRow = rowCount++;
         disableVibrationRow = rowCount++;
-        customCacheDirRow = rowCount++;
         controlsSectionRow = rowCount++;
 
         uiHeaderRow = rowCount++;
@@ -154,9 +152,9 @@ public class VeyraSettingsActivity extends BaseFragment {
         listView.setOnItemClickListener((view, position, x, y) -> {
             boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
             if (position == onlineModeRow) {
-                String[] options = isFarsi
-                        ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین (همیشه آفلاین)", "همیشه آنلاین نشان بده"}
-                        : new String[]{"Show Online (Default)", "Hide Online (Always Offline)", "Always Show Online"};
+                CharSequence[] options = isFarsi
+                        ? new CharSequence[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "مخفی‌سازی آنلاین + آفلاین پس از ارسال پیام", "همیشه آنلاین"}
+                        : new CharSequence[]{"Show Online (Default)", "Hide Online", "Hide Online + Offline After Message", "Always Online"};
                 org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
                 builder.setTitle(isFarsi ? "وضعیت آنلاین" : "Online Status");
                 builder.setItems(options, (dialog, which) -> {
@@ -198,8 +196,6 @@ public class VeyraSettingsActivity extends BaseFragment {
             } else if (position == disableVibrationRow) {
                 VeyraConfig.setDisableVibration(!VeyraConfig.disableVibration);
                 ((TextCheckCell) view).setChecked(VeyraConfig.disableVibration);
-            } else if (position == customCacheDirRow) {
-                presentFragment(new DataSettingsActivity());
             } else if (position == persianCalendarRow) {
                 VeyraConfig.setPersianCalendar(!VeyraConfig.persianCalendar);
                 ((TextCheckCell) view).setChecked(VeyraConfig.persianCalendar);
@@ -385,7 +381,7 @@ public class VeyraSettingsActivity extends BaseFragment {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "نادیده گرفتن محدودیت‌های محتوایی اندروید" : "Bypass Android Content Restrictions",
                                 isFarsi ? "نمایش کانال‌ها و محتوای فیلترشده مخصوص اندروید" : "View channels and content restricted only on Android",
-                                VeyraConfig.ignoreContentRestrictions, true, false
+                                VeyraConfig.ignoreContentRestrictions, true, true
                         );
                     } else if (position == sortByUnreadRow) {
                         checkCell.setTextAndValueAndCheck(
@@ -403,7 +399,7 @@ public class VeyraSettingsActivity extends BaseFragment {
                         checkCell.setTextAndValueAndCheck(
                                 isFarsi ? "غیرفعال کردن استیکرهای ترند" : "Disable Trending Stickers",
                                 isFarsi ? "حذف تب استیکرهای ترند/پیشنهادی از صفحه استیکرها" : "Hide the trending stickers tab",
-                                VeyraConfig.disableTrending, true, false
+                                VeyraConfig.disableTrending, true, true
                         );
                     }
                     break;
@@ -419,9 +415,9 @@ public class VeyraSettingsActivity extends BaseFragment {
                     TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
                     if (position == onlineModeRow) {
                         String[] modeNames = isFarsi
-                                ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "همیشه آنلاین"}
-                                : new String[]{"Show Online (Default)", "Hide Online", "Always Online"};
-                        String current = modeNames[Math.min(VeyraConfig.onlineMode, 2)];
+                                ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "مخفی‌سازی آنلاین + آفلاین پس از ارسال پیام", "همیشه آنلاین"}
+                                : new String[]{"Show Online (Default)", "Hide Online", "Hide Online + Offline After Message", "Always Online"};
+                        String current = modeNames[Math.min(Math.max(VeyraConfig.onlineMode, 0), 3)];
                         detailCell.setTextAndValue(
                                 isFarsi ? "وضعیت آنلاین" : "Online Status",
                                 current,

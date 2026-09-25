@@ -1456,12 +1456,28 @@ public class MessagesController extends BaseController implements NotificationCe
         MediaDataController mediaDataController = getMediaDataController();
         long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
         long date2 = DialogObject.getLastMessageOrDraftDate(dialog2, mediaDataController.getDraft(dialog2.id, 0));
-        // Veyra: optional sort by unread/unmuted priority
-        if (org.telegram.messenger.VeyraConfig.sortByUnread || org.telegram.messenger.VeyraConfig.sortByUnmuted) {
-            int score1 = dialogSortScore(dialog1);
-            int score2 = dialogSortScore(dialog2);
-            if (score1 != score2) {
-                return score2 - score1;
+        // Veyra: optional sort by unread/unmuted priority matching Nagram logic
+        if (org.telegram.messenger.VeyraConfig.sortByUnread) {
+            if (dialog1.unread_count == 0 && dialog2.unread_count > 0) {
+                return 1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0) {
+                return -1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count > 0) {
+                if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+                    boolean m1 = isDialogMuted(dialog1.id, 0);
+                    boolean m2 = isDialogMuted(dialog2.id, 0);
+                    if (m1 && !m2) {
+                        return 1;
+                    } else if (!m1 && m2) {
+                        return -1;
+                    }
+                }
+            }
+        } else if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+            if (dialog1.unread_count == 0 && dialog2.unread_count > 0 && isDialogMuted(dialog1.id, 0) && !isDialogMuted(dialog2.id, 0)) {
+                return 1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0 && !isDialogMuted(dialog1.id, 0) && isDialogMuted(dialog2.id, 0)) {
+                return -1;
             }
         }
         if (date1 < date2) {
@@ -1471,13 +1487,6 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         return 0;
     };
-
-    private int dialogSortScore(TLRPC.Dialog d) {
-        int score = 0;
-        if (org.telegram.messenger.VeyraConfig.sortByUnread && d.unread_count > 0) score += 2;
-        if (org.telegram.messenger.VeyraConfig.sortByUnmuted && !isDialogMuted(d.id, 0)) score += 1;
-        return score;
-    }
 
     private Comparator<CommunityPeerDialog> communityPeerDialogComparator = (peer1, peer2) -> {
         if (peer1.dialog != null && peer2.dialog != null) {
@@ -10555,7 +10564,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void updateOnlineStatus() {
         Utilities.stageQueue.postRunnable(() -> {
-            if (VeyraConfig.onlineMode == 1) {
+            if (VeyraConfig.onlineMode == 1 || VeyraConfig.onlineMode == 2) {
                 TL_account.updateStatus req = new TL_account.updateStatus();
                 req.offline = true;
                 getConnectionsManager().sendRequest(req, (response, error) -> {
@@ -10579,9 +10588,9 @@ public class MessagesController extends BaseController implements NotificationCe
         checkReadTasks();
 
         if (getUserConfig().isClientActivated()) {
-            // Veyra: online visibility control
-            final int onlineMode = VeyraConfig.onlineMode; // 0=normal, 1=hide(always offline), 2=always online
-            if (!ignoreSetOnline && onlineMode != 1 && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
+            // Veyra: online visibility control (0=normal, 1=hide, 2=hide+offline after message, 3=always online)
+            final int onlineMode = VeyraConfig.onlineMode;
+            if (!ignoreSetOnline && onlineMode != 1 && onlineMode != 2 && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
                     if (statusSettingState != 1 && (lastStatusUpdateTime == 0 || Math.abs(System.currentTimeMillis() - lastStatusUpdateTime) >= 55000 || offlineSent)) {
                         statusSettingState = 1;
@@ -10606,7 +10615,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         });
                     }
                 }
-            } else if (onlineMode != 2 && statusSettingState != 2 && !offlineSent && Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000) {
+            } else if (onlineMode != 3 && statusSettingState != 2 && !offlineSent && Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000) {
                 statusSettingState = 2;
                 if (statusRequest != 0) {
                     getConnectionsManager().cancelRequest(statusRequest, true);
