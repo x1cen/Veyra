@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.browser.Browser;
@@ -36,6 +37,7 @@ public class VeyraSettingsActivity extends BaseFragment {
 
     // Privacy section
     private int privacyHeaderRow;
+    private int onlineModeRow;
     private int readOnReplyRow;
     private int antiDeleteRow;
     private int ghostModeRow;
@@ -79,6 +81,7 @@ public class VeyraSettingsActivity extends BaseFragment {
         rowCount = 0;
 
         privacyHeaderRow = rowCount++;
+        onlineModeRow = rowCount++;
         readOnReplyRow = rowCount++;
         antiDeleteRow = rowCount++;
         ghostModeRow = rowCount++;
@@ -142,7 +145,19 @@ public class VeyraSettingsActivity extends BaseFragment {
 
         listView.setOnItemClickListener((view, position, x, y) -> {
             boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-            if (position == readOnReplyRow) {
+            if (position == onlineModeRow) {
+                String[] options = isFarsi
+                        ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین (همیشه آفلاین)", "همیشه آنلاین نشان بده"}
+                        : new String[]{"Show Online (Default)", "Hide Online (Always Offline)", "Always Show Online"};
+                org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
+                builder.setTitle(isFarsi ? "وضعیت آنلاین" : "Online Status");
+                builder.setItems(options, (dialog, which) -> {
+                    VeyraConfig.setOnlineMode(which);
+                    MessagesController.getInstance(currentAccount).updateOnlineStatus();
+                    listAdapter.notifyItemChanged(position);
+                });
+                builder.show();
+            } else if (position == readOnReplyRow) {
                 VeyraConfig.setReadOnReply(!VeyraConfig.readOnReply);
                 ((TextCheckCell) view).setChecked(VeyraConfig.readOnReply);
             } else if (position == antiDeleteRow) {
@@ -216,7 +231,8 @@ public class VeyraSettingsActivity extends BaseFragment {
             return position != privacyHeaderRow && position != privacySectionRow &&
                     position != controlsHeaderRow && position != controlsSectionRow &&
                     position != uiHeaderRow && position != uiSectionRow &&
-                    position != aboutHeaderRow && position != aboutSectionRow;
+                    position != aboutHeaderRow && position != aboutSectionRow &&
+                    position != noAdsRow && position != unlimitedLimitsRow;
         }
 
         @NonNull
@@ -362,7 +378,18 @@ public class VeyraSettingsActivity extends BaseFragment {
                 }
                 case 4: {
                     TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
-                    if (position == noAdsRow) {
+                    if (position == onlineModeRow) {
+                        boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
+                        String[] modeNames = isFarsi
+                                ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "همیشه آنلاین"}
+                                : new String[]{"Show Online (Default)", "Hide Online", "Always Online"};
+                        String current = modeNames[Math.min(VeyraConfig.onlineMode, 2)];
+                        detailCell.setTextAndValue(
+                                isFarsi ? "وضعیت آنلاین" : "Online Status",
+                                current,
+                                true
+                        );
+                    } else if (position == noAdsRow) {
                         detailCell.setTextAndValue(
                                 isFarsi ? "بدون تبلیغات اسپانسری" : "Ad-Free Experience",
                                 isFarsi ? "تمام پست‌های اسپانسری بدون نیاز به پرمیوم حذف شده‌اند" : "All sponsored ads permanently disabled",
@@ -401,7 +428,7 @@ public class VeyraSettingsActivity extends BaseFragment {
                 return 2;
             } else if (position == githubRow) {
                 return 3;
-            } else if (position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
+            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
                 return 4;
             } else {
                 return 0;

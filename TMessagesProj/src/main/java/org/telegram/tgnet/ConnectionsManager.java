@@ -403,6 +403,24 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 1 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+            org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
+            if (!statusReq.offline) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+            org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
+            if (statusReq.offline) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }

@@ -20,6 +20,8 @@ public class VeyraConfig {
     public static boolean disableLinkPreviewByDefault = false;
     public static boolean ignoreContentRestrictions = true;
     public static boolean blockSecretChat = false;
+    // 0 = normal (show online), 1 = hide online (always appear offline), 2 = always appear online
+    public static int onlineMode = 0;
 
     public static void loadConfig() {
         if (configLoaded) return;
@@ -38,6 +40,7 @@ public class VeyraConfig {
         disableLinkPreviewByDefault = preferences.getBoolean("disableLinkPreviewByDefault", false);
         ignoreContentRestrictions = preferences.getBoolean("ignoreContentRestrictions", true);
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
+        onlineMode = preferences.getInt("onlineMode", 0);
         configLoaded = true;
     }
 
@@ -96,6 +99,13 @@ public class VeyraConfig {
     public static void setBlockSecretChat(boolean val) {
         blockSecretChat = val;
         save("blockSecretChat", val);
+    }
+    public static void setOnlineMode(int val) {
+        onlineMode = val;
+        if (preferences == null) {
+            preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
+        }
+        preferences.edit().putInt("onlineMode", val).apply();
     }
 
     private static void save(String key, boolean val) {

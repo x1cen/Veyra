@@ -10497,6 +10497,25 @@ public class MessagesController extends BaseController implements NotificationCe
         });
     }
 
+    public void updateOnlineStatus() {
+        Utilities.stageQueue.postRunnable(() -> {
+            if (VeyraConfig.onlineMode == 1) {
+                TL_account.updateStatus req = new TL_account.updateStatus();
+                req.offline = true;
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        offlineSent = true;
+                        statusSettingState = 2;
+                    }
+                });
+            } else {
+                statusSettingState = 0;
+                lastStatusUpdateTime = 0;
+                offlineSent = true;
+            }
+        });
+    }
+
     public void updateTimerProc() {
         long currentTime = System.currentTimeMillis();
 
@@ -10504,7 +10523,9 @@ public class MessagesController extends BaseController implements NotificationCe
         checkReadTasks();
 
         if (getUserConfig().isClientActivated()) {
-            if (!ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
+            // Veyra: online visibility control
+            final int onlineMode = VeyraConfig.onlineMode; // 0=normal, 1=hide(always offline), 2=always online
+            if (!ignoreSetOnline && onlineMode != 1 && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
                     if (statusSettingState != 1 && (lastStatusUpdateTime == 0 || Math.abs(System.currentTimeMillis() - lastStatusUpdateTime) >= 55000 || offlineSent)) {
                         statusSettingState = 1;
@@ -10529,7 +10550,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         });
                     }
                 }
-            } else if (statusSettingState != 2 && !offlineSent && Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000) {
+            } else if (onlineMode != 2 && statusSettingState != 2 && !offlineSent && Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000) {
                 statusSettingState = 2;
                 if (statusRequest != 0) {
                     getConnectionsManager().cancelRequest(statusRequest, true);
