@@ -16,7 +16,7 @@ public class VeyraConfig {
     public static boolean persianCalendar = true;
     public static boolean showProfileId = true;
     public static boolean disableVibration = false;
-    public static boolean disableUndo = false;
+    public static boolean disableUndo = true;
     public static boolean disableLinkPreviewByDefault = false;
     public static boolean ignoreContentRestrictions = true;
     public static boolean blockSecretChat = false;
@@ -36,7 +36,7 @@ public class VeyraConfig {
         persianCalendar = preferences.getBoolean("persianCalendar", true);
         showProfileId = preferences.getBoolean("showProfileId", true);
         disableVibration = preferences.getBoolean("disableVibration", false);
-        disableUndo = preferences.getBoolean("disableUndo", false);
+        disableUndo = preferences.getBoolean("disableUndo", true);
         disableLinkPreviewByDefault = preferences.getBoolean("disableLinkPreviewByDefault", false);
         ignoreContentRestrictions = preferences.getBoolean("ignoreContentRestrictions", true);
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
