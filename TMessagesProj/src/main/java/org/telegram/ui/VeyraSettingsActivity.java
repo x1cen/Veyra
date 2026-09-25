@@ -1,470 +1,206 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.text.InputType;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.FrameLayout;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
-import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.browser.Browser;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
-import org.telegram.ui.Cells.ShadowSectionCell;
-import org.telegram.ui.Cells.TextCheckCell;
-import org.telegram.ui.Cells.TextDetailSettingsCell;
-import org.telegram.ui.Cells.TextSettingsCell;
-import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.RecyclerListView;
 
-public class VeyraSettingsActivity extends BaseFragment {
+import java.util.ArrayList;
+import java.util.List;
 
-    private RecyclerListView listView;
-    private ListAdapter listAdapter;
+public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
-    private int rowCount;
-
-    // Privacy section
-    private int privacyHeaderRow;
-    private int onlineModeRow;
-    private int readOnReplyRow;
-    private int antiDeleteRow;
-    private int ghostModeRow;
-    private int hideTypingRow;
-    private int blockSecretChatRow;
-    private int privacySectionRow;
-
-    // Controls section
-    private int controlsHeaderRow;
-    private int confirmCallRow;
-    private int confirmLinkRow;
-    private int cleanUrlsRow;
-    private int disableUndoRow;
-    private int disableLinkPreviewRow;
-    private int disableVibrationRow;
-    private int controlsSectionRow;
-
-    // UI section
-    private int uiHeaderRow;
-    private int persianCalendarRow;
-    private int showProfileIdRow;
-    private int bypassRestrictionsRow;
-    private int sortByUnreadRow;
-    private int sortByUnmutedRow;
-    private int disableTrendingRow;
-    private int noAdsRow;
-    private int unlimitedLimitsRow;
-    private int uiSectionRow;
-
-    // About section
-    private int aboutHeaderRow;
-    private int versionRow;
-    private int githubRow;
-    private int aboutSectionRow;
+    private boolean unlocked = false;
+    private FrameLayout lockContainer;
+    private EditTextBoldCursor lockEditText;
 
     @Override
-    public boolean onFragmentCreate() {
-        super.onFragmentCreate();
-        updateRows();
-        return true;
-    }
-
-    private void updateRows() {
-        rowCount = 0;
-
-        privacyHeaderRow = rowCount++;
-        onlineModeRow = rowCount++;
-        readOnReplyRow = rowCount++;
-        antiDeleteRow = rowCount++;
-        ghostModeRow = rowCount++;
-        hideTypingRow = rowCount++;
-        blockSecretChatRow = rowCount++;
-        privacySectionRow = rowCount++;
-
-        controlsHeaderRow = rowCount++;
-        confirmCallRow = rowCount++;
-        confirmLinkRow = rowCount++;
-        cleanUrlsRow = rowCount++;
-        disableUndoRow = rowCount++;
-        disableLinkPreviewRow = rowCount++;
-        disableVibrationRow = rowCount++;
-        controlsSectionRow = rowCount++;
-
-        uiHeaderRow = rowCount++;
-        persianCalendarRow = rowCount++;
-        showProfileIdRow = rowCount++;
-        bypassRestrictionsRow = rowCount++;
-        sortByUnreadRow = rowCount++;
-        sortByUnmutedRow = rowCount++;
-        disableTrendingRow = rowCount++;
-        noAdsRow = rowCount++;
-        unlimitedLimitsRow = rowCount++;
-        uiSectionRow = rowCount++;
-
-        aboutHeaderRow = rowCount++;
-        versionRow = rowCount++;
-        githubRow = rowCount++;
-        aboutSectionRow = rowCount++;
-
-        if (listAdapter != null) {
-            listAdapter.notifyDataSetChanged();
-        }
+    protected String getScreenTitle() {
+        return LocaleController.getString("VeyraSettings", R.string.VeyraSettings);
     }
 
     @Override
     public View createView(Context context) {
-        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle(LocaleController.getString("VeyraSettings", R.string.VeyraSettings));
-        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
-            @Override
-            public void onItemClick(int id) {
-                if (id == -1) {
-                    finishFragment();
-                }
-            }
-        });
+        View view = super.createView(context);
 
-        fragmentView = new FrameLayout(context);
-        FrameLayout frameLayout = (FrameLayout) fragmentView;
-        frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        if (VeyraConfig.hasSettingsLock() && !unlocked) {
+            setupLockOverlay(context);
+        }
 
-        listView = new RecyclerListView(context);
-        listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        listView.setVerticalScrollBarEnabled(false);
-        listView.setItemAnimator(new DefaultItemAnimator());
-        frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        listAdapter = new ListAdapter(context);
-        listView.setAdapter(listAdapter);
-
-        listView.setOnItemClickListener((view, position, x, y) -> {
-            boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-            if (position == onlineModeRow) {
-                CharSequence[] options = isFarsi
-                        ? new CharSequence[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "مخفی‌سازی آنلاین + آفلاین پس از ارسال پیام", "همیشه آنلاین"}
-                        : new CharSequence[]{"Show Online (Default)", "Hide Online", "Hide Online + Offline After Message", "Always Online"};
-                org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
-                builder.setTitle(isFarsi ? "وضعیت آنلاین" : "Online Status");
-                builder.setItems(options, (dialog, which) -> {
-                    VeyraConfig.setOnlineMode(which);
-                    MessagesController.getInstance(currentAccount).updateOnlineStatus();
-                    listAdapter.notifyItemChanged(position);
-                });
-                builder.show();
-            } else if (position == readOnReplyRow) {
-                VeyraConfig.setReadOnReply(!VeyraConfig.readOnReply);
-                ((TextCheckCell) view).setChecked(VeyraConfig.readOnReply);
-            } else if (position == antiDeleteRow) {
-                VeyraConfig.setAntiDelete(!VeyraConfig.antiDelete);
-                ((TextCheckCell) view).setChecked(VeyraConfig.antiDelete);
-            } else if (position == ghostModeRow) {
-                VeyraConfig.setGhostMode(!VeyraConfig.ghostMode);
-                ((TextCheckCell) view).setChecked(VeyraConfig.ghostMode);
-            } else if (position == hideTypingRow) {
-                VeyraConfig.setHideTyping(!VeyraConfig.hideTyping);
-                ((TextCheckCell) view).setChecked(VeyraConfig.hideTyping);
-            } else if (position == blockSecretChatRow) {
-                VeyraConfig.setBlockSecretChat(!VeyraConfig.blockSecretChat);
-                ((TextCheckCell) view).setChecked(VeyraConfig.blockSecretChat);
-            } else if (position == confirmCallRow) {
-                VeyraConfig.setConfirmCall(!VeyraConfig.confirmCall);
-                ((TextCheckCell) view).setChecked(VeyraConfig.confirmCall);
-            } else if (position == confirmLinkRow) {
-                VeyraConfig.setConfirmLink(!VeyraConfig.confirmLink);
-                ((TextCheckCell) view).setChecked(VeyraConfig.confirmLink);
-            } else if (position == cleanUrlsRow) {
-                VeyraConfig.setCleanUrls(!VeyraConfig.cleanUrls);
-                ((TextCheckCell) view).setChecked(VeyraConfig.cleanUrls);
-            } else if (position == disableUndoRow) {
-                VeyraConfig.setDisableUndo(!VeyraConfig.disableUndo);
-                ((TextCheckCell) view).setChecked(VeyraConfig.disableUndo);
-            } else if (position == disableLinkPreviewRow) {
-                VeyraConfig.setDisableLinkPreviewByDefault(!VeyraConfig.disableLinkPreviewByDefault);
-                ((TextCheckCell) view).setChecked(VeyraConfig.disableLinkPreviewByDefault);
-            } else if (position == disableVibrationRow) {
-                VeyraConfig.setDisableVibration(!VeyraConfig.disableVibration);
-                ((TextCheckCell) view).setChecked(VeyraConfig.disableVibration);
-            } else if (position == persianCalendarRow) {
-                VeyraConfig.setPersianCalendar(!VeyraConfig.persianCalendar);
-                ((TextCheckCell) view).setChecked(VeyraConfig.persianCalendar);
-            } else if (position == showProfileIdRow) {
-                VeyraConfig.setShowProfileId(!VeyraConfig.showProfileId);
-                ((TextCheckCell) view).setChecked(VeyraConfig.showProfileId);
-            } else if (position == bypassRestrictionsRow) {
-                VeyraConfig.setIgnoreContentRestrictions(!VeyraConfig.ignoreContentRestrictions);
-                ((TextCheckCell) view).setChecked(VeyraConfig.ignoreContentRestrictions);
-            } else if (position == sortByUnreadRow) {
-                VeyraConfig.setSortByUnread(!VeyraConfig.sortByUnread);
-                ((TextCheckCell) view).setChecked(VeyraConfig.sortByUnread);
-                MessagesController.getInstance(currentAccount).sortDialogs(null);
-            } else if (position == sortByUnmutedRow) {
-                VeyraConfig.setSortByUnmuted(!VeyraConfig.sortByUnmuted);
-                ((TextCheckCell) view).setChecked(VeyraConfig.sortByUnmuted);
-                MessagesController.getInstance(currentAccount).sortDialogs(null);
-            } else if (position == disableTrendingRow) {
-                VeyraConfig.setDisableTrending(!VeyraConfig.disableTrending);
-                ((TextCheckCell) view).setChecked(VeyraConfig.disableTrending);
-            } else if (position == githubRow) {
-                Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
-            }
-        });
-
-        return fragmentView;
+        return view;
     }
 
-    private class ListAdapter extends RecyclerListView.SelectionAdapter {
+    private void setupLockOverlay(Context context) {
+        if (!(fragmentView instanceof FrameLayout)) return;
+        FrameLayout root = (FrameLayout) fragmentView;
 
-        private final Context mContext;
+        boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
 
-        public ListAdapter(Context context) {
-            mContext = context;
-        }
+        lockContainer = new FrameLayout(context);
+        lockContainer.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        lockContainer.setClickable(true);
 
-        @Override
-        public int getItemCount() {
-            return rowCount;
-        }
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
+        lockContainer.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 32, 0, 32, 0));
 
-        @Override
-        public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            int position = holder.getAdapterPosition();
-            return position != privacyHeaderRow && position != privacySectionRow &&
-                    position != controlsHeaderRow && position != controlsSectionRow &&
-                    position != uiHeaderRow && position != uiSectionRow &&
-                    position != aboutHeaderRow && position != aboutSectionRow &&
-                    position != noAdsRow && position != unlimitedLimitsRow &&
-                    position != versionRow;
-        }
+        TextView titleView = new TextView(context);
+        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+        titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        titleView.setGravity(Gravity.CENTER_HORIZONTAL);
+        titleView.setText(isFarsi ? "تنظیمات ویرا قفل است" : "Veyra Settings Locked");
+        content.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 8));
 
-        @NonNull
-        @Override
-        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view;
-            switch (viewType) {
-                case 1:
-                    view = new HeaderCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case 2:
-                    view = new TextCheckCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case 3:
-                    view = new TextSettingsCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case 4:
-                    view = new TextDetailSettingsCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    break;
-                default:
-                    view = new ShadowSectionCell(mContext);
-                    break;
+        TextView descView = new TextView(context);
+        descView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        descView.setGravity(Gravity.CENTER_HORIZONTAL);
+        descView.setText(isFarsi ? "برای ورود، رمز عبور را وارد کنید" : "Enter your passcode to continue");
+        content.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 24));
+
+        lockEditText = new EditTextBoldCursor(context);
+        lockEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+        lockEditText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        lockEditText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        lockEditText.setGravity(Gravity.CENTER);
+        lockEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        lockEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        lockEditText.setCursorSize(AndroidUtilities.dp(20));
+        lockEditText.setCursorWidth(1.5f);
+        content.addView(lockEditText, LayoutHelper.createLinear(200, 44, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+        lockEditText.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                checkUnlock();
+                return true;
             }
-            return new RecyclerListView.Holder(view);
-        }
+            return false;
+        });
 
-        @Override
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        root.addView(lockContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+        lockEditText.postDelayed(() -> {
+            if (lockEditText != null) {
+                lockEditText.requestFocus();
+                AndroidUtilities.showKeyboard(lockEditText);
+            }
+        }, 200);
+    }
+
+    private void checkUnlock() {
+        if (lockEditText == null) return;
+        String code = lockEditText.getText().toString();
+        if (VeyraConfig.checkSettingsLockCode(code)) {
+            unlocked = true;
+            AndroidUtilities.hideKeyboard(lockEditText);
+            if (lockContainer != null && fragmentView instanceof FrameLayout) {
+                ((FrameLayout) fragmentView).removeView(lockContainer);
+                lockContainer = null;
+            }
+        } else {
+            AndroidUtilities.shakeView(lockEditText);
             boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-            switch (holder.getItemViewType()) {
-                case 1: {
-                    HeaderCell headerCell = (HeaderCell) holder.itemView;
-                    if (position == privacyHeaderRow) {
-                        headerCell.setText(isFarsi ? "امنیت و حریم خصوصی" : "Privacy & Security");
-                    } else if (position == controlsHeaderRow) {
-                        headerCell.setText(isFarsi ? "کنترل‌ها و تعاملات" : "Controls & Interaction");
-                    } else if (position == uiHeaderRow) {
-                        headerCell.setText(isFarsi ? "رابط کاربری و ویژگی‌ها" : "UI & Features");
-                    } else if (position == aboutHeaderRow) {
-                        headerCell.setText(isFarsi ? "درباره ویرا" : "About Veyra");
-                    }
-                    break;
-                }
-                case 2: {
-                    TextCheckCell checkCell = (TextCheckCell) holder.itemView;
-                    if (position == readOnReplyRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "سین فقط با پاسخ دادن" : "Mark as Read on Reply",
-                                isFarsi ? "پیام‌های دریافتی تا ارسال پاسخ برای مخاطب خوانده نمی‌شوند" : "Messages are not marked as read until you reply",
-                                VeyraConfig.readOnReply, true, true
-                        );
-                    } else if (position == antiDeleteRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "آنتی‌دیلیت پیام‌ها" : "Anti-Delete Messages",
-                                isFarsi ? "نگه‌داری پیام‌های حذف‌شده با برچسب قرمز 'حذف شده'" : "Keep deleted messages with 'Deleted' label",
-                                VeyraConfig.antiDelete, true, true
-                        );
-                    } else if (position == ghostModeRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "حالت روح (Ghost Mode)" : "Full Ghost Mode",
-                                isFarsi ? "عدم ارسال وضعیت خوانده شدن برای هیچ پیامی" : "Never send read receipts",
-                                VeyraConfig.ghostMode, true, true
-                        );
-                    } else if (position == hideTypingRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "مخفی‌سازی وضعیت نوشتن" : "Hide Typing Status",
-                                isFarsi ? "جلوگیری از ارسال وضعیت 'در حال نوشتن...' به دیگران" : "Don't broadcast 'typing...' status",
-                                VeyraConfig.hideTyping, true, true
-                        );
-                    } else if (position == blockSecretChatRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "مسدودسازی سکرت چت ورودی" : "Block Incoming Secret Chats",
-                                isFarsi ? "رد خودکار درخواست‌های سکرت چت از دیگران" : "Auto-decline incoming secret chat requests",
-                                VeyraConfig.blockSecretChat, true, false
-                        );
-                    } else if (position == confirmCallRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "تأییدیه قبل از تماس" : "Confirm Before Calling",
-                                isFarsi ? "نمایش هشدار تأیید قبل از شروع تماس صوتی یا تصویری" : "Show confirmation dialog before voice/video calls",
-                                VeyraConfig.confirmCall, true, true
-                        );
-                    } else if (position == confirmLinkRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "تأییدیه باز کردن لینک‌ها" : "Confirm External Links",
-                                isFarsi ? "نیاز به تأیید کاربر قبل از باز شدن لینک در مرورگر" : "Require confirmation before opening links",
-                                VeyraConfig.confirmLink, true, true
-                        );
-                    } else if (position == cleanUrlsRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "پاک‌سازی ترکر از لینک‌ها" : "Clean Tracking Parameters",
-                                isFarsi ? "حذف خودکار utm_*, fbclid, gclid, si هنگام کپی لینک" : "Auto-strip utm_*, fbclid, gclid, si from copied URLs",
-                                VeyraConfig.cleanUrls, true, true
-                        );
-                    } else if (position == disableUndoRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "حذف تأخیر ۵ ثانیه‌ای لغو عملیات" : "Skip 5s Undo Countdown",
-                                isFarsi ? "اجرای فوری عملیات بدون نوار انتظار ۵ ثانیه" : "Execute actions instantly without undo toast",
-                                VeyraConfig.disableUndo, true, true
-                        );
-                    } else if (position == disableLinkPreviewRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "غیرفعال‌سازی پیش‌نمایش لینک به‌طور پیش‌فرض" : "Disable Link Preview by Default",
-                                isFarsi ? "جلوگیری از ارسال درخواست پیش‌نمایش به سرور هنگام تایپ لینک" : "Prevent server from fetching link previews while typing",
-                                VeyraConfig.disableLinkPreviewByDefault, true, true
-                        );
-                    } else if (position == disableVibrationRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "غیرفعال کردن ویبره" : "Disable Vibration",
-                                isFarsi ? "قطع تمام فیدبک‌های لرزشی و هپتیک اپلیکیشن" : "Disable all haptic feedback and vibrations globally",
-                                VeyraConfig.disableVibration, true, false
-                        );
-                    } else if (position == persianCalendarRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "تقویم خورشیدی (شمسی)" : "Persian Solar Calendar",
-                                isFarsi ? "نمایش تاریخ‌ها با ماه‌های خورشیدی و ارقام فارسی" : "Display dates in Persian Solar Hijri calendar",
-                                VeyraConfig.persianCalendar, true, true
-                        );
-                    } else if (position == showProfileIdRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "نمایش شناسه تلگرام و DC در پروفایل" : "Show Telegram ID & Datacenter",
-                                isFarsi ? "دسترسی و کپی سریع User ID و دیتاسنتر در پروفایل کاربران" : "Show and copy User ID and DC in user profiles",
-                                VeyraConfig.showProfileId, true, true
-                        );
-                    } else if (position == bypassRestrictionsRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "نادیده گرفتن محدودیت‌های محتوایی اندروید" : "Bypass Android Content Restrictions",
-                                isFarsi ? "نمایش کانال‌ها و محتوای فیلترشده مخصوص اندروید" : "View channels and content restricted only on Android",
-                                VeyraConfig.ignoreContentRestrictions, true, true
-                        );
-                    } else if (position == sortByUnreadRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "اولویت خوانده‌نشده‌ها در لیست" : "Prioritize Unread Chats",
-                                isFarsi ? "نمایش گفتگوهای خوانده‌نشده در بالای لیست" : "Sort unread dialogs to the top of the chat list",
-                                VeyraConfig.sortByUnread, true, true
-                        );
-                    } else if (position == sortByUnmutedRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "اولویت گفتگوهای بی‌صدا نشده" : "Prioritize Unmuted Chats",
-                                isFarsi ? "نمایش گفتگوهایی که بی‌صدا نیستند در بالای لیست" : "Sort non-muted dialogs above muted ones",
-                                VeyraConfig.sortByUnmuted, true, true
-                        );
-                    } else if (position == disableTrendingRow) {
-                        checkCell.setTextAndValueAndCheck(
-                                isFarsi ? "غیرفعال کردن استیکرهای ترند" : "Disable Trending Stickers",
-                                isFarsi ? "حذف تب استیکرهای ترند/پیشنهادی از صفحه استیکرها" : "Hide the trending stickers tab",
-                                VeyraConfig.disableTrending, true, true
-                        );
-                    }
-                    break;
-                }
-                case 3: {
-                    TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
-                    if (position == githubRow) {
-                        textCell.setText(isFarsi ? "مخزن گیت‌هاب (x1cen/Veyra)" : "GitHub Repository (x1cen/Veyra)", false);
-                    }
-                    break;
-                }
-                case 4: {
-                    TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
-                    if (position == onlineModeRow) {
-                        String[] modeNames = isFarsi
-                                ? new String[]{"نمایش آنلاین (پیش‌فرض)", "مخفی کردن آنلاین", "مخفی‌سازی آنلاین + آفلاین پس از ارسال پیام", "همیشه آنلاین"}
-                                : new String[]{"Show Online (Default)", "Hide Online", "Hide Online + Offline After Message", "Always Online"};
-                        String current = modeNames[Math.min(Math.max(VeyraConfig.onlineMode, 0), 3)];
-                        detailCell.setTextAndValue(
-                                isFarsi ? "وضعیت آنلاین" : "Online Status",
-                                current,
-                                true
-                        );
-                    } else if (position == noAdsRow) {
-                        detailCell.setTextAndValue(
-                                isFarsi ? "بدون تبلیغات اسپانسری" : "Ad-Free Experience",
-                                isFarsi ? "تمام پست‌های اسپانسری بدون نیاز به پرمیوم حذف شده‌اند" : "All sponsored ads permanently disabled",
-                                true
-                        );
-                    } else if (position == unlimitedLimitsRow) {
-                        detailCell.setTextAndValue(
-                                isFarsi ? "سقف‌های ارتقاء یافته" : "Unlocked Limits",
-                                isFarsi ? "۱۰۰ پین، ۵۰۰ استیکر دلخواه، ۱۰۰۰ گیف، ۳۰ فولدر" : "100 pins, 500 stickers, 1000 GIFs, 30 folders",
-                                false
-                        );
-                    } else if (position == versionRow) {
-                        detailCell.setTextAndValue(
-                                isFarsi ? "نسخه Veyra" : "Veyra Version",
-                                "1.0.3 (arm64-v8a)",
-                                true
-                        );
-                    }
-                    break;
-                }
+            if (getBulletinFactory() != null) {
+                getBulletinFactory().createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong passcode").show();
             }
         }
+    }
 
-        @Override
-        public int getItemViewType(int position) {
-            if (position == privacyHeaderRow || position == controlsHeaderRow ||
-                    position == uiHeaderRow || position == aboutHeaderRow) {
-                return 1;
-            } else if (position == readOnReplyRow || position == antiDeleteRow ||
-                    position == ghostModeRow || position == hideTypingRow ||
-                    position == blockSecretChatRow || position == confirmCallRow ||
-                    position == confirmLinkRow || position == cleanUrlsRow ||
-                    position == disableUndoRow || position == disableLinkPreviewRow ||
-                    position == disableVibrationRow || position == persianCalendarRow ||
-                    position == showProfileIdRow || position == bypassRestrictionsRow ||
-                    position == sortByUnreadRow || position == sortByUnmutedRow ||
-                    position == disableTrendingRow) {
-                return 2;
-            } else if (position == githubRow) {
-                return 3;
-            } else if (position == onlineModeRow || position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
-                return 4;
-            } else {
-                return 0;
-            }
-        }
+    @Override
+    protected List<VeyraSettingsRow> buildRows() {
+        List<VeyraSettingsRow> r = new ArrayList<>();
+
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraSettingsCategories", R.string.VeyraSettingsCategories)));
+
+        // Category 1: Privacy & Security
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
+                LocaleController.getString("VeyraPrivacySecurityDesc", R.string.VeyraPrivacySecurityDesc),
+                () -> presentFragment(new VeyraPrivacySettingsActivity())
+        ));
+
+        // Category 2: Chat List
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraChatList", R.string.VeyraChatList),
+                LocaleController.getString("VeyraChatListDesc", R.string.VeyraChatListDesc),
+                () -> presentFragment(new VeyraChatListSettingsActivity())
+        ));
+
+        // Category 3: Composing & Messages
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraComposingMessages", R.string.VeyraComposingMessages),
+                LocaleController.getString("VeyraComposingMessagesDesc", R.string.VeyraComposingMessagesDesc),
+                () -> presentFragment(new VeyraComposingSettingsActivity())
+        ));
+
+        // Category 4: Media & Camera
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraMediaCamera", R.string.VeyraMediaCamera),
+                LocaleController.getString("VeyraMediaCameraDesc", R.string.VeyraMediaCameraDesc),
+                () -> presentFragment(new VeyraMediaSettingsActivity())
+        ));
+
+        // Category 5: Controls & General
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraControlsGeneral", R.string.VeyraControlsGeneral),
+                LocaleController.getString("VeyraControlsGeneralDesc", R.string.VeyraControlsGeneralDesc),
+                () -> presentFragment(new VeyraControlsSettingsActivity())
+        ));
+
+        // Category 6: Backup & Restore
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraBackupRestore", R.string.VeyraBackupRestore),
+                LocaleController.getString("VeyraBackupRestoreDesc", R.string.VeyraBackupRestoreDesc),
+                () -> presentFragment(new VeyraBackupSettingsActivity())
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
+        // About section
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraAbout", R.string.VeyraAbout)));
+
+        r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraUnlockedLimits", R.string.VeyraUnlockedLimits),
+                LocaleController.getString("VeyraUnlockedLimitsDesc", R.string.VeyraUnlockedLimitsDesc),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraAdFree", R.string.VeyraAdFree),
+                LocaleController.getString("VeyraAdFreeDesc", R.string.VeyraAdFreeDesc),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraVersion", R.string.VeyraVersion),
+                "1.0.4-beta3",
+                true
+        ));
+
+        r.add(VeyraSettingsRow.button(
+                "GitHub: x1cen/Veyra",
+                false, false,
+                () -> Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra")
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
+        return r;
     }
 }

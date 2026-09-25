@@ -1671,6 +1671,8 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_unpin_selected = 81;
     private final static int veyra_action_mode_other = 82;
     private final static int veyra_view_details = 83;
+    private final static int veyra_copy_dialog_id = 84;
+    private final static int veyra_jump_to_first = 85;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -1899,6 +1901,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onDoubleTap(View view, int position, float x, float y) {
+            if (org.telegram.messenger.VeyraConfig.disableDoubleTapReaction) {
+                return;
+            }
             if (getParentActivity() == null || isSecretChat() || isInScheduleMode() || isInPreviewMode() || chatMode == MODE_QUICK_REPLIES) {
                 return;
             }
@@ -3936,6 +3941,13 @@ public class ChatActivity extends BaseFragment implements
                     }
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
+                } else if (id == veyra_copy_dialog_id) {
+                    AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
+                    if (getBulletinFactory() != null) {
+                        getBulletinFactory().createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
+                    }
+                } else if (id == veyra_jump_to_first) {
+                    scrollToMessageId(1, 0, true, 0, true, 0);
                 } else if (id == boost_group) {
                     if (ChatObject.hasAdminRights(currentChat)) {
                         BoostsActivity boostsActivity = new BoostsActivity(dialog_id);
@@ -4573,6 +4585,12 @@ public class ChatActivity extends BaseFragment implements
 
         if (headerItem != null) {
             headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
+            if (VeyraConfig.copyDialogId) {
+                headerItem.lazilyAddSubItem(veyra_copy_dialog_id, R.drawable.msg_copy, LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
+            }
+            if (VeyraConfig.jumpToFirstMessage && !isSecretChat()) {
+                headerItem.lazilyAddSubItem(veyra_jump_to_first, R.drawable.msg_go_up, LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
+            }
         }
 
         actionModeViews.clear();

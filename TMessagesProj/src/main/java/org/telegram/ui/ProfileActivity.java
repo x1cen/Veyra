@@ -11364,7 +11364,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
             onlineTextOverride = LocaleController.getString(R.string.Updating);
         } else if (currentConnectionState == ConnectionsManager.ConnectionStateConnectingToProxy) {
-            onlineTextOverride = LocaleController.getString(R.string.ConnectingToProxy);
+            onlineTextOverride = org.telegram.messenger.VeyraConfig.hideConnectingToProxy ? null : LocaleController.getString(R.string.ConnectingToProxy);
         } else {
             onlineTextOverride = null;
         }

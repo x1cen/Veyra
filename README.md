@@ -27,12 +27,37 @@
 ## Key Features
 
 ### 🛡️ Privacy & Stealth
-* **Online Status Visibility Control:** Choose whether to broadcast your online status (default), completely hide your online presence (appear offline at all times), or stay always online.
+* **Online Status Visibility Control:** Choose whether to broadcast your online status (default), completely hide your online presence (appear offline at all times), hide online status and instantly go offline after sending messages, or stay always online.
 * **Mark as Read on Reply:** Messages from others remain unread (single checkmark) until you actively reply to the conversation.
 * **Anti-Delete Message Retention:** Retains messages and media revoked by conversation partners, marked clearly with a red "Deleted" badge while safely disabling reply/forward on deleted entries.
 * **Full Ghost Mode:** Disables sending read receipts across all dialogs when enabled.
 * **Hide Typing Indicator:** Prevents sending "typing..." or audio recording indicators to peers.
 * **Block Incoming Secret Chats:** Auto-declines secret chat initiation requests from other users.
+* **Hide Proxy Connecting Status:** Hides the "Connecting to proxy..." status line in chat action bar, launch activity, and profile headers.
+* **Dedicated Settings Lock:** Protect Veyra Settings with a separate, dedicated PIN passcode independent of main app lock.
+
+### 💬 Composing & Chat Actions
+* **Mention by Name:** Insert the user's real display name instead of `@username` when mentioning in messages.
+* **Hide "Send As" Button:** Hide the channel/profile identity switch button in the message input bar to avoid misclicks.
+* **Disable Quick Reaction Double-Tap:** Prevent sending unintended emoji reactions on double-tapping chat messages.
+* **Timestamps with Seconds:** Accurate display of message send times including exact seconds.
+* **Strip Bot Link Trackers:** Automatically strip external tracking parameters (`utm_*`, `fbclid`, `gclid`) when opening external links from chats.
+* **Anonymous Forward by Default:** Automatically default forward previews to hide sender name and quotes.
+* **Disable Large Emoji Rendering:** Render single emojis at normal text size instead of oversized stickers.
+* **Jump to First Message:** Jump instantly to the first message in any channel, group, or conversation from the 3-dot header menu.
+* **Copy Dialog ID:** Quickly copy the Telegram Dialog/Peer ID from the 3-dot header menu.
+
+### 🖼️ Media & Camera
+* **Rear Camera for Video Messages:** Start recording round video messages using the rear camera instead of front camera by default.
+* **Send Typed Text with Stickers:** Retain and attach whatever text you currently typed in the input bar as a caption when sending stickers.
+* **Send Typed Text with GIFs:** Send pre-typed text as a caption when selecting and sending GIFs.
+* **Keep Original Filename on Download:** Preserve the original document filename when downloading media files.
+
+### 📋 Chat List Customization
+* **Disable Global Search:** Prevent querying public Telegram channels, bots, and users globally from the main search bar.
+* **Disable Media Thumbnails in Dialogs:** Option to disable video and photo thumbnail previews in the chat list.
+* **Colored Last-Seen Indicator Dots:** Real-time colored indicators on user avatars showing recent offline time (yellow: ≤15m, orange: ≤30m, red: ≤60m).
+* **Dialog Priority Sorting:** Sort and prioritize unread chats or unmuted dialogs dynamically at the top of your chat list.
 
 ### ⚙️ Power Controls & Interaction
 * **Message Details Inspector:** Inspect any message to view Message ID, Datacenter (DC), Sender ID, Forward details, exact media bytes, timestamps, and export complete message metadata as structured JSON directly to the `Downloads/Veyra/` directory with instant system sharing.
@@ -70,7 +95,8 @@
 * **Unrestricted Forward & Copy (`NoForwards` Bypass):** Bypasses copy and forward restrictions in protected channels and groups.
 * **Bypass Android Content Restrictions:** Displays sensitive channels and content restricted specifically on Android.
 * **Expanded Limits:** Up to 100 pinned chats, 500 favorite stickers, 1000 GIFs, and 30 folders.
-* **Dedicated Veyra Settings:** Conveniently accessible from both the top of the main Telegram Settings menu and the lateral navigation Drawer.
+* **Rich Categorized Veyra Settings:** Completely redesigned modular settings hub categorized into Privacy & Security, Chat List, Composing & Messages, Media & Camera, Controls & General, and Backup & Restore.
+* **Settings JSON Backup & Restore:** Export your custom Veyra configuration as JSON to clipboard or restore/reset anytime.
 
 ---
 

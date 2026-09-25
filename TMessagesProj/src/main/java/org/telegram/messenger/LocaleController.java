@@ -107,6 +107,11 @@ public class LocaleController {
         return formatterDayWithSeconds;
     }
 
+    // Veyra: forkgram port — show seconds in message timestamps when enabled
+    public FastDateFormat getFormatterDayVeyra() {
+        return VeyraConfig.formatTimeWithSeconds ? getFormatterDayWithSeconds() : getFormatterDay();
+    }
+
     private volatile FastDateFormat formatterConstDay;
     public FastDateFormat getFormatterConstDay() {
         if (formatterConstDay == null) {

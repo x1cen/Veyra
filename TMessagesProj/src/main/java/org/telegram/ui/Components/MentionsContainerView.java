@@ -640,7 +640,7 @@ public class MentionsContainerView extends FrameLayout implements NotificationCe
             } else if (object instanceof TLRPC.User) {
                 TLRPC.User user = (TLRPC.User) object;
 
-                if (UserObject.getPublicUsername(user) != null) {
+                if (UserObject.getPublicUsername(user) != null && !org.telegram.messenger.VeyraConfig.mentionByName) {
                     delegate.replaceText(start, len, "@" + UserObject.getPublicUsername(user) + " ", false);
                 } else {
                     String name = UserObject.getFirstName(user, false);

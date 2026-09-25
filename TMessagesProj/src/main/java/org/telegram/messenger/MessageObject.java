@@ -2088,6 +2088,9 @@ public class MessageObject {
     }
 
     private void checkEmojiOnly(Integer emojiOnly) {
+        if (VeyraConfig.disableBigEmoji) {
+            return;
+        }
         if (emojiOnly != null && emojiOnly >= 1 && messageOwner != null && !hasNonEmojiEntities()) {
             Emoji.EmojiSpan[] spans = ((Spannable) messageText).getSpans(0, messageText.length(), Emoji.EmojiSpan.class);
             AnimatedEmojiSpan[] aspans = ((Spannable) messageText).getSpans(0, messageText.length(), AnimatedEmojiSpan.class);

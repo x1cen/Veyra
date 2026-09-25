@@ -145,6 +145,7 @@ import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.SharedPrefsHelper;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
@@ -11039,6 +11040,9 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (delegate == null) {
             return;
         }
+        if (org.telegram.messenger.VeyraConfig.hideSendAsButton) {
+            forceHide = true;
+        }
         createMessageEditText();
         TLRPC.Chat chat;
         TLRPC.Peer defPeer;
@@ -12188,7 +12192,15 @@ public class ChatActivityEnterView extends FrameLayout implements
 
                                     SendMessagesHelper.prepareSendingMedia(AccountInstance.getInstance(currentAccount), photos, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, false, false, editingMessageObject, notify, scheduleDate, scheduleRepeatPeriod, 0, false, null, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, effectId, invertMedia, stars, getSendMonoForumPeerId(),  getSendMessageSuggestionParams());
                                 } else {
-                                    SendMessagesHelper.getInstance(currentAccount).sendSticker(document, query, dialog_id, entry != null ? entry.caption : null, videoEditedInfo, replyingMessageObject, getThreadMessage(), storyItem, replyingQuote, null, notify, scheduleDate, scheduleRepeatPeriod, false, parent, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, stars, getSendMonoForumPeerId(), getSendMessageSuggestionParams(), invertMedia);
+                                    CharSequence veyraGifCaption = entry != null ? entry.caption : null;
+                                    if (veyraGifCaption == null && VeyraConfig.sendCaptionWithGif) {
+                                        CharSequence fieldText = getFieldText();
+                                        if (fieldText != null && fieldText.length() > 0) {
+                                            veyraGifCaption = fieldText;
+                                            setFieldText("");
+                                        }
+                                    }
+                                    SendMessagesHelper.getInstance(currentAccount).sendSticker(document, query, dialog_id, veyraGifCaption, videoEditedInfo, replyingMessageObject, getThreadMessage(), storyItem, replyingQuote, null, notify, scheduleDate, scheduleRepeatPeriod, false, parent, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, stars, getSendMonoForumPeerId(), getSendMessageSuggestionParams(), invertMedia);
                                     MediaDataController.getInstance(currentAccount).addRecentGif(document, (int) (System.currentTimeMillis() / 1000), true);
                                     if (DialogObject.isEncryptedDialog(dialog_id)) {
                                         accountInstance.getMessagesController().saveGif(parent, document);
@@ -12491,11 +12503,22 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                     setStickersExpanded(false, true, false);
                     final TL_stories.StoryItem storyItem = delegate != null ? delegate.getReplyToStory() : null;
-                    SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, query, dialog_id, replyingMessageObject, getThreadMessage(), storyItem, replyingQuote, sendAnimationData, notify, scheduleDate, scheduleRepeatPeriod, parent instanceof TLRPC.TL_messages_stickerSet, parent, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, stars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                    CharSequence veyraCaption = null;
+                    if (VeyraConfig.sendCaptionWithSticker) {
+                        CharSequence fieldText = getFieldText();
+                        if (fieldText != null && fieldText.length() > 0) {
+                            veyraCaption = fieldText;
+                        }
+                    }
+                    if (veyraCaption != null) {
+                        SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, query, dialog_id, veyraCaption, null, replyingMessageObject, getThreadMessage(), storyItem, replyingQuote, sendAnimationData, notify, scheduleDate, scheduleRepeatPeriod, parent instanceof TLRPC.TL_messages_stickerSet, parent, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, stars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                    } else {
+                        SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, query, dialog_id, replyingMessageObject, getThreadMessage(), storyItem, replyingQuote, sendAnimationData, notify, scheduleDate, scheduleRepeatPeriod, parent instanceof TLRPC.TL_messages_stickerSet, parent, parentFragment != null ? parentFragment.quickReplyShortcut : null, parentFragment != null ? parentFragment.getQuickReplyId() : 0, stars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                    }
                     if (delegate != null) {
                         delegate.onMessageSend(null, true, scheduleDate, 0, 0);
                     }
-                    if (clearsInputField) {
+                    if (clearsInputField || veyraCaption != null) {
                         setFieldText("");
                     }
                     MediaDataController.getInstance(currentAccount).addRecentSticker(MediaDataController.TYPE_IMAGE, parent, sticker, (int) (System.currentTimeMillis() / 1000), false);

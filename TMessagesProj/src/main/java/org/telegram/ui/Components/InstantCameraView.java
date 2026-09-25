@@ -731,7 +731,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         selectedCamera = null;
         if (!fromPaused) {
             if (!useCamera2) {
-                isFrontface = true;
+                isFrontface = !org.telegram.messenger.VeyraConfig.rearCameraVideoMessages;
             }
             updateFlash();
             recordedTime = 0;

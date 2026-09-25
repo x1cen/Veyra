@@ -177,7 +177,7 @@ public class MessagePreviewParams {
     public boolean isSecret;
     public boolean multipleUsers;
 
-    public boolean hideForwardSendersName;
+    public boolean hideForwardSendersName = VeyraConfig.anonymousForwardNoQuote;
     public boolean hideCaption;
     public boolean willSeeSenders;
 

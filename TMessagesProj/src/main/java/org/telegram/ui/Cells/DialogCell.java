@@ -84,6 +84,7 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.utils.DrawableUtils;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
@@ -821,6 +822,33 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             return true;
         }
         return false;
+    }
+
+    // Veyra: colored last-seen dots (forkgram port) — yellow <=15m, orange <=30m, red <=60m, default otherwise
+    private int veyraLastSeenDotColor() {
+        int defaultColor = Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider);
+        if (!VeyraConfig.enableLastSeenDots || user == null || user.status == null) {
+            return defaultColor;
+        }
+        if (!(user.status instanceof TLRPC.TL_userStatusOffline)) {
+            return defaultColor;
+        }
+        int wasOnline = user.status.expires;
+        if (wasOnline <= 0) {
+            return defaultColor;
+        }
+        int now = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+        int diffMinutes = (now - wasOnline) / 60;
+        if (diffMinutes < 0) {
+            return defaultColor;
+        } else if (diffMinutes <= 15) {
+            return 0xFFFFC107; // yellow
+        } else if (diffMinutes <= 30) {
+            return 0xFFFF9800; // orange
+        } else if (diffMinutes <= 60) {
+            return 0xFFF44336; // red
+        }
+        return defaultColor;
     }
 
     private void checkGroupCall() {
@@ -5075,7 +5103,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
                     Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
                     canvas.drawCircle(left, top, dp(7) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider));
+                    Theme.dialogs_onlineCirclePaint.setColor(veyraLastSeenDotColor());
                     canvas.drawCircle(left, top, dp(5) * onlineProgress, Theme.dialogs_onlineCirclePaint);
                     if (isOnline) {
                         if (onlineProgress < 1.0f) {
@@ -5637,6 +5665,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
     public void updateMessageThumbs() {
         if (message == null) {
+            return;
+        }
+        if (VeyraConfig.disableThumbsInDialogList) {
+            thumbsCount = 0;
+            hasVideoThumb = false;
             return;
         }
         String restrictionReason = MessagesController.getInstance(message.currentAccount).getRestrictionReason(message.messageOwner.restriction_reason);

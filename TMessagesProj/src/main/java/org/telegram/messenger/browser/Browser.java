@@ -33,6 +33,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.ShareBroadcastReceiver;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.support.customtabs.CustomTabsCallback;
 import org.telegram.messenger.support.customtabs.CustomTabsClient;
 import org.telegram.messenger.support.customtabs.CustomTabsIntent;
@@ -288,10 +289,53 @@ public class Browser {
         openUrl(context, uri, allowCustom, tryTelegraph, false, inCaseLoading, null, false, true, false);
     }
 
+    // Veyra: forkgram port — strip known tracking params (utm_*, fbclid, gclid, etc.) from external links.
+    // Never touches Telegram-internal params (start, startapp, startgroup, domain, text, etc.).
+    private static final java.util.Set<String> VEYRA_TRACKING_PARAMS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "utm_referrer",
+            "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "twclid", "igshid",
+            "mc_cid", "mc_eid", "yclid", "_ga", "_gl", "ref_src", "ref_url", "spm", "scm"
+    ));
+
+    private static Uri stripTrackingParams(Uri uri) {
+        try {
+            if (!VeyraConfig.stripBotLinkParams || uri == null) {
+                return uri;
+            }
+            java.util.Set<String> names = uri.getQueryParameterNames();
+            if (names == null || names.isEmpty()) {
+                return uri;
+            }
+            boolean hasTracking = false;
+            for (String name : names) {
+                if (VEYRA_TRACKING_PARAMS.contains(name.toLowerCase())) {
+                    hasTracking = true;
+                    break;
+                }
+            }
+            if (!hasTracking) {
+                return uri;
+            }
+            Uri.Builder builder = uri.buildUpon().clearQuery();
+            for (String name : names) {
+                if (VEYRA_TRACKING_PARAMS.contains(name.toLowerCase())) {
+                    continue;
+                }
+                for (String value : uri.getQueryParameters(name)) {
+                    builder.appendQueryParameter(name, value);
+                }
+            }
+            return builder.build();
+        } catch (Throwable e) {
+            return uri;
+        }
+    }
+
     public static void openUrl(final Context context, Uri uri, boolean _allowCustom, boolean tryTelegraph, boolean forceNotInternalForApps, Progress inCaseLoading, String browser, boolean allowIntent, boolean allowInAppBrowser, boolean forceRequest) {
         if (context == null || uri == null) {
             return;
         }
+        uri = stripTrackingParams(uri);
         final int currentAccount = UserConfig.selectedAccount;
         boolean[] forceBrowser = new boolean[]{false};
         boolean internalUri = isInternalUri(uri, forceBrowser);
