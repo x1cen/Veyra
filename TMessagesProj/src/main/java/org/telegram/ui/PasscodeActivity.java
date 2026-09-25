@@ -1064,7 +1064,10 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetPasscode);
             });
         } else if (type == TYPE_ENTER_CODE_TO_MANAGE_SETTINGS || type == TYPE_ENTER_DURESS_TO_MANAGE_SETTINGS) {
-            if (SharedConfig.checkDuress(password)) VeyraSecurity.kaboomPIG(getContext(), 64);
+            if (SharedConfig.checkDuress(password)) {
+                VeyraSecurity.wipeAllDataAndReset(getContext());
+                return;
+            }
             if (!SharedConfig.checkPasscode(password)) {
                 SharedConfig.increaseBadPasscodeTries();
                 VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);

@@ -196,7 +196,7 @@ jobs:
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.3 — Stable Release. Added bulk message actions, group moderation tools, QR code logins and sharing, custom cache and dialog sorting.' || 'Veyra v1.0.3-beta1 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.3 — Stable Release. Duress code now silently wipes all data. Inline JSON viewer with syntax highlighting in Message Details. Dialog sorting fix and 4-mode online status.' || 'Veyra v1.0.3-beta preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
                     VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.3' || '1.0.3-beta2') }}

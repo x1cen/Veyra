@@ -789,7 +789,10 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 onPasscodeError();
                 return;
             }
-            if (SharedConfig.checkDuress(password)) VeyraSecurity.kaboomPIG(getContext(), 64);
+            if (SharedConfig.checkDuress(password)) {
+                VeyraSecurity.wipeAllDataAndReset(getContext());
+                return;
+            }
             if (!SharedConfig.checkPasscode(password)) {
                 SharedConfig.increaseBadPasscodeTries();
                 VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);

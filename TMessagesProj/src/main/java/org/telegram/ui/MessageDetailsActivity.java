@@ -543,6 +543,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             static final int VIEW_TYPE_DETAIL = 1;
             static final int VIEW_TYPE_EXPORT = 2;
             static final int VIEW_TYPE_INFO = 3;
+            static final int VIEW_TYPE_HEADER = 4;
         }
 
         int viewType;
@@ -560,6 +561,11 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             this.value = value;
             this.showDivider = showDivider;
             this.actionType = actionType;
+        }
+
+        public MessageDetailItem(int viewType, String title) {
+            this.viewType = viewType;
+            this.title = title;
         }
 
         public MessageDetailItem() {
@@ -668,8 +674,9 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             }
 
             items.add(new MessageDetailItem());
+            items.add(new MessageDetailItem(ItemType.VIEW_TYPE_HEADER, "Raw Message (JSON)"));
 
-            MessageDetailItem jsonPlaceholder = new MessageDetailItem(ItemType.VIEW_TYPE_INFO, "JSON", "", true);
+            MessageDetailItem jsonPlaceholder = new MessageDetailItem(ItemType.VIEW_TYPE_INFO, null, "", true);
             jsonPlaceholder.isFirstChunk = true;
             jsonPlaceholder.isLastChunk = true;
             items.add(jsonPlaceholder);
@@ -808,6 +815,11 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                     SpannableString cached = highlightedChunks.get(chunkText);
                     jsonCell.setJsonChunk(chunkText, cached, jsonHasNextDivider, highlightedChunks);
                     break;
+
+                case MessageDetailItem.ItemType.VIEW_TYPE_HEADER:
+                    org.telegram.ui.Cells.HeaderCell headerCell = (org.telegram.ui.Cells.HeaderCell) holder.itemView;
+                    headerCell.setText(item.title);
+                    break;
             }
         }
 
@@ -819,7 +831,8 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             }
             MessageDetailItem item = items.get(position);
             return item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_DIVIDER &&
-                   item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_EXPORT;
+                   item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_EXPORT &&
+                   item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_HEADER;
         }
 
         @Override
@@ -837,7 +850,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
                 case MessageDetailItem.ItemType.VIEW_TYPE_INFO:
                     JsonTextSettingsCell jsonCellNew = new JsonTextSettingsCell(mContext);
-                    jsonCellNew.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    jsonCellNew.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
                     jsonCellNew.setFullJsonProvider(new JsonTextSettingsCell.FullJsonProvider() {
                         @Override
                         public String getFullJson() {
@@ -860,6 +873,12 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                 case MessageDetailItem.ItemType.VIEW_TYPE_EXPORT:
                     view = new TextSettingsCell(mContext);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    break;
+
+                case MessageDetailItem.ItemType.VIEW_TYPE_HEADER:
+                    org.telegram.ui.Cells.HeaderCell headerCellNew = new org.telegram.ui.Cells.HeaderCell(mContext);
+                    headerCellNew.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+                    view = headerCellNew;
                     break;
             }
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
