@@ -16,6 +16,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -193,10 +194,7 @@ public class VeyraSettingsActivity extends BaseFragment {
             } else if (position == webProxyRow) {
                 presentFragment(new ProxyListActivity());
             } else if (position == githubRow) {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/x1cen/Veyra"));
-                    getParentActivity().startActivity(intent);
-                } catch (Exception ignore) {}
+                Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
             } else if (position == noAdsRow || position == unlimitedLimitsRow || position == versionRow) {
                 BulletinFactory.of(VeyraSettingsActivity.this).createSimpleBulletin(
                         R.drawable.msg_info,

@@ -817,10 +817,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 presentSettingFragment(new VeyraSettingsActivity());
                 break;
             case 101:
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/x1cen/Veyra"));
-                    getParentActivity().startActivity(intent);
-                } catch (Exception ignore) {}
+                Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
                 break;
             case 1:
                 presentSettingFragment(new UserInfoActivity());
