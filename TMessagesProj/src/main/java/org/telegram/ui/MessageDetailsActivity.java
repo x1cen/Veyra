@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.text.SpannableString;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
@@ -329,6 +328,13 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             if (item == null) return;
 
             switch (item.viewType) {
+                case ItemType.VIEW_TYPE_SHOW_JSON:
+                    presentFragment(new JsonViewerActivity(
+                            () -> prettyGson.toJson(messageObject.messageOwner),
+                            messageObject != null && messageObject.messageOwner != null ? messageObject.messageOwner.id : 0
+                    ));
+                    break;
+
                 case ItemType.VIEW_TYPE_EXPORT:
                     final TLRPC.Message exportMessage = messageObject.messageOwner;
                     org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
@@ -451,31 +457,15 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
-        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
     }
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.emojiLoaded) {
-            if (listView != null) {
-                for (int i = 0; i < listView.getChildCount(); i++) {
-                    View child = listView.getChildAt(i);
-                    if (child instanceof JsonTextSettingsCell) {
-                        JsonTextSettingsCell cell = (JsonTextSettingsCell) child;
-                        cell.refreshHighlighting();
-                        if (listAdapter != null) {
-                            cell.cacheIfReady(listAdapter.getHighlightedChunks());
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private void updateRows() {
@@ -544,6 +534,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             static final int VIEW_TYPE_EXPORT = 2;
             static final int VIEW_TYPE_INFO = 3;
             static final int VIEW_TYPE_HEADER = 4;
+            static final int VIEW_TYPE_SHOW_JSON = 5;
         }
 
         int viewType;
@@ -552,8 +543,6 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
         ActionType actionType;
         boolean showDivider;
         boolean multilineDetail;
-        boolean isFirstChunk;
-        boolean isLastChunk;
 
         public MessageDetailItem(String title, CharSequence value, boolean showDivider, ActionType actionType) {
             this.viewType = ItemType.VIEW_TYPE_DETAIL;
@@ -588,12 +577,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
         private final Context mContext;
         private final List<MessageDetailItem> items = new ArrayList<>();
-        private final java.util.HashMap<String, SpannableString> highlightedChunks = new java.util.HashMap<>();
         private String fullJsonText = "";
-
-        public java.util.HashMap<String, SpannableString> getHighlightedChunks() {
-            return highlightedChunks;
-        }
 
         public ListAdapter(Context context) {
             mContext = context;
@@ -674,95 +658,20 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             }
 
             items.add(new MessageDetailItem());
-            items.add(new MessageDetailItem(ItemType.VIEW_TYPE_HEADER, "Raw Message (JSON)"));
-
-            MessageDetailItem jsonPlaceholder = new MessageDetailItem(ItemType.VIEW_TYPE_INFO, null, "", true);
-            jsonPlaceholder.isFirstChunk = true;
-            jsonPlaceholder.isLastChunk = true;
-            items.add(jsonPlaceholder);
-            jsonItemIndex = items.size() - 1;
-
+            items.add(new MessageDetailItem(ItemType.VIEW_TYPE_SHOW_JSON));
             items.add(new MessageDetailItem(ItemType.VIEW_TYPE_EXPORT));
 
             items.add(new MessageDetailItem());
-
-            final int placeholderIndex = jsonItemIndex;
-            final TLRPC.Message message = messageObject.messageOwner;
-            org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
-                String jsonText;
-                try {
-                    jsonText = prettyGson.toJson(message);
-                } catch (Throwable e) {
-                    FileLog.e(e);
-                    jsonText = "";
-                }
-                final String finalJson = jsonText == null ? "" : jsonText;
-                final List<String> chunks = splitJsonIntoChunks(finalJson, JSON_CHUNK_SIZE, JSON_CHUNK_THRESHOLD);
-                AndroidUtilities.runOnUIThread(() -> {
-                    if (listAdapter == null || listAdapter != this) return;
-                    if (placeholderIndex < 0 || placeholderIndex >= items.size()) return;
-                    MessageDetailItem current = items.get(placeholderIndex);
-                    if (current.viewType != ItemType.VIEW_TYPE_INFO) return;
-
-                    fullJsonText = finalJson;
-
-                    items.remove(placeholderIndex);
-                    if (chunks.isEmpty()) {
-                        notifyItemRemoved(placeholderIndex);
-                        return;
-                    }
-                    int insertCount = chunks.size();
-                    for (int i = 0; i < insertCount; i++) {
-                        MessageDetailItem chunkItem = new MessageDetailItem(ItemType.VIEW_TYPE_INFO, i == 0 ? "JSON" : null, chunks.get(i), true);
-                        chunkItem.isFirstChunk = (i == 0);
-                        chunkItem.isLastChunk = (i == insertCount - 1);
-                        items.add(placeholderIndex + i, chunkItem);
-                    }
-                    notifyItemChanged(placeholderIndex);
-                    if (insertCount != 1) {
-                        notifyItemRangeInserted(placeholderIndex + 1, insertCount - 1);
-                    }
-                });
-            });
-        }
-
-        private int jsonItemIndex = -1;
-        private static final int JSON_CHUNK_SIZE = 4000;
-        private static final int JSON_CHUNK_THRESHOLD = 12000;
-
-        private List<String> splitJsonIntoChunks(String json, int maxLen, int threshold) {
-            List<String> result = new ArrayList<>();
-            if (json == null || json.isEmpty()) {
-                return result;
-            }
-            int len = json.length();
-            if (len <= threshold) {
-                result.add(json);
-                return result;
-            }
-            int start = 0;
-            while (start < len) {
-                int end = Math.min(start + maxLen, len);
-                if (end < len) {
-                    int nl = json.lastIndexOf('\n', end);
-                    if (nl > start) {
-                        end = nl;
-                    }
-                }
-                String piece = json.substring(start, end);
-                if (!piece.isEmpty()) {
-                    result.add(piece);
-                }
-                if (end < len && json.charAt(end) == '\n') {
-                    start = end + 1;
-                } else {
-                    start = end;
-                }
-            }
-            return result;
         }
 
         public String getFullJsonText() {
+            if (fullJsonText.isEmpty() && messageObject != null && messageObject.messageOwner != null) {
+                try {
+                    fullJsonText = prettyGson.toJson(messageObject.messageOwner);
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
             return fullJsonText;
         }
 
@@ -804,16 +713,11 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                     exportCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
                     break;
 
-                case MessageDetailItem.ItemType.VIEW_TYPE_INFO:
-                    JsonTextSettingsCell jsonCell = (JsonTextSettingsCell) holder.itemView;
-                    boolean jsonHasNextDivider = item.isLastChunk &&
-                            (position + 1 < items.size()) &&
-                            items.get(position + 1).viewType != MessageDetailItem.ItemType.VIEW_TYPE_DIVIDER;
-                    jsonCell.setTitle(item.isFirstChunk ? item.title : null);
-                    jsonCell.setChunkLayout(item.isFirstChunk, item.isLastChunk);
-                    String chunkText = item.value == null ? "" : item.value.toString();
-                    SpannableString cached = highlightedChunks.get(chunkText);
-                    jsonCell.setJsonChunk(chunkText, cached, jsonHasNextDivider, highlightedChunks);
+                case MessageDetailItem.ItemType.VIEW_TYPE_SHOW_JSON:
+                    TextSettingsCell showJsonCell = (TextSettingsCell) holder.itemView;
+                    boolean showJsonHasNextDivider = (position + 1 < items.size()) && items.get(position + 1).viewType != MessageDetailItem.ItemType.VIEW_TYPE_DIVIDER;
+                    showJsonCell.setText(LocaleController.getString(R.string.ShowJson), showJsonHasNextDivider);
+                    showJsonCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
                     break;
 
                 case MessageDetailItem.ItemType.VIEW_TYPE_HEADER:
@@ -831,7 +735,6 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             }
             MessageDetailItem item = items.get(position);
             return item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_DIVIDER &&
-                   item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_EXPORT &&
                    item.viewType != MessageDetailItem.ItemType.VIEW_TYPE_HEADER;
         }
 
@@ -848,29 +751,8 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
 
-                case MessageDetailItem.ItemType.VIEW_TYPE_INFO:
-                    JsonTextSettingsCell jsonCellNew = new JsonTextSettingsCell(mContext);
-                    jsonCellNew.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
-                    jsonCellNew.setFullJsonProvider(new JsonTextSettingsCell.FullJsonProvider() {
-                        @Override
-                        public String getFullJson() {
-                            return fullJsonText;
-                        }
-
-                        @Override
-                        public void onFullJsonCopied() {
-                            try {
-                                BulletinFactory.of(MessageDetailsActivity.this)
-                                        .createCopyBulletin(LocaleController.getString(R.string.TextCopied))
-                                        .show();
-                            } catch (Throwable ignored) {
-                            }
-                        }
-                    });
-                    view = jsonCellNew;
-                    break;
-
                 case MessageDetailItem.ItemType.VIEW_TYPE_EXPORT:
+                case MessageDetailItem.ItemType.VIEW_TYPE_SHOW_JSON:
                     view = new TextSettingsCell(mContext);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;

@@ -2691,6 +2691,7 @@
     <string name="VeyraSettings">Veyra Settings</string>
     <string name="MessageDetails">Message Details</string>
     <string name="ExportAsJson">Export as JSON</string>
+    <string name="ShowJson">Show JSON</string>
     <string name="CopyCallback">Copy Callback Data</string>
     <string name="CopyInlineQuery">Copy Inline Query</string>
     <string name="CopyID">Copy ID</string>

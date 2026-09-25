@@ -218,11 +218,6 @@ public class VeyraSettingsActivity extends BaseFragment {
                 ((TextCheckCell) view).setChecked(VeyraConfig.disableTrending);
             } else if (position == githubRow) {
                 Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
-            } else if (position == noAdsRow || position == unlimitedLimitsRow) {
-                BulletinFactory.of(VeyraSettingsActivity.this).createSimpleBulletin(
-                        R.drawable.msg_info,
-                        isFarsi ? "این قابلیت به طور پیش‌فرض فعال و بهینه‌سازی شده است" : "This feature is active and permanently optimized"
-                ).show();
             }
         });
 
