@@ -115,12 +115,17 @@ jobs:
                 env:
                     APP_ID: ${{secrets.APP_ID || secrets.API_ID}}
                     APP_HASH: ${{secrets.APP_HASH || secrets.API_HASH}}
+                    GOOGLE_API_KEY: ${{secrets.GOOGLE_API_KEY}}
                 run: |
                     set +x
                     if [ -n "$APP_ID" ] && [ -n "$APP_HASH" ]; then
                         echo "Configuring APP_ID and APP_HASH from repository secrets..."
                         sed -i "s/public static int APP_ID = .*/public static int APP_ID = $APP_ID;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
                         sed -i "s/public static String APP_HASH = .*/public static String APP_HASH = \"$APP_HASH\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$GOOGLE_API_KEY" ]; then
+                        echo "Injecting Google API Key from secrets..."
+                        sed -i "s/REDACTED_VEYRA_GOOGLE_SERVICES_KEY/$GOOGLE_API_KEY/g" TMessagesProj*/google-services.json
                     fi
 
             -   name: Enable Custom Keystore

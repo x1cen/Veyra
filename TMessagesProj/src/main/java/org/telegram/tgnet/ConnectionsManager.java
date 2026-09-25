@@ -421,9 +421,10 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
+        final RequestDelegate finalOnComplete;
         if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && (object instanceof TLRPC.TL_messages_sendMessage || object instanceof TLRPC.TL_messages_sendMedia || object instanceof TLRPC.TL_messages_sendMultiMedia)) {
             final RequestDelegate origDelegate = onComplete;
-            onComplete = (response, error) -> {
+            finalOnComplete = (response, error) -> {
                 if (origDelegate != null) {
                     origDelegate.run(response, error);
                 }
@@ -433,6 +434,8 @@ public class ConnectionsManager extends BaseController {
                     sendRequest(offlineReq, null);
                 }, 500);
             };
+        } else {
+            finalOnComplete = onComplete;
         }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
@@ -486,7 +489,7 @@ public class ConnectionsManager extends BaseController {
                             FileLog.d("Cleanup keys for " + currentAccount + " because of CONNECTION_NOT_INITED");
                         }
                         cleanup(true);
-                        sendRequest(object, onComplete, onCompleteTimestamp, onQuickAck, onWriteToSocket, flags, datacenterId, connectionType, immediate);
+                        sendRequest(object, finalOnComplete, onCompleteTimestamp, onQuickAck, onWriteToSocket, flags, datacenterId, connectionType, immediate);
                         return;
                     }
                     if (resp != null) {
@@ -499,8 +502,8 @@ public class ConnectionsManager extends BaseController {
                     final TLObject finalResponse = resp;
                     final TLRPC.TL_error finalError = error;
                     Utilities.stageQueue.postRunnable(() -> {
-                        if (onComplete != null) {
-                            onComplete.run(finalResponse, finalError);
+                        if (finalOnComplete != null) {
+                            finalOnComplete.run(finalResponse, finalError);
                         } else if (onCompleteTimestamp != null) {
                             onCompleteTimestamp.run(finalResponse, finalError, timestamp);
                         } else if (finalResponse instanceof TLRPC.Updates) {
