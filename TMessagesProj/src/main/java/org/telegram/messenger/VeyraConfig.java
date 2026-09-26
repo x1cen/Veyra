@@ -48,6 +48,7 @@ public class VeyraConfig {
     public static boolean mentionByName = false;
     public static boolean hideSendAsButton = false;
     public static boolean disableQuickReaction = false;
+    public static boolean disableDoubleTapReaction = false;
     public static boolean formatTimeWithSeconds = false;
     public static boolean stripBotLinkParams = false;
     public static boolean anonymousForwardNoQuote = false;
@@ -103,6 +104,7 @@ public class VeyraConfig {
         mentionByName = preferences.getBoolean("mentionByName", false);
         hideSendAsButton = preferences.getBoolean("hideSendAsButton", false);
         disableQuickReaction = preferences.getBoolean("disableQuickReaction", false);
+        disableDoubleTapReaction = disableQuickReaction;
         formatTimeWithSeconds = preferences.getBoolean("formatTimeWithSeconds", false);
         stripBotLinkParams = preferences.getBoolean("stripBotLinkParams", false);
         anonymousForwardNoQuote = preferences.getBoolean("anonymousForwardNoQuote", false);
@@ -232,6 +234,7 @@ public class VeyraConfig {
     }
     public static void setDisableQuickReaction(boolean val) {
         disableQuickReaction = val;
+        disableDoubleTapReaction = val;
         save("disableQuickReaction", val);
     }
     public static void setFormatTimeWithSeconds(boolean val) {

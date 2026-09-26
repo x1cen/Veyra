@@ -7,6 +7,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.ui.Components.BulletinFactory;
 
 public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
 
@@ -75,9 +76,7 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                     () -> {
                         VeyraConfig.clearSettingsLock();
                         reloadRows();
-                        if (getBulletinFactory() != null) {
-                            getBulletinFactory().createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraSettingsLockRemoved", R.string.VeyraSettingsLockRemoved)).show();
-                        }
+                        BulletinFactory.of(VeyraPrivacySettingsActivity.this).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraSettingsLockRemoved", R.string.VeyraSettingsLockRemoved)).show();
                     }
             ));
         }

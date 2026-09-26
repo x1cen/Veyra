@@ -73,9 +73,7 @@ public class VeyraBackupSettingsActivity extends VeyraSettingsBaseActivity {
             }
             String result = json.toString(2);
             AndroidUtilities.addToClipboard(result);
-            if (getBulletinFactory() != null) {
-                getBulletinFactory().createCopyBulletin(LocaleController.getString("VeyraExportCopied", R.string.VeyraExportCopied)).show();
-            }
+            BulletinFactory.of(VeyraBackupSettingsActivity.this).createCopyBulletin(LocaleController.getString("VeyraExportCopied", R.string.VeyraExportCopied)).show();
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -104,7 +102,7 @@ public class VeyraBackupSettingsActivity extends VeyraSettingsBaseActivity {
         container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         builder.setView(container);
 
-        builder.setPositiveButton(LocaleController.getString("Apply", R.string.Apply), (dialog, which) -> {
+        builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
             try {
                 String text = editText.getText().toString().trim();
                 if (text.isEmpty()) return;
@@ -132,14 +130,10 @@ public class VeyraBackupSettingsActivity extends VeyraSettingsBaseActivity {
                 // Reload config in memory
                 VeyraConfig.reloadConfig();
                 reloadRows();
-                if (getBulletinFactory() != null) {
-                    getBulletinFactory().createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraImportSuccess", R.string.VeyraImportSuccess)).show();
-                }
+                BulletinFactory.of(VeyraBackupSettingsActivity.this).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraImportSuccess", R.string.VeyraImportSuccess)).show();
             } catch (Exception e) {
                 FileLog.e(e);
-                if (getBulletinFactory() != null) {
-                    getBulletinFactory().createErrorBulletin(isFarsi ? "فرمت JSON نامعتبر است" : "Invalid JSON format").show();
-                }
+                BulletinFactory.of(VeyraBackupSettingsActivity.this).createErrorBulletin(isFarsi ? "فرمت JSON نامعتبر است" : "Invalid JSON format").show();
             }
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
@@ -158,9 +152,7 @@ public class VeyraBackupSettingsActivity extends VeyraSettingsBaseActivity {
             preferences.edit().clear().apply();
             VeyraConfig.reloadConfig();
             reloadRows();
-            if (getBulletinFactory() != null) {
-                getBulletinFactory().createSimpleBulletin(R.raw.chats_infotip, isFarsi ? "تنظیمات با موفقیت بازنشانی شد" : "Settings reset to defaults").show();
-            }
+            BulletinFactory.of(VeyraBackupSettingsActivity.this).createSimpleBulletin(R.raw.chats_infotip, isFarsi ? "تنظیمات با موفقیت بازنشانی شد" : "Settings reset to defaults").show();
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         builder.show();

@@ -85,7 +85,7 @@ public class VeyraSettingsLockActivity extends BaseFragment {
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        doneItem = menu.addItem(done_button, R.drawable.ic_done);
+        doneItem = menu.addItem(done_button, R.drawable.ic_ab_done);
 
         FrameLayout frameLayout = new FrameLayout(context);
         frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
@@ -185,9 +185,7 @@ public class VeyraSettingsLockActivity extends BaseFragment {
                 }
             } else {
                 AndroidUtilities.shakeView(passwordEditText);
-                if (getBulletinFactory() != null) {
-                    getBulletinFactory().createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong code").show();
-                }
+                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong code").show();
             }
         } else if (state == 1) {
             firstEnteredCode = code;
@@ -202,18 +200,14 @@ public class VeyraSettingsLockActivity extends BaseFragment {
                     String hash = Utilities.MD5(saltStr + code);
                     VeyraConfig.setSettingsLock(hash, saltStr);
                     finishFragment();
-                    if (getBulletinFactory() != null) {
-                        getBulletinFactory().createSimpleBulletin(R.raw.chats_infotip, isFarsi ? "قفل تنظیمات ویرا با موفقیت ذخیره شد" : "Settings lock saved successfully").show();
-                    }
+                    BulletinFactory.of(VeyraSettingsLockActivity.this).createSimpleBulletin(R.raw.chats_infotip, isFarsi ? "قفل تنظیمات ویرا با موفقیت ذخیره شد" : "Settings lock saved successfully").show();
                 } catch (Exception e) {
                     FileLog.e(e);
                     finishFragment();
                 }
             } else {
                 AndroidUtilities.shakeView(passwordEditText);
-                if (getBulletinFactory() != null) {
-                    getBulletinFactory().createErrorBulletin(isFarsi ? "رمزها مطابقت ندارند" : "Codes do not match").show();
-                }
+                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمزها مطابقت ندارند" : "Codes do not match").show();
                 state = 1;
                 firstEnteredCode = "";
                 updateUI();

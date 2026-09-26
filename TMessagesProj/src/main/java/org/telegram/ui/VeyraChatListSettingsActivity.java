@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
 
@@ -35,7 +36,7 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 v -> {
                     VeyraConfig.setDisableThumbsInDialogList(v);
                     if (listView != null) {
-                        MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(org.telegram.messenger.NotificationCenter.dialogsNeedReload);
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
                     }
                 },
                 true
@@ -48,7 +49,7 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 v -> {
                     VeyraConfig.setEnableLastSeenDots(v);
                     if (listView != null) {
-                        MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(org.telegram.messenger.NotificationCenter.dialogsNeedReload);
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
                     }
                 },
                 true

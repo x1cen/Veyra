@@ -180,6 +180,7 @@ import org.telegram.messenger.SvgHelper;
 import org.telegram.messenger.Timer;
 import org.telegram.messenger.TranslateController;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
@@ -3943,9 +3944,7 @@ public class ChatActivity extends BaseFragment implements
                     showDetailsJson();
                 } else if (id == veyra_copy_dialog_id) {
                     AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
-                    if (getBulletinFactory() != null) {
-                        getBulletinFactory().createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
-                    }
+                    BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
                 } else if (id == veyra_jump_to_first) {
                     scrollToMessageId(1, 0, true, 0, true, 0);
                 } else if (id == boost_group) {

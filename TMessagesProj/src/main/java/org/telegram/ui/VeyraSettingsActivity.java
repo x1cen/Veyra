@@ -16,6 +16,7 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -116,9 +117,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         } else {
             AndroidUtilities.shakeView(lockEditText);
             boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-            if (getBulletinFactory() != null) {
-                getBulletinFactory().createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong passcode").show();
-            }
+            BulletinFactory.of(VeyraSettingsActivity.this).createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong passcode").show();
         }
     }
 
