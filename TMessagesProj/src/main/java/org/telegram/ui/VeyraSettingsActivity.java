@@ -192,7 +192,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.detail(
                 LocaleController.getString("VeyraVersion", R.string.VeyraVersion),
-                "1.0.4-beta3",
+                "1.0.4",
                 true
         ));
 

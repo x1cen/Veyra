@@ -34,7 +34,9 @@
 * **Hide Typing Indicator:** Prevents sending "typing..." or audio recording indicators to peers.
 * **Block Incoming Secret Chats:** Auto-declines secret chat initiation requests from other users.
 * **Hide Proxy Connecting Status:** Hides the "Connecting to proxy..." status line in chat action bar, launch activity, and profile headers.
-* **Dedicated Settings Lock:** Protect Veyra Settings with a separate, dedicated PIN passcode independent of main app lock.
+* **Variable-Length Security PINs (6–24 Digits):** Full support for flexible length PINs (min 6, max 24 digits) across Main Passcode, Duress Code, and Settings Lock.
+* **Emergency Duress Code:** Dedicated secondary PIN that silently and instantly wipes all local app data and accounts upon entry.
+* **Dedicated Settings Lock:** Protect Veyra Settings with a separate, dedicated PIN passcode independent of the main app lock.
 
 ### 💬 Composing & Chat Actions
 * **Mention by Name:** Insert the user's real display name instead of `@username` when mentioning in messages.
@@ -164,7 +166,7 @@ The enhancements in Veyra are modularized to preserve upstream stability:
 
 4. The built package will be located at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.3.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.4.apk
    ```
 
 ---
