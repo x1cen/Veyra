@@ -19,6 +19,7 @@ import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -27,6 +28,7 @@ import android.util.TypedValue;
 import android.view.ActionMode;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -824,7 +826,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             lockImageView.setVisibility(!AndroidUtilities.isSmallScreen() && AndroidUtilities.displaySize.x < AndroidUtilities.displaySize.y ? View.VISIBLE : View.GONE);
         }
         if (pinEditText != null) {
-            pinEditText.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
+            pinEditText.setShowSoftInputOnFocus(!isCustomKeyboardVisible());
         }
     }
 
