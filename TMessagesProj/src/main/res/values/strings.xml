@@ -2736,8 +2736,8 @@
     <string name="VeyraHideConnectingToProxy">Hide Proxy Connecting Status</string>
     <string name="VeyraHideConnectingToProxyDesc">Hide \'Connecting to proxy...\' in chat title and drawer</string>
     <string name="VeyraSettingsLock">Settings Lock</string>
-    <string name="VeyraSettingsLockSet">Set Passcode</string>
-    <string name="VeyraSettingsLockChange">Change Passcode</string>
+    <string name="VeyraSettingsLockSet">Set Password</string>
+    <string name="VeyraSettingsLockChange">Change Password</string>
     <string name="VeyraSettingsLockOn">Enabled</string>
     <string name="VeyraSettingsLockOff">Disabled</string>
     <string name="VeyraSettingsLockRemove">Turn Off Settings Lock</string>

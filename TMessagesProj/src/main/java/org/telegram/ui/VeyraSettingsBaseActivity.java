@@ -55,6 +55,18 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        // Veyra: rebuild rows whenever this screen becomes visible again,
+        // e.g. after popping back from a sub-screen (Settings Lock setup,
+        // online-mode picker, etc). Without this, rows that were built
+        // once in onFragmentCreate() keep showing stale state (an applied
+        // change is saved correctly but the row/label/button visibility
+        // only catches up after fully leaving and re-entering Settings).
+        reloadRows();
+    }
+
+    @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
