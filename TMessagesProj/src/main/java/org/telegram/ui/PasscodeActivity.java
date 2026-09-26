@@ -111,7 +111,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     private TextViewSwitcher descriptionTextSwitcher;
     private OutlineTextContainerView outlinePasswordView;
     private EditTextBoldCursor passwordEditText;
-    private CodeFieldContainer codeFieldContainer;
+    private EditTextBoldCursor pinEditText;
     private TextView passcodesDoNotMatchTextView;
 
     private ImageView passwordButton;
@@ -438,8 +438,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                                     }
                                 }, 150);
                                 passwordEditText.setText("");
-                                for (CodeNumberField f : codeFieldContainer.codeField) {
-                                    f.setText("");
+                                if (pinEditText != null) {
+                                    pinEditText.setText("");
                                 }
                                 updateFields();
                             }
@@ -611,7 +611,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     @Override
                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                         if (postedHidePasscodesDoNotMatch) {
-                            codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
+                            if (pinEditText != null) {
+                                pinEditText.removeCallbacks(hidePasscodesDoNotMatch);
+                            }
                             hidePasscodesDoNotMatch.run();
                         }
                     }
@@ -640,42 +642,61 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     }
                 });
 
-                codeFieldContainer = new CodeFieldContainer(context) {
-                    @Override
-                    protected void processNextPressed() {
+                pinEditText = new EditTextBoldCursor(context);
+                pinEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
+                pinEditText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                pinEditText.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+                pinEditText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+                pinEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                pinEditText.setGravity(Gravity.CENTER);
+                pinEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                pinEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+                pinEditText.setCursorSize(dp(22));
+                pinEditText.setCursorWidth(1.5f);
+                pinEditText.setSingleLine(true);
+                pinEditText.setMaxLines(1);
+                pinEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(BuildVars.PIN_MAX_SIZE)});
+
+                pinEditText.setOnEditorActionListener((textView, i, keyEvent) -> {
+                    if (passcodeSetStep == 0) {
+                        processNext();
+                        return true;
+                    } else if (passcodeSetStep == 1) {
+                        processDone();
+                        return true;
+                    }
+                    return false;
+                });
+
+                pinEditText.setOnKeyListener((v, keyCode, event) -> {
+                    if (event.getAction() == KeyEvent.ACTION_UP && (keyCode == KeyEvent.KEYCODE_FORWARD || keyCode == KeyEvent.KEYCODE_ENTER)) {
                         if (passcodeSetStep == 0) {
-                            postDelayed(()->processNext(), 260);
+                            processNext();
                         } else {
                             processDone();
                         }
+                        return true;
                     }
-                };
-                codeFieldContainer.setNumbersCount(BuildVars.PIN_MAX_SIZE, CodeFieldContainer.TYPE_PASSCODE);
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
-                    f.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                    f.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24);
-                    f.addTextChangedListener(new TextWatcher() {
-                        @Override
-                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                            if (postedHidePasscodesDoNotMatch) {
-                                codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
-                                hidePasscodesDoNotMatch.run();
-                            }
+                    return false;
+                });
+
+                pinEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                        if (postedHidePasscodesDoNotMatch) {
+                            pinEditText.removeCallbacks(hidePasscodesDoNotMatch);
+                            hidePasscodesDoNotMatch.run();
                         }
+                    }
 
-                        @Override
-                        public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
-                        @Override
-                        public void afterTextChanged(Editable s) {}
-                    });
-                    f.setOnFocusChangeListener((v, hasFocus) -> {
-                        keyboardView.setEditText(f);
-                        keyboardView.setDispatchBackWhenEmpty(true);
-                    });
-                }
-                codeContainer.addView(codeFieldContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 40, 10, 40, 0));
+                    @Override
+                    public void afterTextChanged(Editable s) {}
+                });
+
+                codeContainer.addView(pinEditText, LayoutHelper.createFrame(240, 48, Gravity.CENTER_HORIZONTAL, 0, 10, 0, 0));
 
                 innerLinearLayout.addView(codeContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 32, 0, 72));
 
@@ -791,20 +812,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void animateSuccessAnimation(Runnable callback) {
-        if (!isPinCode()) {
-            callback.run();
-            return;
-        }
-        for (int i = 0; i < codeFieldContainer.codeField.length; i++) {
-            CodeNumberField field = codeFieldContainer.codeField[i];
-            field.postDelayed(()-> field.animateSuccessProgress(1f), i * 10L);
-        }
-        codeFieldContainer.postDelayed(() -> {
-            for (CodeNumberField f : codeFieldContainer.codeField) {
-                f.animateSuccessProgress(0f);
-            }
-            callback.run();
-        }, codeFieldContainer.codeField.length * 75L + 350L);
+        callback.run();
     }
 
     @Override
@@ -815,10 +823,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         if (lockImageView != null) {
             lockImageView.setVisibility(!AndroidUtilities.isSmallScreen() && AndroidUtilities.displaySize.x < AndroidUtilities.displaySize.y ? View.VISIBLE : View.GONE);
         }
-        if (codeFieldContainer != null && codeFieldContainer.codeField != null) {
-            for (CodeNumberField f : codeFieldContainer.codeField) {
-                f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
-            }
+        if (pinEditText != null) {
+            pinEditText.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
         }
     }
 
@@ -902,9 +908,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
     private void showKeyboard() {
         if (isPinCode()) {
-            codeFieldContainer.codeField[0].requestFocus();
-            if (!isCustomKeyboardVisible()) {
-                AndroidUtilities.showKeyboard(codeFieldContainer.codeField[0]);
+            if (pinEditText != null) {
+                pinEditText.requestFocus();
+                if (!isCustomKeyboardVisible()) {
+                    AndroidUtilities.showKeyboard(pinEditText);
+                }
             }
         } else if (isPassword()) {
             passwordEditText.requestFocus();
@@ -927,13 +935,19 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             descriptionTextSwitcher.setText(LocaleController.getString(currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN ? (isDuressBruh(type) ? R.string.CreateDuressInfoPIN : R.string.CreatePasscodeInfoPIN) : (isDuressBruh(type) ? R.string.CreateDuressInfoPassword : R.string.CreatePasscodeInfoPassword)), animate);
         }
         if (isPinCode()) {
-            AndroidUtilities.updateViewVisibilityAnimated(codeFieldContainer, true, 1f, animate);
+            if (pinEditText != null) {
+                AndroidUtilities.updateViewVisibilityAnimated(pinEditText, true, 1f, animate);
+            }
             AndroidUtilities.updateViewVisibilityAnimated(outlinePasswordView, false, 1f, animate);
+            keyboardView.setEditText(pinEditText);
         } else if (isPassword()) {
-            AndroidUtilities.updateViewVisibilityAnimated(codeFieldContainer, false, 1f, animate);
+            if (pinEditText != null) {
+                AndroidUtilities.updateViewVisibilityAnimated(pinEditText, false, 1f, animate);
+            }
             AndroidUtilities.updateViewVisibilityAnimated(outlinePasswordView, true, 1f, animate);
+            keyboardView.setEditText(null);
         }
-        boolean show = isPassword();
+        boolean show = true;
         if (show) {
             onShowKeyboardCallback = () -> {
                 floatingButton.setButtonVisible(true, animate);
@@ -956,7 +970,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void processNext() {
-        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 8) {
+        String code = isPinCode() ? (pinEditText != null ? pinEditText.getText().toString() : "") : passwordEditText.getText().toString();
+        if (code.length() < BuildVars.PIN_MIN_SIZE || code.length() > BuildVars.PIN_MAX_SIZE) {
             onPasscodeError();
             return;
         }
@@ -973,11 +988,12 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             descriptionTextSwitcher.setText(AndroidUtilities.replaceTags(LocaleController.getString(R.string.PasscodeReinstallNotice)));
         }
 
-
-        firstPassword = isPinCode() ? codeFieldContainer.getCode() : passwordEditText.getText().toString();
+        firstPassword = code;
         passwordEditText.setText("");
         passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
+        if (pinEditText != null) {
+            pinEditText.setText("");
+        }
         showKeyboard();
         passcodeSetStep = 1;
     }
@@ -993,28 +1009,34 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void processDone() {
-        if (isPassword() && passwordEditText.getText().length() == 0) {
-            onPasscodeError();
-            return;
-        }
-        String password = isPinCode() ? codeFieldContainer.getCode() : passwordEditText.getText().toString();
+        String password = isPinCode() ? (pinEditText != null ? pinEditText.getText().toString() : "") : passwordEditText.getText().toString();
         if (type == TYPE_SETUP_CODE || type == TYPE_SETUP_DURESS) {
+            if (password.length() < BuildVars.PIN_MIN_SIZE || password.length() > BuildVars.PIN_MAX_SIZE) {
+                onPasscodeError();
+                return;
+            }
             if (!firstPassword.equals(password)) {
                 AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.setText("");
-                }
-                if (isPinCode()) {
-                    codeFieldContainer.codeField[0].requestFocus();
+                if (pinEditText != null) {
+                    pinEditText.setText("");
                 }
                 passwordEditText.setText("");
+                if (isPinCode()) {
+                    if (pinEditText != null) {
+                        pinEditText.requestFocus();
+                    }
+                } else {
+                    passwordEditText.requestFocus();
+                }
                 onPasscodeError();
 
-                codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
-                codeFieldContainer.post(()->{
-                    codeFieldContainer.postDelayed(hidePasscodesDoNotMatch, 3000);
-                    postedHidePasscodesDoNotMatch = true;
-                });
+                if (pinEditText != null) {
+                    pinEditText.removeCallbacks(hidePasscodesDoNotMatch);
+                    pinEditText.post(()->{
+                        pinEditText.postDelayed(hidePasscodesDoNotMatch, 3000);
+                        postedHidePasscodesDoNotMatch = true;
+                    });
+                }
                 return;
             }
 
@@ -1044,9 +1066,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
             passwordEditText.clearFocus();
             AndroidUtilities.hideKeyboard(passwordEditText);
-            for (CodeNumberField f : codeFieldContainer.codeField) {
-                f.clearFocus();
-                AndroidUtilities.hideKeyboard(f);
+            if (pinEditText != null) {
+                pinEditText.clearFocus();
+                AndroidUtilities.hideKeyboard(pinEditText);
             }
             keyboardView.setEditText(null);
 
@@ -1072,11 +1094,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 SharedConfig.increaseBadPasscodeTries();
                 VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
                 passwordEditText.setText("");
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.setText("");
-                }
-                if (isPinCode()) {
-                    codeFieldContainer.codeField[0].requestFocus();
+                if (pinEditText != null) {
+                    pinEditText.setText("");
+                    if (isPinCode()) {
+                        pinEditText.requestFocus();
+                    }
                 }
                 onPasscodeError();
                 return;
@@ -1086,9 +1108,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
             passwordEditText.clearFocus();
             AndroidUtilities.hideKeyboard(passwordEditText);
-            for (CodeNumberField f : codeFieldContainer.codeField) {
-                f.clearFocus();
-                AndroidUtilities.hideKeyboard(f);
+            if (pinEditText != null) {
+                pinEditText.clearFocus();
+                AndroidUtilities.hideKeyboard(pinEditText);
             }
             keyboardView.setEditText(null);
 
@@ -1113,21 +1135,15 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             fragmentView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         } catch (Exception ignore) {}
         if (isPinCode()) {
-            for (CodeNumberField f : codeFieldContainer.codeField) {
-                f.animateErrorProgress(1f);
+            if (pinEditText != null) {
+                AndroidUtilities.shakeViewSpring(pinEditText, 10, () -> {});
             }
         } else {
             outlinePasswordView.animateError(1f);
-        }
-        AndroidUtilities.shakeViewSpring(isPinCode() ? codeFieldContainer : outlinePasswordView, isPinCode() ? 10 : 4, () -> AndroidUtilities.runOnUIThread(()->{
-            if (isPinCode()) {
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.animateErrorProgress(0f);
-                }
-            } else {
+            AndroidUtilities.shakeViewSpring(outlinePasswordView, 4, () -> AndroidUtilities.runOnUIThread(()->{
                 outlinePasswordView.animateError(0f);
-            }
-        }, isPinCode() ? 150 : 1000));
+            }, 1000));
+        }
     }
 
     private class ListAdapter extends RecyclerListView.SelectionAdapter {

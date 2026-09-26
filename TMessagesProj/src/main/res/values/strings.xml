@@ -2736,8 +2736,8 @@
     <string name="VeyraHideConnectingToProxy">Hide Proxy Connecting Status</string>
     <string name="VeyraHideConnectingToProxyDesc">Hide \'Connecting to proxy...\' in chat title and drawer</string>
     <string name="VeyraSettingsLock">Settings Lock</string>
-    <string name="VeyraSettingsLockSet">Set Password</string>
-    <string name="VeyraSettingsLockChange">Change Password</string>
+    <string name="VeyraSettingsLockSet">Set Passcode</string>
+    <string name="VeyraSettingsLockChange">Change Passcode</string>
     <string name="VeyraSettingsLockOn">Enabled</string>
     <string name="VeyraSettingsLockOff">Disabled</string>
     <string name="VeyraSettingsLockRemove">Turn Off Settings Lock</string>
@@ -5637,9 +5637,9 @@
     <string name="CreatePassword">Create a Password</string>
     <string name="CreatePasscode">Create a passcode</string>
     <string name="CreateDuress">Create a duress</string>
-    <string name="CreatePasscodeInfoPIN">Please enter any 4-16 digits that you will use to unlock Telegram.</string>
-    <string name="CreateDuressInfoPassword">Please enter the password you will use to destroy Telegram.</string>
-    <string name="CreateDuressInfoPIN">Please enter any 4-16 digits that you will use to destroy Telegram.</string>
+    <string name="CreatePasscodeInfoPIN">Please enter 6 to 24 digits to unlock Veyra.</string>
+    <string name="CreatePasscodeInfoPassword">Please enter the password you will use to unlock Telegram.</string>
+    <string name="CreateDuressInfoPIN">Please enter 6 to 24 digits for the duress code.</string>
     <string name="CreatePasscodeInfoPassword">Please enter the password you will use to unlock Telegram.</string>
     <string name="PasscodeReinstallNotice">If you forget your passcode, you\'ll need to **reinstall** the app. All secret chats will be lost.</string>
     <string name="DuressReinstallNotice">If you will setup same duress as your main pin only ghosts of Morrowind can unlock it.</string>

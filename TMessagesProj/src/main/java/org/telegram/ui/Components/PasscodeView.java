@@ -98,20 +98,16 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
     private class AnimatingTextView extends FrameLayout {
 
-        private final static int DOTS_COUNT = 8;
+        private final static int DOTS_COUNT = 24;
         private final StringBuilder stringBuilder = new StringBuilder(DOTS_COUNT);
         private final float[] dotProgress = new float[DOTS_COUNT];
         private final float[] dotScale = new float[DOTS_COUNT];
         private final ValueAnimator[] animators = new ValueAnimator[DOTS_COUNT];
-        private final Paint emptyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         public AnimatingTextView(Context context) {
             super(context);
             setWillNotDraw(false);
-            emptyPaint.setStyle(Paint.Style.STROKE);
-            emptyPaint.setStrokeWidth(AndroidUtilities.dp(1.75f));
-            emptyPaint.setColor(0x55ffffff);
             fillPaint.setStyle(Paint.Style.FILL);
             fillPaint.setColor(0xffffffff);
             for (int i = 0; i < DOTS_COUNT; i++) {
@@ -128,24 +124,20 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            int count = stringBuilder.length();
+            if (count == 0) return;
             int width = getMeasuredWidth();
             int height = getMeasuredHeight();
             float centerY = height / 2f;
-            float dotSpacing = AndroidUtilities.dp(22);
-            float totalWidth = (DOTS_COUNT - 1) * dotSpacing;
+            float dotSpacing = count > 12 ? AndroidUtilities.dp(11f) : AndroidUtilities.dp(16f);
+            float radius = count > 12 ? AndroidUtilities.dp(4.5f) : AndroidUtilities.dp(6f);
+            float totalWidth = (count - 1) * dotSpacing;
             float startX = (width - totalWidth) / 2f;
-            float radius = AndroidUtilities.dp(6f);
 
-            for (int i = 0; i < DOTS_COUNT; i++) {
+            for (int i = 0; i < count; i++) {
                 float cx = startX + i * dotSpacing;
                 float p = dotProgress[i];
                 float s = dotScale[i];
-
-                // Outer modern ring for empty slot
-                emptyPaint.setColor(0x55ffffff);
-                canvas.drawCircle(cx, centerY, radius, emptyPaint);
-
-                // Filled dot when entered
                 if (p > 0.001f) {
                     fillPaint.setColor(0xffffffff);
                     fillPaint.setAlpha((int) (255 * p));
@@ -170,8 +162,11 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             animateDot(pos, 1f, true);
             checkTitle();
 
-            if (stringBuilder.length() == DOTS_COUNT) {
-                AndroidUtilities.runOnUIThread(() -> processDone(false), 120);
+            String currentPin = stringBuilder.toString();
+            if (currentPin.length() >= 6) {
+                if (SharedConfig.checkPasscode(currentPin) || SharedConfig.checkDuress(currentPin) || currentPin.length() == DOTS_COUNT) {
+                    AndroidUtilities.runOnUIThread(() -> processDone(false), 120);
+                }
             }
         }
 
@@ -474,8 +469,11 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == 8 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
-                    processDone(false);
+                if (passwordEditText.length() >= 6 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                    String pin = passwordEditText.getText().toString();
+                    if (SharedConfig.checkPasscode(pin) || SharedConfig.checkDuress(pin) || pin.length() >= 24) {
+                        processDone(false);
+                    }
                 }
             }
         });

@@ -1,23 +1,18 @@
 package org.telegram.ui;
 
 import android.content.Context;
-import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextWatcher;
-import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
@@ -33,14 +28,10 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.OutlineTextContainerView;
 
 // Veyra: secondary lock that protects the Veyra Settings hub only.
-// Completely separate from the app's main 8-digit passcode + duress
-// code system (PasscodeActivity/SharedConfig) -- must never touch those.
-// Uses a free-length password field (6-24 chars), same look & feel as
-// Telegram's own "password" passcode mode (OutlineTextContainerView +
-// reveal/hide eye button) instead of a fixed-length numeric PIN box.
+// Clean, centered numeric PIN field with variable length (6-24 digits).
+// Completely separate from the app's main passcode and duress code.
 public class VeyraSettingsLockActivity extends BaseFragment {
 
     private static final int done_button = 1;
@@ -48,9 +39,7 @@ public class VeyraSettingsLockActivity extends BaseFragment {
     private static final int MIN_LENGTH = 6;
     private static final int MAX_LENGTH = 24;
 
-    private OutlineTextContainerView outlinePasswordView;
     private EditTextBoldCursor passwordEditText;
-    private ImageView revealButton;
     private TextView titleTextView;
     private TextView descriptionTextView;
     private ActionBarMenuItem doneItem;
@@ -127,56 +116,18 @@ public class VeyraSettingsLockActivity extends BaseFragment {
         descriptionTextView.setGravity(Gravity.CENTER_HORIZONTAL);
         linearLayout.addView(descriptionTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 24));
 
-        // --- Free-length password field, styled like Telegram's own
-        // "password" passcode mode (PasscodeActivity / PASSCODE_TYPE_PASSWORD):
-        // OutlineTextContainerView label + EditTextBoldCursor + reveal/hide eye icon.
-        outlinePasswordView = new OutlineTextContainerView(context);
-        outlinePasswordView.setText(LocaleController.getString(R.string.EnterPassword));
-
         passwordEditText = new EditTextBoldCursor(context);
-        passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        passwordEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+        passwordEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
         passwordEditText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        passwordEditText.setBackground(null);
-        passwordEditText.setMaxLines(1);
-        passwordEditText.setLines(1);
-        passwordEditText.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-        passwordEditText.setSingleLine(true);
-        passwordEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_LENGTH)});
+        passwordEditText.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+        passwordEditText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        passwordEditText.setGravity(Gravity.CENTER);
         passwordEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        passwordEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
-        passwordEditText.setTypeface(Typeface.DEFAULT);
-        passwordEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
-        passwordEditText.setCursorSize(AndroidUtilities.dp(20));
+        passwordEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        passwordEditText.setCursorSize(AndroidUtilities.dp(22));
         passwordEditText.setCursorWidth(1.5f);
-
-        int padding = AndroidUtilities.dp(16);
-        passwordEditText.setPadding(padding, padding, padding, padding);
-
-        passwordEditText.setOnFocusChangeListener((v, hasFocus) -> outlinePasswordView.animateSelection(hasFocus ? 1 : 0));
-
-        LinearLayout fieldRow = new LinearLayout(context);
-        fieldRow.setOrientation(LinearLayout.HORIZONTAL);
-        fieldRow.setGravity(Gravity.CENTER_VERTICAL);
-        fieldRow.addView(passwordEditText, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
-
-        revealButton = new ImageView(context);
-        revealButton.setImageResource(R.drawable.msg_message);
-        revealButton.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
-        revealButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1));
-
-        AtomicBoolean isPasswordShown = new AtomicBoolean(false);
-        revealButton.setOnClickListener(v -> {
-            isPasswordShown.set(!isPasswordShown.get());
-            int selectionStart = passwordEditText.getSelectionStart(), selectionEnd = passwordEditText.getSelectionEnd();
-            passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT | (isPasswordShown.get() ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_TEXT_VARIATION_PASSWORD));
-            passwordEditText.setSelection(selectionStart, selectionEnd);
-            revealButton.setColorFilter(Theme.getColor(isPasswordShown.get() ? Theme.key_windowBackgroundWhiteInputFieldActivated : Theme.key_windowBackgroundWhiteHintText));
-        });
-        fieldRow.addView(revealButton, LayoutHelper.createLinearRelatively(24, 24, 0, 0, 0, 14, 0));
-
-        outlinePasswordView.addView(fieldRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        linearLayout.addView(outlinePasswordView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
+        passwordEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_LENGTH)});
+        linearLayout.addView(passwordEditText, LayoutHelper.createLinear(240, 44, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
 
         passwordEditText.setOnEditorActionListener((textView, actionId, keyEvent) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -205,16 +156,16 @@ public class VeyraSettingsLockActivity extends BaseFragment {
     private void updateUI() {
         boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
         if (state == 0) {
-            titleTextView.setText(isFarsi ? "رمز فعلی را وارد کنید" : "Enter Current Password");
-            descriptionTextView.setText(isFarsi ? "برای دسترسی به تنظیمات ویرا، رمز خود را وارد کنید" : "Enter your password to access Veyra Settings");
+            titleTextView.setText(isFarsi ? "رمز فعلی را وارد کنید" : "Enter Current PIN");
+            descriptionTextView.setText(isFarsi ? "برای دسترسی به تنظیمات ویرا، رمز خود را وارد کنید" : "Enter your PIN to access Veyra Settings");
         } else if (state == 1) {
-            titleTextView.setText(isFarsi ? "رمز جدید را وارد کنید" : "Enter New Password");
+            titleTextView.setText(isFarsi ? "رمز جدید را وارد کنید" : "Enter New PIN");
             descriptionTextView.setText(isFarsi
-                    ? ("یک رمز عبور بین " + MIN_LENGTH + " تا " + MAX_LENGTH + " کاراکتر برای قفل تنظیمات ویرا تعیین کنید")
-                    : ("Set a password between " + MIN_LENGTH + " and " + MAX_LENGTH + " characters to protect Veyra Settings"));
+                    ? ("یک پین بین " + MIN_LENGTH + " تا " + MAX_LENGTH + " رقم برای قفل تنظیمات ویرا تعیین کنید")
+                    : ("Set a " + MIN_LENGTH + " to " + MAX_LENGTH + " digit PIN to protect Veyra Settings"));
         } else if (state == 2) {
-            titleTextView.setText(isFarsi ? "تأیید رمز جدید" : "Confirm New Password");
-            descriptionTextView.setText(isFarsi ? "رمز جدید را دوباره وارد نمایید" : "Re-enter the new password to confirm");
+            titleTextView.setText(isFarsi ? "تأیید رمز جدید" : "Confirm New PIN");
+            descriptionTextView.setText(isFarsi ? "رمز جدید را دوباره وارد نمایید" : "Re-enter the new PIN to confirm");
         }
         if (passwordEditText != null) {
             passwordEditText.setText("");
@@ -230,17 +181,9 @@ public class VeyraSettingsLockActivity extends BaseFragment {
 
         if (state != 0 && code.length() < MIN_LENGTH) {
             AndroidUtilities.shakeView(passwordEditText);
-            if (outlinePasswordView != null) {
-                outlinePasswordView.animateError(1f);
-                AndroidUtilities.runOnUIThread(() -> {
-                    if (outlinePasswordView != null) {
-                        outlinePasswordView.animateError(0f);
-                    }
-                }, 600);
-            }
             BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi
-                    ? ("رمز باید حداقل " + MIN_LENGTH + " کاراکتر باشد")
-                    : ("Password must be at least " + MIN_LENGTH + " characters")).show();
+                    ? ("رمز باید حداقل " + MIN_LENGTH + " رقم باشد")
+                    : ("PIN must be at least " + MIN_LENGTH + " digits")).show();
             return;
         }
         if (code.isEmpty()) {
@@ -259,7 +202,7 @@ public class VeyraSettingsLockActivity extends BaseFragment {
                 }
             } else {
                 AndroidUtilities.shakeView(passwordEditText);
-                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong password").show();
+                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong PIN").show();
             }
         } else if (state == 1) {
             firstEnteredCode = code;
@@ -281,7 +224,7 @@ public class VeyraSettingsLockActivity extends BaseFragment {
                 }
             } else {
                 AndroidUtilities.shakeView(passwordEditText);
-                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمزها مطابقت ندارند" : "Passwords do not match").show();
+                BulletinFactory.of(VeyraSettingsLockActivity.this).createErrorBulletin(isFarsi ? "رمزها مطابقت ندارند" : "PINs do not match").show();
                 state = 1;
                 firstEnteredCode = "";
                 updateUI();

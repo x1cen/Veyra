@@ -76,18 +76,19 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         content.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 24));
 
         lockEditText = new EditTextBoldCursor(context);
-        lockEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+        lockEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
         lockEditText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        lockEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        lockEditText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         lockEditText.setTransformationMethod(android.text.method.PasswordTransformationMethod.getInstance());
         lockEditText.setSingleLine(true);
         lockEditText.setMaxLines(1);
         lockEditText.setGravity(Gravity.CENTER);
         lockEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
         lockEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        lockEditText.setCursorSize(AndroidUtilities.dp(20));
+        lockEditText.setCursorSize(AndroidUtilities.dp(22));
         lockEditText.setCursorWidth(1.5f);
-        content.addView(lockEditText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+        lockEditText.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(24)});
+        content.addView(lockEditText, LayoutHelper.createLinear(240, 44, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
 
         lockEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
