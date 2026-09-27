@@ -16,13 +16,14 @@ on:
                 type: string
                 default: '1.0.3'
             arch:
-                description: 'Target Architecture (arm64-v8a is fastest for phones)'
+                description: 'Target Architecture (auto = all for main, arm64-v8a for dev)'
                 type: choice
                 options:
+                    - 'auto'
                     - 'arm64-v8a'
                     - 'arm64-v8a,armeabi-v7a'
                     - 'all'
-                default: 'arm64-v8a'
+                default: 'auto'
             veyra-changes:
                 description: 'Changelog / Release notes'
                 type: string
@@ -42,21 +43,21 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
         name: Generate APK
         runs-on: ubuntu-latest
         env:
-            TARGET_ARCH: ${{ inputs.arch || 'arm64-v8a' }}
+            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}
             CCACHE_DIR: ${{github.workspace}}/.ccache
             CCACHE_MAXSIZE: 3G
             CCACHE_COMPILERCHECK: content
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
@@ -112,10 +113,10 @@ jobs:
                     echo "ANDROID_NDK_HOME=${NDK_DIR}" >> "${GITHUB_ENV}"
                     "${CMAKE_DIR}/bin/cmake" --version
 
-            -   name: Install ccache
+            -   name: Install ccache and nasm
                 run: |
                     sudo apt-get update
-                    sudo apt-get install -y ccache
+                    sudo apt-get install -y ccache nasm
                     mkdir -p "${CCACHE_DIR}"
                     ccache -s
 
@@ -194,7 +195,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -216,15 +217,15 @@ jobs:
                     files: ${{steps.locate_apk.outputs.apk_path}}
                     body: |
                         **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
-                        Target Architecture: `${{ env.TARGET_ARCH }}`
+                        Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.8 — Stable Release. New: in-app update checker that queries GitHub Releases directly (no more Play Store dependency) with a one-tap "Check for Updates" button in Veyra Settings; official announcement channel (@GetVeyra) linked from both the Telegram Help screen and Veyra Settings. Fixed: the Help screen and Veyra Settings version display now always match the real installed build instead of showing a stale/upstream number.' || 'Veyra v1.0.8 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.9 — Stable Release. Universal multi-architecture build (arm64-v8a, armeabi-v7a, x86, x86_64) supporting all Android devices. Improved in-app update checker with live status bulletins and legacy version migration.' || 'Veyra v1.0.9 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
 
             -   name: Telegram announcement - stable release
                 if: ${{ success() && env.IS_STABLE == 'true' }}

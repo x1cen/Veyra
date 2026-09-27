@@ -144,6 +144,7 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
+                connection.setInstanceFollowRedirects(true);
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
                 connection.setRequestProperty("User-Agent", "Veyra-Android");
                 int code = connection.getResponseCode();
@@ -249,7 +250,11 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
         if (semver == null) {
             return 0;
         }
-        String[] parts = semver.trim().split("[.\\-+]");
+        semver = semver.trim();
+        if (semver.startsWith("12.")) {
+            return 0;
+        }
+        String[] parts = semver.split("[.\\-+]");
         int major = parts.length > 0 ? parseIntSafe(parts[0]) : 0;
         int minor = parts.length > 1 ? parseIntSafe(parts[1]) : 0;
         int patch = parts.length > 2 ? parseIntSafe(parts[2]) : 0;
