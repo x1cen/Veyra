@@ -10926,6 +10926,21 @@ public class MessagesController extends BaseController implements NotificationCe
     private long lastCheckPromoInfoTime;
 
     private void checkPromoInfoInternal(boolean reset) {
+        // Veyra: sponsored "Use Proxy" / PSA pinned-dialog ads are permanently disabled.
+        // Never issue TL_help_getPromoData and never let a stale promo dialog linger
+        // (covers upgraders who already had one cached from before this fix).
+        if (promoDialogId != 0) {
+            promoDialogId = 0;
+            proxyDialogAddress = null;
+            getGlobalMainSettings().edit()
+                    .putLong("proxy_dialog", 0)
+                    .remove("proxyDialogAddress")
+                    .commit();
+            AndroidUtilities.runOnUIThread(this::removePromoDialog);
+        }
+        checkingPromoInfo = false;
+        return;
+        /* Original Telegram sponsor/PSA dialog logic — intentionally disabled in Veyra:
         if (reset && checkingPromoInfo) {
             checkingPromoInfo = false;
         }
@@ -11211,6 +11226,7 @@ public class MessagesController extends BaseController implements NotificationCe
             getGlobalMainSettings().edit().putLong("proxy_dialog", promoDialogId).remove("proxyDialogAddress").putInt("nextPromoInfoCheckTime", nextPromoInfoCheckTime).commit();
             AndroidUtilities.runOnUIThread(this::removePromoDialog);
         }
+        */
     }
 
     private void removePromoDialog() {

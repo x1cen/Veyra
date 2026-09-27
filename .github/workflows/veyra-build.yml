@@ -42,7 +42,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.6' || '1.0.6-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
@@ -56,9 +56,31 @@ jobs:
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+            IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
+
+            -   name: Telegram log - build started
+                if: ${{ always() }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🔨 *Veyra build started*
+                    Version: \`${VERSION_NAME}\`
+                    Branch: \`${{ github.ref_name }}\`
+                    Arch: \`${TARGET_ARCH}\`
+                    Commit: [\`${GITHUB_SHA:0:9}\`](${{ github.server_url }}/${{ github.repository }}/commit/${GITHUB_SHA})
+                    Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" > /dev/null
 
             -   name: Set up AWS Corretto 21
                 uses: actions/setup-java@v5
@@ -172,7 +194,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.6' || '1.0.6-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -185,6 +207,7 @@ jobs:
                     echo "apk_sha256=$(sha256sum "$VEYRA_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
             -   name: Create Release and Upload APK
+                id: gh_release
                 uses: softprops/action-gh-release@v3
                 with:
                     tag_name: ${{env.TNAME}}
@@ -196,9 +219,82 @@ jobs:
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.6 — Stable Release. Bug fixes: callback button popup anchor now accurately positioned on the pressed button, and messages are no longer falsely marked as edited when reacting or for bot responses. Includes 6-24 digit variable PINs, modular settings hub, anti-delete, ghost mode, and privacy controls.' || 'Veyra v1.0.6 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.7 — Stable Release. Fixed: channels/groups opened only by username no longer show as joined (Mute/Unmute) and no longer auto-join or linger in the chat list; the in-app "Use Proxy" sponsored ad is fully removed; callback button popup now anchors to the pressed button; false "edited" tags on bot messages and reacted messages are suppressed.' || 'Veyra v1.0.7 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.6' || '1.0.6-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.6' || '1.0.6-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.6' || '1.0.6-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+
+            -   name: Telegram announcement - stable release
+                if: ${{ success() && env.IS_STABLE == 'true' }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_RELEASE_CHANNEL_ID: ${{secrets.TELEGRAM_RELEASE_CHANNEL_ID}}
+                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra stable release. See the GitHub release page for full details.' }}
+                    RELEASE_URL: ${{ steps.gh_release.outputs.url }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_RELEASE_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🚀 *Veyra ${VERSION_NAME} — Stable Release*
+
+                    ${CHANGELOG}
+
+                    SHA-256: \`${{ steps.locate_apk.outputs.apk_sha256 }}\`"
+                    REPLY_MARKUP='{"inline_keyboard":[[{"text":"📦 GitHub Repository","url":"${{ github.server_url }}/${{ github.repository }}"},{"text":"⬇️ Release Page","url":"'"${RELEASE_URL}"'"}]]}'
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_RELEASE_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" \
+                        --data-urlencode reply_markup="$REPLY_MARKUP" > /dev/null
+
+            -   name: Telegram announcement - beta build
+                if: ${{ success() && env.IS_STABLE != 'true' }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra preview build on the dev branch.' }}
+                    RELEASE_URL: ${{ steps.gh_release.outputs.url }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🧪 *Veyra ${VERSION_NAME} — Beta Build*
+
+                    ${CHANGELOG}
+
+                    SHA-256: \`${{ steps.locate_apk.outputs.apk_sha256 }}\`"
+                    REPLY_MARKUP='{"inline_keyboard":[[{"text":"📦 GitHub Repository","url":"${{ github.server_url }}/${{ github.repository }}"},{"text":"⬇️ Release Page","url":"'"${RELEASE_URL}"'"}]]}'
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" \
+                        --data-urlencode reply_markup="$REPLY_MARKUP" > /dev/null
+
+            -   name: Telegram log - build finished
+                if: ${{ always() }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                    JOB_STATUS: ${{ job.status }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    if [ "$JOB_STATUS" = "success" ]; then
+                        ICON="✅"; LABEL="Build succeeded"
+                    elif [ "$JOB_STATUS" = "cancelled" ]; then
+                        ICON="⚪"; LABEL="Build cancelled"
+                    else
+                        ICON="❌"; LABEL="Build failed"
+                    fi
+                    TEXT="${ICON} *Veyra ${LABEL}*
+                    Version: \`${VERSION_NAME}\`
+                    Branch: \`${{ github.ref_name }}\`
+                    Arch: \`${TARGET_ARCH}\`
+                    Run log: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" > /dev/null
