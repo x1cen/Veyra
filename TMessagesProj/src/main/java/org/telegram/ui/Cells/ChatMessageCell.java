@@ -4636,6 +4636,33 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return false;
     }
 
+    private int lastLongPressedBotButtonIndex = -1;
+
+    /**
+     * Returns the on-cell bounds of the bot button that triggered the last long press.
+     * Used to anchor context popups to the pressed button instead of the whole message cell.
+     */
+    public boolean getLastLongPressedBotButtonBounds(RectF out) {
+        if (out == null || botButtons == null || lastLongPressedBotButtonIndex < 0 || lastLongPressedBotButtonIndex >= botButtons.size()) {
+            return false;
+        }
+        BotButton button = botButtons.get(lastLongPressedBotButtonIndex);
+        if (button == null) {
+            return false;
+        }
+        final int widthForButtons = getWidthForButtons();
+        int addX;
+        if (currentMessageObject != null && currentMessageObject.isOutOwner()) {
+            addX = getMeasuredWidth() - widthForButtons - dp(10);
+        } else {
+            addX = backgroundDrawableLeft + dp(mediaBackground || drawPinnedBottom ? 1 : 7);
+        }
+        final float left = button.x * widthForButtons + addX;
+        final float top = button.y + layoutHeight - dp(2);
+        out.set(left, top, left + button.width * widthForButtons, top + button.height);
+        return true;
+    }
+
     private boolean checkBotButtonMotionEvent(MotionEvent event) {
         if (botButtons.isEmpty()) {
             return false;
@@ -4680,11 +4707,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 if (!currentMessageObject.scheduled) {
                                     if (button2.buttonCustom != null) {
                                         cancelCheckLongPress();
+                                        lastLongPressedBotButtonIndex = pressedBotButton;
                                         if (delegate != null) {
                                             delegate.didLongPressCustomBotButton(this, button2.buttonCustom);
                                         }
                                     } else if (button2.button != null) {
                                         cancelCheckLongPress();
+                                        lastLongPressedBotButtonIndex = pressedBotButton;
                                         if (delegate != null) {
                                             delegate.didLongPressBotButton(this, button2.button);
                                         }
@@ -18391,7 +18420,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (messageObject.scheduled || messageObject.messageOwner.edit_hide) {
             edited = false;
         } else if (currentPosition == null || currentMessagesGroup == null || currentMessagesGroup.messages.isEmpty()) {
-            edited = (messageObject.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0 || messageObject.isEditing();
+            edited = messageObject.isEdited() || messageObject.isEditing();
             if (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted) {
                 deleted = true;
             }
@@ -18404,7 +18433,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (object.messageOwner != null && object.messageOwner.isDeleted) {
                         deleted = true;
                     }
-                    if ((object.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0 || object.isEditing()) {
+                    if (object.isEdited() || object.isEditing()) {
                         edited = true;
                         break;
                     }

@@ -42,7 +42,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.4' || '1.0.4-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.5' || '1.0.5-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
@@ -172,7 +172,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.4' || '1.0.4-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.5' || '1.0.5-dev') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -196,9 +196,9 @@ jobs:
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.4 — Stable Release. Complete modular settings hub, 6-24 digit variable length PIN (Passcode, Duress, Settings Lock), JSON backup/restore, Anti-delete, Ghost mode, and enhanced privacy controls.' || 'Veyra v1.0.4 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.5 — Stable Release. Bug fixes: callback button long-press popup now anchors to the pressed button, and messages are no longer falsely marked as edited when reacting. Includes the full modular settings hub, 6-24 digit variable length PIN (Passcode, Duress, Settings Lock), JSON backup/restore, Anti-delete, Ghost mode, and enhanced privacy controls.' || 'Veyra v1.0.5 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.4' || '1.0.4-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.4' || '1.0.4-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.4' || '1.0.4-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.5' || '1.0.5-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.5' || '1.0.5-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.5' || '1.0.5-dev') }}

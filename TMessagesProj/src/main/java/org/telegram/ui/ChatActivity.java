@@ -40042,6 +40042,15 @@ public class ChatActivity extends BaseFragment implements
             };
 
             ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
+            final RectF pressedButtonBounds = new RectF();
+            if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
+                // Anchor the popup to the pressed button instead of the whole message cell.
+                // Clamp X so a right-aligned button cannot push the popup off-screen.
+                final float maxLeft = Math.max(0, cell.getMeasuredWidth() - dp(200));
+                final float tx = Math.min(pressedButtonBounds.left, maxLeft);
+                final float ty = pressedButtonBounds.bottom - cell.getMeasuredHeight();
+                options.translate(tx, ty);
+            }
             if (!TextUtils.isEmpty(button.text)) {
                 options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
             }
