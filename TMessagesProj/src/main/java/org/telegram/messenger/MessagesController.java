@@ -19551,6 +19551,13 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
 
                 ImageLoader.saveMessageThumbs(message);
+                MessageObject oldMsg = dialogMessagesByIds.get(message.id);
+                if (oldMsg != null && oldMsg.messageOwner != null) {
+                    if (!oldMsg.isEdited() && TextUtils.equals(oldMsg.messageOwner.message, message.message)) {
+                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                        message.edit_date = 0;
+                    }
+                }
                 AndroidUtilities.runOnUIThread(()-> getSendMessagesHelper().onMessageEdited(message));
 
                 boolean isDialogCreated = createdDialogIds.contains(message.dialog_id);

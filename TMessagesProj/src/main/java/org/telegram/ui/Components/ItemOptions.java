@@ -1005,6 +1005,20 @@ public class ItemOptions {
         return this;
     }
 
+    private RectF overrideScrimBounds;
+
+    /**
+     * Overrides the bounds (relative to the scrim view) used to position the popup.
+     * Lets a caller anchor the menu to a sub-region of the view, e.g. a single
+     * bot button inside a message cell, instead of the whole view.
+     */
+    public ItemOptions setScrimBounds(RectF bounds) {
+        if (bounds != null) {
+            this.overrideScrimBounds = new RectF(bounds);
+        }
+        return this;
+    }
+
     public ItemOptions translate(float x, float y) {
         this.translateX += x;
         this.translateY += y;
@@ -1283,7 +1297,9 @@ public class ItemOptions {
             }
         }
         RectF scrimViewBounds = new RectF();
-        if (scrimView instanceof ScrimView) {
+        if (overrideScrimBounds != null) {
+            scrimViewBounds.set(overrideScrimBounds);
+        } else if (scrimView instanceof ScrimView) {
             ((ScrimView) scrimView).getBounds(scrimViewBounds);
         } else if (animateToWidth != 0 && animateToHeight != 0) {
             scrimViewBounds.set(0, 0, animateToWidth, animateToHeight);
@@ -1599,7 +1615,9 @@ public class ItemOptions {
             y += p[1];
         }
         RectF scrimViewBounds = new RectF();
-        if (scrimView instanceof ScrimView) {
+        if (overrideScrimBounds != null) {
+            scrimViewBounds.set(overrideScrimBounds);
+        } else if (scrimView instanceof ScrimView) {
             ((ScrimView) scrimView).getBounds(scrimViewBounds);
         } else if (animateToWidth != 0 && animateToHeight != 0) {
             scrimViewBounds.set(0, 0, animateToWidth, animateToHeight);
@@ -2120,7 +2138,9 @@ public class ItemOptions {
                 }
                 if (scrimViewPadding > 0 || scrimViewRoundRadius > 0) {
                     clipPath.rewind();
-                    if (scrimView instanceof ScrimView) {
+                    if (overrideScrimBounds != null) {
+                        bounds.set(overrideScrimBounds);
+                    } else if (scrimView instanceof ScrimView) {
                         ((ScrimView) scrimView).getBounds(bounds);
                     } else {
                         bounds.set(0, 0, getWidth(), getHeight());

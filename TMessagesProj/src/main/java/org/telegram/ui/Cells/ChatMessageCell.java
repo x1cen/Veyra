@@ -18415,9 +18415,18 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject.isFromUser()) {
             author = MessagesController.getInstance(currentAccount).getUser(fromId);
         }
+        if (author == null && currentMessageObject.getDialogId() > 0) {
+            author = MessagesController.getInstance(currentAccount).getUser(currentMessageObject.getDialogId());
+        }
         boolean hasReplies = messageObject.hasReplies();
         deleted = (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted) || messageObject.deleted;
-        if (messageObject.scheduled || messageObject.messageOwner.edit_hide) {
+        if (messageObject.scheduled
+                || messageObject.isLiveLocation()
+                || messageObject.messageOwner.edit_hide
+                || messageObject.getDialogId() == 777000
+                || messageObject.messageOwner.via_bot_id != 0
+                || messageObject.messageOwner.via_bot_name != null
+                || author != null && author.bot) {
             edited = false;
         } else if (currentPosition == null || currentMessagesGroup == null || currentMessagesGroup.messages.isEmpty()) {
             edited = messageObject.isEdited() || messageObject.isEditing();

@@ -26704,6 +26704,14 @@ public class ChatActivity extends BaseFragment implements
             }
 
             addToPolls(messageObject, old);
+            if (old.messageOwner != null && messageObject.messageOwner != null) {
+                // If the old message was not edited and its content hasn't changed,
+                // server updates (like reactions) sent via updateEditMessage must not mark it as edited.
+                if (!old.isEdited() && TextUtils.equals(old.messageOwner.message, messageObject.messageOwner.message)) {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
+                }
+            }
             if (old.richCheckboxEcho && messageObject.type == MessageObject.TYPE_ARTICLE && old.richLayout != null && messageObject.messageOwner != null) {
                 messageObject.richLayout = old.richLayout;
                 messageObject.messageOwner.rich_message = old.messageOwner.rich_message;
@@ -40045,11 +40053,7 @@ public class ChatActivity extends BaseFragment implements
             final RectF pressedButtonBounds = new RectF();
             if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
                 // Anchor the popup to the pressed button instead of the whole message cell.
-                // Clamp X so a right-aligned button cannot push the popup off-screen.
-                final float maxLeft = Math.max(0, cell.getMeasuredWidth() - dp(200));
-                final float tx = Math.min(pressedButtonBounds.left, maxLeft);
-                final float ty = pressedButtonBounds.bottom - cell.getMeasuredHeight();
-                options.translate(tx, ty);
+                options.setScrimBounds(pressedButtonBounds);
             }
             if (!TextUtils.isEmpty(button.text)) {
                 options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
