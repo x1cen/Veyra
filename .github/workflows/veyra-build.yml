@@ -42,7 +42,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }} [${{ inputs.arch || 'arm64-v8a' }}]
 
 jobs:
     apk:
@@ -56,7 +56,7 @@ jobs:
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
@@ -194,7 +194,7 @@ jobs:
             -   name: Verify APK exists
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
                 run: |
                     APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
                     if [ ! -f "$APK_PATH" ]; then
@@ -219,12 +219,12 @@ jobs:
                         Target Architecture: `${{ env.TARGET_ARCH }}`
                         SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.7 — Stable Release. Fixed: channels/groups opened only by username no longer show as joined (Mute/Unmute) and no longer auto-join or linger in the chat list; the in-app "Use Proxy" sponsored ad is fully removed; callback button popup now anchors to the pressed button; false "edited" tags on bot messages and reacted messages are suppressed.' || 'Veyra v1.0.7 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.8 — Stable Release. New: in-app update checker that queries GitHub Releases directly (no more Play Store dependency) with a one-tap "Check for Updates" button in Veyra Settings; official announcement channel (@GetVeyra) linked from both the Telegram Help screen and Veyra Settings. Fixed: the Help screen and Veyra Settings version display now always match the real installed build instead of showing a stale/upstream number.' || 'Veyra v1.0.8 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.7' || '1.0.7-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.8' || '1.0.8-dev') }}
 
             -   name: Telegram announcement - stable release
                 if: ${{ success() && env.IS_STABLE == 'true' }}

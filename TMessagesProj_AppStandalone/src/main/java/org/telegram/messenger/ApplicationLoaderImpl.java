@@ -31,9 +31,24 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.SMSStatsActivity;
 import org.telegram.ui.SMSSubscribeSheet;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class ApplicationLoaderImpl extends ApplicationLoader {
+
+    // Veyra: GitHub-based update check, replacing the Play Store / Telegram-cloud
+    // update mechanism. Points at the public repo's "latest" stable release.
+    private static final String VEYRA_GITHUB_OWNER = "x1cen";
+    private static final String VEYRA_GITHUB_REPO = "Veyra";
+    private static final String VEYRA_RELEASES_API = "https://api.github.com/repos/" + VEYRA_GITHUB_OWNER + "/" + VEYRA_GITHUB_REPO + "/releases/latest";
+
+    private volatile BetaUpdate veyraPendingUpdate;
+    private volatile String veyraPendingUpdateReleaseUrl;
+
     @Override
     protected String onGetApplicationId() {
 //        return BuildConfig.APPLICATION_ID;
@@ -109,6 +124,150 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
         }
         return true;
     }
+
+    // --- Veyra GitHub update channel -------------------------------------------------
+
+    @Override
+    public boolean isCustomUpdate() {
+        return true;
+    }
+
+    @Override
+    public void checkUpdate(boolean force, Runnable whenDone) {
+        Utilities.externalNetworkQueue.postRunnable(() -> {
+            BetaUpdate result = null;
+            String releaseUrl = null;
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(VEYRA_RELEASES_API);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                connection.setRequestProperty("User-Agent", "Veyra-Android");
+                int code = connection.getResponseCode();
+                if (code == 200) {
+                    StringBuilder sb = new StringBuilder();
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            sb.append(line);
+                        }
+                    }
+                    JSONObject release = new JSONObject(sb.toString());
+                    String tag = release.optString("tag_name", null);
+                    if (tag != null && tag.startsWith("v")) {
+                        tag = tag.substring(1);
+                    }
+                    if (tag != null && !release.optBoolean("prerelease", false) && !release.optBoolean("draft", false)) {
+                        String changelog = release.optString("body", null);
+                        int syntheticVersionCode = versionCodeFromSemver(tag);
+                        result = new BetaUpdate(tag, syntheticVersionCode, changelog);
+                        releaseUrl = "https://github.com/" + VEYRA_GITHUB_OWNER + "/" + VEYRA_GITHUB_REPO + "/releases/tag/" + release.optString("tag_name", "v" + tag);
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.disconnect();
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
+
+            final BetaUpdate finalResult = result;
+            final String finalReleaseUrl = releaseUrl;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (finalResult != null && finalResult.versionCode > getCurrentVersionCode()) {
+                    veyraPendingUpdate = finalResult;
+                    veyraPendingUpdateReleaseUrl = finalReleaseUrl;
+                } else {
+                    veyraPendingUpdate = null;
+                    veyraPendingUpdateReleaseUrl = null;
+                }
+                if (whenDone != null) {
+                    whenDone.run();
+                }
+            });
+        });
+    }
+
+    @Override
+    public BetaUpdate getUpdate() {
+        return veyraPendingUpdate;
+    }
+
+    @Override
+    public boolean showCustomUpdateAppPopup(Context context, BetaUpdate update, int account) {
+        if (context == null || update == null) {
+            return false;
+        }
+        try {
+            String message = update.changelog != null && !update.changelog.trim().isEmpty()
+                    ? update.changelog.trim()
+                    : LocaleController.getString(R.string.AppUpdate);
+            new AlertDialog.Builder(context)
+                    .setTitle(LocaleController.formatString(R.string.VeyraUpdateAvailableTitle, update.version))
+                    .setMessage(message)
+                    .setPositiveButton(LocaleController.getString(R.string.Update), (dialog, which) -> {
+                        String targetUrl = veyraPendingUpdateReleaseUrl;
+                        if (targetUrl == null) {
+                            targetUrl = "https://github.com/" + VEYRA_GITHUB_OWNER + "/" + VEYRA_GITHUB_REPO + "/releases/latest";
+                        }
+                        try {
+                            org.telegram.messenger.browser.Browser.openUrl(context, targetUrl);
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    })
+                    .setNegativeButton(LocaleController.getString(R.string.AppUpdateRemindMeLater), null)
+                    .show();
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
+        }
+        return true;
+    }
+
+    private static int getCurrentVersionCode() {
+        try {
+            android.content.pm.PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager()
+                    .getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+            return versionCodeFromSemver(pInfo.versionName);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return Integer.MAX_VALUE; // fail safe: never prompt update if we can't tell our own version
+        }
+    }
+
+    // Converts "1.2.34" -> 1_002_034 so plain integer comparison orders versions correctly
+    // (each of major/minor/patch is clamped to 0-999).
+    private static int versionCodeFromSemver(String semver) {
+        if (semver == null) {
+            return 0;
+        }
+        String[] parts = semver.trim().split("[.\\-+]");
+        int major = parts.length > 0 ? parseIntSafe(parts[0]) : 0;
+        int minor = parts.length > 1 ? parseIntSafe(parts[1]) : 0;
+        int patch = parts.length > 2 ? parseIntSafe(parts[2]) : 0;
+        major = Math.max(0, Math.min(999, major));
+        minor = Math.max(0, Math.min(999, minor));
+        patch = Math.max(0, Math.min(999, patch));
+        return major * 1_000_000 + minor * 1_000 + patch;
+    }
+
+    private static int parseIntSafe(String s) {
+        try {
+            return Integer.parseInt(s.replaceAll("[^0-9]", ""));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------
 
     @Override
     public IUpdateLayout takeUpdateLayout(Activity activity, ViewGroup sideMenuContainer) {

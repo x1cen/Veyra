@@ -2717,6 +2717,9 @@
     <string name="VeyraAdFree">Ad-Free Experience</string>
     <string name="VeyraAdFreeDesc">All sponsored ads permanently disabled</string>
     <string name="VeyraVersion">Veyra Version</string>
+    <string name="VeyraHelpChannel">Help &amp; Updates Channel</string>
+    <string name="VeyraUpdateAvailableTitle">Veyra %1$s available</string>
+    <string name="VeyraCheckForUpdates">Check for Updates</string>
 
     <string name="VeyraOnlineStatus">Online Status</string>
     <string name="VeyraOnlineModeDefault">Show Online (Default)</string>

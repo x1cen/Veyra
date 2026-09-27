@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
@@ -192,7 +193,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.detail(
                 LocaleController.getString("VeyraVersion", R.string.VeyraVersion),
-                "1.0.7",
+                getAppVersionName(),
                 true
         ));
 
@@ -202,8 +203,37 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra")
         ));
 
+        r.add(VeyraSettingsRow.button(
+                LocaleController.getString("VeyraHelpChannel", R.string.VeyraHelpChannel),
+                false, false,
+                () -> Browser.openUrl(getParentActivity(), "https://t.me/GetVeyra")
+        ));
+
+        r.add(VeyraSettingsRow.button(
+                LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates),
+                false, false,
+                this::checkForUpdates
+        ));
+
         r.add(VeyraSettingsRow.shadow());
 
         return r;
+    }
+
+    private void checkForUpdates() {
+        if (!(getParentActivity() instanceof LaunchActivity)) {
+            return;
+        }
+        ((LaunchActivity) getParentActivity()).checkAppUpdate(true, null);
+    }
+
+    private static String getAppVersionName() {
+        try {
+            android.content.pm.PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager()
+                    .getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+            return pInfo.versionName;
+        } catch (Exception e) {
+            return "1.0.8";
+        }
     }
 }
