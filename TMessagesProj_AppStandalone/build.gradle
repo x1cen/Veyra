@@ -22,9 +22,24 @@ dependencies {
 //    implementation files('../TMessagesProj/libs/libgsaverification-client.aar')
 }
 
+def isMultiArch = (System.getenv("TARGET_ARCH") == "all")
+
 android {
     compileSdkVersion 35
     buildToolsVersion '35.0.0'
+
+    splits {
+        abi {
+            if (isMultiArch) {
+                enable true
+                reset()
+                include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                universalApk true
+            } else {
+                enable false
+            }
+        }
+    }
 
     defaultConfig.applicationId = APP_PACKAGE
 
@@ -117,7 +132,14 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "app.apk"
+            def abi = output.getFilter("ABI")
+            if (abi != null) {
+                outputFileName = "app-${abi}.apk"
+            } else if (isMultiArch) {
+                outputFileName = "app-universal.apk"
+            } else {
+                outputFileName = "app.apk"
+            }
             output.versionCodeOverride = defaultConfig.versionCode
         }
     }

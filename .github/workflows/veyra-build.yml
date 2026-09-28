@@ -192,20 +192,43 @@ jobs:
                         mv "${GITHUB_WORKSPACE}/gradle.properties.old" "${GITHUB_WORKSPACE}/gradle.properties"
                     fi
 
-            -   name: Verify APK exists
+            -   name: Process and verify generated APKs
                 id: locate_apk
                 env:
                     VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
                 run: |
-                    APK_PATH="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/app.apk"
-                    if [ ! -f "$APK_PATH" ]; then
-                       find "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs" -type f >&2
-                       exit 1
+                    APK_DIR="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone"
+                    cd "$APK_DIR"
+                    echo "=== Generated build artifacts ==="
+                    ls -la
+
+                    # Handle single APK (dev / single-arch build)
+                    if [ -f "app.apk" ]; then
+                        mv "app.apk" "Veyra.${VERSION_NAME}.apk"
                     fi
-                    VEYRA_APK="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.${VERSION_NAME}.apk"
-                    mv "$APK_PATH" "$VEYRA_APK"
-                    echo "apk_path=$VEYRA_APK" >> "$GITHUB_OUTPUT"
-                    echo "apk_sha256=$(sha256sum "$VEYRA_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+                    # Handle multi-arch splits (main / all build)
+                    if [ -f "app-universal.apk" ]; then
+                        cp "app-universal.apk" "Veyra.${VERSION_NAME}.apk"
+                        mv "app-universal.apk" "Veyra.${VERSION_NAME}-universal.apk"
+                    fi
+
+                    for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+                        if [ -f "app-${abi}.apk" ]; then
+                            mv "app-${abi}.apk" "Veyra.${VERSION_NAME}-${abi}.apk"
+                        fi
+                    done
+
+                    echo "=== Final release packages ==="
+                    ls -la Veyra.*.apk
+
+                    # Calculate sha256 checksums
+                    sha256sum Veyra.*.apk > "${APK_DIR}/SHA256SUMS.txt"
+                    cat "${APK_DIR}/SHA256SUMS.txt"
+
+                    PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}.apk"
+                    echo "apk_path=$PRIMARY_APK" >> "$GITHUB_OUTPUT"
+                    echo "apk_sha256=$(sha256sum "$PRIMARY_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
             -   name: Create Release and Upload APK
                 id: gh_release
@@ -214,13 +237,14 @@ jobs:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
                     prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || github.ref_name != 'main' }}
-                    files: ${{steps.locate_apk.outputs.apk_path}}
+                    files: |
+                        TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.*.apk
+                        TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/SHA256SUMS.txt
                     body: |
                         **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
-                        Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
-                        SHA-256: `${{steps.locate_apk.outputs.apk_sha256}}`
+                        Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal + Dedicated per-architecture APKs (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.9 — Stable Release. Universal multi-architecture build (arm64-v8a, armeabi-v7a, x86, x86_64) supporting all Android devices. Improved in-app update checker with live status bulletins and legacy version migration.' || 'Veyra v1.0.9 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.9 — Stable Release. Universal multi-architecture build with dedicated standalone APKs for each architecture (arm64-v8a, armeabi-v7a, x86, x86_64) alongside the universal package. Includes in-app update checker with live feedback and legacy version migration.' || 'Veyra v1.0.9 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
                     VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
@@ -233,7 +257,7 @@ jobs:
                 env:
                     TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
                     TELEGRAM_RELEASE_CHANNEL_ID: ${{secrets.TELEGRAM_RELEASE_CHANNEL_ID}}
-                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra stable release. See the GitHub release page for full details.' }}
+                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra stable release. Available in Universal and per-architecture packages.' }}
                     RELEASE_URL: ${{ steps.gh_release.outputs.url }}
                 run: |
                     if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_RELEASE_CHANNEL_ID" ]; then exit 0; fi
@@ -241,7 +265,13 @@ jobs:
 
                     ${CHANGELOG}
 
-                    SHA-256: \`${{ steps.locate_apk.outputs.apk_sha256 }}\`"
+                    📦 *Available Packages:*
+                    • Universal: \`Veyra.${VERSION_NAME}-universal.apk\`
+                    • ARM64 (64-bit): \`Veyra.${VERSION_NAME}-arm64-v8a.apk\`
+                    • ARMv7 (32-bit): \`Veyra.${VERSION_NAME}-armeabi-v7a.apk\`
+                    • x86_64 / x86: Available on Release page
+
+                    Verify file hashes in \`SHA256SUMS.txt\` on GitHub."
                     REPLY_MARKUP='{"inline_keyboard":[[{"text":"📦 GitHub Repository","url":"${{ github.server_url }}/${{ github.repository }}"},{"text":"⬇️ Release Page","url":"'"${RELEASE_URL}"'"}]]}'
                     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                         -d chat_id="${TELEGRAM_RELEASE_CHANNEL_ID}" \
