@@ -5685,7 +5685,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             final byte[] buf = new byte[64 * 1024];
             int n;
             while ((n = vis.read(buf)) > 0) {
-                if (cancelled != null && cancelled[0]) return;
+                if (task != null && task.isCancelled()) return;
                 out.write(buf, 0, n);
             }
         }
