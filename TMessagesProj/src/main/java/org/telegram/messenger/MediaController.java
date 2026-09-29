@@ -95,7 +95,6 @@ import org.telegram.tgnet.OutputSerializedData;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_stories;
-import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Adapters.FiltersView;
@@ -109,7 +108,6 @@ import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
 import org.telegram.ui.Components.VideoPlayer;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PhotoViewer;
-import org.telegram.ui.Stories.DarkThemeResourceProvider;
 import org.telegram.ui.Stories.recorder.StoryEntry;
 
 import java.io.File;
@@ -5053,11 +5051,12 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     private static class MediaLoader implements NotificationCenter.NotificationCenterDelegate {
 
         private AccountInstance currentAccount;
-        private AlertDialog progressDialog;
+        // Veyra: background save via MediaSaveService instead of a blocking dialog.
+        // The UI stays responsive; progress + cancel live in a notification.
+        private MediaSaveService.Task saveTask;
         private ArrayList<MessageObject> messageObjects;
         private HashMap<String, MessageObject> loadingMessageObjects = new HashMap<>();
         private float finishedProgress;
-        private boolean cancelled;
         private boolean finished;
         private int copiedFiles;
         private CountDownLatch waitingForFile;
@@ -5072,23 +5071,11 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             currentAccount.getNotificationCenter().addObserver(this, NotificationCenter.fileLoaded);
             currentAccount.getNotificationCenter().addObserver(this, NotificationCenter.fileLoadProgressChanged);
             currentAccount.getNotificationCenter().addObserver(this, NotificationCenter.fileLoadFailed);
-            final Theme.ResourcesProvider resourcesProvider = PhotoViewer.getInstance().isVisible() ? new DarkThemeResourceProvider() : null;
-            progressDialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_LOADING, resourcesProvider);
-            progressDialog.setMessage(LocaleController.getString(R.string.Loading));
-            progressDialog.setCancelable(true);
-            progressDialog.setCancelDialog(true);
-            progressDialog.setOnCancelListener(d -> {
-                cancelled = true;
-            });
+            saveTask = MediaSaveService.startTask();
+            saveTask.totalFiles = messages.size();
         }
 
         public void start() {
-            AndroidUtilities.runOnUIThread(() -> {
-                if (!finished) {
-                    progressDialog.show();
-                }
-            }, 250);
-
             new Thread(() -> {
                 try {
                     if (Build.VERSION.SDK_INT >= 29) {
@@ -5133,7 +5120,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                 addMessageToLoad(message);
                                 waitingForFile.await();
                             }
-                            if (cancelled) {
+                            if (isCancelled()) {
                                 break;
                             }
                             if (!sourceFile.exists()) {
@@ -5226,11 +5213,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
             AndroidUtilities.runOnUIThread(() -> {
                 try {
-                    if (progressDialog.isShowing()) {
-                        progressDialog.dismiss();
-                    } else {
-                        finished = true;
-                    }
+                    finished = true;
+                    MediaSaveService.finishTask(saveTask);
                     if (onFinishRunnable != null) {
                         AndroidUtilities.runOnUIThread(() -> onFinishRunnable.run(copiedFiles));
                     }
@@ -5280,7 +5264,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 });
                 waitingForFile.await();
             }
-            if (cancelled) {
+            if (isCancelled()) {
                 return true;
             }
             if (photoFile == null || !photoFile.exists()) {
@@ -5316,7 +5300,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     try (OutputStream os = ApplicationLoader.applicationContext.getContentResolver().openOutputStream(dst)) {
                         if (os != null) {
                             writeMotionPhoto(photoFile, videoFile, os, null);
-                            ok = !cancelled;
+                            ok = !isCancelled();
                         }
                     }
                     if (ok) {
@@ -5337,7 +5321,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 try (FileOutputStream fos = new FileOutputStream(destFile)) {
                     writeMotionPhoto(photoFile, videoFile, fos, null);
                 }
-                if (cancelled) {
+                if (isCancelled()) {
                     destFile.delete();
                 } else {
                     DownloadManager downloadManager = (DownloadManager) ApplicationLoader.applicationContext.getSystemService(Context.DOWNLOAD_SERVICE);
@@ -5347,13 +5331,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
             finishedProgress += 100.0f / messageObjects.size();
             final int progress = (int) finishedProgress;
-            AndroidUtilities.runOnUIThread(() -> {
-                try {
-                    progressDialog.setProgress(progress);
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-            });
+            MediaSaveService.updateTaskProgress(saveTask, progress);
             return true;
         }
 
@@ -5382,15 +5360,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     @SuppressLint("DiscouragedPrivateApi") Method getInt = FileDescriptor.class.getDeclaredMethod("getInt$");
                     int fdint = (Integer) getInt.invoke(inputStream.getFD());
                     if (AndroidUtilities.isInternalUri(fdint)) {
-                        if (progressDialog != null) {
-                            AndroidUtilities.runOnUIThread(() -> {
-                                try {
-                                    progressDialog.dismiss();
-                                } catch (Exception e) {
-                                    FileLog.e(e);
-                                }
-                            });
-                        }
+                        MediaSaveService.finishTask(saveTask);
                         return false;
                     }
                 } catch (Throwable e) {
@@ -5398,23 +5368,17 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 }
                 long lastProgress = 0;
                 for (long a = 0; a < size; a += 4096) {
-                    if (cancelled) {
+                    if (isCancelled()) {
                         break;
                     }
                     destination.transferFrom(source, a, Math.min(4096, size - a));
                     if (a + 4096 >= size || lastProgress <= SystemClock.elapsedRealtime() - 500) {
                         lastProgress = SystemClock.elapsedRealtime();
                         final int progress = (int) (finishedProgress + 100.0f / messageObjects.size() * a / size);
-                        AndroidUtilities.runOnUIThread(() -> {
-                            try {
-                                progressDialog.setProgress(progress);
-                            } catch (Exception e) {
-                                FileLog.e(e);
-                            }
-                        });
+                        MediaSaveService.updateTaskProgress(saveTask, progress);
                     }
                 }
-                if (!cancelled) {
+                if (!isCancelled()) {
                     if (isMusic) {
                         AndroidUtilities.addMediaToGallery(destFile);
                     } else {
@@ -5438,13 +5402,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     }
                     finishedProgress += 100.0f / messageObjects.size();
                     final int progress = (int) (finishedProgress);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            progressDialog.setProgress(progress);
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                        }
-                    });
+                    MediaSaveService.updateTaskProgress(saveTask, progress);
                     return true;
                 }
             } catch (Exception e) {
@@ -5452,6 +5410,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
             destFile.delete();
             return false;
+        }
+
+        private boolean isCancelled() {
+            return saveTask != null && saveTask.isCancelled();
         }
 
         @Override
@@ -5468,13 +5430,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     Long totalSize = (Long) args[2];
                     float loadProgress = loadedSize / (float) totalSize;
                     final int progress = (int) (finishedProgress + loadProgress / messageObjects.size() * 100);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            progressDialog.setProgress(progress);
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                        }
-                    });
+                    MediaSaveService.updateTaskProgress(saveTask, progress);
                 }
             }
         }
@@ -5513,30 +5469,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         }
 
         final File sourceFile = file;
-        final boolean[] cancelled = new boolean[]{false};
         if (sourceFile.exists()) {
 
-            AlertDialog progressDialog = null;
-            final boolean[] finished = new boolean[1];
-            if (context != null && type != 0) {
-                try {
-                    final AlertDialog dialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_LOADING);
-                    dialog.setMessage(LocaleController.getString(R.string.Loading));
-                    dialog.setCanceledOnTouchOutside(false);
-                    dialog.setCancelable(true);
-                    dialog.setOnCancelListener(d -> cancelled[0] = true);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        if (!finished[0]) {
-                            dialog.show();
-                        }
-                    }, 250);
-                    progressDialog = dialog;
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-            }
-
-            final AlertDialog finalProgress = progressDialog;
+            // Veyra: background save via MediaSaveService instead of a blocking dialog.
+            final MediaSaveService.Task saveTask = (context != null && type != 0) ? MediaSaveService.startTask() : null;
 
             new Thread(() -> {
                 try {
@@ -5591,36 +5527,22 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                 @SuppressLint("DiscouragedPrivateApi") Method getInt = FileDescriptor.class.getDeclaredMethod("getInt$");
                                 int fdint = (Integer) getInt.invoke(inputStream.getFD());
                                 if (AndroidUtilities.isInternalUri(fdint)) {
-                                    if (finalProgress != null) {
-                                        AndroidUtilities.runOnUIThread(() -> {
-                                            try {
-                                                finalProgress.dismiss();
-                                            } catch (Exception e) {
-                                                FileLog.e(e);
-                                            }
-                                        });
-                                    }
+                                    MediaSaveService.finishTask(saveTask);
                                     return;
                                 }
                             } catch (Throwable e) {
                                 FileLog.e(e);
                             }
                             for (long a = 0; a < size; a += 4096) {
-                                if (cancelled[0]) {
+                                if (saveTask != null && saveTask.isCancelled()) {
                                     break;
                                 }
                                 destination.transferFrom(source, a, Math.min(4096, size - a));
-                                if (finalProgress != null) {
+                                if (saveTask != null) {
                                     if (lastProgress <= System.currentTimeMillis() - 500) {
                                         lastProgress = System.currentTimeMillis();
                                         final int progress = (int) ((float) a / (float) size * 100);
-                                        AndroidUtilities.runOnUIThread(() -> {
-                                            try {
-                                                finalProgress.setProgress(progress);
-                                            } catch (Exception e) {
-                                                FileLog.e(e);
-                                            }
-                                        });
+                                        MediaSaveService.updateTaskProgress(saveTask, progress);
                                     }
                                 }
                             }
@@ -5628,7 +5550,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                             FileLog.e(e);
                             result = false;
                         }
-                        if (cancelled[0]) {
+                        if (saveTask != null && saveTask.isCancelled()) {
                             destFile.delete();
                             result = false;
                         }
@@ -5648,19 +5570,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 } catch (Exception e) {
                     FileLog.e(e);
                 }
-                if (finalProgress != null) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            if (finalProgress.isShowing()) {
-                                finalProgress.dismiss();
-                            } else {
-                                finished[0] = true;
-                            }
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                        }
-                    });
-                }
+                MediaSaveService.finishTask(saveTask);
             }).start();
         }
     }
@@ -5679,25 +5589,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             return;
         }
 
-        final boolean[] cancelled = new boolean[]{false};
-        AlertDialog progressDialog = null;
-        final boolean[] finished = new boolean[1];
-        try {
-            final AlertDialog dialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_LOADING);
-            dialog.setMessage(LocaleController.getString(R.string.Loading));
-            dialog.setCanceledOnTouchOutside(false);
-            dialog.setCancelable(true);
-            dialog.setOnCancelListener(d -> cancelled[0] = true);
-            AndroidUtilities.runOnUIThread(() -> {
-                if (!finished[0]) {
-                    dialog.show();
-                }
-            }, 250);
-            progressDialog = dialog;
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-        final AlertDialog finalProgress = progressDialog;
+        // Veyra: background save via MediaSaveService instead of a blocking dialog.
+        final MediaSaveService.Task saveTask = MediaSaveService.startTask();
 
         new Thread(() -> {
             Uri savedUri = null;
@@ -5716,8 +5609,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     if (dst != null) {
                         try (OutputStream os = ApplicationLoader.applicationContext.getContentResolver().openOutputStream(dst)) {
                             if (os != null) {
-                                writeMotionPhoto(photoFile, videoFile, os, cancelled);
-                                ok = !cancelled[0];
+                                writeMotionPhoto(photoFile, videoFile, os, saveTask);
+                                ok = !saveTask.isCancelled();
                             }
                         }
                         if (ok) {
@@ -5736,9 +5629,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         destFile.createNewFile();
                     }
                     try (FileOutputStream fos = new FileOutputStream(destFile)) {
-                        writeMotionPhoto(photoFile, videoFile, fos, cancelled);
+                        writeMotionPhoto(photoFile, videoFile, fos, saveTask);
                     }
-                    if (cancelled[0]) {
+                    if (saveTask.isCancelled()) {
                         destFile.delete();
                     } else {
                         AndroidUtilities.addMediaToGallery(destFile.getAbsoluteFile());
@@ -5753,26 +5646,14 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 final Uri finalUri = savedUri;
                 AndroidUtilities.runOnUIThread(() -> onSaved.run(finalUri));
             }
-            if (finalProgress != null) {
-                AndroidUtilities.runOnUIThread(() -> {
-                    try {
-                        if (finalProgress.isShowing()) {
-                            finalProgress.dismiss();
-                        } else {
-                            finished[0] = true;
-                        }
-                    } catch (Exception e) {
-                        FileLog.e(e);
-                    }
-                });
-            }
+            MediaSaveService.finishTask(saveTask);
         }).start();
     }
 
-    private static void writeMotionPhoto(File photoFile, File videoFile, OutputStream out, boolean[] cancelled) throws IOException {
+    private static void writeMotionPhoto(File photoFile, File videoFile, OutputStream out, MediaSaveService.Task task) throws IOException {
         final long videoLength = videoFile.length();
         final String xmp = buildMotionPhotoXmp(videoLength);
-        final byte[] xmpHeader = "http://ns.adobe.com/xap/1.0/ ".getBytes("UTF-8");
+        final byte[] xmpHeader = "http://ns.adobe.com/xap/1.0/\u0000".getBytes("UTF-8");
         final byte[] xmpBytes = xmp.getBytes("UTF-8");
         final int segLen = xmpHeader.length + xmpBytes.length + 2;
         if (segLen > 65535) {
@@ -5796,7 +5677,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             final byte[] buf = new byte[64 * 1024];
             int n;
             while ((n = pis.read(buf)) > 0) {
-                if (cancelled != null && cancelled[0]) return;
+                if (task != null && task.isCancelled()) return;
                 out.write(buf, 0, n);
             }
         }

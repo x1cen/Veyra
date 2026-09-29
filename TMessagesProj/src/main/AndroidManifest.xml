@@ -511,6 +511,12 @@
             android:foregroundServiceType="location|dataSync"
         />
         <service
+            android:name=".MediaSaveService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+        />
+        <service
             android:name=".voip.VoIPService"
             android:enabled="true"
             android:exported="false"
@@ -584,6 +590,8 @@
         </service>
 
         <receiver android:name=".StopLiveLocationReceiver" android:enabled="true"/>
+
+        <receiver android:name=".MediaSaveCancelReceiver" android:enabled="true" android:exported="false"/>
 
         <receiver android:name=".PopupReplyReceiver" android:enabled="true"/>
 
