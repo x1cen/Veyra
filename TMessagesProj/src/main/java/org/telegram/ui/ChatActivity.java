@@ -2998,6 +2998,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         if (chatMode == MODE_PINNED) {
+            ArrayList<MessageObject> messageObjects = new ArrayList<>();
             for (int a = 0, N = pinnedMessageIds.size(); a < N; a++) {
                 Integer id = pinnedMessageIds.get(a);
                 MessageObject object = pinnedMessageObjects.get(id);
