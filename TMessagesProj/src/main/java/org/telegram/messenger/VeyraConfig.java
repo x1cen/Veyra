@@ -9,11 +9,18 @@ public class VeyraConfig {
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
     public static boolean ghostMode = false;
+    public static boolean ghostModeVoice = true;   // suppress voice/video message listened receipt in ghost mode
     public static boolean hideTyping = false;
     public static boolean readOnReply = true;
     public static boolean blockSecretChat = false;
     // 0 = normal (show online), 1 = hide online, 2 = hide online + offline after sending message, 3 = always appear online
     public static int onlineMode = 0;
+
+    // ==================== Edit History ====================
+    public static int editHistoryLimit = 5;  // max versions saved per message (default 5, max enforced in settings)
+
+    // ==================== Ignore ====================
+    // per-group ignore flags are stored in veyra_ignore_list SQLite table; nothing in prefs
 
     // ==================== Controls & Interaction ====================
     public static boolean confirmCall = true;
@@ -76,6 +83,7 @@ public class VeyraConfig {
         preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
         antiDelete = preferences.getBoolean("antiDelete", true);
         ghostMode = preferences.getBoolean("ghostMode", false);
+        ghostModeVoice = preferences.getBoolean("ghostModeVoice", true);
         hideTyping = preferences.getBoolean("hideTyping", false);
         readOnReply = preferences.getBoolean("readOnReply", true);
         confirmCall = preferences.getBoolean("confirmCall", true);
@@ -110,6 +118,7 @@ public class VeyraConfig {
         anonymousForwardNoQuote = preferences.getBoolean("anonymousForwardNoQuote", false);
         jumpToFirstMessage = preferences.getBoolean("jumpToFirstMessage", true);
         copyDialogId = preferences.getBoolean("copyDialogId", true);
+        editHistoryLimit = preferences.getInt("editHistoryLimit", 5);
 
         rearCameraVideoMessages = preferences.getBoolean("rearCameraVideoMessages", false);
 
@@ -129,6 +138,10 @@ public class VeyraConfig {
     public static void setGhostMode(boolean val) {
         ghostMode = val;
         save("ghostMode", val);
+    }
+    public static void setGhostModeVoice(boolean val) {
+        ghostModeVoice = val;
+        save("ghostModeVoice", val);
     }
     public static void setHideTyping(boolean val) {
         hideTyping = val;
@@ -256,6 +269,13 @@ public class VeyraConfig {
     public static void setCopyDialogId(boolean val) {
         copyDialogId = val;
         save("copyDialogId", val);
+    }
+    public static void setEditHistoryLimit(int val) {
+        editHistoryLimit = Math.max(1, Math.min(50, val));
+        if (preferences == null) {
+            preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
+        }
+        preferences.edit().putInt("editHistoryLimit", editHistoryLimit).apply();
     }
 
     public static void setRearCameraVideoMessages(boolean val) {

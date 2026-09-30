@@ -92,6 +92,34 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
         ));
 
         r.add(VeyraSettingsRow.shadow());
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory)));
+        r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraEditHistoryLimit", R.string.VeyraEditHistoryLimit),
+                () -> String.valueOf(VeyraConfig.editHistoryLimit),
+                true,
+                this::showEditHistoryLimitDialog
+        ));
+        r.add(VeyraSettingsRow.shadow());
         return r;
+    }
+
+    private void showEditHistoryLimitDialog() {
+        if (getParentActivity() == null) return;
+        org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString("VeyraEditHistoryLimit", R.string.VeyraEditHistoryLimit));
+        final android.widget.EditText input = new android.widget.EditText(getParentActivity());
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setText(String.valueOf(VeyraConfig.editHistoryLimit));
+        input.selectAll();
+        builder.setView(input);
+        builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
+            try {
+                int val = Integer.parseInt(input.getText().toString().trim());
+                VeyraConfig.setEditHistoryLimit(val);
+                reloadRows();
+            } catch (NumberFormatException ignored) {}
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        builder.show();
     }
 }

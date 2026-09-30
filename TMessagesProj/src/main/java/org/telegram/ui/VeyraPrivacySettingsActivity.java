@@ -42,6 +42,11 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.ghostMode, v -> VeyraConfig.setGhostMode(v), true
         ));
         r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraGhostModeVoice", R.string.VeyraGhostModeVoice),
+                LocaleController.getString("VeyraGhostModeVoiceDesc", R.string.VeyraGhostModeVoiceDesc),
+                () -> VeyraConfig.ghostModeVoice, v -> VeyraConfig.setGhostModeVoice(v), true
+        ));
+        r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraHideTyping", R.string.VeyraHideTyping),
                 LocaleController.getString("VeyraHideTypingDesc", R.string.VeyraHideTypingDesc),
                 () -> VeyraConfig.hideTyping, v -> VeyraConfig.setHideTyping(v), true

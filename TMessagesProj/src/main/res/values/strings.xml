@@ -2733,7 +2733,9 @@
     <string name="VeyraAntiDelete">Anti-Delete Messages</string>
     <string name="VeyraAntiDeleteDesc">Keep deleted messages with \'Deleted\' label</string>
     <string name="VeyraGhostMode">Full Ghost Mode</string>
-    <string name="VeyraGhostModeDesc">Never send read receipts</string>
+    <string name="VeyraGhostModeDesc">Never send read receipts, online status, or typing status</string>
+    <string name="VeyraGhostModeVoice">Hide Voice/Video Listened State</string>
+    <string name="VeyraGhostModeVoiceDesc">Do not send the \'listened\' indicator when you play a voice or video message (works independently of full Ghost Mode)</string>
     <string name="VeyraHideTyping">Hide Typing Status</string>
     <string name="VeyraHideTypingDesc">Don\'t broadcast \'typing...\' status</string>
     <string name="VeyraBlockSecretChat">Block Incoming Secret Chats</string>
@@ -11314,4 +11316,36 @@
     <string name="ArticleAIPrompt">Write a prompt...</string>
     <string name="ArticleAIGenerate">Generate</string>
     <string name="ArticleAIAddToPage">Add to Page</string>
+
+    <!-- Veyra: Edit History -->
+    <string name="VeyraEditHistory">Edit History</string>
+    <string name="VeyraEditHistoryLimit">Max saved versions per message (1–50, default 5)</string>
+    <string name="VeyraEditHistoryOption">History</string>
+    <string name="VeyraEditHistoryTitle">Edit History</string>
+    <string name="VeyraEditHistoryCurrent">Current version</string>
+    <string name="VeyraEditHistoryMediaCaption">(media / no text)</string>
+
+    <!-- Veyra: Cache submenu -->
+    <string name="VeyraCacheMenu">Cache</string>
+    <string name="VeyraCacheTelegram">Clear Telegram Cache (this chat)</string>
+    <string name="VeyraCacheVeyra">Clear Veyra Cache (edit history + deleted)</string>
+    <string name="VeyraCacheTelegramCleared">Telegram cache cleared</string>
+    <string name="VeyraCacheVeyraCleared">Veyra cache cleared</string>
+
+    <!-- Veyra: Ignore -->
+    <string name="VeyraIgnoreOption">Ignore User</string>
+    <string name="VeyraIgnoreList">Ignore List</string>
+    <string name="VeyraIgnorePickerTitle">Ignore %1$s — what to hide?</string>
+    <string name="VeyraIgnoreApply">Apply</string>
+    <string name="VeyraIgnoreSelectAll">Select / Deselect all</string>
+    <string name="VeyraIgnoreRemove">Remove from ignore list</string>
+    <string name="VeyraIgnoreMessages">Messages (text)</string>
+    <string name="VeyraIgnoreReactions">Reactions</string>
+    <string name="VeyraIgnoreVoice">Voice messages</string>
+    <string name="VeyraIgnoreVideoMsg">Video messages (round)</string>
+    <string name="VeyraIgnoreStickers">Stickers</string>
+    <string name="VeyraIgnoreGifs">GIFs</string>
+    <string name="VeyraIgnorePhotos">Photos</string>
+    <string name="VeyraIgnoreVideos">Videos</string>
+
 </resources>

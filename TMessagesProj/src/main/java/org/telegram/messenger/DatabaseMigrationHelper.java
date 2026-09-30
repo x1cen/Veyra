@@ -1679,6 +1679,13 @@ public class DatabaseMigrationHelper {
             database.executeFast("PRAGMA user_version = 176").stepThis().dispose();
             version = 176;
         }
+        if (version == 176) {
+            // Veyra: per-group ignore list; edit history already has table from DB creation
+            // uid = dialog_id of the group; peer_id = user being ignored; flags = bitmask of ignored content types
+            database.executeFast("CREATE TABLE IF NOT EXISTS veyra_ignore_list(uid INTEGER, peer_id INTEGER, flags INTEGER, PRIMARY KEY(uid, peer_id));").stepThis().dispose();
+            database.executeFast("PRAGMA user_version = 177").stepThis().dispose();
+            version = 177;
+        }
 
         return version;
     }

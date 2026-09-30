@@ -395,6 +395,15 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
+        // Veyra: suppress voice/video message "listened" state even when full ghost mode is off
+        if (!org.telegram.messenger.VeyraConfig.ghostMode && org.telegram.messenger.VeyraConfig.ghostModeVoice && (
+                object instanceof TLRPC.TL_messages_readMessageContents ||
+                object instanceof TLRPC.TL_channels_readMessageContents)) {
+            if (onComplete != null) {
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+            }
+            return;
+        }
         if (org.telegram.messenger.VeyraConfig.hideTyping && (
                 object instanceof TLRPC.TL_messages_setTyping ||
                 object instanceof TLRPC.TL_messages_setEncryptedTyping)) {

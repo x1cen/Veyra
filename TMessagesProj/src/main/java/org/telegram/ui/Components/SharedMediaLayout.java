@@ -6997,10 +6997,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     tabs.add(new Pair(TAB_GROUPUSERS, getString(R.string.GroupMembers)));
                 }
                 if (hasMedia[0] > 0) {
+                    // Veyra: show count in tab title
+                    String mediaTitle = hasMedia[0] > 0
+                            ? String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedMediaTab2), hasMedia[0])
+                            : getString(R.string.SharedMediaTab2);
                     if (hasMedia[1] == 0 && hasMedia[2] == 0 && hasMedia[3] == 0 && hasMedia[4] == 0 && hasMedia[5] == 0 && hasMedia[6] == 0 && chatUsersAdapter.chatInfo == null) {
-                        tabs.add(new Pair(TAB_PHOTOVIDEO, getString(R.string.SharedMediaTabFull2)));
+                        tabs.add(new Pair(TAB_PHOTOVIDEO, mediaTitle.replace(getString(R.string.SharedMediaTab2), getString(R.string.SharedMediaTabFull2))));
                     } else {
-                        tabs.add(new Pair(TAB_PHOTOVIDEO, getString(R.string.SharedMediaTab2)));
+                        tabs.add(new Pair(TAB_PHOTOVIDEO, mediaTitle));
                     }
                 }
                 if (hasSavedMessages) {
@@ -7008,28 +7012,28 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     MessagesController.getGlobalMainSettings().edit().putInt("savedhint", 3).apply();
                 }
                 if (hasMedia[1] > 0) {
-                    tabs.add(new Pair(TAB_FILES, getString(R.string.SharedFilesTab2)));
+                    tabs.add(new Pair(TAB_FILES, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedFilesTab2), hasMedia[1])));
                 }
                 if (!DialogObject.isEncryptedDialog(dialog_id)) {
                     if (hasMedia[3] > 0) {
-                        tabs.add(new Pair(TAB_LINKS, getString(R.string.SharedLinksTab2)));
+                        tabs.add(new Pair(TAB_LINKS, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedLinksTab2), hasMedia[3])));
                     }
                     if (hasMedia[4] > 0) {
-                        tabs.add(new Pair(TAB_AUDIO, getString(R.string.SharedMusicTab2)));
+                        tabs.add(new Pair(TAB_AUDIO, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedMusicTab2), hasMedia[4])));
                     }
                     if (hasMedia[MEDIA_POLL] > 0) {
-                        tabs.add(new Pair(TAB_POLL, getString(R.string.SharedPollTab)));
+                        tabs.add(new Pair(TAB_POLL, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedPollTab), hasMedia[MEDIA_POLL])));
                     }
                 } else {
                     if (hasMedia[4] > 0) {
-                        tabs.add(new Pair(TAB_AUDIO, getString(R.string.SharedMusicTab2)));
+                        tabs.add(new Pair(TAB_AUDIO, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedMusicTab2), hasMedia[4])));
                     }
                 }
                 if (hasMedia[2] > 0) {
-                    tabs.add(new Pair(TAB_VOICE, getString(R.string.SharedVoiceTab2)));
+                    tabs.add(new Pair(TAB_VOICE, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedVoiceTab2), hasMedia[2])));
                 }
                 if (hasMedia[5] > 0) {
-                    tabs.add(new Pair(TAB_GIF, getString(R.string.SharedGIFsTab2)));
+                    tabs.add(new Pair(TAB_GIF, String.format(java.util.Locale.US, "%s (%d)", getString(R.string.SharedGIFsTab2), hasMedia[5])));
                 }
                 if (hasMedia[6] > 0) {
                     tabs.add(new Pair(TAB_COMMON_GROUPS, getString(R.string.SharedGroupsTab2)));

@@ -1674,6 +1674,10 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_view_details = 83;
     private final static int veyra_copy_dialog_id = 84;
     private final static int veyra_jump_to_first = 85;
+    private final static int veyra_edit_history = 86;
+    private final static int veyra_ignore_user = 87;
+    private final static int veyra_cache_menu = 88;
+    private final static int veyra_ignore_list = 89;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -2988,8 +2992,12 @@ public class ChatActivity extends BaseFragment implements
 
         super.onFragmentCreate();
 
+        // Veyra: pre-load ignore list cache for group dialogs
+        if (currentChat != null && !ChatObject.isChannelAndNotMegaGroup(currentChat)) {
+            org.veyra.client.VeyraIgnoreCache.load(currentAccount, dialog_id);
+        }
+
         if (chatMode == MODE_PINNED) {
-            ArrayList<MessageObject> messageObjects = new ArrayList<>();
             for (int a = 0, N = pinnedMessageIds.size(); a < N; a++) {
                 Integer id = pinnedMessageIds.get(a);
                 MessageObject object = pinnedMessageObjects.get(id);
@@ -3947,6 +3955,37 @@ public class ChatActivity extends BaseFragment implements
                     BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
                 } else if (id == veyra_jump_to_first) {
                     scrollToMessageId(1, 0, true, 0, true, 0);
+                } else if (id == veyra_cache_menu) {
+                    // Show Veyra cache submenu: Telegram cache vs Veyra cache
+                    if (getParentActivity() == null) return;
+                    CharSequence[] options = new CharSequence[]{
+                            LocaleController.getString("VeyraCacheTelegram", R.string.VeyraCacheTelegram),
+                            LocaleController.getString("VeyraCacheVeyra", R.string.VeyraCacheVeyra)
+                    };
+                    new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity())
+                            .setTitle(LocaleController.getString("VeyraCacheMenu", R.string.VeyraCacheMenu))
+                            .setItems(options, (dialog2, which) -> {
+                                if (which == 0) {
+                                    // Clear Telegram media cache for this dialog
+                                    getFileLoader().cancelLoadAllFiles();
+                                    getMessagesStorage().clearLocalDatabase();
+                                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(
+                                            R.raw.chats_infotip,
+                                            LocaleController.getString("VeyraCacheTelegramCleared", R.string.VeyraCacheTelegramCleared)
+                                    ).show();
+                                } else {
+                                    // Clear Veyra cache (edit history + deleted messages) for this dialog
+                                    getMessagesStorage().clearVeyraCache(dialog_id);
+                                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(
+                                            R.raw.chats_infotip,
+                                            LocaleController.getString("VeyraCacheVeyraCleared", R.string.VeyraCacheVeyraCleared)
+                                    ).show();
+                                }
+                            })
+                            .show();
+                } else if (id == veyra_ignore_list) {
+                    if (currentChat == null) return;
+                    new VeyraIgnoreListSheet(getParentActivity(), currentAccount, dialog_id).show();
                 } else if (id == boost_group) {
                     if (ChatObject.hasAdminRights(currentChat)) {
                         BoostsActivity boostsActivity = new BoostsActivity(dialog_id);
@@ -4589,6 +4628,12 @@ public class ChatActivity extends BaseFragment implements
             }
             if (VeyraConfig.jumpToFirstMessage && !isSecretChat()) {
                 headerItem.lazilyAddSubItem(veyra_jump_to_first, R.drawable.msg_go_up, LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
+            }
+            // Veyra: Cache submenu (all chats)
+            headerItem.lazilyAddSubItem(veyra_cache_menu, R.drawable.msg_clear, LocaleController.getString("VeyraCacheMenu", R.string.VeyraCacheMenu));
+            // Veyra: Ignore List (groups/supergroups only)
+            if (currentChat != null && !ChatObject.isChannelAndNotMegaGroup(currentChat)) {
+                headerItem.lazilyAddSubItem(veyra_ignore_list, R.drawable.msg_block2, LocaleController.getString("VeyraIgnoreList", R.string.VeyraIgnoreList));
             }
         }
 
@@ -34255,6 +34300,31 @@ public class ChatActivity extends BaseFragment implements
                 }, getResourceProvider(), AlertsCreator.SUGGEST_DATE_PICKER_MODE_EDIT).show(), AmountUtils.Amount.of(suggestedPost != null ? suggestedPost.price : null), !ChatObject.canManageMonoForum(currentAccount, getDialogId()));
                 break;
             }
+            case veyra_edit_history: {
+                if (selectedObject != null && getParentActivity() != null) {
+                    new VeyraEditHistorySheet(
+                            getParentActivity(),
+                            currentAccount,
+                            selectedObject.getId(),
+                            dialog_id,
+                            selectedObject.messageOwner != null ? selectedObject.messageOwner.message : ""
+                    ).show();
+                }
+                break;
+            }
+            case veyra_ignore_user: {
+                if (selectedObject != null && getParentActivity() != null
+                        && selectedObject.messageOwner != null
+                        && selectedObject.messageOwner.from_id instanceof org.telegram.tgnet.TLRPC.TL_peerUser) {
+                    long peerId = selectedObject.messageOwner.from_id.user_id;
+                    TLRPC.User fromUser = getMessagesController().getUser(peerId);
+                    String userName = fromUser != null
+                            ? (fromUser.first_name + (fromUser.last_name != null && !fromUser.last_name.isEmpty() ? " " + fromUser.last_name : ""))
+                            : String.valueOf(peerId);
+                    new VeyraIgnorePickerSheet(getParentActivity(), currentAccount, dialog_id, peerId, userName).show();
+                }
+                break;
+            }
         }
         selectedObject = null;
         selectedObjectGroup = null;
@@ -37422,6 +37492,31 @@ public class ChatActivity extends BaseFragment implements
 
                 MessageObject message = messages.get(position - messagesStartRow);
                 View view = holder.itemView;
+
+                // Veyra: hide messages from ignored users in groups
+                if (message != null && currentChat != null
+                        && message.messageOwner != null
+                        && message.messageOwner.from_id instanceof org.telegram.tgnet.TLRPC.TL_peerUser) {
+                    long peerId = message.messageOwner.from_id.user_id;
+                    int ignoreFlags = org.veyra.client.VeyraIgnoreCache.getFlags(dialog_id, peerId);
+                    boolean shouldHide = false;
+                    if ((ignoreFlags & MessagesStorage.IGNORE_MESSAGES) != 0) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_VOICE) != 0 && message.isVoice()) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_VIDEO_MSG) != 0 && message.isRoundVideo()) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_STICKERS) != 0 && message.isSticker()) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_GIFS) != 0 && message.isGif()) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_PHOTOS) != 0 && message.isPhoto()) shouldHide = true;
+                    else if ((ignoreFlags & MessagesStorage.IGNORE_VIDEOS) != 0 && message.isVideo()) shouldHide = true;
+                    if (shouldHide) {
+                        view.setVisibility(View.GONE);
+                        view.getLayoutParams().height = 0;
+                        return;
+                    }
+                }
+                if (view.getLayoutParams() != null && view.getLayoutParams().height == 0) {
+                    view.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                }
+                view.setVisibility(View.VISIBLE);
 
                 if (view instanceof ChatMessageCell) {
                     final ChatMessageCell messageCell = (ChatMessageCell) view;
@@ -46112,6 +46207,21 @@ public class ChatActivity extends BaseFragment implements
                 options.add(OPTION_DELETE);
                 icons.add(deleteIconRes);
             }
+        }
+        // Veyra: Edit History — only for edited messages, only if there's locally-saved history
+        if (message != null && message.isEdited() && !message.isOut()
+                && message.messageOwner != null && message.messageOwner.message != null) {
+            items.add(LocaleController.getString("VeyraEditHistoryOption", R.string.VeyraEditHistoryOption));
+            options.add(veyra_edit_history);
+            icons.add(R.drawable.msg_info);
+        }
+        // Veyra: Ignore — only in group chats, only for messages from other users (not bots, not ourselves)
+        if (currentChat != null && !ChatObject.isChannelAndNotMegaGroup(currentChat)
+                && message != null && !message.isOut()
+                && message.messageOwner != null && message.messageOwner.from_id instanceof org.telegram.tgnet.TLRPC.TL_peerUser) {
+            items.add(LocaleController.getString("VeyraIgnoreOption", R.string.VeyraIgnoreOption));
+            options.add(veyra_ignore_user);
+            icons.add(R.drawable.msg_block2);
         }
     }
 

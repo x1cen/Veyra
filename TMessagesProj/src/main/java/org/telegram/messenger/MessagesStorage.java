@@ -112,7 +112,7 @@ public class MessagesStorage extends BaseController {
 
     private static final ConcurrentHashMap<Integer, MessagesStorage> Instance = new ConcurrentHashMap<>();
 
-    public final static int LAST_DB_VERSION = 176;
+    public final static int LAST_DB_VERSION = 177;
     private boolean databaseMigrationInProgress;
     public boolean showClearDatabaseAlert;
 
@@ -754,9 +754,10 @@ public class MessagesStorage extends BaseController {
         database.executeFast("PRAGMA user_version = " + MessagesStorage.LAST_DB_VERSION).stepThis().dispose();
 
         database.executeFast("CREATE TABLE veyra_init(durov_relogin INTEGER);").stepThis().dispose();
-        database.executeFast("CREATE TABLE veyra_message_history(mid INTEGER, uid INTEGER, date INTEGER, message TEXT, PRIMARY KEY(mid, uid, date));").stepThis().dispose();
+        database.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_history(mid INTEGER, uid INTEGER, date INTEGER, message TEXT, PRIMARY KEY(mid, uid, date));").stepThis().dispose();
         database.executeFast("CREATE INDEX mid_uid ON veyra_message_history (mid, uid);").stepThis().dispose();
-        database.executeFast("CREATE TABLE veyra_message_deletions(mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY(mid, uid));").stepThis().dispose();
+        database.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions(mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY(mid, uid));").stepThis().dispose();
+        database.executeFast("CREATE TABLE IF NOT EXISTS veyra_ignore_list(uid INTEGER, peer_id INTEGER, flags INTEGER, PRIMARY KEY(uid, peer_id));").stepThis().dispose();
 
     }
 
@@ -15858,6 +15859,11 @@ public class MessagesStorage extends BaseController {
                                     TLRPC.Message oldMessage = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                                     oldMessage.readAttachPath(data, getUserConfig().clientUserId);
                                     data.reuse();
+                                    // Veyra: save edit history entry before overwriting old message
+                                    if (message.edit_date != 0 && oldMessage.message != null && !oldMessage.message.isEmpty()) {
+                                        int saveDate = oldMessage.edit_date != 0 ? oldMessage.edit_date : oldMessage.date;
+                                        saveEditHistoryEntry(oldMessage.id, dialogId, saveDate, oldMessage.message);
+                                    }
                                     if (reactionUpdates != null) {
                                         reactionUpdates.add(new SavedReactionsUpdate(selfId, oldMessage, message));
                                     }
@@ -18641,4 +18647,157 @@ public class MessagesStorage extends BaseController {
                     '}';
         }
     }
+
+    // ==================== Veyra Edit History ====================
+
+    /**
+     * Save one history entry for an edited message.
+     * Enforces FIFO cap of VeyraConfig.editHistoryLimit: oldest entry is removed when limit exceeded.
+     * Must be called on the storage thread before the new message data is written.
+     */
+    public void saveEditHistoryEntry(int mid, long dialogId, int editDate, String text) {
+        storageQueue.postRunnable(() -> {
+            try {
+                int limit = VeyraConfig.editHistoryLimit;
+                // Count existing entries
+                SQLiteCursor cnt = database.queryFinalized(
+                        String.format(Locale.US, "SELECT COUNT(*) FROM veyra_message_history WHERE mid=%d AND uid=%d", mid, dialogId));
+                int count = 0;
+                if (cnt.next()) count = cnt.intValue(0);
+                cnt.dispose();
+                // Remove oldest if at cap
+                if (count >= limit) {
+                    database.executeFast(String.format(Locale.US,
+                            "DELETE FROM veyra_message_history WHERE mid=%d AND uid=%d AND date=(SELECT MIN(date) FROM veyra_message_history WHERE mid=%d AND uid=%d)",
+                            mid, dialogId, mid, dialogId)).stepThis().dispose();
+                }
+                // Insert new entry
+                SQLitePreparedStatement st = database.executeFast("REPLACE INTO veyra_message_history(mid, uid, date, message) VALUES(?,?,?,?)");
+                st.bindInteger(1, mid);
+                st.bindLong(2, dialogId);
+                st.bindInteger(3, editDate);
+                st.bindString(4, text != null ? text : "");
+                st.step();
+                st.dispose();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    /**
+     * Returns all history entries for a message as parallel arrays (timestamps, texts).
+     * Callback invoked on UI thread.
+     */
+    public void getEditHistory(int mid, long dialogId, Utilities.Callback2<int[], String[]> callback) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(
+                        String.format(Locale.US, "SELECT date, message FROM veyra_message_history WHERE mid=%d AND uid=%d ORDER BY date ASC", mid, dialogId));
+                java.util.ArrayList<Integer> dates = new java.util.ArrayList<>();
+                java.util.ArrayList<String> texts = new java.util.ArrayList<>();
+                while (cursor.next()) {
+                    dates.add(cursor.intValue(0));
+                    texts.add(cursor.stringValue(1));
+                }
+                cursor.dispose();
+                int[] datesArr = new int[dates.size()];
+                String[] textsArr = new String[texts.size()];
+                for (int i = 0; i < dates.size(); i++) {
+                    datesArr[i] = dates.get(i);
+                    textsArr[i] = texts.get(i);
+                }
+                AndroidUtilities.runOnUIThread(() -> callback.run(datesArr, textsArr));
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    /** Clears all Veyra-specific data for a dialog (edit history + deleted message records). */
+    public void clearVeyraCache(long dialogId) {
+        storageQueue.postRunnable(() -> {
+            try {
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_history WHERE uid=%d", dialogId)).stepThis().dispose();
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid=%d", dialogId)).stepThis().dispose();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    // ==================== Veyra Ignore List ====================
+
+    /** Ignore flags bitmask constants */
+    public static final int IGNORE_MESSAGES  = 1;
+    public static final int IGNORE_REACTIONS = 1 << 1;
+    public static final int IGNORE_VOICE     = 1 << 2;
+    public static final int IGNORE_VIDEO_MSG = 1 << 3;
+    public static final int IGNORE_STICKERS  = 1 << 4;
+    public static final int IGNORE_GIFS      = 1 << 5;
+    public static final int IGNORE_PHOTOS    = 1 << 6;
+    public static final int IGNORE_VIDEOS    = 1 << 7;
+
+    /** Save or update ignore flags for a user in a group dialog. flags=0 removes the entry. */
+    public void setIgnoreEntry(long groupDialogId, long peerId, int flags) {
+        storageQueue.postRunnable(() -> {
+            try {
+                if (flags == 0) {
+                    database.executeFast(String.format(Locale.US,
+                            "DELETE FROM veyra_ignore_list WHERE uid=%d AND peer_id=%d", groupDialogId, peerId)).stepThis().dispose();
+                } else {
+                    SQLitePreparedStatement st = database.executeFast("REPLACE INTO veyra_ignore_list(uid, peer_id, flags) VALUES(?,?,?)");
+                    st.bindLong(1, groupDialogId);
+                    st.bindLong(2, peerId);
+                    st.bindInteger(3, flags);
+                    st.step();
+                    st.dispose();
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    /** Returns ignore flags for a peer in a group dialog, or 0 if not ignored. Must run on storage thread. */
+    public int getIgnoreFlagsSync(long groupDialogId, long peerId) {
+        try {
+            SQLiteCursor cursor = database.queryFinalized(
+                    String.format(Locale.US, "SELECT flags FROM veyra_ignore_list WHERE uid=%d AND peer_id=%d", groupDialogId, peerId));
+            int flags = 0;
+            if (cursor.next()) flags = cursor.intValue(0);
+            cursor.dispose();
+            return flags;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return 0;
+        }
+    }
+
+    /** Load full ignore list for a group dialog. Callback on UI thread. */
+    public void getIgnoreList(long groupDialogId, Utilities.Callback2<long[], int[]> callback) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(
+                        String.format(Locale.US, "SELECT peer_id, flags FROM veyra_ignore_list WHERE uid=%d ORDER BY peer_id ASC", groupDialogId));
+                java.util.ArrayList<Long> peers = new java.util.ArrayList<>();
+                java.util.ArrayList<Integer> flagsList = new java.util.ArrayList<>();
+                while (cursor.next()) {
+                    peers.add(cursor.longValue(0));
+                    flagsList.add(cursor.intValue(1));
+                }
+                cursor.dispose();
+                long[] peersArr = new long[peers.size()];
+                int[] flagsArr = new int[flagsList.size()];
+                for (int i = 0; i < peers.size(); i++) {
+                    peersArr[i] = peers.get(i);
+                    flagsArr[i] = flagsList.get(i);
+                }
+                AndroidUtilities.runOnUIThread(() -> callback.run(peersArr, flagsArr));
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
 }
