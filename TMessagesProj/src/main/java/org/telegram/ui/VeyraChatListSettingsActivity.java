@@ -103,6 +103,8 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
         editText.setSelection(editText.getText().length());
         editText.setSingleLine(true);
         editText.setHint(LocaleController.getString("AppName", R.string.AppName));
+        editText.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
+        editText.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
 
         android.widget.FrameLayout container = new android.widget.FrameLayout(getParentActivity());
         container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
