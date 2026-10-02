@@ -1640,8 +1640,8 @@ public class MessagesController extends BaseController implements NotificationCe
         ringtoneSizeMax = mainPreferences.getInt("ringtoneSizeMax", 1024_00);
         pmReadDateExpirePeriod = mainPreferences.getInt("pmReadDateExpirePeriod", 7 * 86400);
         suggestStickersApiOnly = mainPreferences.getBoolean("suggestStickersApiOnly", false);
-        roundVideoSize = mainPreferences.getInt("roundVideoSize", 384);
-        roundVideoBitrate = mainPreferences.getInt("roundVideoBitrate", 1000);
+        roundVideoSize = mainPreferences.getInt("roundVideoSize", VeyraConfig.highQualityVideoMessages ? 640 : 384);
+        roundVideoBitrate = mainPreferences.getInt("roundVideoBitrate", VeyraConfig.highQualityVideoMessages ? 2500 : 1000);
         roundAudioBitrate = mainPreferences.getInt("roundAudioBitrate", 64);
         pendingSuggestions = mainPreferences.getStringSet("pendingSuggestions", null);
         dismissedSuggestions = mainPreferences.getStringSet("dismissedSuggestions", null);
@@ -9419,6 +9419,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
             }
             getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId, null, false);
+            org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(dialogId, messages);
         } else {
             if (taskRequest instanceof TLRPC.TL_channels_deleteMessages) {
                 channelId = ((TLRPC.TL_channels_deleteMessages) taskRequest).channel.channel_id;
@@ -19572,6 +19573,13 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (!oldMsg.isEdited() && TextUtils.equals(oldMsg.messageOwner.message, message.message)) {
                         message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         message.edit_date = 0;
+                    } else if (!TextUtils.isEmpty(oldMsg.messageOwner.message)) {
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(
+                                message.dialog_id,
+                                message.id,
+                                oldMsg.messageOwner.edit_date > 0 ? oldMsg.messageOwner.edit_date : oldMsg.messageOwner.date,
+                                oldMsg.messageOwner.message
+                        );
                     }
                 }
                 AndroidUtilities.runOnUIThread(()-> getSendMessagesHelper().onMessageEdited(message));

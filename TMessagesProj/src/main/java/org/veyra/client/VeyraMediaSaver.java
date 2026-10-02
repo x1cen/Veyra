@@ -39,13 +39,13 @@ public final class VeyraMediaSaver {
     public static final int SAVE_TYPE_MUSIC = 2;
     public static final int SAVE_TYPE_DOWNLOADS = 3;
 
-    public static final String FOLDER_VIDEO_NOTES = "Telegram Video Notes";
-    public static final String FOLDER_VOICE = "Telegram Voice";
-    public static final String FOLDER_AUDIO = "Telegram Audio";
-    public static final String FOLDER_VIDEO = "Telegram Video";
-    public static final String FOLDER_IMAGES = "Telegram Images";
-    public static final String FOLDER_ANIMATIONS = "Telegram Animations";
-    public static final String FOLDER_DOCUMENTS = "Telegram Documents";
+    public static final String FOLDER_VIDEO_NOTES = "Video Notes";
+    public static final String FOLDER_VOICE = "Voice Notes";
+    public static final String FOLDER_AUDIO = "Audio";
+    public static final String FOLDER_VIDEO = "Videos";
+    public static final String FOLDER_IMAGES = "Photos";
+    public static final String FOLDER_ANIMATIONS = "Animations";
+    public static final String FOLDER_DOCUMENTS = "Documents";
 
     public static int getSaveOptionType(MessageObject messageObject) {
         if (messageObject == null) {

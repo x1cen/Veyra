@@ -8,12 +8,29 @@ public class VeyraConfig {
 
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
-    public static boolean ghostMode = false;
-    public static boolean hideTyping = false;
+    public static boolean ghostMode = true;
+    public static boolean hideTyping = true;
     public static boolean readOnReply = true;
     public static boolean blockSecretChat = false;
     // 0 = normal (show online), 1 = hide online, 2 = hide online + offline after sending message, 3 = always appear online
-    public static int onlineMode = 0;
+    public static int onlineMode = 1;
+
+    // Ghost Mode (Granular)
+    public static boolean ghostHideOnline = true;
+    public static boolean ghostHideTyping = true;
+    public static boolean ghostHideRead = true;
+    public static boolean ghostHideReadContents = true;
+    public static boolean ghostHideStories = true;
+    public static boolean ghostReadOnReply = true;
+
+    // Media & Camera
+    public static boolean disableVideoNoteWatermark = true;
+    public static boolean highQualityVideoMessages = true;
+
+    // Message Edit History
+    public static boolean editHistoryEnabled = true;
+    public static int editHistoryLimit = 10;
+    public static boolean editHistoryDropOldest = true;
 
     // ==================== Controls & Interaction ====================
     public static boolean confirmCall = true;
@@ -75,9 +92,22 @@ public class VeyraConfig {
         if (configLoaded) return;
         preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
         antiDelete = preferences.getBoolean("antiDelete", true);
-        ghostMode = preferences.getBoolean("ghostMode", false);
-        hideTyping = preferences.getBoolean("hideTyping", false);
+        ghostMode = preferences.getBoolean("ghostMode", true);
+        hideTyping = preferences.getBoolean("hideTyping", true);
         readOnReply = preferences.getBoolean("readOnReply", true);
+        ghostHideOnline = preferences.getBoolean("ghostHideOnline", true);
+        ghostHideTyping = preferences.getBoolean("ghostHideTyping", true);
+        ghostHideRead = preferences.getBoolean("ghostHideRead", true);
+        ghostHideReadContents = preferences.getBoolean("ghostHideReadContents", true);
+        ghostHideStories = preferences.getBoolean("ghostHideStories", true);
+        ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
+
+        disableVideoNoteWatermark = preferences.getBoolean("disableVideoNoteWatermark", true);
+        highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
+
+        editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
+        editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
+        editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
         cleanUrls = preferences.getBoolean("cleanUrls", true);
@@ -129,6 +159,52 @@ public class VeyraConfig {
     public static void setGhostMode(boolean val) {
         ghostMode = val;
         save("ghostMode", val);
+    }
+    public static void setGhostHideOnline(boolean val) {
+        ghostHideOnline = val;
+        save("ghostHideOnline", val);
+    }
+    public static void setGhostHideTyping(boolean val) {
+        ghostHideTyping = val;
+        save("ghostHideTyping", val);
+    }
+    public static void setGhostHideRead(boolean val) {
+        ghostHideRead = val;
+        save("ghostHideRead", val);
+    }
+    public static void setGhostHideReadContents(boolean val) {
+        ghostHideReadContents = val;
+        save("ghostHideReadContents", val);
+    }
+    public static void setGhostHideStories(boolean val) {
+        ghostHideStories = val;
+        save("ghostHideStories", val);
+    }
+    public static void setGhostReadOnReply(boolean val) {
+        ghostReadOnReply = val;
+        save("ghostReadOnReply", val);
+    }
+
+    public static void setDisableVideoNoteWatermark(boolean val) {
+        disableVideoNoteWatermark = val;
+        save("disableVideoNoteWatermark", val);
+    }
+    public static void setHighQualityVideoMessages(boolean val) {
+        highQualityVideoMessages = val;
+        save("highQualityVideoMessages", val);
+    }
+
+    public static void setEditHistoryEnabled(boolean val) {
+        editHistoryEnabled = val;
+        save("editHistoryEnabled", val);
+    }
+    public static void setEditHistoryLimit(int val) {
+        editHistoryLimit = val;
+        save("editHistoryLimit", val);
+    }
+    public static void setEditHistoryDropOldest(boolean val) {
+        editHistoryDropOldest = val;
+        save("editHistoryDropOldest", val);
     }
     public static void setHideTyping(boolean val) {
         hideTyping = val;

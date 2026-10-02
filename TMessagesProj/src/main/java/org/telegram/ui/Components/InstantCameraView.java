@@ -2316,6 +2316,10 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
             started = true;
             int resolution = MessagesController.getInstance(currentAccount).roundVideoSize;
             int bitrate = MessagesController.getInstance(currentAccount).roundVideoBitrate * 1024;
+            if (org.telegram.messenger.VeyraConfig.highQualityVideoMessages) {
+                resolution = Math.max(resolution, 640);
+                bitrate = Math.max(bitrate, 2800 * 1024);
+            }
             AndroidUtilities.runOnUIThread(() -> {
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.stopAllHeavyOperations, 512);
             });

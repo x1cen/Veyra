@@ -385,17 +385,30 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
-        if (org.telegram.messenger.VeyraConfig.ghostMode && (
+        if (org.telegram.messenger.VeyraConfig.ghostHideRead && (
                 object instanceof TLRPC.TL_messages_readHistory ||
+                object instanceof TLRPC.TL_channels_readHistory)) {
+            if (onComplete != null) {
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+            }
+            return;
+        }
+        if (org.telegram.messenger.VeyraConfig.ghostHideReadContents && (
                 object instanceof TLRPC.TL_messages_readMessageContents ||
-                object instanceof TLRPC.TL_channels_readHistory ||
                 object instanceof TLRPC.TL_channels_readMessageContents)) {
             if (onComplete != null) {
                 AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
             }
             return;
         }
-        if (org.telegram.messenger.VeyraConfig.hideTyping && (
+        if (org.telegram.messenger.VeyraConfig.ghostHideStories && (
+                object instanceof TLRPC.TL_stories_readStories)) {
+            if (onComplete != null) {
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+            }
+            return;
+        }
+        if ((org.telegram.messenger.VeyraConfig.ghostHideTyping || org.telegram.messenger.VeyraConfig.hideTyping) && (
                 object instanceof TLRPC.TL_messages_setTyping ||
                 object instanceof TLRPC.TL_messages_setEncryptedTyping)) {
             if (onComplete != null) {
@@ -403,7 +416,7 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
-        if ((org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2) && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+        if ((org.telegram.messenger.VeyraConfig.ghostHideOnline || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2) && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
             org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
             if (!statusReq.offline) {
                 if (onComplete != null) {

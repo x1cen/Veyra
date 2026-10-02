@@ -11314,4 +11314,29 @@
     <string name="ArticleAIAddToPage">Add to Page</string>
     <string name="HideContent">Hide Content</string>
     <string name="HiddenMessagesRestored">Hidden messages restored</string>
+
+    <string name="VeyraGhostHideOnline">Hide Online Status</string>
+    <string name="VeyraGhostHideOnlineDesc">Never broadcast online status to Telegram servers</string>
+    <string name="VeyraGhostHideTyping">Hide Typing &amp; Actions</string>
+    <string name="VeyraGhostHideTypingDesc">Do not send typing, recording voice, or uploading actions</string>
+    <string name="VeyraGhostHideRead">Hide Read Receipts</string>
+    <string name="VeyraGhostHideReadDesc">Do not mark incoming messages as read/seen</string>
+    <string name="VeyraGhostHideReadContents">Hide Playing Voice &amp; Video Notes</string>
+    <string name="VeyraGhostHideReadContentsDesc">Do not send played/listened status for voice and video notes</string>
+    <string name="VeyraGhostHideStories">Hide Viewing Stories</string>
+    <string name="VeyraGhostHideStoriesDesc">Watch stories anonymously without appearing in viewers list</string>
+
+    <string name="VeyraEditHistory">Message Edit History</string>
+    <string name="VeyraEditHistoryDesc">Track and view previous versions of edited messages</string>
+    <string name="VeyraEditHistoryEnable">Save Edit History</string>
+    <string name="VeyraEditHistoryEnableDesc">Log previous versions when a message is edited</string>
+    <string name="VeyraEditHistoryLimit">Max Edits Per Message</string>
+    <string name="VeyraEditHistoryLimitDesc">Number of previous edits to keep (between 5 and 100)</string>
+    <string name="VeyraEditHistoryDropOldest">Drop Oldest Edits On Overflow</string>
+    <string name="VeyraEditHistoryDropOldestDesc">When limit is reached, discard the oldest edit instead of ignoring new ones</string>
+    <string name="VeyraEditHistoryClear">Clear All Edit History</string>
+    <string name="VeyraEditHistoryCleared">All edit history cleared</string>
+
+    <string name="EditHistory">History</string>
+    <string name="OriginalMessage">Original Message</string>
 </resources>

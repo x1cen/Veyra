@@ -20,31 +20,10 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity)));
-        r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraOnlineStatus", R.string.VeyraOnlineStatus),
-                () -> onlineModeLabel(VeyraConfig.onlineMode),
-                true,
-                this::showOnlineModeDialog
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraReadOnReply", R.string.VeyraReadOnReply),
-                LocaleController.getString("VeyraReadOnReplyDesc", R.string.VeyraReadOnReplyDesc),
-                () -> VeyraConfig.readOnReply, v -> VeyraConfig.setReadOnReply(v), true
-        ));
         r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraAntiDelete", R.string.VeyraAntiDelete),
                 LocaleController.getString("VeyraAntiDeleteDesc", R.string.VeyraAntiDeleteDesc),
                 () -> VeyraConfig.antiDelete, v -> VeyraConfig.setAntiDelete(v), true
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraGhostMode", R.string.VeyraGhostMode),
-                LocaleController.getString("VeyraGhostModeDesc", R.string.VeyraGhostModeDesc),
-                () -> VeyraConfig.ghostMode, v -> VeyraConfig.setGhostMode(v), true
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraHideTyping", R.string.VeyraHideTyping),
-                LocaleController.getString("VeyraHideTypingDesc", R.string.VeyraHideTypingDesc),
-                () -> VeyraConfig.hideTyping, v -> VeyraConfig.setHideTyping(v), true
         ));
         r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraBlockSecretChat", R.string.VeyraBlockSecretChat),

@@ -1405,6 +1405,8 @@ public class MessagesStorage extends BaseController {
                 ArrayList<Long> dialogsToCleanup = new ArrayList<>();
 
                 database.executeFast("DELETE FROM ephemeral_messages").stepThis().dispose();
+                database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
+                org.veyra.client.VeyraEditHistoryManager.clearAll();
                 database.executeFast("DELETE FROM poll_votes_mentions").stepThis().dispose();
                 database.executeFast("DELETE FROM poll_votes_mentions_topics").stepThis().dispose();
                 database.executeFast("DELETE FROM reaction_mentions").stepThis().dispose();
@@ -2232,6 +2234,7 @@ public class MessagesStorage extends BaseController {
     public void fullReset() {
         storageQueue.postRunnable(() -> {
             cleanupInternal(true);
+            org.veyra.client.VeyraEditHistoryManager.clearAll();
             clearLoadingDialogsOffsets();
             openDatabase(1);
             AndroidUtilities.runOnUIThread(() -> {

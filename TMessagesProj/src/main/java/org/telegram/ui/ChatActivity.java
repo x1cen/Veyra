@@ -183,6 +183,8 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.VeyraConfig;
 import org.veyra.client.HiddenContentManager;
 import org.veyra.client.VeyraMediaSaver;
+import org.veyra.client.VeyraEditHistoryManager;
+import org.veyra.client.MessageEditHistorySheet;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
@@ -1242,6 +1244,7 @@ public class ChatActivity extends BaseFragment implements
 
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_HIDE_CONTENT = 116;
+    public final static int OPTION_VIEW_EDIT_HISTORY = 117;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -33273,8 +33276,37 @@ public class ChatActivity extends BaseFragment implements
                     selectedObjectGroup = null;
                     return;
                 }
+                if (selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted))) {
+                    ArrayList<Integer> mids = new ArrayList<>();
+                    if (selectedObjectGroup != null && selectedObjectGroup.messages != null) {
+                        for (int a = 0; a < selectedObjectGroup.messages.size(); a++) {
+                            MessageObject msg = selectedObjectGroup.messages.get(a);
+                            mids.add(msg.getId());
+                            removeMessageWithThanos(msg);
+                        }
+                    } else {
+                        mids.add(selectedObject.getId());
+                        removeMessageWithThanos(selectedObject);
+                    }
+                    getMessagesController().deleteMessages(mids, null, currentEncryptedChat, dialog_id, (int) getTopicId(), false, chatMode, true);
+                    getMessagesStorage().markMessagesAsDeleted(dialog_id, mids, true, false, chatMode, (int) getTopicId());
+                    VeyraEditHistoryManager.deleteHistoryBatch(dialog_id, mids);
+                    selectedObject = null;
+                    selectedObjectToEditCaption = null;
+                    selectedObjectGroup = null;
+                    break;
+                }
                 preserveDim = true;
                 createDeleteMessagesAlert(selectedObject, selectedObjectGroup, true);
+                break;
+            }
+            case OPTION_VIEW_EDIT_HISTORY: {
+                if (selectedObject != null) {
+                    MessageEditHistorySheet.show(this, selectedObject);
+                }
+                selectedObject = null;
+                selectedObjectToEditCaption = null;
+                selectedObjectGroup = null;
                 break;
             }
             case OPTION_FORWARD: {
@@ -45812,6 +45844,11 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_EDIT);
                     icons.add(R.drawable.msg_edit);
                 }
+                if (selectedObject != null && (selectedObject.isEdited() || VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId()))) {
+                    items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_recent);
+                }
                 if (ChatObject.isMonoForum(currentChat) && selectedObject.getGroupId() == 0 && selectedObjectGroup == null && message != null && message.messageOwner != null && message.messageOwner.suggested_post == null && message.messageOwner.action == null) {
                     items.add(LocaleController.getString(R.string.EditOfferAdd));
                     options.add(OPTION_SUGGESTION_ADD_OFFER);
@@ -45849,7 +45886,8 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_HIDE_CONTENT);
                     icons.add(R.drawable.msg_stories_myhide);
                 }
-                if (message.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat) && (threadMessageObjects == null || !threadMessageObjects.contains(message))) {
+                boolean isTaggedDeleted = selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted));
+                if (isTaggedDeleted || (message.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat) && (threadMessageObjects == null || !threadMessageObjects.contains(message)))) {
                     items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                     options.add(OPTION_DELETE);
                     icons.add(deleteIconRes);

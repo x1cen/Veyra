@@ -142,42 +142,56 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraSettingsCategories", R.string.VeyraSettingsCategories)));
 
-        // Category 1: Privacy & Security
+        // Category 1: Ghost Mode
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraGhostMode", R.string.VeyraGhostMode),
+                LocaleController.getString("VeyraGhostModeDesc", R.string.VeyraGhostModeDesc),
+                () -> presentFragment(new VeyraGhostModeSettingsActivity())
+        ));
+
+        // Category 2: Message Edit History
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory),
+                LocaleController.getString("VeyraEditHistoryDesc", R.string.VeyraEditHistoryDesc),
+                () -> presentFragment(new VeyraEditHistorySettingsActivity())
+        ));
+
+        // Category 3: Privacy & Security
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
                 LocaleController.getString("VeyraPrivacySecurityDesc", R.string.VeyraPrivacySecurityDesc),
                 () -> presentFragment(new VeyraPrivacySettingsActivity())
         ));
 
-        // Category 2: Chat List
+        // Category 4: Chat List
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraChatList", R.string.VeyraChatList),
                 LocaleController.getString("VeyraChatListDesc", R.string.VeyraChatListDesc),
                 () -> presentFragment(new VeyraChatListSettingsActivity())
         ));
 
-        // Category 3: Composing & Messages
+        // Category 5: Composing & Messages
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraComposingMessages", R.string.VeyraComposingMessages),
                 LocaleController.getString("VeyraComposingMessagesDesc", R.string.VeyraComposingMessagesDesc),
                 () -> presentFragment(new VeyraComposingSettingsActivity())
         ));
 
-        // Category 4: Media & Camera
+        // Category 6: Media & Camera
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraMediaCamera", R.string.VeyraMediaCamera),
                 LocaleController.getString("VeyraMediaCameraDesc", R.string.VeyraMediaCameraDesc),
                 () -> presentFragment(new VeyraMediaSettingsActivity())
         ));
 
-        // Category 5: Controls & General
+        // Category 7: Controls & General
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraControlsGeneral", R.string.VeyraControlsGeneral),
                 LocaleController.getString("VeyraControlsGeneralDesc", R.string.VeyraControlsGeneralDesc),
                 () -> presentFragment(new VeyraControlsSettingsActivity())
         ));
 
-        // Category 6: Backup & Restore
+        // Category 8: Backup & Restore
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraBackupRestore", R.string.VeyraBackupRestore),
                 LocaleController.getString("VeyraBackupRestoreDesc", R.string.VeyraBackupRestoreDesc),
@@ -205,18 +219,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 LocaleController.getString("VeyraVersion", R.string.VeyraVersion),
                 getAppVersionName(),
                 true
-        ));
-
-        r.add(VeyraSettingsRow.button(
-                "GitHub: x1cen/Veyra",
-                false, false,
-                () -> Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra")
-        ));
-
-        r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraHelpChannel", R.string.VeyraHelpChannel),
-                false, false,
-                () -> Browser.openUrl(getParentActivity(), "https://t.me/GetVeyra")
         ));
 
         r.add(VeyraSettingsRow.button(
@@ -368,7 +370,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                     .getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
             return pInfo.versionName;
         } catch (Exception e) {
-            return "1.0.10";
+            return "1.0.11";
         }
     }
 }
