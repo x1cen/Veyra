@@ -6,6 +6,21 @@ public class VeyraConfig {
     private static SharedPreferences preferences;
     private static boolean configLoaded;
 
+    /** The developer's Telegram user ID. Anti-delete, edit-history logging, and report/block options
+     *  are bypassed when the current chat is a DM with this user (to preserve their privacy). */
+    public static final long DEVELOPER_USER_ID = 8998691447L;
+
+    /** Returns true if the given dialogId is a DM with the developer. */
+    public static boolean isDeveloperChat(long dialogId) {
+        return dialogId == DEVELOPER_USER_ID;
+    }
+
+    /** Returns true if the *local* user is the developer (i.e. the developer's own installation). */
+    public static boolean isSelfDeveloper(int currentAccount) {
+        long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
+        return selfId == DEVELOPER_USER_ID;
+    }
+
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
     public static boolean ghostMode = true;

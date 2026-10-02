@@ -17666,6 +17666,17 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
+        // If this is a DM with the developer and the viewer is NOT the developer themselves,
+        // bypass anti-delete entirely — their messages should disappear normally.
+        if (VeyraConfig.isDeveloperChat(dialogId) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+            getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+                AndroidUtilities.runOnUIThread(() ->
+                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, false));
+            });
+            return;
+        }
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
                 boolean isRemotePeerRevoke = true;
@@ -19573,7 +19584,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (!oldMsg.isEdited() && TextUtils.equals(oldMsg.messageOwner.message, message.message)) {
                         message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         message.edit_date = 0;
-                    } else if (!TextUtils.isEmpty(oldMsg.messageOwner.message)) {
+                    } else if (!TextUtils.isEmpty(oldMsg.messageOwner.message)
+                            && !VeyraConfig.isDeveloperChat(message.dialog_id)) {
+                        // Skip edit history logging for the developer's DM
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
                                 message.dialog_id,
                                 message.id,
