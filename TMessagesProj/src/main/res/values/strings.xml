@@ -11361,6 +11361,7 @@
     <string name="VeyraEmergencyProgress">Executing Emergency Protocol…</string>
 
     <string name="VeyraCustomHeaderTitle">Custom Header Title</string>
+    <string name="VeyraUseProfileName">Use Profile Name</string>
     <string name="VeyraCustomHeaderTitleDesc">Customize the title text shown in the main chat list</string>
     <string name="VeyraCustomHeaderTitleDialog">Enter header title (leave empty for default):</string>
     <string name="VeyraAnimatedTitle">Header Animation</string>

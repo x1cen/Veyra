@@ -79,7 +79,7 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
 
-        // Veyra: custom header title (static text, no animation)
+        // Veyra: custom header title (static text)
         r.add(VeyraSettingsRow.detail(
                 LocaleController.getString("VeyraCustomHeaderTitle", R.string.VeyraCustomHeaderTitle),
                 () -> android.text.TextUtils.isEmpty(VeyraConfig.customHeaderTitle)
@@ -102,20 +102,37 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
         editText.setText(VeyraConfig.customHeaderTitle);
         editText.setSelection(editText.getText().length());
         editText.setSingleLine(true);
+        editText.setHint(LocaleController.getString("AppName", R.string.AppName));
+
         android.widget.FrameLayout container = new android.widget.FrameLayout(getParentActivity());
         container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
         container.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         builder.setView(container);
 
+        // Save custom text
         builder.setPositiveButton(LocaleController.getString(R.string.Save), (dialog, which) -> {
-            VeyraConfig.setCustomHeaderTitle(editText.getText().toString());
+            VeyraConfig.setCustomHeaderTitle(editText.getText().toString().trim());
             reloadRows();
         });
-        builder.setNeutralButton(LocaleController.getString(R.string.Reset), (dialog, which) -> {
+
+        // Use profile name
+        builder.setNeutralButton(LocaleController.getString("VeyraUseProfileName", R.string.VeyraUseProfileName), (dialog, which) -> {
+            org.telegram.tgnet.TLRPC.User me = org.telegram.messenger.UserConfig.getInstance(currentAccount).getCurrentUser();
+            if (me != null && !android.text.TextUtils.isEmpty(me.first_name)) {
+                String name = me.first_name + (android.text.TextUtils.isEmpty(me.last_name) ? "" : " " + me.last_name);
+                VeyraConfig.setCustomHeaderTitle(name.trim());
+            } else {
+                VeyraConfig.setCustomHeaderTitle("");
+            }
+            reloadRows();
+        });
+
+        // Cancel / reset to default (empty = use Telegram logo)
+        builder.setNegativeButton(LocaleController.getString(R.string.Reset), (dialog, which) -> {
             VeyraConfig.setCustomHeaderTitle("");
             reloadRows();
         });
-        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+
         builder.show();
     }
 }

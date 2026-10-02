@@ -2934,7 +2934,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 .add(NotificationCenter.dialogsUnreadPollVotesCounterChanged)
                 .add(NotificationCenter.forceImportContactsStart)
                 .add(NotificationCenter.userEmojiStatusUpdated)
-                .add(NotificationCenter.currentUserPremiumStatusChanged);
+                .add(NotificationCenter.currentUserPremiumStatusChanged)
+                .add(NotificationCenter.veyraHeaderTitleChanged); // Veyra: live title update
 
             globalObserversGroup.add(NotificationCenter.didSetPasscode);
         }
@@ -10858,6 +10859,28 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         } else if (id == NotificationCenter.currentUserPremiumStatusChanged) {
             updateStatus(UserConfig.getInstance(account).getCurrentUser(), true);
             updateStoriesPosting();
+        } else if (id == NotificationCenter.veyraHeaderTitleChanged) {
+            // Veyra: live-update action bar title when user changes customHeaderTitle in settings
+            if (actionBar != null && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
+                String customTitle = org.telegram.messenger.VeyraConfig.customHeaderTitle;
+                if (!TextUtils.isEmpty(customTitle)) {
+                    actionBar.setTitle(customTitle);
+                } else {
+                    // restore default (profile name or "Telegram")
+                    long clientUserId = UserConfig.getInstance(currentAccount).getClientUserId();
+                    if (BuildVars.SPECIAL_TITLE_USER_ID != 0 && clientUserId == BuildVars.SPECIAL_TITLE_USER_ID && !TextUtils.isEmpty(BuildVars.SPECIAL_TITLE_TEXT)) {
+                        actionBar.setTitle(BuildVars.SPECIAL_TITLE_TEXT);
+                    } else {
+                        TLRPC.User me = UserConfig.getInstance(currentAccount).getCurrentUser();
+                        if (me != null && !TextUtils.isEmpty(me.first_name)) {
+                            String name = me.first_name + (TextUtils.isEmpty(me.last_name) ? "" : " " + me.last_name);
+                            actionBar.setTitle(name.trim());
+                        } else {
+                            actionBar.setTitle(getString(R.string.AppName));
+                        }
+                    }
+                }
+            }
         } else if (id == NotificationCenter.onDatabaseReset) {
             dialogsLoaded.put(currentAccount, false);
             loadDialogs(getAccountInstance());

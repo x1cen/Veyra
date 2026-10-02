@@ -223,6 +223,11 @@ public class VeyraConfig {
     public static void setCustomHeaderTitle(String title) {
         customHeaderTitle = title != null ? title.trim() : "";
         save("customHeaderTitle", customHeaderTitle);
+        // Notify DialogsActivity to update header immediately
+        for (int i = 0; i < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT; i++) {
+            org.telegram.messenger.NotificationCenter.getInstance(i)
+                    .postNotificationName(org.telegram.messenger.NotificationCenter.veyraHeaderTitleChanged);
+        }
     }
     // setAnimatedTitleMode removed — animation disabled by design
 
