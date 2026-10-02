@@ -12288,7 +12288,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 } else {
-                    if (currentUser != null && currentUser.bot) {
+                    if (user != null && user.bot) {
                         otherItem.addSubItem(share_contact, R.drawable.msg_share, LocaleController.getString(R.string.BotShare));
                     }
                     if (!TextUtils.isEmpty(user.phone)) {
