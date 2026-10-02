@@ -593,8 +593,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Nullable
     private ActionBarMenuSubItem hideChatItem;
     private final static int veyra_hide_chat = 120;
-    // Veyra: header animation view placeholder (animation disabled, preserved for future use)
-    private org.veyra.client.VeyraHeaderAnimationView veyraHeaderAnimView;
 
     private void updateTitleAnimation() {
         // Animation removed by user request — no-op
@@ -5663,8 +5661,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ViewCompat.setOnApplyWindowInsetsListener(fragmentView, this::onApplyWindowInsets);
 
-        // Veyra: no animation overlay — removed by design
-        veyraHeaderAnimView = null;
+        // Veyra: animation overlay removed
 
         return fragmentView;
     }
@@ -7265,10 +7262,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onPause() {
         super.onPause();
-        if (veyraHeaderAnimView != null) {
-            veyraHeaderAnimView.pause();
-        }
-        // veyraHeaderAnimView is null when animation is disabled
+        // Veyra: animation removed
         if (storiesBulletin != null) {
             storiesBulletin.hide();
             storiesBulletin = null;
