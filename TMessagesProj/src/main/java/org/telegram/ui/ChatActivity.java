@@ -19593,22 +19593,13 @@ public class ChatActivity extends BaseFragment implements
             } else if (!MessagesController.isSupportUser(currentUser) && getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
                 if (!TextUtils.isEmpty(currentUser.phone)) {
                     String titleName = PhoneFormat.getInstance().format("+" + currentUser.phone);
-                    if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
-                        titleName = "\uD83D\uDC80 " + titleName;
-                    }
                     avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 } else {
                     String titleName = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser)));
-                    if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
-                        titleName = "\uD83D\uDC80 " + titleName;
-                    }
                     avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 }
             } else {
                 String titleName = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser)));
-                if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
-                    titleName = "\uD83D\uDC80 " + titleName;
-                }
                 avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), !MessagesController.isSupportUser(currentUser) ? currentUser.emoji_status : null, animated);
             }
         }
