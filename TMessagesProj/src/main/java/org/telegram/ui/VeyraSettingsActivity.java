@@ -315,8 +315,20 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
                 if (latestCode > currentCode) {
                     String title = isFarsi ? ("نسخه جدید ویرا (" + tag + ") موجود است") : ("Veyra " + tag + " available");
-                    String msg = (notes != null && !notes.trim().isEmpty()) ? notes.trim()
+                    String rawNotes = (notes != null && !notes.trim().isEmpty()) ? notes.trim()
                             : (isFarsi ? "نسخه جدید ویرا منتشر شده است." : "A new version of Veyra is available.");
+                    // Strip markdown formatting so AlertDialog shows plain text
+                    String msg = rawNotes
+                            .replaceAll("(?m)^#{1,6}\\s*", "")       // ## headers
+                            .replaceAll("\\*\\*(.+?)\\*\\*", "$1")   // **bold**
+                            .replaceAll("__(.+?)__", "$1")            // __bold__
+                            .replaceAll("\\*(.+?)\\*", "$1")          // *italic*
+                            .replaceAll("_(.+?)_", "$1")              // _italic_
+                            .replaceAll("`{1,3}[^`]*`{1,3}", "")      // `code` / ```blocks```
+                            .replaceAll("(?m)^[-*+]\\s+", "• ")       // bullet lists
+                            .replaceAll("\\[(.+?)\\]\\(.*?\\)", "$1") // [text](url)
+                            .replaceAll("\\n{3,}", "\n\n")            // collapse triple newlines
+                            .trim();
                     new AlertDialog.Builder(getParentActivity())
                             .setTitle(title)
                             .setMessage(msg)
