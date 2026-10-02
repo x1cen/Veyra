@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Veyra</string>
+    <string name="AppName">Veyra Beta</string>
     <string name="AppNameBeta">Veyra Preview</string>
     <string name="LanguageName">Español</string>
     <string name="English">Inglés</string>

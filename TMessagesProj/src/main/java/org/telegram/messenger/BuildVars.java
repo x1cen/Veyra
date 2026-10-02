@@ -27,11 +27,11 @@ public class BuildVars {
     public static int BUILD_VERSION = 6991;
     public static int BUILD_VERSION_FULL = 69919;
 //    public static String BUILD_VENDOR = "com.android.vending";
-//    public static String BUILD_VEYRA = "org.veyra.messenger";
+//    public static String BUILD_VEYRA = "org.veyra.messenger.beta";
     public static String BUILD_VENDOR = "com.google.android.packageinstaller";
     public static String BUILD_DUROV = "org.telegram.messenger.web";
     public static String BUILD_DUROV_TG = "org.telegram.messenger";
-    public static String BUILD_VEYRA = "org.veyra.messenger";
+    public static String BUILD_VEYRA = "org.veyra.messenger.beta";
     public static String BUILD_VERSION_STRING = "12.9.2";
     public static final List<String> fuLabel = new ArrayList<>() {{
         add("Free");
