@@ -593,19 +593,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Nullable
     private ActionBarMenuSubItem hideChatItem;
     private final static int veyra_hide_chat = 120;
-    // Veyra: header animation view (replaces old ObjectAnimator approach)
+    // Veyra: header animation view placeholder (animation disabled, preserved for future use)
     private org.veyra.client.VeyraHeaderAnimationView veyraHeaderAnimView;
 
     private void updateTitleAnimation() {
-        int mode = org.telegram.messenger.VeyraConfig.animatedTitleMode;
-        if (veyraHeaderAnimView != null) {
-            veyraHeaderAnimView.setMode(mode);
-            if (mode == org.veyra.client.VeyraHeaderAnimationView.MODE_OFF) {
-                veyraHeaderAnimView.pause();
-            } else {
-                veyraHeaderAnimView.resume();
-            }
-        }
+        // Animation removed by user request — no-op
     }
 
     private float additionalFloatingTranslation;
@@ -5670,14 +5662,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ViewCompat.setOnApplyWindowInsetsListener(fragmentView, this::onApplyWindowInsets);
 
-        // Veyra: add particle animation overlay above action bar
-        veyraHeaderAnimView = new org.veyra.client.VeyraHeaderAnimationView(context);
-        veyraHeaderAnimView.setMode(org.telegram.messenger.VeyraConfig.animatedTitleMode);
-        int abHeight = AndroidUtilities.dp(56);
-        ((android.view.ViewGroup) fragmentView).addView(veyraHeaderAnimView,
-                LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.TOP | Gravity.LEFT, 0, 0, 0, 0));
-        veyraHeaderAnimView.setClickable(false);
-        veyraHeaderAnimView.bringToFront();
+        // Veyra: no animation overlay — removed by design
+        veyraHeaderAnimView = null;
 
         return fragmentView;
     }
@@ -7281,6 +7267,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (veyraHeaderAnimView != null) {
             veyraHeaderAnimView.pause();
         }
+        // veyraHeaderAnimView is null when animation is disabled
         if (storiesBulletin != null) {
             storiesBulletin.hide();
             storiesBulletin = null;

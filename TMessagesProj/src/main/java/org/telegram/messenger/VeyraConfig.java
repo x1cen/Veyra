@@ -50,7 +50,7 @@ public class VeyraConfig {
     public static String customHeaderTitle = "";
 
     // Animated Header Title (0 = Off, 1 = Lightning, 2 = Rain, 3 = Fireworks, 4 = Meteors, 5 = Matrix, 6 = Glitch, 7 = Snow, 8 = Fire, 9 = Aurora)
-    public static int animatedTitleMode = 1;
+    // animatedTitleMode removed — animation disabled by design
 
     // Media & Camera
     public static boolean disableVideoNoteWatermark = true;
@@ -132,7 +132,7 @@ public class VeyraConfig {
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
         blockScreenCapture = preferences.getBoolean("blockScreenCapture", false);
         customHeaderTitle = preferences.getString("customHeaderTitle", "");
-        animatedTitleMode = preferences.getInt("animatedTitleMode", 1);
+        // animatedTitleMode intentionally not loaded — removed by design
 
         disableVideoNoteWatermark = preferences.getBoolean("disableVideoNoteWatermark", true);
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
@@ -224,10 +224,7 @@ public class VeyraConfig {
         customHeaderTitle = title != null ? title.trim() : "";
         save("customHeaderTitle", customHeaderTitle);
     }
-    public static void setAnimatedTitleMode(int mode) {
-        animatedTitleMode = mode;
-        save("animatedTitleMode", mode);
-    }
+    // setAnimatedTitleMode removed — animation disabled by design
 
     public static void setDisableVideoNoteWatermark(boolean val) {
         disableVideoNoteWatermark = val;
