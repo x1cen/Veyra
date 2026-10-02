@@ -21791,8 +21791,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentBackgroundDrawable.setBounds(left, top, right, bottom);
             currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
             currentBackgroundDrawable.setAlpha(255);
-            // Veyra: draw a thin red outline on the bubble for deleted messages
-            if (deleted) {
+            // Veyra: draw a thin red outline on the bubble for deleted messages (incoming only)
+            if (deleted && !currentMessageObject.isOutOwner()) {
                 android.graphics.RectF bubbleRect = new android.graphics.RectF(left, top, right, bottom);
                 android.graphics.Paint deletedBorderPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
                 deletedBorderPaint.setStyle(android.graphics.Paint.Style.STROKE);
@@ -23780,8 +23780,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     Theme.chat_timePaint.setColor(getThemedColor(Theme.key_chat_mediaTimeText));
                 }
             } else {
-                if (deleted) {
-                    // Veyra: tint the timestamp in a subtle red-ish tone for deleted messages
+                if (deleted && !currentMessageObject.isOutOwner()) {
+                    // Veyra: tint the timestamp red for deleted INCOMING messages only
                     Theme.chat_timePaint.setColor(0xFFE53935);
                 } else if (currentMessageObject.isOutOwner()) {
                     Theme.chat_timePaint.setColor(getThemedColor(drawSelectionBackground ? Theme.key_chat_outTimeSelectedText : Theme.key_chat_outTimeText));

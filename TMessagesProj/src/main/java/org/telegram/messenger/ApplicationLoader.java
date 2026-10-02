@@ -292,6 +292,9 @@ public class ApplicationLoader extends Application {
 
         super.onCreate();
 
+        // Veyra: initialize security guard early
+        org.veyra.client.VeyraSecurityGuard.initialize(this);
+
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("app start time = " + (startTime = SystemClock.elapsedRealtime()));
             try {

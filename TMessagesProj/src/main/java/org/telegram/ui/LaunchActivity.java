@@ -441,6 +441,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         flagSecureReason.attach();
 
         super.onCreate(savedInstanceState);
+        // Veyra: prevent screen capture / recent-apps thumbnail leakage
+        org.veyra.client.VeyraSecurityGuard.applyWindowSecurity(this);
         if (Build.VERSION.SDK_INT >= 24) {
             AndroidUtilities.isInMultiwindow = isInMultiWindowMode();
         }
