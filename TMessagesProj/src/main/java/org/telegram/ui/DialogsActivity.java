@@ -593,8 +593,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Nullable
     private ActionBarMenuSubItem hideChatItem;
     private final static int veyra_hide_chat = 120;
-    private int emergencyLogoClickCount = 0;
-    private long lastEmergencyLogoClickTime = 0;
     // Veyra: header animation view (replaces old ObjectAnimator approach)
     private org.veyra.client.VeyraHeaderAnimationView veyraHeaderAnimView;
 
@@ -3562,19 +3560,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             actionBar.setClipContent(true);
         //}
         actionBar.setTitleActionRunnable(() -> {
-            long now = android.os.SystemClock.elapsedRealtime();
-            if (now - lastEmergencyLogoClickTime < 1800) {
-                emergencyLogoClickCount++;
-            } else {
-                emergencyLogoClickCount = 1;
-            }
-            lastEmergencyLogoClickTime = now;
-            if (emergencyLogoClickCount >= 7) {
-                emergencyLogoClickCount = 0;
-                org.veyra.client.VeyraEmergencyHandler.showEmergencyDialog(DialogsActivity.this, currentAccount);
-                return;
-            }
-
             if (initialDialogsType != DIALOGS_TYPE_WIDGET) {
                 hideFloatingButton(false);
             }
@@ -13852,6 +13837,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
         io.add(R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings), () -> {
             presentFragment(new VeyraSettingsActivity());
+        });
+
+        // Veyra: Emergency wipe options
+        io.addGap();
+        io.add(R.drawable.msg_clear, LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe), () -> {
+            org.veyra.client.VeyraEmergencyHandler.confirmLocalWipePublic(DialogsActivity.this, currentAccount);
+        });
+        io.add(R.drawable.msg_delete, LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe), () -> {
+            org.veyra.client.VeyraEmergencyHandler.confirmFullWipePublic(DialogsActivity.this, currentAccount);
         });
 
         if (proxyMenuSubItem != null) {

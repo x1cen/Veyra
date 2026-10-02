@@ -72,12 +72,19 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
 
+            // Encrypt text before storing
+            String encryptedText = VeyraKeyStore.encryptString(text);
+            if (encryptedText == null) encryptedText = text; // fallback plain if keystore fails
+
             Cursor checkCursor = db.rawQuery("SELECT text FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id DESC LIMIT 1",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             if (checkCursor != null) {
                 if (checkCursor.moveToFirst()) {
-                    String lastText = checkCursor.getString(0);
-                    if (TextUtils.equals(lastText, text)) {
+                    // Decrypt stored value to compare
+                    String stored = checkCursor.getString(0);
+                    String storedDecrypted = VeyraKeyStore.decryptString(stored);
+                    if (storedDecrypted == null) storedDecrypted = stored;
+                    if (TextUtils.equals(storedDecrypted, text)) {
                         checkCursor.close();
                         return;
                     }
@@ -111,7 +118,7 @@ public final class VeyraEditHistoryManager {
             values.put("dialog_id", dialogId);
             values.put("message_id", messageId);
             values.put("date", date);
-            values.put("text", text);
+            values.put("text", encryptedText);
             db.insert(TABLE_NAME, null, values);
         } catch (Exception e) {
             FileLog.e(e);
@@ -127,7 +134,10 @@ public final class VeyraEditHistoryManager {
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     int date = cursor.getInt(0);
-                    String text = cursor.getString(1);
+                    String encryptedText = cursor.getString(1);
+                    // Decrypt on read
+                    String text = VeyraKeyStore.decryptString(encryptedText);
+                    if (text == null) text = encryptedText; // fallback for legacy plain rows
                     list.add(new EditEntry(dialogId, messageId, date, text));
                 }
                 cursor.close();

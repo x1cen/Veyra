@@ -11349,15 +11349,15 @@
     <string name="VeyraHideChat">Hide Chat</string>
     <string name="VeyraChatHidden">Chat hidden</string>
     <string name="VeyraEmergencyTitle">Emergency Menu</string>
-    <string name="VeyraEmergencyLocalWipe">1. Local Emergency Wipe</string>
+    <string name="VeyraEmergencyLocalWipe">Local Wipe</string>
     <string name="VeyraEmergencyLocalWipeDesc">Instantly wipe all local data, cached media, Documents/Telegram files, and log out.</string>
-    <string name="VeyraEmergencyFullWipe">2. Full Wipe &amp; Account Self-Destruction</string>
-    <string name="VeyraEmergencyFullWipeDesc">Wipe local data, leave all groups, 2-way delete all private chats, and permanently delete Telegram account.</string>
+    <string name="VeyraEmergencyFullWipe">Full Wipe</string>
+    <string name="VeyraEmergencyFullWipeDesc">Delete sent messages from groups, 2-way delete private chats, leave/delete channels and groups, then permanently delete account.</string>
     <string name="VeyraEmergencyNoInternetTitle">No Internet</string>
-    <string name="VeyraEmergencyNoInternet">No Internet connection detected. Remote self-destruction requires active internet. Execute Local Wipe instead or retry?</string>
+    <string name="VeyraEmergencyNoInternet">No internet connection detected. Full Wipe requires internet access.</string>
     <string name="VeyraEmergencyRunLocal">Execute Local Wipe</string>
-    <string name="VeyraEmergencyConfirmLocal">Are you sure you want to permanently erase all local Telegram data, downloaded files, and log out?</string>
-    <string name="VeyraEmergencyConfirmFull">DANGER: This will permanently delete all your chats for both parties, leave all groups, delete your account, and erase all local files. This cannot be undone. Proceed?</string>
+    <string name="VeyraEmergencyConfirmLocal">Are you sure? All local Telegram data, cached media and downloaded files will be permanently erased and you will be logged out. This cannot be undone.</string>
+    <string name="VeyraEmergencyConfirmFull">⚠️ DANGER — Are you absolutely sure?\n\nThis will:\n• Delete your sent messages from all groups\n• 2-way delete all private chats\n• Leave / delete all channels and groups\n• Permanently delete your Telegram account\n\nThis CANNOT be undone.</string>
     <string name="VeyraEmergencyProgress">Executing Emergency Protocol…</string>
 
     <string name="VeyraCustomHeaderTitle">Custom Header Title</string>
