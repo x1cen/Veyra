@@ -664,7 +664,12 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         linearLayout1.setOrientation(LinearLayout.VERTICAL);
 
-        actionBar.setTitle(getString(R.string.ChannelEdit));
+        boolean canEditTitle = currentUser != null || ChatObject.canChangeChatInfo(currentChat);
+        if (canEditTitle) {
+            actionBar.setTitle(getString(R.string.ChannelEdit));
+        } else {
+            actionBar.setTitle(getString("ViewDetails", R.string.ViewDetails));
+        }
 
         avatarContainer = new LinearLayout(context);
         avatarContainer.setOrientation(LinearLayout.VERTICAL);
@@ -761,8 +766,13 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         } else {
             nameTextView.setHint(getString("GroupName", R.string.GroupName));
         }
-        nameTextView.setEnabled(currentChat != null || ChatObject.canChangeChatInfo(currentChat));
-        nameTextView.setFocusable(nameTextView.isEnabled());
+        boolean canEditInfo = currentUser != null || ChatObject.canChangeChatInfo(currentChat);
+        nameTextView.setEnabled(canEditInfo);
+        nameTextView.setFocusable(canEditInfo);
+        if (!canEditInfo && nameTextView.getEditText() != null) {
+            nameTextView.getEditText().setFocusable(false);
+            nameTextView.getEditText().setCursorVisible(false);
+        }
         nameTextView.getEditText().addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -1163,7 +1173,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
 
         ActionBarMenu menu = actionBar.createMenu();
-        if (currentUser != null || ChatObject.canChangeChatInfo(currentChat) || /*signCell != null ||*/ historyCell != null) {
+        if (currentUser != null || ChatObject.canChangeChatInfo(currentChat)) {
             doneButton = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, dp(56));
             doneButton.setContentDescription(getString("Done", R.string.Done));
         }
@@ -1208,6 +1218,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             reactionsCell = new TextCell(context);
             reactionsCell.setBackground(Theme.getSelectorDrawable(false));
             reactionsCell.setOnClickListener(v -> {
+                if (!ChatObject.canChangeChatInfo(currentChat)) {
+                    return;
+                }
                 if (ChatObject.isChannelAndNotMegaGroup(currentChat)) {
                     presentFragment(new ChatCustomReactionsEditActivity(chatId, info));
                 } else {
@@ -1358,8 +1371,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
 
         if (currentChat != null) {
+            // Veyra: keep infoContainer visible for non-admin group members so they can view members, admins, permissions, reactions
+            infoContainer.setVisibility(View.VISIBLE);
             if (!ChatObject.hasAdminRights(currentChat)) {
-                infoContainer.setVisibility(View.GONE);
                 settingsTopSectionCell.setVisibility(View.GONE);
             }
 
@@ -2431,7 +2445,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 }
                 adminCell.setTextAndIcon(getString("ChannelAdministrators", R.string.ChannelAdministrators), R.drawable.msg_admins, true);
             }
-            reactionsCell.setVisibility(ChatObject.canChangeChatInfo(currentChat) ? View.VISIBLE : View.GONE);
+            reactionsCell.setVisibility(View.VISIBLE);
             updateReactionsCell(animated);
             if (info == null || !ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_INVITE) || (!isPrivate && currentChat.creator)) {
                 inviteLinksCell.setVisibility(View.GONE);

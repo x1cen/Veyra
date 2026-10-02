@@ -12333,14 +12333,30 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (topicId == 0 && (ChatObject.canChangeChatInfo(chat) || !ChatObject.isChannel(chat) || (chatInfo != null && chatInfo.can_delete_channel))) {
                 createAutoDeleteItem(context);
             }
+            boolean canEditGroup = false;
             if (ChatObject.isChannel(chat)) {
                 if (isTopic) {
                     if (ChatObject.canManageTopic(currentAccount, chat, topicId)) {
-                        editItemVisible = true;
+                        canEditGroup = true;
                     }
                 } else {
                     if (ChatObject.hasAdminRights(chat) || chat.megagroup && ChatObject.canChangeChatInfo(chat)) {
-                        editItemVisible = true;
+                        canEditGroup = true;
+                    }
+                }
+                // Veyra: always show edit/details button for group members
+                if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat) && !isTopic) {
+                    editItemVisible = true;
+                } else if (canEditGroup) {
+                    editItemVisible = true;
+                }
+                if (editItem != null) {
+                    if (canEditGroup) {
+                        editItem.setIcon(R.drawable.group_edit_profile);
+                        editItem.setContentDescription(LocaleController.getString(R.string.Edit));
+                    } else {
+                        editItem.setIcon(R.drawable.msg_info);
+                        editItem.setContentDescription(LocaleController.getString("ViewDetails", R.string.ViewDetails));
                     }
                 }
                 if (chatInfo != null) {
@@ -12432,8 +12448,20 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     callItemVisible = call != null;
                     voiceChatAction = call != null || voiceChatAction;
                 }
-                if (ChatObject.canChangeChatInfo(chat)) {
+                boolean canEditBasic = ChatObject.canChangeChatInfo(chat);
+                if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat)) {
                     editItemVisible = true;
+                } else if (canEditBasic) {
+                    editItemVisible = true;
+                }
+                if (editItem != null) {
+                    if (canEditBasic) {
+                        editItem.setIcon(R.drawable.group_edit_profile);
+                        editItem.setContentDescription(LocaleController.getString(R.string.Edit));
+                    } else {
+                        editItem.setIcon(R.drawable.msg_info);
+                        editItem.setContentDescription(LocaleController.getString("ViewDetails", R.string.ViewDetails));
+                    }
                 }
                 if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat)) {
                     if (chatInfo == null || !chatInfo.participants_hidden || ChatObject.hasAdminRights(chat)) {
@@ -12485,9 +12513,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.hideSubItem(delete_avatar);
         }
 
-        if (otherItem != null) {
-            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
-        }
+
 
         isCallAvailable = callItemVisible;
 
