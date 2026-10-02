@@ -9,7 +9,12 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.OutlineTextContainerView;
+import android.util.TypedValue;
+import android.view.Gravity;
 
 public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
 
@@ -98,17 +103,58 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
         org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
         builder.setTitle(LocaleController.getString("VeyraCustomHeaderTitle", R.string.VeyraCustomHeaderTitle));
 
-        final android.widget.EditText editText = new android.widget.EditText(getParentActivity());
+        Theme.ResourcesProvider resourcesProvider = new Theme.ResourcesProvider() {
+            @Override
+            public int getColor(int key) {
+                if (key == Theme.key_windowBackgroundWhiteInputField || key == Theme.key_windowBackgroundWhiteInputFieldActivated) {
+                    int c = Theme.getColor(Theme.key_windowBackgroundWhiteInputField);
+                    return c != 0 ? c : 0x55808080;
+                }
+                return Theme.getColor(key);
+            }
+        };
+
+        OutlineTextContainerView outlineView = new OutlineTextContainerView(getParentActivity(), resourcesProvider);
+        outlineView.setText(LocaleController.getString("VeyraCustomHeaderTitle", R.string.VeyraCustomHeaderTitle));
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
         editText.setText(VeyraConfig.customHeaderTitle);
         editText.setSelection(editText.getText().length());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setCursorSize(AndroidUtilities.dp(20));
+        editText.setCursorWidth(1.5f);
+        editText.setBackground(null);
         editText.setSingleLine(true);
-        editText.setHint(LocaleController.getString("AppName", R.string.AppName));
-        editText.setTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextBlack));
-        editText.setHintTextColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_dialogTextHint));
+        editText.setMaxLines(1);
+        editText.setLines(1);
+        editText.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+        editText.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+        outlineView.attachEditText(editText);
+        outlineView.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+        boolean hasInitialText = !android.text.TextUtils.isEmpty(VeyraConfig.customHeaderTitle);
+        outlineView.animateSelection(false, hasInitialText, false);
+
+        editText.setOnFocusChangeListener((v, hasFocus) -> {
+            outlineView.animateSelection(hasFocus, hasFocus || editText.length() > 0);
+        });
+        editText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                outlineView.animateSelection(editText.hasFocus(), editText.hasFocus() || s.length() > 0);
+            }
+        });
 
         android.widget.FrameLayout container = new android.widget.FrameLayout(getParentActivity());
-        container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
-        container.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(12));
+        container.addView(outlineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 58));
         builder.setView(container);
 
         // Save custom text
