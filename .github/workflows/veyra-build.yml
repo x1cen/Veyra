@@ -43,7 +43,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
@@ -57,7 +57,7 @@ jobs:
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
@@ -195,7 +195,7 @@ jobs:
             -   name: Process and verify generated APKs
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }}
                 run: |
                     APK_DIR="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone"
                     cd "$APK_DIR"
@@ -244,12 +244,12 @@ jobs:
                         **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
                         Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal + Dedicated per-architecture APKs (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.9 — Stable Release. Universal multi-architecture build with dedicated standalone APKs for each architecture (arm64-v8a, armeabi-v7a, x86, x86_64) alongside the universal package. Includes in-app update checker with live feedback and legacy version migration.' || 'Veyra v1.0.9 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.10 — Stable Release. Universal multi-architecture build with dedicated standalone APKs for each architecture (arm64-v8a, armeabi-v7a, x86, x86_64) alongside the universal package. Includes in-app update checker with live feedback and legacy version migration.' || 'Veyra v1.0.10 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.9' || '1.0.9-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.10' || '1.0.10-dev') }}
 
             -   name: Telegram announcement - stable release
                 if: ${{ success() && env.IS_STABLE == 'true' }}

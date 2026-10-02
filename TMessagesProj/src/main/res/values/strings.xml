@@ -11312,4 +11312,6 @@
     <string name="ArticleAIPrompt">Write a prompt...</string>
     <string name="ArticleAIGenerate">Generate</string>
     <string name="ArticleAIAddToPage">Add to Page</string>
+    <string name="HideContent">Hide Content</string>
+    <string name="HiddenMessagesRestored">Hidden messages restored</string>
 </resources>

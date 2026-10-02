@@ -13,6 +13,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -46,6 +47,7 @@ import org.telegram.ui.Components.AnimatedEmojiDrawable;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.Bulletin;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FolderDrawable;
 import org.telegram.ui.Components.HintsController;
@@ -62,6 +64,7 @@ import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.glass.GlassTabView;
 import org.telegram.ui.Stories.recorder.HintView2;
+import org.veyra.client.HiddenContentManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,6 +93,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private static final int ANIMATOR_ID_TABS_VISIBLE = 0;
     private final BoolAnimator animatorTabsVisible = new BoolAnimator(ANIMATOR_ID_TABS_VISIBLE,
         this, CubicBezierInterpolator.EASE_OUT_QUINT, 380, true);
+
+    private int chatsTabClickCount;
+    private long lastChatsTabClickTime;
 
 
     private IUpdateLayout updateLayout;
@@ -312,9 +318,30 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             final GlassTabView view = tabs[index];
 
             final int position = indexToPosition(index);
+            final int finalIndex = index;
             tabs[index].setOnClickListener(v -> {
                 if (viewPager.isManualScrolling() || viewPager.isTouch()) {
                     return;
+                }
+
+                if (finalIndex == INDEX_CHATS) {
+                    long now = SystemClock.uptimeMillis();
+                    if (now - lastChatsTabClickTime < 1500) {
+                        chatsTabClickCount++;
+                    } else {
+                        chatsTabClickCount = 1;
+                    }
+                    lastChatsTabClickTime = now;
+
+                    if (chatsTabClickCount >= 7) {
+                        chatsTabClickCount = 0;
+                        HiddenContentManager.unhideAll(currentAccount);
+                        if (getParentActivity() != null) {
+                            BulletinFactory.of(MainTabsActivity.this).createSuccessBulletin(LocaleController.getString("HiddenMessagesRestored", R.string.HiddenMessagesRestored)).show();
+                        }
+                    }
+                } else {
+                    chatsTabClickCount = 0;
                 }
 
                 if (viewPager.getCurrentPosition() == position) {
