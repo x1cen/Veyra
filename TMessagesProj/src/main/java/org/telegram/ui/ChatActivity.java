@@ -8618,10 +8618,7 @@ public class ChatActivity extends BaseFragment implements
                     finishFragment();
                 });
                 builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-                builder.setNegativeButtonText(LocaleController.getString(R.string.Cancel));
-                AlertDialog dialog = builder.create();
-                dialog.setButtonTextColor(DialogInterface.BUTTON_POSITIVE, 0xFFE53935);
-                showDialog(dialog);
+                showDialog(builder.create());
             } else if (currentUser != null && currentUser.bot && botUser != null) {
                 if (botUser.length() != 0) {
                     getMessagesController().sendBotStart(currentUser, botUser);

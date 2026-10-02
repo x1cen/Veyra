@@ -401,13 +401,8 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
-        if (org.telegram.messenger.VeyraConfig.ghostHideStories && (
-                object instanceof TLRPC.TL_stories_readStories)) {
-            if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
-            }
-            return;
-        }
+        // Story view hiding: TL_stories_readStories not available in this build — intercepted at StoriesController level instead.
+        // if (org.telegram.messenger.VeyraConfig.ghostHideStories && ...) { return; }
         if ((org.telegram.messenger.VeyraConfig.ghostHideTyping || org.telegram.messenger.VeyraConfig.hideTyping) && (
                 object instanceof TLRPC.TL_messages_setTyping ||
                 object instanceof TLRPC.TL_messages_setEncryptedTyping)) {

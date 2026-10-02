@@ -95,7 +95,7 @@ public class MessageEditHistorySheet extends BottomSheet {
         versionLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
 
         TextView dateLabel = new TextView(context);
-        dateLabel.setText(LocaleController.formatDateTime(date));
+        dateLabel.setText(LocaleController.formatDateTime(date, false));
         dateLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         dateLabel.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
         dateLabel.setGravity(Gravity.END);
