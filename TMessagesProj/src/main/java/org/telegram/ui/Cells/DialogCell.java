@@ -5122,7 +5122,21 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                             needInvalidate = true;
                         }
                     }
-                }
+                    // Veyra: mutual contact indicator — small blue dot at bottom-left of avatar
+                    if (user != null && user.mutual_contact && onlineProgress < 1.0f) {
+                        int mutLeft, mutTop2;
+                        mutTop2 = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 6 : 8));
+                        if (LocaleController.isRTL) {
+                            mutLeft = (int) (storyParams.originalAvatarRect.right - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
+                        } else {
+                            mutLeft = (int) (storyParams.originalAvatarRect.left + dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 10 : 6));
+                        }
+                        Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
+                        canvas.drawCircle(mutLeft, mutTop2, dp(7), Theme.dialogs_onlineCirclePaint);
+                        Theme.dialogs_onlineCirclePaint.setColor(0xFF2196F3); // blue
+                        canvas.drawCircle(mutLeft, mutTop2, dp(5), Theme.dialogs_onlineCirclePaint);
+                    }
+                } // end user != null
             } else if (chat != null) {
                 hasCall = chat.call_active && chat.call_not_empty;
                 if ((hasCall || chatCallProgress != 0) && rightFragmentOpenedProgress < 1f) {

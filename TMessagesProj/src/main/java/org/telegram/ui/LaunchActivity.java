@@ -7171,6 +7171,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 updateCurrentConnectionState(account);
             }
         } else if (id == NotificationCenter.mainUserInfoChanged) {
+            // Veyra: first-login heart rain for love pair
+            org.veyra.client.VeyraHeartAnimation.maybeShowFirstLoginRain(this, frameLayout, account);
 
         } else if (id == NotificationCenter.attachMenuBotsDidLoad) {
 

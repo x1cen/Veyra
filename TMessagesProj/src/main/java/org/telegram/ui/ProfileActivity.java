@@ -600,6 +600,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_upgrade_to_supergroup = 61;
     private final static int veyra_qr_code = 62;
     private final static int veyra_view_details = 63;
+    private final static int veyra_love = 64;
+
+    // Extra info rows for user profile
+    private int veyra_mutualContactRow = -1;
+    private int veyra_premiumStatusRow = -1;
 
     private Rect rect = new Rect();
 
@@ -2761,6 +2766,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     showProfileQrCode();
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
+                } else if (id == veyra_love) {
+                    // Veyra: side burst hearts from both edges
+                    android.view.ViewGroup rootView = (android.view.ViewGroup) getParentActivity().getWindow().getDecorView();
+                    org.veyra.client.VeyraHeartAnimation.showSideBurst(getParentActivity(), rootView, 4000);
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -10541,6 +10550,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         setAvatarRow = -1;
         setAvatarSectionRow = -1;
         numberSectionRow = -1;
+        veyra_mutualContactRow = -1;
+        veyra_premiumStatusRow = -1;
         numberRow = -1;
         birthdayRow = -1;
         setUsernameRow = -1;
@@ -10807,6 +10818,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (org.telegram.messenger.VeyraConfig.showProfileId) {
                     idRow = rowCount++;
+                }
+                // Veyra: mutual contact + premium status rows (private user chats only)
+                if (userId != 0 && userId != getUserConfig().getClientUserId()) {
+                    TLRPC.User profileUser = getMessagesController().getUser(userId);
+                    if (profileUser != null && profileUser.mutual_contact) {
+                        veyra_mutualContactRow = rowCount++;
+                    }
+                    if (profileUser != null) {
+                        veyra_premiumStatusRow = rowCount++;
+                    }
                 }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
@@ -12307,6 +12328,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && !TextUtils.isEmpty(UserObject.getPublicUsername(user))) {
                     otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
                 }
+                // Veyra: Love button — only visible when viewer & peer are the love pair
+                long selfId = getUserConfig().getClientUserId();
+                if (org.veyra.client.VeyraHeartAnimation.areLovePair(selfId, userId)) {
+                    otherItem.addSubItem(veyra_love, R.drawable.msg_gift_premium, "Love ❤️");
+                }
             }
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
@@ -13745,6 +13771,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         String value = dc > 0 ? label + " (DC " + dc + ")" : label;
                         boolean needDivider = myProfile ? false : (position < infoEndRow);
                         detailCell.setTextAndValue(text, value, needDivider);
+                    } else if (position == veyra_mutualContactRow) {
+                        detailCell.setTextAndValue("Mutual Contact", "Yes — they have saved your number too", position < infoEndRow);
+                    } else if (position == veyra_premiumStatusRow) {
+                        TLRPC.User profileUser = getMessagesController().getUser(userId);
+                        boolean hasPremium = profileUser != null && profileUser.premium;
+                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active ✓" : "Not active", position < infoEndRow);
                     } else if (position == locationRow) {
                         if (chatInfo != null && chatInfo.location instanceof TLRPC.TL_channelLocation) {
                             TLRPC.TL_channelLocation location = (TLRPC.TL_channelLocation) chatInfo.location;
@@ -14483,7 +14515,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (position == infoHeaderRow || position == membersHeaderRow || position == settingsSectionRow2 ||
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow) {
+            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow
+                    || position == veyra_mutualContactRow || position == veyra_premiumStatusRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;
