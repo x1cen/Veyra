@@ -110,6 +110,21 @@ public class VeyraAntiDelete {
         return new GsonBuilder().disableHtmlEscaping().create().toJson(o);
     }
 
+    /**
+     * Purge all Veyra anti-delete entries for a specific dialog from MessagesStorage.
+     * Call this when the user manually clears a "Deleted Account" chat.
+     */
+    public static void clearDialog(long dialogId) {
+        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
+            .getStorageQueue().postRunnable(() -> {
+                try {
+                    org.telegram.SQLite.SQLiteDatabase db =
+                        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
+                    db.executeFast("DELETE FROM veyra_message_deletions WHERE dialog_id = " + dialogId).stepThis().dispose();
+                } catch (Exception ignored) {}
+            });
+    }
+
     public static String toJsonNestedMaps(Map<Integer, Map<String, String>> map) {
         final Gson gson = new Gson();
         final JsonObject jsonObject = new JsonObject();

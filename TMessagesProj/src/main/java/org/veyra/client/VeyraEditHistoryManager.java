@@ -189,4 +189,14 @@ public final class VeyraEditHistoryManager {
             FileLog.e(e);
         }
     }
+
+    /** Clear all edit history entries for a single dialog (e.g. on "Deleted Chat" wipe). */
+    public static void clearDialog(long dialogId) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
 }

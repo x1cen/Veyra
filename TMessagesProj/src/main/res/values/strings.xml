@@ -11339,4 +11339,8 @@
 
     <string name="EditHistory">History</string>
     <string name="OriginalMessage">Original Message</string>
+
+    <string name="VeyraDeletedChat">Deleted Chat</string>
+    <string name="VeyraDeletedChatTitle">Remove Deleted Account Chat?</string>
+    <string name="VeyraDeletedChatConfirm">This chat belongs to a deleted account. Removing it will permanently delete all messages and Veyra cached data (anti-delete records, edit history) for this conversation. This cannot be undone.</string>
 </resources>

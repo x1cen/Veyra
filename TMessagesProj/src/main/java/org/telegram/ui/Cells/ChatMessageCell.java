@@ -21791,6 +21791,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentBackgroundDrawable.setBounds(left, top, right, bottom);
             currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
             currentBackgroundDrawable.setAlpha(255);
+            // Veyra: draw a thin red outline on the bubble for deleted messages
+            if (deleted) {
+                android.graphics.RectF bubbleRect = new android.graphics.RectF(left, top, right, bottom);
+                android.graphics.Paint deletedBorderPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                deletedBorderPaint.setStyle(android.graphics.Paint.Style.STROKE);
+                deletedBorderPaint.setColor(0x99E53935);
+                deletedBorderPaint.setStrokeWidth(dp(1.5f));
+                canvas.drawRoundRect(bubbleRect, dp(14), dp(14), deletedBorderPaint);
+            }
         }
 
         animateCheckboxTranslation();
@@ -23771,7 +23780,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     Theme.chat_timePaint.setColor(getThemedColor(Theme.key_chat_mediaTimeText));
                 }
             } else {
-                if (currentMessageObject.isOutOwner()) {
+                if (deleted) {
+                    // Veyra: tint the timestamp in a subtle red-ish tone for deleted messages
+                    Theme.chat_timePaint.setColor(0xFFE53935);
+                } else if (currentMessageObject.isOutOwner()) {
                     Theme.chat_timePaint.setColor(getThemedColor(drawSelectionBackground ? Theme.key_chat_outTimeSelectedText : Theme.key_chat_outTimeText));
                 } else {
                     Theme.chat_timePaint.setColor(getThemedColor(drawSelectionBackground ? Theme.key_chat_inTimeSelectedText : Theme.key_chat_inTimeText));

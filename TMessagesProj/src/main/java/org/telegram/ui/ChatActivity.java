@@ -8600,6 +8600,28 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else if (UserObject.isReplyUser(currentUser)) {
                 toggleMute(true);
+            } else if (currentUser != null && org.telegram.messenger.UserObject.isDeleted(currentUser)) {
+                // Veyra: "Deleted Chat" confirm → wipe Telegram cache + Veyra cache
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
+                builder.setTitle(LocaleController.getString("VeyraDeletedChatTitle", R.string.VeyraDeletedChatTitle));
+                builder.setMessage(LocaleController.getString("VeyraDeletedChatConfirm", R.string.VeyraDeletedChatConfirm));
+                builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialogInterface, i) -> {
+                    // 1. Remove from dialog list & clear Telegram local data
+                    getMessagesController().deleteDialog(dialog_id, 0, false);
+                    // 2. Purge Veyra anti-delete cache for this dialog
+                    org.veyra.client.VeyraAntiDelete.clearDialog(dialog_id);
+                    // 3. Purge Veyra edit-history cache for this dialog
+                    org.veyra.client.VeyraEditHistoryManager.clearDialog(dialog_id);
+                    // 4. Navigate back
+                    getNotificationCenter().removeObserver(ChatActivity.this, NotificationCenter.closeChats);
+                    getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
+                    finishFragment();
+                });
+                builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                builder.setNegativeButtonText(LocaleController.getString(R.string.Cancel));
+                AlertDialog dialog = builder.create();
+                dialog.setButtonTextColor(DialogInterface.BUTTON_POSITIVE, 0xFFE53935);
+                showDialog(dialog);
             } else if (currentUser != null && currentUser.bot && botUser != null) {
                 if (botUser.length() != 0) {
                     getMessagesController().sendBotStart(currentUser, botUser);
@@ -27904,7 +27926,14 @@ public class ChatActivity extends BaseFragment implements
                     sentBotStart = true;
                 }
             } else {
-                bottomOverlayChatText.setText(LocaleController.getString(R.string.DeleteThisChat));
+                // Veyra: show "Deleted Chat" for deleted accounts instead of the normal delete button
+                if (currentUser != null && org.telegram.messenger.UserObject.isDeleted(currentUser)) {
+                    bottomOverlayChatText.setTag("veyra_deleted_chat");
+                    bottomOverlayChatText.setText(LocaleController.getString("VeyraDeletedChat", R.string.VeyraDeletedChat));
+                } else {
+                    bottomOverlayChatText.setTag(null);
+                    bottomOverlayChatText.setText(LocaleController.getString(R.string.DeleteThisChat));
+                }
             }
         }
 
