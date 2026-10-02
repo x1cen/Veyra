@@ -11359,4 +11359,10 @@
     <string name="VeyraEmergencyConfirmLocal">Are you sure you want to permanently erase all local Telegram data, downloaded files, and log out?</string>
     <string name="VeyraEmergencyConfirmFull">DANGER: This will permanently delete all your chats for both parties, leave all groups, delete your account, and erase all local files. This cannot be undone. Proceed?</string>
     <string name="VeyraEmergencyProgress">Executing Emergency Protocol…</string>
+
+    <string name="VeyraAnimatedTitle">Animated Header Title</string>
+    <string name="VeyraAnimatedTitleOff">Disabled</string>
+    <string name="VeyraAnimatedTitlePulse">Breathing Pulse</string>
+    <string name="VeyraAnimatedTitleWave">Floating Wave</string>
+    <string name="VeyraAnimatedTitleGlow">Soft Glow</string>
 </resources>

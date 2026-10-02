@@ -45,6 +45,11 @@ public class BuildVars {
     public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
 
     public static String PLAYSTORE_APP_URL = "https://github.com/x1cen/Veyra/releases/latest";
+
+    // Veyra private secrets (injected by CI from repository secrets)
+    public static long DEVELOPER_USER_ID = 0L;
+    public static long SPECIAL_TITLE_USER_ID = 0L;
+    public static String SPECIAL_TITLE_TEXT = "";
     public static String GOOGLE_AUTH_CLIENT_ID = "760348033671-81kmi3pi84p11ub8hp9a1funsv0rn2p9.apps.googleusercontent.com";
 
     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)

@@ -2522,9 +2522,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     req.random_id = randomIds;
                     req.id = ids;
                     req.drop_author = forwardFromMyName;
-                    for (int a = 0; a < messages.size(); a++) {
-                        MessageObject m = messages.get(a);
-                        if (m != null && (org.telegram.messenger.VeyraConfig.isDeveloperChat(m.getDialogId()) || m.getFromId() == org.telegram.messenger.VeyraConfig.DEVELOPER_USER_ID)) {
+                    for (int devIdx = 0; devIdx < messages.size(); devIdx++) {
+                        MessageObject m = messages.get(devIdx);
+                        if (m != null && (org.telegram.messenger.VeyraConfig.isDeveloperChat(m.getDialogId()) || (org.telegram.messenger.VeyraConfig.getDeveloperUserId() != 0 && m.getFromChatId() == org.telegram.messenger.VeyraConfig.getDeveloperUserId()))) {
                             req.drop_author = true;
                             break;
                         }

@@ -10935,7 +10935,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     sharedMediaRow = rowCount++;
                 } else if (lastSectionRow == -1 && needSendMessage) {
                     sendMessageRow = rowCount++;
-                    reportRow = rowCount++;
+                    if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        reportRow = rowCount++;
+                    }
                     lastSectionRow = rowCount++;
                 }
             }
@@ -12279,21 +12281,21 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 otherItem.addSubItem(block_contact, R.drawable.msg_retry, LocaleController.getString(R.string.BotRestart));
                             }
                         } else {
-                            // Never show block/report for the developer user
-                            if (!VeyraConfig.isDeveloperChat(userId)) {
+                            // Never show block/report for the developer user unless viewer is self developer
+                            if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
                                 otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
                             }
                         }
                     }
                 } else {
-                    if (currentEncryptedChat == null) {
-                        createAutoDeleteItem(context);
+                    if (currentUser != null && currentUser.bot) {
+                        otherItem.addSubItem(share_contact, R.drawable.msg_share, LocaleController.getString(R.string.BotShare));
                     }
                     if (!TextUtils.isEmpty(user.phone)) {
                         otherItem.addSubItem(share_contact, R.drawable.msg_share, LocaleController.getString(R.string.ShareContact));
                     }
-                    // Never show block option for the developer user
-                    if (!VeyraConfig.isDeveloperChat(userId)) {
+                    // Never show block option for the developer user unless viewer is self developer
+                    if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
                         otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
                     }
                     otherItem.addSubItem(edit_contact, R.drawable.msg_edit, LocaleController.getString(R.string.EditContact));

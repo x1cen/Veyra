@@ -43,7 +43,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
@@ -57,7 +57,7 @@ jobs:
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }}
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
@@ -139,12 +139,27 @@ jobs:
                     APP_ID: ${{secrets.APP_ID || secrets.API_ID}}
                     APP_HASH: ${{secrets.APP_HASH || secrets.API_HASH}}
                     GOOGLE_API_KEY: ${{secrets.GOOGLE_API_KEY}}
+                    DEVELOPER_USER_ID: ${{secrets.DEVELOPER_USER_ID}}
+                    SPECIAL_TITLE_USER_ID: ${{secrets.SPECIAL_TITLE_USER_ID}}
+                    SPECIAL_TITLE_TEXT: ${{secrets.SPECIAL_TITLE_TEXT}}
                 run: |
                     set +x
                     if [ -n "$APP_ID" ] && [ -n "$APP_HASH" ]; then
                         echo "Configuring APP_ID and APP_HASH from repository secrets..."
                         sed -i "s/public static int APP_ID = .*/public static int APP_ID = $APP_ID;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
                         sed -i "s/public static String APP_HASH = .*/public static String APP_HASH = \"$APP_HASH\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$DEVELOPER_USER_ID" ]; then
+                        echo "Configuring DEVELOPER_USER_ID from repository secrets..."
+                        sed -i "s/public static long DEVELOPER_USER_ID = .*/public static long DEVELOPER_USER_ID = ${DEVELOPER_USER_ID}L;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$SPECIAL_TITLE_USER_ID" ]; then
+                        echo "Configuring SPECIAL_TITLE_USER_ID from repository secrets..."
+                        sed -i "s/public static long SPECIAL_TITLE_USER_ID = .*/public static long SPECIAL_TITLE_USER_ID = ${SPECIAL_TITLE_USER_ID}L;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$SPECIAL_TITLE_TEXT" ]; then
+                        echo "Configuring SPECIAL_TITLE_TEXT from repository secrets..."
+                        sed -i "s/public static String SPECIAL_TITLE_TEXT = .*/public static String SPECIAL_TITLE_TEXT = \"$SPECIAL_TITLE_TEXT\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
                     fi
                     if [ -n "$GOOGLE_API_KEY" ]; then
                         echo "Injecting Google API Key from secrets..."
@@ -195,7 +210,7 @@ jobs:
             -   name: Process and verify generated APKs
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }}
                 run: |
                     APK_DIR="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone"
                     cd "$APK_DIR"
@@ -247,9 +262,9 @@ jobs:
                         ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.0.12 — Stable Release. Universal multi-architecture build with dedicated standalone APKs for each architecture (arm64-v8a, armeabi-v7a, x86, x86_64) alongside the universal package. Includes in-app update checker with live feedback and legacy version migration.' || 'Veyra v1.0.12 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.16' || '1.0.16-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.0.17' || '1.0.17-dev') }}
 
             -   name: Telegram announcement - stable release
                 if: ${{ success() && env.IS_STABLE == 'true' }}

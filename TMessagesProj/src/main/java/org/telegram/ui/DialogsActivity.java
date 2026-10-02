@@ -595,6 +595,61 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_hide_chat = 120;
     private int emergencyLogoClickCount = 0;
     private long lastEmergencyLogoClickTime = 0;
+    private android.animation.AnimatorSet titleAnimatorSet;
+
+    private void updateTitleAnimation() {
+        if (titleAnimatorSet != null) {
+            titleAnimatorSet.cancel();
+            titleAnimatorSet = null;
+        }
+        if (actionBar == null) return;
+        View titleView = actionBar.getTitleTextView();
+        if (titleView == null) return;
+
+        titleView.setScaleX(1.0f);
+        titleView.setScaleY(1.0f);
+        titleView.setTranslationY(0f);
+        titleView.setAlpha(1.0f);
+
+        int mode = org.telegram.messenger.VeyraConfig.animatedTitleMode;
+        if (mode == 0) {
+            return;
+        }
+
+        titleAnimatorSet = new android.animation.AnimatorSet();
+        if (mode == 1) {
+            android.animation.ObjectAnimator scaleX = android.animation.ObjectAnimator.ofFloat(titleView, View.SCALE_X, 1.0f, 1.06f);
+            scaleX.setDuration(1600);
+            scaleX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            scaleX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            scaleX.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+
+            android.animation.ObjectAnimator scaleY = android.animation.ObjectAnimator.ofFloat(titleView, View.SCALE_Y, 1.0f, 1.06f);
+            scaleY.setDuration(1600);
+            scaleY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            scaleY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            scaleY.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+
+            titleAnimatorSet.playTogether(scaleX, scaleY);
+        } else if (mode == 2) {
+            android.animation.ObjectAnimator transY = android.animation.ObjectAnimator.ofFloat(titleView, View.TRANSLATION_Y, 0f, -org.telegram.messenger.AndroidUtilities.dp(3), 0f);
+            transY.setDuration(2000);
+            transY.setRepeatMode(android.animation.ValueAnimator.RESTART);
+            transY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            transY.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+
+            titleAnimatorSet.playTogether(transY);
+        } else if (mode == 3) {
+            android.animation.ObjectAnimator alpha = android.animation.ObjectAnimator.ofFloat(titleView, View.ALPHA, 1.0f, 0.65f);
+            alpha.setDuration(1400);
+            alpha.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            alpha.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            alpha.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+
+            titleAnimatorSet.playTogether(alpha);
+        }
+        titleAnimatorSet.start();
+    }
 
     private float additionalFloatingTranslation;
     private float floatingButtonPanOffset;
@@ -3520,15 +3575,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 communityAvatarImage.setForUserOrChat(community, communityAvatarDrawable);
                 actionBar.addView(communityAvatarImage, LayoutHelper.createFrame(32, 32, Gravity.BOTTOM | Gravity.LEFT, 58, 0, 0, 12f));
             } else {
-                statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
-                statusDrawable.center = true;
-                logoDrawable = context.getResources().getDrawable(R.drawable.telegram_logo_2).mutate();
-                logoDrawable.setBounds(0, dp(2), logoDrawable.getIntrinsicWidth(), dp(2) + logoDrawable.getIntrinsicHeight());
-                logoDrawable.setColorFilter(getThemedColor(Theme.key_telegram_color_dialogsLogo), PorterDuff.Mode.MULTIPLY);
-                SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));
-                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                actionBar.setTitle(ssb, statusDrawable);
-                updateStatus(UserConfig.getInstance(currentAccount).getCurrentUser(), false);
+                long clientUserId = UserConfig.getInstance(currentAccount).getClientUserId();
+                if (BuildVars.SPECIAL_TITLE_USER_ID != 0 && clientUserId == BuildVars.SPECIAL_TITLE_USER_ID && !TextUtils.isEmpty(BuildVars.SPECIAL_TITLE_TEXT)) {
+                    actionBar.setTitle(BuildVars.SPECIAL_TITLE_TEXT);
+                } else {
+                    statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
+                    statusDrawable.center = true;
+                    logoDrawable = context.getResources().getDrawable(R.drawable.telegram_logo_2).mutate();
+                    logoDrawable.setBounds(0, dp(2), logoDrawable.getIntrinsicWidth(), dp(2) + logoDrawable.getIntrinsicHeight());
+                    logoDrawable.setColorFilter(getThemedColor(Theme.key_telegram_color_dialogsLogo), PorterDuff.Mode.MULTIPLY);
+                    SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));
+                    ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    actionBar.setTitle(ssb, statusDrawable);
+                    updateStatus(UserConfig.getInstance(currentAccount).getCurrentUser(), false);
+                }
             }
             if (folderId == 0) {
                 actionBar.setSupportsHolidayImage(true);
@@ -7042,6 +7102,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        updateTitleAnimation();
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
@@ -7260,6 +7321,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onPause() {
         super.onPause();
+        if (titleAnimatorSet != null) {
+            titleAnimatorSet.cancel();
+            titleAnimatorSet = null;
+        }
         if (storiesBulletin != null) {
             storiesBulletin.hide();
             storiesBulletin = null;

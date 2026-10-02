@@ -77,7 +77,41 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
 
+        r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraAnimatedTitle", R.string.VeyraAnimatedTitle),
+                () -> animatedTitleLabel(VeyraConfig.animatedTitleMode),
+                false,
+                this::showAnimatedTitleDialog
+        ));
+
         r.add(VeyraSettingsRow.shadow());
         return r;
+    }
+
+    private String animatedTitleLabel(int mode) {
+        switch (mode) {
+            case 1:
+                return LocaleController.getString("VeyraAnimatedTitlePulse", R.string.VeyraAnimatedTitlePulse);
+            case 2:
+                return LocaleController.getString("VeyraAnimatedTitleWave", R.string.VeyraAnimatedTitleWave);
+            case 3:
+                return LocaleController.getString("VeyraAnimatedTitleGlow", R.string.VeyraAnimatedTitleGlow);
+            default:
+                return LocaleController.getString("VeyraAnimatedTitleOff", R.string.VeyraAnimatedTitleOff);
+        }
+    }
+
+    private void showAnimatedTitleDialog() {
+        if (getParentActivity() == null) return;
+        CharSequence[] options = new CharSequence[]{
+                animatedTitleLabel(0), animatedTitleLabel(1), animatedTitleLabel(2), animatedTitleLabel(3)
+        };
+        org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString("VeyraAnimatedTitle", R.string.VeyraAnimatedTitle));
+        builder.setItems(options, (dialog, which) -> {
+            VeyraConfig.setAnimatedTitleMode(which);
+            reloadRows();
+        });
+        builder.show();
     }
 }

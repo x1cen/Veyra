@@ -14672,6 +14672,9 @@ public class MessagesStorage extends BaseController {
             while (cursor.next()) {
                 try {
                     long did = cursor.longValue(0);
+                    if (VeyraConfig.isDeveloperChat(did) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        continue;
+                    }
                     int mid = cursor.intValue(1);
                     database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
                 } catch (Exception e) {

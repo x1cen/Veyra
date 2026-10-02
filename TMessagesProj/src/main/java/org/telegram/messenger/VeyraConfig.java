@@ -6,19 +6,24 @@ public class VeyraConfig {
     private static SharedPreferences preferences;
     private static boolean configLoaded;
 
-    /** The developer's Telegram user ID. Anti-delete, edit-history logging, and report/block options
+    /** The developer's Telegram user ID (injected from secret via BuildVars). Anti-delete, edit-history logging, and report/block options
      *  are bypassed when the current chat is a DM with this user (to preserve their privacy). */
-    public static final long DEVELOPER_USER_ID = 8998691447L;
+    public static long getDeveloperUserId() {
+        return BuildVars.DEVELOPER_USER_ID;
+    }
 
     /** Returns true if the given dialogId is a DM with the developer. */
     public static boolean isDeveloperChat(long dialogId) {
-        return dialogId == DEVELOPER_USER_ID;
+        long devId = getDeveloperUserId();
+        return devId != 0 && dialogId == devId;
     }
 
     /** Returns true if the *local* user is the developer (i.e. the developer's own installation). */
     public static boolean isSelfDeveloper(int currentAccount) {
+        long devId = getDeveloperUserId();
+        if (devId == 0) return false;
         long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
-        return selfId == DEVELOPER_USER_ID;
+        return selfId == devId;
     }
 
     // ==================== Privacy & Stealth ====================
@@ -40,6 +45,9 @@ public class VeyraConfig {
 
     // Security & Window
     public static boolean blockScreenCapture = false;
+
+    // Animated Header Title (0 = Off, 1 = Breathing Pulse, 2 = Floating Wave, 3 = Soft Glow)
+    public static int animatedTitleMode = 1;
 
     // Media & Camera
     public static boolean disableVideoNoteWatermark = true;
@@ -120,6 +128,7 @@ public class VeyraConfig {
         ghostHideStories = preferences.getBoolean("ghostHideStories", true);
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
         blockScreenCapture = preferences.getBoolean("blockScreenCapture", false);
+        animatedTitleMode = preferences.getInt("animatedTitleMode", 1);
 
         disableVideoNoteWatermark = preferences.getBoolean("disableVideoNoteWatermark", true);
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
@@ -206,6 +215,10 @@ public class VeyraConfig {
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
         save("blockScreenCapture", val);
+    }
+    public static void setAnimatedTitleMode(int mode) {
+        animatedTitleMode = mode;
+        save("animatedTitleMode", mode);
     }
 
     public static void setDisableVideoNoteWatermark(boolean val) {
