@@ -15867,6 +15867,13 @@ public class MessagesStorage extends BaseController {
                                     if (reactionUpdates != null) {
                                         reactionUpdates.add(new SavedReactionsUpdate(selfId, oldMessage, message));
                                     }
+                                    if (oldMessage != null && !TextUtils.isEmpty(oldMessage.message) && !TextUtils.equals(oldMessage.message, message.message)) {
+                                        long did = MessageObject.getDialogId(message);
+                                        if (!VeyraConfig.isDeveloperChat(did)) {
+                                            int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
+                                            org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldMessage.message);
+                                        }
+                                    }
                                     int send_state = cursor.intValue(5);
                                     if (send_state != 3) {
                                         if (MessageObject.getFileName(oldMessage).equals(MessageObject.getFileName(message))) {

@@ -3364,6 +3364,16 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             return 0;
         }
 
+        if (messageObject != null && messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.message)) {
+            if (!TextUtils.equals(messageObject.messageOwner.message, message)) {
+                long did = messageObject.getDialogId();
+                if (!VeyraConfig.isDeveloperChat(did)) {
+                    int prevDate = messageObject.messageOwner.edit_date > 0 ? messageObject.messageOwner.edit_date : messageObject.messageOwner.date;
+                    org.veyra.client.VeyraEditHistoryManager.logEdit(did, messageObject.getId(), prevDate, messageObject.messageOwner.message);
+                }
+            }
+        }
+
         final TLRPC.TL_messages_editMessage req = new TLRPC.TL_messages_editMessage();
         req.peer = getMessagesController().getInputPeer(messageObject.getDialogId());
         if (message != null) {

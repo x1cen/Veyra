@@ -54,17 +54,28 @@ public class MessageEditHistorySheet extends BottomSheet {
         LinearLayout itemsContainer = new LinearLayout(context);
         itemsContainer.setOrientation(LinearLayout.VERTICAL);
 
-        if (history.isEmpty() && (messageObject.messageOwner != null && messageObject.messageOwner.message != null)) {
-            itemsContainer.addView(createEntryView(context, fragment, 1, messageObject.messageOwner.date, messageObject.messageOwner.message, true));
+        String currentMsgText = "";
+        if (messageObject.messageOwner != null && !android.text.TextUtils.isEmpty(messageObject.messageOwner.message)) {
+            currentMsgText = messageObject.messageOwner.message;
+        } else if (messageObject.caption != null && !android.text.TextUtils.isEmpty(messageObject.caption.toString())) {
+            currentMsgText = messageObject.caption.toString();
+        } else if (messageObject.messageText != null && !android.text.TextUtils.isEmpty(messageObject.messageText.toString())) {
+            currentMsgText = messageObject.messageText.toString();
+        }
+
+        if (history.isEmpty()) {
+            if (!android.text.TextUtils.isEmpty(currentMsgText)) {
+                itemsContainer.addView(createEntryView(context, fragment, 1, messageObject.messageOwner != null ? messageObject.messageOwner.date : 0, currentMsgText, true));
+            }
         } else {
             for (int i = 0; i < history.size(); i++) {
                 VeyraEditHistoryManager.EditEntry entry = history.get(i);
                 boolean isFirst = (i == 0);
                 itemsContainer.addView(createEntryView(context, fragment, i + 1, entry.date, entry.text, isFirst));
             }
-            if (messageObject.messageOwner != null && messageObject.messageOwner.message != null) {
-                int curDate = messageObject.messageOwner.edit_date > 0 ? messageObject.messageOwner.edit_date : messageObject.messageOwner.date;
-                itemsContainer.addView(createEntryView(context, fragment, history.size() + 1, curDate, messageObject.messageOwner.message, false));
+            if (!android.text.TextUtils.isEmpty(currentMsgText)) {
+                int curDate = (messageObject.messageOwner != null && messageObject.messageOwner.edit_date > 0) ? messageObject.messageOwner.edit_date : (messageObject.messageOwner != null ? messageObject.messageOwner.date : 0);
+                itemsContainer.addView(createEntryView(context, fragment, history.size() + 1, curDate, currentMsgText, false));
             }
         }
 

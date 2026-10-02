@@ -26723,6 +26723,11 @@ public class ChatActivity extends BaseFragment implements
                 if (!old.isEdited() && TextUtils.equals(old.messageOwner.message, messageObject.messageOwner.message)) {
                     messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                     messageObject.messageOwner.edit_date = 0;
+                } else if (!TextUtils.isEmpty(old.messageOwner.message) && !TextUtils.equals(old.messageOwner.message, messageObject.messageOwner.message)) {
+                    if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
+                        int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, old.messageOwner.message);
+                    }
                 }
             }
             if (old.richCheckboxEcho && messageObject.type == MessageObject.TYPE_ARTICLE && old.richLayout != null && messageObject.messageOwner != null) {
