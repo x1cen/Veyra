@@ -18485,16 +18485,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else {
             currentTimeString = timeString;
         }
-        // Veyra: prepend a proper "DELETED" badge drawable for deleted incoming messages
-        if (deleted && !currentMessageObject.isOutOwner()) {
-            org.veyra.client.VeyraDeletedBadgeDrawable badge = new org.veyra.client.VeyraDeletedBadgeDrawable(9);
-            badge.setColor(getThemedColor(Theme.key_chat_inTimeText));
-            badge.setBounds(0, 0, badge.getIntrinsicWidth(), badge.getIntrinsicHeight());
-            android.text.SpannableString ss = new android.text.SpannableString("D " + currentTimeString);
-            ss.setSpan(new android.text.style.ImageSpan(badge, android.text.style.ImageSpan.ALIGN_BASELINE),
-                    0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            currentTimeString = ss;
-        }
+
         if (currentMessageObject.isStakedDice()) {
             currentTimeString = TextUtils.concat("💎", StarsIntroActivity.formatTON(currentMessageObject.getStakedDiceAmount()), "  ", currentTimeString);
             currentTimeString = StarsIntroActivity.replaceDiamond(currentTimeString, 0.55f, null, 0, dp(-.33f), 1.05f);
