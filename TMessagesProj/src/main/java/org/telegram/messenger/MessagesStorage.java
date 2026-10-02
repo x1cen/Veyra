@@ -395,6 +395,7 @@ public class MessagesStorage extends BaseController {
         loadUnreadMessages();
         loadPendingTasks();
         try {
+            org.veyra.client.VeyraAntiDelete.initFromDb(database);
             openSync.countDown();
         } catch (Throwable ignore) {
 
@@ -14677,6 +14678,7 @@ public class MessagesStorage extends BaseController {
                     }
                     int mid = cursor.intValue(1);
                     database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
+                    org.veyra.client.VeyraAntiDelete.markChatDeleted(did);
                 } catch (Exception e) {
                     //we don't care, made to ignore unique key errors
                 }

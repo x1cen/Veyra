@@ -110,7 +110,41 @@ public class VeyraAntiDelete {
         return new GsonBuilder().disableHtmlEscaping().create().toJson(o);
     }
 
+    private static final java.util.Set<Long> peerDeletedChats = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    public static void markChatDeleted(long dialogId) {
+        if (dialogId > 0) {
+            peerDeletedChats.add(dialogId);
+        }
+    }
+
+    public static void removeChatDeleted(long dialogId) {
+        peerDeletedChats.remove(dialogId);
+    }
+
+    public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {
+        if (db == null) return;
+        try {
+            org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT DISTINCT uid FROM veyra_message_deletions WHERE uid > 0");
+            while (cursor.next()) {
+                peerDeletedChats.add(cursor.longValue(0));
+            }
+            cursor.dispose();
+        } catch (Throwable ignored) {}
+    }
+
+    public static boolean isChatDeleted(long dialogId, TLRPC.User user) {
+        if (user != null && (user.deleted || UserObject.isDeleted(user))) {
+            return true;
+        }
+        if (dialogId > 0) {
+            return peerDeletedChats.contains(dialogId);
+        }
+        return false;
+    }
+
     public static void clearAll() {
+        peerDeletedChats.clear();
         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
             .getStorageQueue().postRunnable(() -> {
                 try {
@@ -126,12 +160,13 @@ public class VeyraAntiDelete {
      * Call this when the user manually clears a "Deleted Account" chat.
      */
     public static void clearDialog(long dialogId) {
+        removeChatDeleted(dialogId);
         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
             .getStorageQueue().postRunnable(() -> {
                 try {
                     org.telegram.SQLite.SQLiteDatabase db =
                         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
-                    db.executeFast("DELETE FROM veyra_message_deletions WHERE dialog_id = " + dialogId).stepThis().dispose();
+                    db.executeFast("DELETE FROM veyra_message_deletions WHERE uid = " + dialogId).stepThis().dispose();
                 } catch (Exception ignored) {}
             });
     }

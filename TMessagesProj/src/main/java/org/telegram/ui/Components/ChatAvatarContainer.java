@@ -234,6 +234,18 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                 } else {
                     super.onDraw(canvas);
                 }
+                if (parentFragment != null && org.veyra.client.VeyraAntiDelete.isChatDeleted(parentFragment.getDialogId(), parentFragment.getCurrentUser())) {
+                    int deadX = getMeasuredWidth() - dp(7);
+                    int deadY = getMeasuredHeight() - dp(7);
+                    Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_actionBarDefault, resourcesProvider));
+                    canvas.drawCircle(deadX, deadY, dp(8.5f), Theme.dialogs_onlineCirclePaint);
+                    Theme.dialogs_onlineCirclePaint.setColor(0xFF37474F);
+                    canvas.drawCircle(deadX, deadY, dp(7), Theme.dialogs_onlineCirclePaint);
+                    android.text.TextPaint skullPaint = new android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                    skullPaint.setTextSize(dp(8.5f));
+                    skullPaint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                    canvas.drawText("\uD83D\uDC80", deadX, deadY + dp(3.2f), skullPaint);
+                }
             }
 
             @Override

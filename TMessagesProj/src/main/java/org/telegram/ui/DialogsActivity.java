@@ -595,60 +595,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_hide_chat = 120;
     private int emergencyLogoClickCount = 0;
     private long lastEmergencyLogoClickTime = 0;
-    private android.animation.AnimatorSet titleAnimatorSet;
+    // Veyra: header animation view (replaces old ObjectAnimator approach)
+    private org.veyra.client.VeyraHeaderAnimationView veyraHeaderAnimView;
 
     private void updateTitleAnimation() {
-        if (titleAnimatorSet != null) {
-            titleAnimatorSet.cancel();
-            titleAnimatorSet = null;
-        }
-        if (actionBar == null) return;
-        View titleView = actionBar.getTitleTextView();
-        if (titleView == null) return;
-
-        titleView.setScaleX(1.0f);
-        titleView.setScaleY(1.0f);
-        titleView.setTranslationY(0f);
-        titleView.setAlpha(1.0f);
-
         int mode = org.telegram.messenger.VeyraConfig.animatedTitleMode;
-        if (mode == 0) {
-            return;
+        if (veyraHeaderAnimView != null) {
+            veyraHeaderAnimView.setMode(mode);
+            if (mode == org.veyra.client.VeyraHeaderAnimationView.MODE_OFF) {
+                veyraHeaderAnimView.pause();
+            } else {
+                veyraHeaderAnimView.resume();
+            }
         }
-
-        titleAnimatorSet = new android.animation.AnimatorSet();
-        if (mode == 1) {
-            android.animation.ObjectAnimator scaleX = android.animation.ObjectAnimator.ofFloat(titleView, View.SCALE_X, 1.0f, 1.06f);
-            scaleX.setDuration(1600);
-            scaleX.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-            scaleX.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-            scaleX.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
-
-            android.animation.ObjectAnimator scaleY = android.animation.ObjectAnimator.ofFloat(titleView, View.SCALE_Y, 1.0f, 1.06f);
-            scaleY.setDuration(1600);
-            scaleY.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-            scaleY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-            scaleY.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
-
-            titleAnimatorSet.playTogether(scaleX, scaleY);
-        } else if (mode == 2) {
-            android.animation.ObjectAnimator transY = android.animation.ObjectAnimator.ofFloat(titleView, View.TRANSLATION_Y, 0f, -org.telegram.messenger.AndroidUtilities.dp(3), 0f);
-            transY.setDuration(2000);
-            transY.setRepeatMode(android.animation.ValueAnimator.RESTART);
-            transY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-            transY.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
-
-            titleAnimatorSet.playTogether(transY);
-        } else if (mode == 3) {
-            android.animation.ObjectAnimator alpha = android.animation.ObjectAnimator.ofFloat(titleView, View.ALPHA, 1.0f, 0.65f);
-            alpha.setDuration(1400);
-            alpha.setRepeatMode(android.animation.ValueAnimator.REVERSE);
-            alpha.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-            alpha.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
-
-            titleAnimatorSet.playTogether(alpha);
-        }
-        titleAnimatorSet.start();
     }
 
     private float additionalFloatingTranslation;
@@ -3578,6 +3537,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 long clientUserId = UserConfig.getInstance(currentAccount).getClientUserId();
                 if (BuildVars.SPECIAL_TITLE_USER_ID != 0 && clientUserId == BuildVars.SPECIAL_TITLE_USER_ID && !TextUtils.isEmpty(BuildVars.SPECIAL_TITLE_TEXT)) {
                     actionBar.setTitle(BuildVars.SPECIAL_TITLE_TEXT);
+                } else if (!TextUtils.isEmpty(org.telegram.messenger.VeyraConfig.customHeaderTitle)) {
+                    // Veyra: user-defined custom header title
+                    actionBar.setTitle(org.telegram.messenger.VeyraConfig.customHeaderTitle);
                 } else {
                     statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
                     statusDrawable.center = true;
@@ -5722,6 +5684,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         checkUi_searchFieldStyle();
 
         ViewCompat.setOnApplyWindowInsetsListener(fragmentView, this::onApplyWindowInsets);
+
+        // Veyra: add particle animation overlay above action bar
+        veyraHeaderAnimView = new org.veyra.client.VeyraHeaderAnimationView(context);
+        veyraHeaderAnimView.setMode(org.telegram.messenger.VeyraConfig.animatedTitleMode);
+        int abHeight = AndroidUtilities.dp(56);
+        ((android.view.ViewGroup) fragmentView).addView(veyraHeaderAnimView,
+                LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.TOP | Gravity.LEFT, 0, 0, 0, 0));
+        veyraHeaderAnimView.setClickable(false);
+        veyraHeaderAnimView.bringToFront();
+
         return fragmentView;
     }
 
@@ -7324,6 +7296,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (titleAnimatorSet != null) {
             titleAnimatorSet.cancel();
             titleAnimatorSet = null;
+        }
+        if (veyraHeaderAnimView != null) {
+            veyraHeaderAnimView.pause();
         }
         if (storiesBulletin != null) {
             storiesBulletin.hide();

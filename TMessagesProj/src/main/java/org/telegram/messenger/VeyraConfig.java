@@ -46,7 +46,10 @@ public class VeyraConfig {
     // Security & Window
     public static boolean blockScreenCapture = false;
 
-    // Animated Header Title (0 = Off, 1 = Breathing Pulse, 2 = Floating Wave, 3 = Soft Glow)
+    // Custom Header Title (overrides "Telegram" in DialogsActivity)
+    public static String customHeaderTitle = "";
+
+    // Animated Header Title (0 = Off, 1 = Lightning, 2 = Rain, 3 = Fireworks, 4 = Meteors, 5 = Matrix, 6 = Glitch, 7 = Snow, 8 = Fire, 9 = Aurora)
     public static int animatedTitleMode = 1;
 
     // Media & Camera
@@ -128,6 +131,7 @@ public class VeyraConfig {
         ghostHideStories = preferences.getBoolean("ghostHideStories", true);
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
         blockScreenCapture = preferences.getBoolean("blockScreenCapture", false);
+        customHeaderTitle = preferences.getString("customHeaderTitle", "");
         animatedTitleMode = preferences.getInt("animatedTitleMode", 1);
 
         disableVideoNoteWatermark = preferences.getBoolean("disableVideoNoteWatermark", true);
@@ -215,6 +219,10 @@ public class VeyraConfig {
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
         save("blockScreenCapture", val);
+    }
+    public static void setCustomHeaderTitle(String title) {
+        customHeaderTitle = title != null ? title.trim() : "";
+        save("customHeaderTitle", customHeaderTitle);
     }
     public static void setAnimatedTitleMode(int mode) {
         animatedTitleMode = mode;

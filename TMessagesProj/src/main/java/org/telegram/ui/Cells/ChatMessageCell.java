@@ -18458,6 +18458,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
         } else if (deleted || edited) {
+            // Veyra: deleted label — plain text, colour matches theme (no red, no raw emoji)
             timeString = (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) ?
                 LocaleController.formatPmEditedDate(currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date) :
                     ((deleted ? LocaleController.getString("DeletedMessage", R.string.DeletedMessage) : getString(R.string.EditedMessage)) + " " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000));
@@ -18483,6 +18484,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         } else {
             currentTimeString = timeString;
+        }
+        // Veyra: prepend a proper "DELETED" badge drawable for deleted incoming messages
+        if (deleted && !currentMessageObject.isOutOwner()) {
+            org.veyra.client.VeyraDeletedBadgeDrawable badge = new org.veyra.client.VeyraDeletedBadgeDrawable(9);
+            badge.setColor(getThemedColor(Theme.key_chat_inTimeText));
+            badge.setBounds(0, 0, badge.getIntrinsicWidth(), badge.getIntrinsicHeight());
+            android.text.SpannableString ss = new android.text.SpannableString("D " + currentTimeString);
+            ss.setSpan(new android.text.style.ImageSpan(badge, android.text.style.ImageSpan.ALIGN_BASELINE),
+                    0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            currentTimeString = ss;
         }
         if (currentMessageObject.isStakedDice()) {
             currentTimeString = TextUtils.concat("💎", StarsIntroActivity.formatTON(currentMessageObject.getStakedDiceAmount()), "  ", currentTimeString);
@@ -21791,15 +21802,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentBackgroundDrawable.setBounds(left, top, right, bottom);
             currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
             currentBackgroundDrawable.setAlpha(255);
-            // Veyra: draw a thin red outline on the bubble for deleted messages (incoming only)
-            if (deleted && !currentMessageObject.isOutOwner()) {
-                android.graphics.RectF bubbleRect = new android.graphics.RectF(left, top, right, bottom);
-                android.graphics.Paint deletedBorderPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-                deletedBorderPaint.setStyle(android.graphics.Paint.Style.STROKE);
-                deletedBorderPaint.setColor(0x99E53935);
-                deletedBorderPaint.setStrokeWidth(dp(1.5f));
-                canvas.drawRoundRect(bubbleRect, dp(14), dp(14), deletedBorderPaint);
-            }
         }
 
         animateCheckboxTranslation();
@@ -23780,10 +23782,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     Theme.chat_timePaint.setColor(getThemedColor(Theme.key_chat_mediaTimeText));
                 }
             } else {
-                if (deleted && !currentMessageObject.isOutOwner()) {
-                    // Veyra: tint the timestamp red for deleted INCOMING messages only
-                    Theme.chat_timePaint.setColor(0xFFE53935);
-                } else if (currentMessageObject.isOutOwner()) {
+                if (currentMessageObject.isOutOwner()) {
                     Theme.chat_timePaint.setColor(getThemedColor(drawSelectionBackground ? Theme.key_chat_outTimeSelectedText : Theme.key_chat_outTimeText));
                 } else {
                     Theme.chat_timePaint.setColor(getThemedColor(drawSelectionBackground ? Theme.key_chat_inTimeSelectedText : Theme.key_chat_inTimeText));

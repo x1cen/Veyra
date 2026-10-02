@@ -11360,9 +11360,18 @@
     <string name="VeyraEmergencyConfirmFull">DANGER: This will permanently delete all your chats for both parties, leave all groups, delete your account, and erase all local files. This cannot be undone. Proceed?</string>
     <string name="VeyraEmergencyProgress">Executing Emergency Protocol…</string>
 
-    <string name="VeyraAnimatedTitle">Animated Header Title</string>
+    <string name="VeyraCustomHeaderTitle">Custom Header Title</string>
+    <string name="VeyraCustomHeaderTitleDesc">Customize the title text shown in the main chat list</string>
+    <string name="VeyraCustomHeaderTitleDialog">Enter header title (leave empty for default):</string>
+    <string name="VeyraAnimatedTitle">Header Animation</string>
     <string name="VeyraAnimatedTitleOff">Disabled</string>
-    <string name="VeyraAnimatedTitlePulse">Breathing Pulse</string>
-    <string name="VeyraAnimatedTitleWave">Floating Wave</string>
-    <string name="VeyraAnimatedTitleGlow">Soft Glow</string>
+    <string name="VeyraAnimatedTitleLightning">Lightning Storm (برق و صاعقه)</string>
+    <string name="VeyraAnimatedTitleRain">Raindrops (بارش باران)</string>
+    <string name="VeyraAnimatedTitleFireworks">Fireworks &amp; Sparklers (فشفشه و آتش‌بازی)</string>
+    <string name="VeyraAnimatedTitleMeteors">Meteor Shower (بارش شهاب‌سنگ)</string>
+    <string name="VeyraAnimatedTitleMatrix">Matrix Digital Rain (ماتریس کد)</string>
+    <string name="VeyraAnimatedTitleGlitch">Cyberpunk Glitch (گلیچ سایبرپانک)</string>
+    <string name="VeyraAnimatedTitleSnow">Winter Snowfall (بارش برف)</string>
+    <string name="VeyraAnimatedTitleFire">Fire &amp; Embers (شعله و اخگرهای آتش)</string>
+    <string name="VeyraAnimatedTitleAurora">Aurora Borealis (شفق قطبی نئونی)</string>
 </resources>

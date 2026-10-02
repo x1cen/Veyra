@@ -2280,6 +2280,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 if (nameString != null && nameString.length() == 0) {
                     nameString = getString(R.string.HiddenName);
                 }
+                if (currentDialogId > 0 && org.veyra.client.VeyraAntiDelete.isChatDeleted(currentDialogId, user)) {
+                    if (nameString != null && !nameString.toString().startsWith("\uD83D\uDC80")) {
+                        nameString = "\uD83D\uDC80 " + nameString;
+                    }
+                }
             }
         }
 
@@ -5135,6 +5140,24 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         canvas.drawCircle(mutLeft, mutTop2, dp(7), Theme.dialogs_onlineCirclePaint);
                         Theme.dialogs_onlineCirclePaint.setColor(0xFF2196F3); // blue
                         canvas.drawCircle(mutLeft, mutTop2, dp(5), Theme.dialogs_onlineCirclePaint);
+                    }
+                    // Veyra: dead icon badge on avatar for peer-deleted chats or deleted accounts
+                    if (org.veyra.client.VeyraAntiDelete.isChatDeleted(currentDialogId, user)) {
+                        int deadLeft, deadTop;
+                        deadTop = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 7 : 9));
+                        if (LocaleController.isRTL) {
+                            deadLeft = (int) (storyParams.originalAvatarRect.left + dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 9 : 7));
+                        } else {
+                            deadLeft = (int) (storyParams.originalAvatarRect.right - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 9 : 7));
+                        }
+                        Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
+                        canvas.drawCircle(deadLeft, deadTop, dp(8.5f), Theme.dialogs_onlineCirclePaint);
+                        Theme.dialogs_onlineCirclePaint.setColor(0xFF37474F); // dark slate grey
+                        canvas.drawCircle(deadLeft, deadTop, dp(7), Theme.dialogs_onlineCirclePaint);
+                        android.text.TextPaint skullPaint = new android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                        skullPaint.setTextSize(dp(8.5f));
+                        skullPaint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                        canvas.drawText("\uD83D\uDC80", deadLeft, deadTop + dp(3.2f), skullPaint);
                     }
                 } // end user != null
             } else if (chat != null) {

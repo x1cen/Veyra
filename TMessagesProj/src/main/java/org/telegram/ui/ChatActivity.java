@@ -8600,7 +8600,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else if (UserObject.isReplyUser(currentUser)) {
                 toggleMute(true);
-            } else if (currentUser != null && org.telegram.messenger.UserObject.isDeleted(currentUser)) {
+            } else if (currentUser != null && org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser)) {
                 // Veyra: "Deleted Chat" confirm → wipe Telegram cache + Veyra cache
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
                 builder.setTitle(LocaleController.getString("VeyraDeletedChatTitle", R.string.VeyraDeletedChatTitle));
@@ -19592,12 +19592,24 @@ public class ChatActivity extends BaseFragment implements
                 avatarContainer.setTitle(LocaleController.getString(R.string.SavedMessages));
             } else if (!MessagesController.isSupportUser(currentUser) && getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
                 if (!TextUtils.isEmpty(currentUser.phone)) {
-                    avatarContainer.setTitle(PhoneFormat.getInstance().format("+" + currentUser.phone), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
+                    String titleName = PhoneFormat.getInstance().format("+" + currentUser.phone);
+                    if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
+                        titleName = "\uD83D\uDC80 " + titleName;
+                    }
+                    avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 } else {
-                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
+                    String titleName = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser)));
+                    if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
+                        titleName = "\uD83D\uDC80 " + titleName;
+                    }
+                    avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 }
             } else {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), !MessagesController.isSupportUser(currentUser) ? currentUser.emoji_status : null, animated);
+                String titleName = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser)));
+                if (org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser) && !titleName.startsWith("\uD83D\uDC80")) {
+                    titleName = "\uD83D\uDC80 " + titleName;
+                }
+                avatarContainer.setTitle(titleName, currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), !MessagesController.isSupportUser(currentUser) ? currentUser.emoji_status : null, animated);
             }
         }
         setParentActivityTitle(avatarContainer.getTitleTextView().getText());
@@ -26403,6 +26415,7 @@ public class ChatActivity extends BaseFragment implements
                     if (obj.messageOwner != null) {
                         obj.messageOwner.isDeleted = true;
                     }
+                    org.veyra.client.VeyraAntiDelete.markChatDeleted(dialog_id);
                     if (index != -1 && chatAdapter != null) {
                         chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                     }
@@ -27928,8 +27941,8 @@ public class ChatActivity extends BaseFragment implements
                     sentBotStart = true;
                 }
             } else {
-                // Veyra: show "Deleted Chat" for deleted accounts instead of the normal delete button
-                if (currentUser != null && org.telegram.messenger.UserObject.isDeleted(currentUser)) {
+                // Veyra: show "Deleted Chat" for peer-deleted chats or deleted accounts
+                if (currentUser != null && org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser)) {
                     bottomOverlayChatText.setTag("veyra_deleted_chat");
                     bottomOverlayChatText.setText(LocaleController.getString("VeyraDeletedChat", R.string.VeyraDeletedChat));
                 } else {
