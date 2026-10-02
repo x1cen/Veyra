@@ -235,6 +235,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                     super.onDraw(canvas);
                 }
                 // Veyra: dead badge removed by user request
+            }
 
             @Override
             public boolean onTouchEvent(MotionEvent event) {
