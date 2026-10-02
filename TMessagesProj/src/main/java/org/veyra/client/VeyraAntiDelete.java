@@ -110,6 +110,17 @@ public class VeyraAntiDelete {
         return new GsonBuilder().disableHtmlEscaping().create().toJson(o);
     }
 
+    public static void clearAll() {
+        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
+            .getStorageQueue().postRunnable(() -> {
+                try {
+                    org.telegram.SQLite.SQLiteDatabase db =
+                        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
+                    db.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
+                } catch (Exception ignored) {}
+            });
+    }
+
     /**
      * Purge all Veyra anti-delete entries for a specific dialog from MessagesStorage.
      * Call this when the user manually clears a "Deleted Account" chat.

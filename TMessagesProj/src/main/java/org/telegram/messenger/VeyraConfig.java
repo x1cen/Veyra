@@ -38,6 +38,9 @@ public class VeyraConfig {
     public static boolean ghostHideStories = true;
     public static boolean ghostReadOnReply = true;
 
+    // Security & Window
+    public static boolean blockScreenCapture = false;
+
     // Media & Camera
     public static boolean disableVideoNoteWatermark = true;
     public static boolean highQualityVideoMessages = true;
@@ -116,6 +119,7 @@ public class VeyraConfig {
         ghostHideReadContents = preferences.getBoolean("ghostHideReadContents", true);
         ghostHideStories = preferences.getBoolean("ghostHideStories", true);
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
+        blockScreenCapture = preferences.getBoolean("blockScreenCapture", false);
 
         disableVideoNoteWatermark = preferences.getBoolean("disableVideoNoteWatermark", true);
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
@@ -198,6 +202,10 @@ public class VeyraConfig {
     public static void setGhostReadOnReply(boolean val) {
         ghostReadOnReply = val;
         save("ghostReadOnReply", val);
+    }
+    public static void setBlockScreenCapture(boolean val) {
+        blockScreenCapture = val;
+        save("blockScreenCapture", val);
     }
 
     public static void setDisableVideoNoteWatermark(boolean val) {

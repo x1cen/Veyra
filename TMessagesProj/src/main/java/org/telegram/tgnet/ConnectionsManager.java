@@ -389,7 +389,16 @@ public class ConnectionsManager extends BaseController {
                 object instanceof TLRPC.TL_messages_readHistory ||
                 object instanceof TLRPC.TL_channels_readHistory)) {
             if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                TLObject dummy;
+                if (object instanceof TLRPC.TL_messages_readHistory) {
+                    TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
+                    aff.pts = -1;
+                    aff.pts_count = 0;
+                    dummy = aff;
+                } else {
+                    dummy = new TLRPC.TL_boolTrue();
+                }
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(dummy, null));
             }
             return;
         }
@@ -397,7 +406,16 @@ public class ConnectionsManager extends BaseController {
                 object instanceof TLRPC.TL_messages_readMessageContents ||
                 object instanceof TLRPC.TL_channels_readMessageContents)) {
             if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                TLObject dummy;
+                if (object instanceof TLRPC.TL_messages_readMessageContents) {
+                    TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
+                    aff.pts = -1;
+                    aff.pts_count = 0;
+                    dummy = aff;
+                } else {
+                    dummy = new TLRPC.TL_boolTrue();
+                }
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(dummy, null));
             }
             return;
         }

@@ -35,6 +35,14 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                 LocaleController.getString("VeyraHideConnectingToProxyDesc", R.string.VeyraHideConnectingToProxyDesc),
                 () -> VeyraConfig.hideConnectingToProxy, v -> VeyraConfig.setHideConnectingToProxy(v), false
         ));
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraBlockScreenCapture", R.string.VeyraBlockScreenCapture),
+                LocaleController.getString("VeyraBlockScreenCaptureDesc", R.string.VeyraBlockScreenCaptureDesc),
+                () -> VeyraConfig.blockScreenCapture, v -> {
+                    VeyraConfig.setBlockScreenCapture(v);
+                    org.veyra.client.VeyraSecurityGuard.applyWindowSecurity(getParentActivity());
+                }, false
+        ));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraSettingsLock", R.string.VeyraSettingsLock)));

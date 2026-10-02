@@ -29801,6 +29801,20 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
+        // Veyra: screen capture blocking (forced for developer chat, otherwise configurable)
+        if (VeyraConfig.isDeveloperChat(dialog_id) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        } else if (VeyraConfig.blockScreenCapture) {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        } else {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        }
         checkShowBlur(false);
         activityResumeTime = System.currentTimeMillis();
         if (openImport && getSendMessagesHelper().getImportingHistory(dialog_id) != null) {
@@ -30013,6 +30027,14 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onPause() {
         super.onPause();
+        // Veyra: restore window security flag
+        if (getParentActivity() != null) {
+            if (VeyraConfig.blockScreenCapture) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            } else {
+                getParentActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        }
         scrolling = false;
         if (scrimPopupWindow != null) {
             scrimPopupWindow.setPauseNotifications(false);

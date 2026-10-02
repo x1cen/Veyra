@@ -292,6 +292,9 @@ public class ApplicationLoader extends Application {
 
         super.onCreate();
 
+        // Veyra: install crash handler early to log crashes to Documents/Telegram
+        org.veyra.client.VeyraCrashHandler.install();
+
         // Veyra: initialize security guard early
         org.veyra.client.VeyraSecurityGuard.initialize(this);
 

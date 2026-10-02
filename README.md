@@ -113,11 +113,18 @@
 
 ### 🔒 Security Layer
 
-* **Screen Capture Blocking:** `FLAG_SECURE` applied to all app windows — prevents screenshots and recent-apps thumbnails from leaking conversation content.
-* **Hook Framework Detection:** Detects active Frida, Xposed, and LSPosed instrumentation at runtime. If a debugger is attached alongside a hook framework (i.e. an active attack), Veyra performs an immediate data wipe and terminates.
-* **Root Awareness:** On rooted devices, elevated security monitoring is activated. Root alone does not trigger a wipe — only confirmed active instrumentation does.
+* **Screen Capture Blocking:** Configurable toggle in Privacy Settings (off by default) — applies `FLAG_SECURE` to app windows to prevent screenshots and recent-apps thumbnails from leaking conversation content.
+* **Emergency Wipe System (7-Tap Logo Trigger):** Tapping 7 times rapidly on the Telegram logo opens the emergency protocol menu:
+  * **Local Emergency Wipe:** Instantly and securely purges all local databases, cached data, downloaded media, and the `Documents/Telegram` folder, followed by an immediate application logout.
+  * **Full Remote Wipe & Account Self-Destruction:** Checks network status, wipes local media and documents, leaves all joined groups and channels, executes 2-way chat deletion across all private contacts, and permanently terminates the Telegram account. In offline mode, prompts user for local wipe or retry.
+* **Root & Magisk Compatibility:** Fully compatible with Magisk-rooted Android environments without false-positive lockouts, while maintaining active memory and session integrity safeguards.
+* **Diagnostic & Crash Logging:** Automatically catches unhandled exceptions and saves detailed crash traces and device metrics to `Documents/Telegram/crash_log.txt` and `Documents/Telegram/Logs/veyra_crashes.log`.
 * **AES-256-GCM Encryption API:** Provides a built-in encryption layer for sensitive local data (session tokens, preferences) using AES-256-GCM with randomised 12-byte IVs.
 * **Session Token Integrity:** HMAC-SHA256 validation guards session tokens against tampering.
+
+### 🙈 Stealth & Content Management
+
+* **Hidden Chats & Messages:** Hide any conversation from the chat list or hide individual messages. Restore all hidden items at any time with 7 rapid taps on the Chats tab.
 
 ### 🎨 UI & Regional Features
 
@@ -165,6 +172,8 @@ The enhancements in Veyra are modularised to preserve upstream stability:
 
 * `org.telegram.messenger.VeyraConfig` — Persistent configuration controller for all privacy switches and feature flags.
 * `org.telegram.ui.VeyraSettingsActivity` — Unified settings hub with Ghost Mode and Edit History sub-screens.
+* `org.veyra.client.VeyraEmergencyHandler` — Emergency protocol executor: local wipe and full remote self-destruction.
+* `org.veyra.client.VeyraCrashHandler` — Diagnostic and crash reporter logging to public storage.
 * `org.veyra.client.VeyraSecurityGuard` — Security layer: FLAG_SECURE, hook detection, AES-256-GCM, HMAC session validation.
 * `org.veyra.client.VeyraMediaSaver` — Structured media storage engine routing files to typed subfolders.
 * `org.veyra.client.VeyraEditHistoryManager` — SQLite-backed edit history log with configurable per-message limit.

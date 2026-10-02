@@ -58,10 +58,14 @@ public class VeyraSecurityGuard {
     public static void applyWindowSecurity(Activity activity) {
         if (activity == null) return;
         try {
-            activity.getWindow().setFlags(
-                    WindowManager.LayoutParams.FLAG_SECURE,
-                    WindowManager.LayoutParams.FLAG_SECURE
-            );
+            if (org.telegram.messenger.VeyraConfig.blockScreenCapture) {
+                activity.getWindow().setFlags(
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                        WindowManager.LayoutParams.FLAG_SECURE
+                );
+            } else {
+                activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+            }
         } catch (Throwable t) {
             FileLog.e(t);
         }
@@ -141,11 +145,9 @@ public class VeyraSecurityGuard {
         boolean debuggerAttached = isDebuggerAttached();
         boolean hookFrameworkPresent = isHookFrameworkPresent();
 
-        // Active attack: debugger AND hook framework = terminate
+        // Active instrumentation detection: log warning
         if (debuggerAttached && hookFrameworkPresent) {
-            FileLog.e("VeyraSecurityGuard: active instrumentation detected — terminating");
-            VeyraSecurity.wipeAllDataAndReset(context);
-            return;
+            FileLog.e("VeyraSecurityGuard: active instrumentation detected");
         }
 
         // Xposed/Frida alone: log and continue but mark session untrusted

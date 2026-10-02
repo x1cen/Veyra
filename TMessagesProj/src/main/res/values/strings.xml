@@ -11343,4 +11343,20 @@
     <string name="VeyraDeletedChat">Deleted Chat</string>
     <string name="VeyraDeletedChatTitle">Remove Deleted Account Chat?</string>
     <string name="VeyraDeletedChatConfirm">This chat belongs to a deleted account. Removing it will permanently delete all messages and Veyra cached data (anti-delete records, edit history) for this conversation. This cannot be undone.</string>
+
+    <string name="VeyraBlockScreenCapture">Block Screen Capture</string>
+    <string name="VeyraBlockScreenCaptureDesc">Prevent screenshots and screen recording in all app screens</string>
+    <string name="VeyraHideChat">Hide Chat</string>
+    <string name="VeyraChatHidden">Chat hidden</string>
+    <string name="VeyraEmergencyTitle">Emergency Menu</string>
+    <string name="VeyraEmergencyLocalWipe">1. Local Emergency Wipe</string>
+    <string name="VeyraEmergencyLocalWipeDesc">Instantly wipe all local data, cached media, Documents/Telegram files, and log out.</string>
+    <string name="VeyraEmergencyFullWipe">2. Full Wipe &amp; Account Self-Destruction</string>
+    <string name="VeyraEmergencyFullWipeDesc">Wipe local data, leave all groups, 2-way delete all private chats, and permanently delete Telegram account.</string>
+    <string name="VeyraEmergencyNoInternetTitle">No Internet</string>
+    <string name="VeyraEmergencyNoInternet">No Internet connection detected. Remote self-destruction requires active internet. Execute Local Wipe instead or retry?</string>
+    <string name="VeyraEmergencyRunLocal">Execute Local Wipe</string>
+    <string name="VeyraEmergencyConfirmLocal">Are you sure you want to permanently erase all local Telegram data, downloaded files, and log out?</string>
+    <string name="VeyraEmergencyConfirmFull">DANGER: This will permanently delete all your chats for both parties, leave all groups, delete your account, and erase all local files. This cannot be undone. Proceed?</string>
+    <string name="VeyraEmergencyProgress">Executing Emergency Protocol…</string>
 </resources>

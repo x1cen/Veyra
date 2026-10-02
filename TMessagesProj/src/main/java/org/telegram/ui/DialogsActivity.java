@@ -590,6 +590,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private ActionBarMenuSubItem readItem;
     @Nullable
     private ActionBarMenuSubItem blockItem;
+    @Nullable
+    private ActionBarMenuSubItem hideChatItem;
+    private final static int veyra_hide_chat = 120;
+    private int emergencyLogoClickCount = 0;
+    private long lastEmergencyLogoClickTime = 0;
 
     private float additionalFloatingTranslation;
     private float floatingButtonPanOffset;
@@ -3535,6 +3540,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             actionBar.setClipContent(true);
         //}
         actionBar.setTitleActionRunnable(() -> {
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - lastEmergencyLogoClickTime < 1800) {
+                emergencyLogoClickCount++;
+            } else {
+                emergencyLogoClickCount = 1;
+            }
+            lastEmergencyLogoClickTime = now;
+            if (emergencyLogoClickCount >= 7) {
+                emergencyLogoClickCount = 0;
+                org.veyra.client.VeyraEmergencyHandler.showEmergencyDialog(DialogsActivity.this, currentAccount);
+                return;
+            }
+
             if (initialDialogsType != DIALOGS_TYPE_WIDGET) {
                 hideFloatingButton(false);
             }
@@ -6753,6 +6771,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         readItem = otherItem.addSubItem(read, R.drawable.msg_markread, LocaleController.getString(R.string.MarkAsRead));
         clearItem = otherItem.addSubItem(clear, R.drawable.msg_clear, LocaleController.getString(R.string.ClearHistory));
         blockItem = otherItem.addSubItem(block, R.drawable.msg_block, LocaleController.getString(R.string.BlockUser));
+        hideChatItem = otherItem.addSubItem(veyra_hide_chat, R.drawable.msg_stories_myhide, LocaleController.getString("VeyraHideChat", R.string.VeyraHideChat));
 
         muteItem.setOnLongClickListener(e -> {
             performSelectedDialogsAction(selectedDialogs, mute, true, true);
@@ -9250,6 +9269,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
                 return;
             }
+        } else if (action == veyra_hide_chat) {
+            for (int a = 0; a < selectedDialogs.size(); a++) {
+                org.veyra.client.HiddenContentManager.hideDialog(selectedDialogs.get(a));
+            }
+            hideActionMode(false);
+            getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
+            getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+            if (getParentActivity() != null) {
+                BulletinFactory.of(DialogsActivity.this).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraChatHidden", R.string.VeyraChatHidden)).show();
+            }
+            return;
         } else if (action == community_ungroup) {
             if (alert) {
                 AlertsCreator.showSimpleConfirmAlert(this,
@@ -10993,6 +11023,21 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
+        ArrayList<TLRPC.Dialog> res = getDialogsArrayInternal(currentAccount, dialogsType, folderId, frozen);
+        if (org.veyra.client.HiddenContentManager.hasHiddenDialogs() && res != null && !res.isEmpty()) {
+            ArrayList<TLRPC.Dialog> filtered = new ArrayList<>(res.size());
+            for (int i = 0; i < res.size(); i++) {
+                TLRPC.Dialog d = res.get(i);
+                if (d == null || !org.veyra.client.HiddenContentManager.isDialogHidden(d.id)) {
+                    filtered.add(d);
+                }
+            }
+            return filtered;
+        }
+        return res;
+    }
+
+    private ArrayList<TLRPC.Dialog> getDialogsArrayInternal(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (frozen && frozenDialogsList != null) {
             return frozenDialogsList;
         }

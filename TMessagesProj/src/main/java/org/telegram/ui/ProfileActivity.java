@@ -600,7 +600,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_upgrade_to_supergroup = 61;
     private final static int veyra_qr_code = 62;
     private final static int veyra_view_details = 63;
-    private final static int veyra_love = 64;
 
     // Extra info rows for user profile
     private int veyra_mutualContactRow = -1;
@@ -2766,10 +2765,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     showProfileQrCode();
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
-                } else if (id == veyra_love) {
-                    // Veyra: side burst hearts from both edges
-                    android.view.ViewGroup rootView = (android.view.ViewGroup) getParentActivity().getWindow().getDecorView();
-                    org.veyra.client.VeyraHeartAnimation.showSideBurst(getParentActivity(), rootView, 4000);
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -12327,11 +12322,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (user != null && !TextUtils.isEmpty(UserObject.getPublicUsername(user))) {
                     otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
-                }
-                // Veyra: Love button — only visible when viewer & peer are the love pair
-                long selfId = getUserConfig().getClientUserId();
-                if (org.veyra.client.VeyraHeartAnimation.areLovePair(selfId, userId)) {
-                    otherItem.addSubItem(veyra_love, R.drawable.msg_gift_premium, "Love ❤️");
                 }
             }
         } else if (chatId != 0) {
