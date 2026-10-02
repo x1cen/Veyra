@@ -3,11 +3,13 @@ package org.telegram.ui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.ui.Components.LayoutHelper;
 
 public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
 

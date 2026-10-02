@@ -424,4 +424,11 @@ public class VeyraConfig {
         }
         preferences.edit().putInt(key, val).apply();
     }
+
+    private static void save(String key, String val) {
+        if (preferences == null) {
+            preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
+        }
+        preferences.edit().putString(key, val != null ? val : "").apply();
+    }
 }

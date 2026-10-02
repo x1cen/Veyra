@@ -3,7 +3,6 @@ name: Build and Release Veyra APK
 on:
     push:
         branches:
-            - dev
             - main
         paths-ignore:
             - '**.md'

@@ -7278,10 +7278,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onPause() {
         super.onPause();
-        if (titleAnimatorSet != null) {
-            titleAnimatorSet.cancel();
-            titleAnimatorSet = null;
-        }
         if (veyraHeaderAnimView != null) {
             veyraHeaderAnimView.pause();
         }

@@ -193,7 +193,8 @@ public class VeyraEmergencyHandler {
                                 safeSleep(120);
                             }
                         } else {
-                            boolean isAdmin = ChatObject.isAdmin(chat, selfId) || ChatObject.hasAdminRights(chat);
+                            boolean isAdmin = ChatObject.hasAdminRights(chat) ||
+                                    (chat.admin_rights != null);
                             if (isAdmin) {
                                 // Admin: delete all messages for everyone then leave
                                 if (ChatObject.isMegagroup(chat)) {
