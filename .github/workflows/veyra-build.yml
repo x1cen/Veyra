@@ -1,13 +1,6 @@
 name: Build and Release Veyra APK
 
 on:
-    push:
-        branches:
-            - main
-        paths-ignore:
-            - '**.md'
-            - 'assets/**'
-            - 'LICENSE'
     workflow_dispatch:
         inputs:
             veyra-version:
