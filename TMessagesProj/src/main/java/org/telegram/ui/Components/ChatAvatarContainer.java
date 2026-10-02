@@ -234,8 +234,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                 } else {
                     super.onDraw(canvas);
                 }
-                if (parentFragment != null && false) { // Veyra: dead badge removed by user request
-            }
+                // Veyra: dead badge removed by user request
 
             @Override
             public boolean onTouchEvent(MotionEvent event) {
