@@ -4244,10 +4244,11 @@ public class AndroidUtilities {
                     if (isApk) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                                 && !ApplicationLoader.applicationContext.getPackageManager().canRequestPackageInstalls()) {
+                            Dialog apkDialog = AlertsCreator.createApkRestrictedDialog(activity, null);
                             if (parentFragment != null) {
-                                parentFragment.showDialog(AlertsCreator.createApkRestrictedDialog(activity, null).create());
+                                parentFragment.showDialog(apkDialog);
                             } else {
-                                AlertsCreator.createApkRestrictedDialog(activity, null).show();
+                                apkDialog.show();
                             }
                             return;
                         }
