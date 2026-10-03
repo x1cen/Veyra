@@ -343,7 +343,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                             .replaceAll("\\[(.+?)\\]\\(.*?\\)", "$1") // [text](url)
                             .replaceAll("\\n{3,}", "\n\n")            // collapse triple newlines
                             .trim();
-                    new AlertDialog.Builder(fragment.getParentActivity())
+                    AlertDialog.Builder builder = new AlertDialog.Builder(fragment.getParentActivity())
                             .setTitle(title)
                             .setMessage(msg)
                             .setPositiveButton(isFarsi ? "به‌روزرسانی" : "Update", (dialog, which) -> {
@@ -353,8 +353,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                                     FileLog.e(e);
                                 }
                             })
-                            .setNegativeButton(isFarsi ? "بعداً" : "Later", null)
-                            .show();
+                            .setNegativeButton(isFarsi ? "بعداً" : "Later", null);
+                    fragment.showDialog(builder.create());
                 } else {
                     BulletinFactory.of(fragment).createSimpleBulletin(
                             R.raw.chats_infotip,
