@@ -95,7 +95,7 @@ public class VeyraEmergencyHandler {
 
         new Thread(() -> {
             try {
-                executeFullWipeAllAccountsBlocking();
+                executeFullWipeBlocking(currentAccount);
             } catch (Throwable t) {
                 FileLog.e(t);
             }
@@ -104,18 +104,6 @@ public class VeyraEmergencyHandler {
                 executeLocalWipe(context);
             });
         }).start();
-    }
-
-    public static void executeFullWipeAllAccountsBlocking() {
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-            if (UserConfig.getInstance(a).isClientActivated()) {
-                try {
-                    executeFullWipeBlocking(a);
-                } catch (Throwable t) {
-                    FileLog.e(t);
-                }
-            }
-        }
     }
 
     public static void executeDuressAction(Context context, int action, boolean fallbackToLocal) {
@@ -147,7 +135,7 @@ public class VeyraEmergencyHandler {
 
         new Thread(() -> {
             try {
-                executeFullWipeAllAccountsBlocking();
+                executeFullWipeBlocking(UserConfig.selectedAccount);
             } catch (Throwable t) {
                 FileLog.e(t);
             } finally {
