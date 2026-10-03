@@ -26725,17 +26725,7 @@ public class ChatActivity extends BaseFragment implements
             if (old.messageOwner != null && messageObject.messageOwner != null) {
                 String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
-                if (TextUtils.equals(oldText, newText)) {
-                    if (old.messageOwner.edit_date == 0) {
-                        // Only strip Edited label for incoming messages — not our own edits
-                        if (!messageObject.isOut()) {
-                            messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                            messageObject.messageOwner.edit_date = 0;
-                        }
-                    } else {
-                        messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
-                    }
-                } else if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !old.isOut() && !messageObject.isOut()) {
+                if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !old.isOut() && !messageObject.isOut()) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
                         org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);

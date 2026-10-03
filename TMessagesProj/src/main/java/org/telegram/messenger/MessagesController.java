@@ -19589,21 +19589,11 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (oldMsgOwner != null) {
                     String oldText = oldMsgOwner.message != null ? oldMsgOwner.message : "";
                     String newText = message.message != null ? message.message : "";
-                    if (TextUtils.equals(oldText, newText)) {
-                        if (oldMsgOwner.edit_date == 0) {
-                            // For own outgoing messages (edit in-flight), keep the new edit_date from server
-                            // so the label doesn't flash. For incoming messages suppress the Edited label.
-                            if (!message.out) {
-                                message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                message.edit_date = 0;
-                            }
-                        } else {
-                            message.edit_date = oldMsgOwner.edit_date;
-                        }
-                    } else if (!TextUtils.isEmpty(oldText)
+                    if (!TextUtils.isEmpty(oldText)
+                            && !TextUtils.equals(oldText, newText)
                             && !oldMsgOwner.out && !message.out
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)) {
-                        // Skip edit history logging for the developer's DM
+                        // Skip edit history logging for the developer's DM and own messages
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
                                 message.dialog_id,
                                 message.id,

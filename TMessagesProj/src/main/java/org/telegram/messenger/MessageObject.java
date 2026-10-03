@@ -562,11 +562,6 @@ public class MessageObject {
         if (message.reactions == null) {
             message.flags &= ~1048576;
         }
-        // A message is only "edited" when the server sent a real edit_date.
-        // Reactions and other local updates must never mark a message as edited.
-        if (message.edit_date == 0) {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-        }
     }
 
     public static double getDocumentDuration(TLRPC.Document document) {
@@ -3972,10 +3967,6 @@ public class MessageObject {
         }
         message.reactions = reactions;
         message.flags |= 1048576;
-        // Reacting to a message must not flag it as edited.
-        if (message.edit_date == 0) {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-        }
     }
 
     public boolean hasReactions() {

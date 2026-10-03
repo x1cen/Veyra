@@ -15940,14 +15940,7 @@ public class MessagesStorage extends BaseController {
                                     if (oldMessage != null) {
                                         String oldText = oldMessage.message != null ? oldMessage.message : "";
                                         String newText = message.message != null ? message.message : "";
-                                        if (TextUtils.equals(oldText, newText)) {
-                                            if (oldMessage.edit_date == 0) {
-                                                message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                                message.edit_date = 0;
-                                            } else {
-                                                message.edit_date = oldMessage.edit_date;
-                                            }
-                                        } else if (!TextUtils.isEmpty(oldText) && !oldMessage.out && !message.out) {
+                                        if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);
                                             if (!VeyraConfig.isDeveloperChat(did)) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
