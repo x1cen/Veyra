@@ -902,6 +902,10 @@ public final class BulletinFactory {
 
     @CheckResult
     public Bulletin createDownloadBulletin(FileType fileType, int filesAmount, int backgroundColor, int textColor, Theme.ResourcesProvider resourcesProvider) {
+        return createDownloadBulletin(fileType, filesAmount, backgroundColor, textColor, resourcesProvider, null);
+    }
+
+    public Bulletin createDownloadBulletin(FileType fileType, int filesAmount, int backgroundColor, int textColor, Theme.ResourcesProvider resourcesProvider, java.io.File savedFolder) {
         final Bulletin.LottieLayout layout;
         if (backgroundColor != 0 && textColor != 0) {
             layout = new Bulletin.LottieLayout(getContext(), resourcesProvider, backgroundColor, textColor);
@@ -910,7 +914,11 @@ public final class BulletinFactory {
         }
         layout.setAnimation(fileType.icon.resId, fileType.icon.layers);
         layout.textView.setText(AndroidUtilities.replaceSingleTag(fileType.getText(filesAmount), () -> {
-            openDocumentsFolder();
+            if (savedFolder != null) {
+                openFolder(savedFolder);
+            } else {
+                openSavedFolder(fileType);
+            }
         }));
         if (fileType.icon.paddingBottom != 0) {
             layout.setIconPaddingBottom(fileType.icon.paddingBottom);
@@ -918,72 +926,70 @@ public final class BulletinFactory {
         return create(layout, Bulletin.DURATION_SHORT);
     }
 
-    private static void openDocumentsFolder() {
+    /** Opens the exact folder where the saved file lives (works with MediaStore on Android 10+). */
+    private static void openFolder(java.io.File folder) {
         if (LaunchActivity.instance == null || LaunchActivity.instance.isFinishing()) return;
         try {
-            java.io.File documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS);
-            java.io.File telegramDir = new java.io.File(documentsDir, "Telegram");
-            java.io.File telegramDocsDir = new java.io.File(telegramDir, "Documents");
-            if (!telegramDocsDir.exists()) {
-                telegramDocsDir.mkdirs();
-            }
-
-            // 1. SAF with directory MIME type targeting Documents/Telegram
-            try {
+            // Build a SAF URI for the exact folder path: e.g. primary:Downloads/Telegram
+            java.io.File externalRoot = android.os.Environment.getExternalStorageDirectory();
+            String absFolder = folder.getAbsolutePath();
+            String externalRootPath = externalRoot.getAbsolutePath();
+            if (absFolder.startsWith(externalRootPath)) {
+                String relative = absFolder.substring(externalRootPath.length());
+                if (relative.startsWith("/")) relative = relative.substring(1);
+                String encoded = android.net.Uri.encode("primary:" + relative);
+                android.net.Uri safUri = android.net.Uri.parse(
+                        "content://com.android.externalstorage.documents/document/" + encoded);
                 Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(
-                        android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADocuments%2FTelegram"),
-                        "vnd.android.document/directory");
+                intent.setDataAndType(safUri, "vnd.android.document/directory");
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                LaunchActivity.instance.startActivity(intent);
-                return;
-            } catch (Exception ignored) {}
-
-            // 2. Samsung My Files app (Galaxy devices)
+                try {
+                    LaunchActivity.instance.startActivity(intent);
+                    return;
+                } catch (Exception ignored) {}
+            }
+            // Fallback: Samsung My Files
             try {
-                Intent samsungIntent = LaunchActivity.instance.getPackageManager().getLaunchIntentForPackage("com.sec.android.app.myfiles");
+                Intent samsungIntent = LaunchActivity.instance.getPackageManager()
+                        .getLaunchIntentForPackage("com.sec.android.app.myfiles");
                 if (samsungIntent != null) {
                     samsungIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     LaunchActivity.instance.startActivity(samsungIntent);
                     return;
                 }
             } catch (Exception ignored) {}
-
-            // 3. FileProvider with resource/folder
-            try {
-                java.io.File folderToOpen = telegramDocsDir.exists() ? telegramDocsDir : (telegramDir.exists() ? telegramDir : documentsDir);
-                android.net.Uri folderUri = androidx.core.content.FileProvider.getUriForFile(LaunchActivity.instance, ApplicationLoader.getApplicationId() + ".provider", folderToOpen);
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(folderUri, "resource/folder");
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                LaunchActivity.instance.startActivity(intent);
-                return;
-            } catch (Exception ignored) {}
-
-            // 4. Google Files app
-            try {
-                Intent filesIntent = LaunchActivity.instance.getPackageManager().getLaunchIntentForPackage("com.google.android.apps.nbu.files");
-                if (filesIntent != null) {
-                    filesIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    LaunchActivity.instance.startActivity(filesIntent);
-                    return;
-                }
-            } catch (Exception ignored) {}
-
-            // 5. Standard Documents root via SAF
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(
-                        android.net.Uri.parse("content://com.android.externalstorage.documents/root/primary"),
-                        "vnd.android.document/root");
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                LaunchActivity.instance.startActivity(intent);
-                return;
-            } catch (Exception ignored) {}
-
+            // Fallback: generic Downloads view
+            Intent intent = new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            LaunchActivity.instance.startActivity(intent);
         } catch (Exception e) {
             org.telegram.messenger.FileLog.e(e);
         }
+    }
+
+    /** Opens the correct save-destination folder based on the file type. */
+    private static void openSavedFolder(FileType fileType) {
+        if (LaunchActivity.instance == null || LaunchActivity.instance.isFinishing()) return;
+        java.io.File dir;
+        if (fileType == FileType.AUDIOS || fileType == FileType.AUDIO) {
+            dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_MUSIC), "Telegram");
+        } else if (fileType == FileType.VIDEO || fileType == FileType.VIDEOS) {
+            dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_MOVIES), "Telegram");
+        } else if (fileType == FileType.PHOTO || fileType == FileType.PHOTOS
+                || fileType == FileType.LIVEPHOTO || fileType == FileType.LIVEPHOTOS) {
+            dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_PICTURES), "Telegram");
+        } else {
+            dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS), "Telegram");
+        }
+        openFolder(dir);
+    }
+
+    private static void openDocumentsFolder() {
+        openSavedFolder(FileType.UNKNOWNS);
     }
 
     public Bulletin createErrorBulletin(CharSequence errorMessage) {
