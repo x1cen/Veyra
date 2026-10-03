@@ -604,6 +604,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     // Extra info rows for user profile
     private int veyra_mutualContactRow = -1;
     private int veyra_premiumStatusRow = -1;
+    private int veyra_verifiedRow = -1;
 
     private Rect rect = new Rect();
 
@@ -6285,9 +6286,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (chatId != 0) {
             final TLRPC.Chat chat = getMessagesController().getChat(chatId);
             final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chatId);
-            org.veyra.client.VeyraGroupInfoSheet sheet = new org.veyra.client.VeyraGroupInfoSheet(
-                    getParentActivity(), chat, cInfo, currentAccount);
-            sheet.show();
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (chat != null) {
+                    root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
+                }
+                if (cInfo != null) {
+                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         } else if (currentEncryptedChat != null) {
             presentFragment(new JsonViewerActivity(() -> {
                 com.google.gson.JsonObject root = new com.google.gson.JsonObject();
@@ -10540,6 +10548,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         numberSectionRow = -1;
         veyra_mutualContactRow = -1;
         veyra_premiumStatusRow = -1;
+        veyra_verifiedRow = -1;
         numberRow = -1;
         birthdayRow = -1;
         setUsernameRow = -1;
@@ -10816,6 +10825,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (profileUser != null) {
                         veyra_premiumStatusRow = rowCount++;
                     }
+                    if (profileUser != null && profileUser.verified) {
+                        veyra_verifiedRow = rowCount++;
+                    }
                 }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
@@ -10983,6 +10995,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             if (org.telegram.messenger.VeyraConfig.showProfileId) {
                 idRow = rowCount++;
+            }
+            // Veyra: show verified badge as a row for groups/channels
+            if (currentChat != null && currentChat.verified) {
+                veyra_verifiedRow = rowCount++;
             }
             if (emptyRow < 0 && emptyRow2 < 0) {
                 if (hasMusic || peerColor != null || actionsView == null) {
@@ -12337,20 +12353,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         canEditGroup = true;
                     }
                 }
-                // Veyra: always show edit/details button for group members
-                if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat) && !isTopic) {
-                    editItemVisible = true;
-                } else if (canEditGroup) {
+                // Show edit button only for admins, not for regular members
+                if (canEditGroup) {
                     editItemVisible = true;
                 }
-                if (editItem != null) {
-                    if (canEditGroup) {
-                        editItem.setIcon(R.drawable.group_edit_profile);
-                        editItem.setContentDescription(LocaleController.getString(R.string.Edit));
-                    } else {
-                        editItem.setIcon(R.drawable.msg_info);
-                        editItem.setContentDescription(LocaleController.getString("ViewDetails", R.string.ViewDetails));
-                    }
+                if (editItem != null && canEditGroup) {
+                    editItem.setIcon(R.drawable.group_edit_profile);
+                    editItem.setContentDescription(LocaleController.getString(R.string.Edit));
                 }
                 if (chatInfo != null) {
                     if (ChatObject.canManageCalls(chat) && chatInfo.call == null) {
@@ -12442,19 +12451,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     voiceChatAction = call != null || voiceChatAction;
                 }
                 boolean canEditBasic = ChatObject.canChangeChatInfo(chat);
-                if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat)) {
-                    editItemVisible = true;
-                } else if (canEditBasic) {
+                if (canEditBasic) {
                     editItemVisible = true;
                 }
-                if (editItem != null) {
-                    if (canEditBasic) {
-                        editItem.setIcon(R.drawable.group_edit_profile);
-                        editItem.setContentDescription(LocaleController.getString(R.string.Edit));
-                    } else {
-                        editItem.setIcon(R.drawable.msg_info);
-                        editItem.setContentDescription(LocaleController.getString("ViewDetails", R.string.ViewDetails));
-                    }
+                if (editItem != null && canEditBasic) {
+                    editItem.setIcon(R.drawable.group_edit_profile);
+                    editItem.setContentDescription(LocaleController.getString(R.string.Edit));
                 }
                 if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat)) {
                     if (chatInfo == null || !chatInfo.participants_hidden || ChatObject.hasAdminRights(chat)) {
@@ -13791,7 +13793,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     } else if (position == veyra_premiumStatusRow) {
                         TLRPC.User profileUser = getMessagesController().getUser(userId);
                         boolean hasPremium = profileUser != null && profileUser.premium;
-                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active ✓" : "Not active", position < infoEndRow);
+                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active" : "Not active", position < infoEndRow);
+                    } else if (position == veyra_verifiedRow) {
+                        detailCell.setTextAndValue("Verified", "Yes - verified by Telegram", position < infoEndRow);
                     } else if (position == locationRow) {
                         if (chatInfo != null && chatInfo.location instanceof TLRPC.TL_channelLocation) {
                             TLRPC.TL_channelLocation location = (TLRPC.TL_channelLocation) chatInfo.location;
@@ -14531,7 +14535,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
             } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow
-                    || position == veyra_mutualContactRow || position == veyra_premiumStatusRow) {
+                    || position == veyra_mutualContactRow || position == veyra_premiumStatusRow || position == veyra_verifiedRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;
