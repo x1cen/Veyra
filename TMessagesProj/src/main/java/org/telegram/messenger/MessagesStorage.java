@@ -14748,6 +14748,9 @@ public class MessagesStorage extends BaseController {
 
             for (Map.Entry<Long, ArrayList<Integer>> entry : devMessagesByChat.entrySet()) {
                 markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), true, 0, 0);
+                if (!dialogsToUpdate.contains(entry.getKey())) {
+                    dialogsToUpdate.add(entry.getKey());
+                }
             }
             updateWidgets(dialogsToUpdate);
             return dialogsToUpdate;

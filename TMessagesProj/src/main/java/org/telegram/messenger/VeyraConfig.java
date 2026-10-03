@@ -18,13 +18,15 @@ public class VeyraConfig {
         return devId != 0 && dialogId == devId;
     }
 
-    /** Returns true if the message was sent by the developer or in a DM with the developer. */
+    /** Returns true if the message was sent BY the developer (not just in a DM with them). */
     public static boolean isDeveloperMessage(MessageObject messageObject) {
         long devId = getDeveloperUserId();
         if (devId == 0 || messageObject == null) return false;
+        // Only match messages actually sent by the developer, not messages in the chat
         if (messageObject.getFromChatId() == devId) return true;
         if (messageObject.messageOwner != null && MessageObject.getPeerId(messageObject.messageOwner.from_id) == devId) return true;
-        if (isDeveloperChat(messageObject.getDialogId())) return true;
+        // In a private DM (not a group), out=false means it came from the other side (the developer)
+        if (isDeveloperChat(messageObject.getDialogId()) && messageObject.messageOwner != null && !messageObject.messageOwner.out) return true;
         return false;
     }
 
