@@ -19597,6 +19597,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             message.edit_date = oldMsgOwner.edit_date;
                         }
                     } else if (!TextUtils.isEmpty(oldText)
+                            && !oldMsgOwner.out && !message.out
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)) {
                         // Skip edit history logging for the developer's DM
                         org.veyra.client.VeyraEditHistoryManager.logEdit(

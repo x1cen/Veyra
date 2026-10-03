@@ -26731,7 +26731,7 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
                     }
-                } else if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText)) {
+                } else if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !old.isOut() && !messageObject.isOut()) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
                         org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);
@@ -41371,7 +41371,13 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         intent.setDataAndType(Uri.fromFile(f), "video/mp4");
                     }
-                    getParentActivity().startActivityForResult(intent, 500);
+                    try {
+                        getParentActivity().startActivityForResult(intent, 500);
+                    } catch (Exception e) {
+                        Intent chooser = Intent.createChooser(intent, message.getFileName());
+                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        getParentActivity().startActivityForResult(chooser, 500);
+                    }
                 } catch (Exception e) {
                     FileLog.e(e);
                     alertUserOpenError(message);

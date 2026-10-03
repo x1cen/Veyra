@@ -206,6 +206,8 @@
     <string name="VeyraEditHistoryTabReactions">واکنش ها</string>
     <string name="VeyraReactionHistoryEnable">تاریخچه واکنش ها</string>
     <string name="VeyraReactionHistoryEnableDesc">ثبت و نمایش تب واکنش ها در پنل تاریخچه</string>
+    <string name="VeyraReactionHistoryLimit">سقف تعداد واکنش های ذخیره شده</string>
+    <string name="VeyraReactionHistoryLimitDesc">حداکثر تعداد واکنش های ذخیره شده برای هر پیام (بین ۵ تا ۱۰۰)</string>
     <string name="VeyraNoEditHistory">هیچ ویرایشی برای این پیام ثبت نشده است.</string>
     <string name="VeyraNoReactionHistory">هیچ واکنشی برای این پیام ثبت نشده است.</string>
 </resources>

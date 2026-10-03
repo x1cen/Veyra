@@ -1088,6 +1088,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private long startedPlayTime;
     private boolean keepScreenOnFlagSet;
     private VideoPlayerControlFrameLayout videoPlayerControlFrameLayout;
+    private TextView videoSubtitleTextView;
     private String lastControlFrameDuration;
     private Animator videoPlayerControlAnimator;
     private boolean videoPlayerControlVisible = true;
@@ -9572,6 +9573,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void createVideoControlsInterface() {
+        videoSubtitleTextView = new TextView(containerView.getContext());
+        videoSubtitleTextView.setTextColor(0xffffffff);
+        videoSubtitleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        videoSubtitleTextView.setGravity(Gravity.CENTER);
+        videoSubtitleTextView.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(6), 0xb3000000));
+        videoSubtitleTextView.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(4), AndroidUtilities.dp(10), AndroidUtilities.dp(4));
+        videoSubtitleTextView.setVisibility(View.GONE);
+        containerView.addView(videoSubtitleTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 24, 0, 24, 60));
+
         videoPlayerControlFrameLayout = new VideoPlayerControlFrameLayout(containerView.getContext());
         containerView.addView(videoPlayerControlFrameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.BOTTOM | Gravity.LEFT));
 
@@ -10486,6 +10496,16 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             if (firstFrameView != null) {
                 firstFrameView.clear();
             }
+            videoPlayer.setSubtitleListener(text -> {
+                if (videoSubtitleTextView != null) {
+                    if (!TextUtils.isEmpty(text)) {
+                        videoSubtitleTextView.setText(text);
+                        videoSubtitleTextView.setVisibility(View.VISIBLE);
+                    } else {
+                        videoSubtitleTextView.setVisibility(View.GONE);
+                    }
+                }
+            });
             videoPlayer.setDelegate(new VideoPlayer.VideoPlayerDelegate() {
 
                 private boolean firstState = true;
@@ -10936,6 +10956,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void releasePlayer(boolean onClose) {
+        if (videoSubtitleTextView != null) {
+            videoSubtitleTextView.setVisibility(View.GONE);
+            videoSubtitleTextView.setText("");
+        }
         usedSurfaceView = false;
         if (pipSource != null) {
             pipSource.destroy();

@@ -11396,6 +11396,8 @@
     <string name="VeyraEditHistoryTabReactions">Reactions</string>
     <string name="VeyraReactionHistoryEnable">Message Reaction History</string>
     <string name="VeyraReactionHistoryEnableDesc">Track and display reactions tab in edit history panel</string>
+    <string name="VeyraReactionHistoryLimit">Reaction History Limit</string>
+    <string name="VeyraReactionHistoryLimitDesc">Maximum number of reaction entries saved per message (5 to 100)</string>
     <string name="VeyraNoEditHistory">No edit history recorded for this message.</string>
     <string name="VeyraNoReactionHistory">No reactions recorded for this message.</string>
 </resources>

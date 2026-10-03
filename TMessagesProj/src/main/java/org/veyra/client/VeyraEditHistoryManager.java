@@ -253,11 +253,47 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void logReaction(long dialogId, int messageId, int date, String reaction, int count, long userId) {
-        if (!VeyraConfig.reactionHistoryEnabled || TextUtils.isEmpty(reaction)) {
+        if (!VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
             return;
         }
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
+
+            if (userId != 0) {
+                Cursor c = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? AND user_id = ? AND reaction = ? LIMIT 1",
+                        new String[]{String.valueOf(dialogId), String.valueOf(messageId), String.valueOf(userId), reaction});
+                boolean exists = c != null && c.moveToFirst();
+                if (c != null) c.close();
+                if (exists) {
+                    return;
+                }
+            } else {
+                Cursor c = db.rawQuery("SELECT count FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
+                        new String[]{String.valueOf(dialogId), String.valueOf(messageId), reaction});
+                if (c != null) {
+                    if (c.moveToFirst() && c.getInt(0) == count) {
+                        c.close();
+                        return;
+                    }
+                    c.close();
+                }
+            }
+
+            Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?",
+                    new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            int total = 0;
+            if (countCursor != null) {
+                if (countCursor.moveToFirst()) total = countCursor.getInt(0);
+                countCursor.close();
+            }
+            int limit = Math.max(5, Math.min(100, VeyraConfig.reactionHistoryLimit));
+            if (total >= limit) {
+                int toDelete = total - limit + 1;
+                db.execSQL("DELETE FROM " + REACTION_TABLE_NAME + " WHERE id IN (" +
+                        "SELECT id FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
+                        new Object[]{dialogId, messageId, toDelete});
+            }
+
             ContentValues values = new ContentValues();
             values.put("dialog_id", dialogId);
             values.put("message_id", messageId);

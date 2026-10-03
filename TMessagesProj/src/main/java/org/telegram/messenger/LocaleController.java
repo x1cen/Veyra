@@ -1594,6 +1594,8 @@ public class LocaleController {
             case "VeyraEditHistoryTabReactions": return "واکنش ها";
             case "VeyraReactionHistoryEnable": return "تاریخچه واکنش ها";
             case "VeyraReactionHistoryEnableDesc": return "ثبت و نمایش تب واکنش ها در پنل تاریخچه";
+            case "VeyraReactionHistoryLimit": return "سقف تعداد واکنش های ذخیره شده";
+            case "VeyraReactionHistoryLimitDesc": return "حداکثر تعداد واکنش های ذخیره شده برای هر پیام (بین ۵ تا ۱۰۰)";
             case "VeyraNoEditHistory": return "هیچ ویرایشی برای این پیام ثبت نشده است.";
             case "VeyraNoReactionHistory": return "هیچ واکنشی برای این پیام ثبت نشده است.";
             default: return null;

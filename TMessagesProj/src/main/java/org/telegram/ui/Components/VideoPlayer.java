@@ -146,6 +146,14 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         boolean needUpdate();
     }
 
+    public interface SubtitleListener {
+        void onSubtitles(CharSequence text);
+    }
+    private SubtitleListener subtitleListener;
+    public void setSubtitleListener(SubtitleListener listener) {
+        this.subtitleListener = listener;
+    }
+
     public ExoPlayer player;
     private ExoPlayer audioPlayer;
     private DefaultBandwidthMeter bandwidthMeter;
@@ -200,9 +208,18 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         this.audioDisabled = audioDisabled;
         mediaDataSourceFactory = new ExtendedDefaultDataSourceFactory(ApplicationLoader.applicationContext, "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/47.0 (Chrome)");
         trackSelector = new DefaultTrackSelector(ApplicationLoader.applicationContext, new AdaptiveTrackSelection.Factory());
+        DefaultTrackSelector.Parameters.Builder trackBuilder = trackSelector.getParameters().buildUpon();
+        trackBuilder.setSelectUndeterminedTextLanguage(true);
+        try {
+            String lang = LocaleController.getInstance().getCurrentLocale().getLanguage();
+            if (!TextUtils.isEmpty(lang)) {
+                trackBuilder.setPreferredTextLanguage(lang);
+            }
+        } catch (Exception ignored) {}
         if (audioDisabled) {
-            trackSelector.setParameters(trackSelector.getParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
+            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true);
         }
+        trackSelector.setParameters(trackBuilder.build());
         lastReportedPlaybackState = ExoPlayer.STATE_IDLE;
         shouldPauseOther = pauseOther;
         if (pauseOther) {
@@ -1682,6 +1699,29 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
             if (audioVisualizerDelegate != null) {
                 audioVisualizerDelegate.onVisualizerUpdate(false, true, null);
             }
+        }
+    }
+
+    @Override
+    public void onCues(List<com.google.android.exoplayer2.text.Cue> cues) {
+        if (subtitleListener != null) {
+            AndroidUtilities.runOnUIThread(() -> {
+                if (subtitleListener != null) {
+                    if (cues != null && !cues.isEmpty()) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < cues.size(); i++) {
+                            com.google.android.exoplayer2.text.Cue cue = cues.get(i);
+                            if (cue != null && !TextUtils.isEmpty(cue.text)) {
+                                if (sb.length() > 0) sb.append("\n");
+                                sb.append(cue.text);
+                            }
+                        }
+                        subtitleListener.onSubtitles(sb.length() > 0 ? sb.toString() : null);
+                    } else {
+                        subtitleListener.onSubtitles(null);
+                    }
+                }
+            });
         }
     }
 

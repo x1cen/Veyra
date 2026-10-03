@@ -5282,19 +5282,38 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
-                                if (reactions != null && reactions.results != null && VeyraConfig.reactionHistoryEnabled) {
+                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
-                                    for (int r = 0; r < reactions.results.size(); r++) {
-                                        TLRPC.ReactionCount rc = reactions.results.get(r);
-                                        if (rc != null) {
-                                            String emoji = "";
-                                            if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                emoji = "⭐️";
-                                            } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
+                                    if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
+                                        for (int r = 0; r < reactions.recent_reactions.size(); r++) {
+                                            TLRPC.MessagePeerReaction mpr = reactions.recent_reactions.get(r);
+                                            if (mpr != null) {
+                                                long peerId = MessageObject.getPeerId(mpr.peer_id);
+                                                String emoji = "";
+                                                if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                    emoji = "⭐️";
+                                                } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                    emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
+                                                }
+                                                if (!TextUtils.isEmpty(emoji)) {
+                                                    int rDate = mpr.date > 0 ? mpr.date : nowTime;
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, rDate, emoji, 1, peerId);
+                                                }
                                             }
-                                            if (!TextUtils.isEmpty(emoji)) {
-                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0);
+                                        }
+                                    } else if (reactions.results != null) {
+                                        for (int r = 0; r < reactions.results.size(); r++) {
+                                            TLRPC.ReactionCount rc = reactions.results.get(r);
+                                            if (rc != null) {
+                                                String emoji = "";
+                                                if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                    emoji = "⭐️";
+                                                } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                    emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
+                                                }
+                                                if (!TextUtils.isEmpty(emoji)) {
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0);
+                                                }
                                             }
                                         }
                                     }
@@ -15927,7 +15946,7 @@ public class MessagesStorage extends BaseController {
                                             } else {
                                                 message.edit_date = oldMessage.edit_date;
                                             }
-                                        } else if (!TextUtils.isEmpty(oldText)) {
+                                        } else if (!TextUtils.isEmpty(oldText) && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);
                                             if (!VeyraConfig.isDeveloperChat(did)) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;

@@ -63,6 +63,7 @@ public class VeyraConfig {
     // Message Edit History
     public static boolean editHistoryEnabled = true;
     public static boolean reactionHistoryEnabled = true;
+    public static int reactionHistoryLimit = 20;
     public static boolean editHistoryPrivate = true;
     public static boolean editHistoryGroups = true;
     public static boolean editHistoryChannels = true;
@@ -152,6 +153,7 @@ public class VeyraConfig {
 
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
         reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
+        reactionHistoryLimit = preferences.getInt("reactionHistoryLimit", 20);
         editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
         editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
         editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
@@ -268,6 +270,29 @@ public class VeyraConfig {
             return editHistoryEnabled;
         }
     }
+
+    public static boolean isChatTypeAllowedForReactionHistory(long dialogId) {
+        if (!reactionHistoryEnabled) return false;
+        try {
+            int currentAccount = UserConfig.selectedAccount;
+            if (dialogId > 0) {
+                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                if (user != null && user.bot) {
+                    return false;
+                }
+                return true;
+            } else {
+                long chatId = -dialogId;
+                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
+                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                    return false;
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
     public static void setGhostMode(boolean val) {
         ghostMode = val;
         save("ghostMode", val);
@@ -327,6 +352,10 @@ public class VeyraConfig {
     public static void setReactionHistoryEnabled(boolean val) {
         reactionHistoryEnabled = val;
         save("reactionHistoryEnabled", val);
+    }
+    public static void setReactionHistoryLimit(int val) {
+        reactionHistoryLimit = val;
+        save("reactionHistoryLimit", val);
     }
     public static void setEditHistoryPrivate(boolean val) {
         editHistoryPrivate = val;

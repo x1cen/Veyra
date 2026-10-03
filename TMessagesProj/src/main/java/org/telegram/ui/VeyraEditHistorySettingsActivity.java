@@ -50,6 +50,13 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         ));
 
         r.add(VeyraSettingsRow.detail(
+                LocaleController.getString("VeyraReactionHistoryLimit", R.string.VeyraReactionHistoryLimit),
+                () -> String.valueOf(VeyraConfig.reactionHistoryLimit),
+                true,
+                this::showReactionLimitDialog
+        ));
+
+        r.add(VeyraSettingsRow.detail(
                 LocaleController.getString("VeyraEditHistoryLimit", R.string.VeyraEditHistoryLimit),
                 () -> String.valueOf(VeyraConfig.editHistoryLimit),
                 true,
@@ -117,6 +124,47 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         r.add(VeyraSettingsRow.shadow());
 
         return r;
+    }
+
+    private void showReactionLimitDialog() {
+        if (getParentActivity() == null) return;
+        Context context = getParentActivity();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(LocaleController.getString("VeyraReactionHistoryLimit", R.string.VeyraReactionHistoryLimit));
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(16), AndroidUtilities.dp(24), AndroidUtilities.dp(16));
+
+        TextView hint = new TextView(context);
+        hint.setText(LocaleController.getString("VeyraReactionHistoryLimitDesc", R.string.VeyraReactionHistoryLimitDesc));
+        hint.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        hint.setTextSize(14);
+        container.addView(hint, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(context);
+        editText.setTextSize(18);
+        editText.setText(String.valueOf(VeyraConfig.reactionHistoryLimit));
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+        editText.setGravity(Gravity.CENTER);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 40));
+
+        builder.setView(container);
+        builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
+            try {
+                int val = Integer.parseInt(editText.getText().toString().trim());
+                val = Math.max(5, Math.min(100, val));
+                VeyraConfig.setReactionHistoryLimit(val);
+                if (listView != null && listView.getAdapter() != null) {
+                    listView.getAdapter().notifyDataSetChanged();
+                }
+            } catch (Exception ignore) {
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
     }
 
     private void showLimitDialog() {

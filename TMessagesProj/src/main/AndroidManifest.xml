@@ -92,6 +92,10 @@
             <data android:scheme="ton"/>
         </intent>
         <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="*/*"/>
+        </intent>
+        <intent>
             <action android:name="android.intent.action.GET_CONTENT"/>
         </intent>
         <intent>

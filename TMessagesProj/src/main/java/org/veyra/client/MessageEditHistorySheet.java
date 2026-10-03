@@ -189,6 +189,7 @@ public class MessageEditHistorySheet extends BottomSheet {
 
     private boolean populateReactions(Context context, LinearLayout container, MessageObject messageObject, long dialogId, int messageId) {
         boolean found = false;
+        java.util.HashSet<String> seen = new java.util.HashSet<>();
 
         if (messageObject.messageOwner != null && messageObject.messageOwner.reactions != null) {
             TLRPC.TL_messageReactions reactions = messageObject.messageOwner.reactions;
@@ -198,10 +199,22 @@ public class MessageEditHistorySheet extends BottomSheet {
                     if (pr != null) {
                         String emoji = getReactionEmoji(pr.reaction);
                         long peerId = MessageObject.getPeerId(pr.peer_id);
-                        TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(peerId);
-                        String userName = user != null ? UserObject.getUserName(user) : (peerId != 0 ? ("User " + peerId) : "");
-                        container.addView(createReactionCard(context, emoji, userName, pr.date, 1));
-                        found = true;
+                        String key = emoji + "_" + peerId;
+                        if (seen.add(key)) {
+                            TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(peerId);
+                            String userName;
+                            if (user != null) {
+                                if (!android.text.TextUtils.isEmpty(user.username)) {
+                                    userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
+                                } else {
+                                    userName = UserObject.getUserName(user);
+                                }
+                            } else {
+                                userName = peerId != 0 ? ("User " + peerId) : LocaleController.getString("Reactions", R.string.Reactions);
+                            }
+                            container.addView(createReactionCard(context, emoji, userName, pr.date, 1));
+                            found = true;
+                        }
                     }
                 }
             }
@@ -223,8 +236,26 @@ public class MessageEditHistorySheet extends BottomSheet {
         if (dbHistory != null && !dbHistory.isEmpty()) {
             for (int i = 0; i < dbHistory.size(); i++) {
                 VeyraEditHistoryManager.ReactionEntry entry = dbHistory.get(i);
-                container.addView(createReactionCard(context, entry.reaction, "Reaction", entry.date, entry.count));
-                found = true;
+                String key = entry.reaction + "_" + entry.userId;
+                if (entry.userId == 0 || seen.add(key)) {
+                    String userName;
+                    if (entry.userId != 0) {
+                        TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(entry.userId);
+                        if (user != null) {
+                            if (!android.text.TextUtils.isEmpty(user.username)) {
+                                userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
+                            } else {
+                                userName = UserObject.getUserName(user);
+                            }
+                        } else {
+                            userName = "User " + entry.userId;
+                        }
+                    } else {
+                        userName = LocaleController.getString("Reactions", R.string.Reactions);
+                    }
+                    container.addView(createReactionCard(context, entry.reaction, userName, entry.date, entry.count));
+                    found = true;
+                }
             }
         }
 

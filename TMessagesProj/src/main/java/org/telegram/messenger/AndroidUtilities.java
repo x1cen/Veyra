@@ -4248,15 +4248,38 @@ public class AndroidUtilities {
                         try {
                             activity.startActivityForResult(intent, 500);
                         } catch (Exception e) {
-                            if (Build.VERSION.SDK_INT >= 24) {
-                                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
-                            } else {
-                                intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                            try {
+                                Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                                chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                activity.startActivityForResult(chooser, 500);
+                            } catch (Exception e2) {
+                                try {
+                                    if (Build.VERSION.SDK_INT >= 24) {
+                                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "*/*");
+                                    } else {
+                                        intent.setDataAndType(Uri.fromFile(f), "*/*");
+                                    }
+                                    Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                                    chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                    activity.startActivityForResult(chooser, 500);
+                                } catch (Exception e3) {
+                                    if (Build.VERSION.SDK_INT >= 24) {
+                                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
+                                    } else {
+                                        intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                                    }
+                                    activity.startActivityForResult(intent, 500);
+                                }
                             }
-                            activity.startActivityForResult(intent, 500);
                         }
                     } else {
-                        activity.startActivityForResult(intent, 500);
+                        try {
+                            activity.startActivityForResult(intent, 500);
+                        } catch (Exception e) {
+                            Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            activity.startActivityForResult(chooser, 500);
+                        }
                     }
                 } catch (Exception e) {
                     if (activity == null) {
@@ -4316,15 +4339,38 @@ public class AndroidUtilities {
                 try {
                     activity.startActivityForResult(intent, 500);
                 } catch (Exception e) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
-                    } else {
-                        intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                    try {
+                        Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        activity.startActivityForResult(chooser, 500);
+                    } catch (Exception e2) {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "*/*");
+                            } else {
+                                intent.setDataAndType(Uri.fromFile(f), "*/*");
+                            }
+                            Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            activity.startActivityForResult(chooser, 500);
+                        } catch (Exception e3) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
+                            } else {
+                                intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                            }
+                            activity.startActivityForResult(intent, 500);
+                        }
                     }
-                    activity.startActivityForResult(intent, 500);
                 }
             } else {
-                activity.startActivityForResult(intent, 500);
+                try {
+                    activity.startActivityForResult(intent, 500);
+                } catch (Exception e) {
+                    Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                    chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    activity.startActivityForResult(chooser, 500);
+                }
             }
             return true;
         }
