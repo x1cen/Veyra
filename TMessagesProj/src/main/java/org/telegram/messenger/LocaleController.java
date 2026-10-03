@@ -1431,11 +1431,167 @@ public class LocaleController {
         return localeInfo == null || TextUtils.isEmpty(localeInfo.name) ? getString("LanguageName", R.string.LanguageName) : localeInfo.name;
     }
 
+    private static String getVeyraFarsiString(String key) {
+        if (key == null) return null;
+        switch (key) {
+            case "VeyraSettings": return "تنظیمات ویرا";
+            case "VeyraSettingsCategories": return "دسته‌بندی‌ها";
+            case "VeyraPrivacySecurity": return "حریم خصوصی و امنیت";
+            case "VeyraPrivacySecurityDesc": return "وضعیت آنلاین، قفل تنظیمات، مسدودسازی نشست‌ها";
+            case "VeyraChatList": return "لیست گفتگوها";
+            case "VeyraChatListDesc": return "فیلتر جستجو، پیش‌نمایش رسانه، نشانگر آنلاین، عنوان اختصاصی";
+            case "VeyraComposingMessages": return "نوشتن و پیام‌ها";
+            case "VeyraComposingMessagesDesc": return "منشن با نام، ارسال با عنوان، ری‌اکشن سریع، نمایش ثانیه";
+            case "VeyraMediaCamera": return "رسانه و دوربین";
+            case "VeyraMediaCameraDesc": return "دوربین پشت برای پیام ویدیویی، ارسال متن همراه استیکر و گیف";
+            case "VeyraControlsGeneral": return "کنترل‌ها و تنظیمات عمومی";
+            case "VeyraControlsGeneralDesc": return "تأیید تماس/لینک، پاکسازی لینک‌ها، تقویم شمسی، شناسه پروفایل";
+            case "VeyraBackupRestore": return "پشتیبان‌گیری و بازیابی";
+            case "VeyraBackupRestoreDesc": return "خروجی گرفتن، وارد کردن و بازنشانی تنظیمات";
+            case "VeyraAbout": return "درباره ویرا";
+            case "VeyraUnlockedLimits": return "محدودیت‌های آزادشده";
+            case "VeyraUnlockedLimitsDesc": return "۱۰۰ سنجاق، ۵۰۰ استیکر، ۱۰۰۰ گیف، ۳۰ پوشه";
+            case "VeyraAdFree": return "تجربه بدون تبلیغات";
+            case "VeyraAdFreeDesc": return "تبلیغات رسمی تلگرام به طور دائمی غیرفعال است";
+            case "VeyraVersion": return "نسخه ویرا";
+            case "VeyraCheckForUpdates": return "بررسی به‌روزرسانی";
+            case "VeyraAntiDelete": return "ضدحذف پیام‌ها";
+            case "VeyraAntiDeleteDesc": return "نگهداری پیام‌های حذف‌شده با برچسب 'حذف شده'";
+            case "VeyraAntiDeleteEnable": return "فعال‌سازی ضدحذف پیام‌ها";
+            case "VeyraAntiDeleteEnableDesc": return "نگهداری پیام‌های حذف‌شده در چت‌های مشخص‌شده";
+            case "VeyraChatTypes": return "نوع گفتگوها";
+            case "VeyraChatTypePrivate": return "چت‌های خصوصی";
+            case "VeyraChatTypePrivateDesc": return "فعال بودن در گفتگوهای دونفره خصوصی";
+            case "VeyraChatTypeGroups": return "گروه‌ها";
+            case "VeyraChatTypeGroupsDesc": return "فعال بودن در گروه‌های عادی و سوپرگروه‌ها";
+            case "VeyraChatTypeChannels": return "کانال‌ها";
+            case "VeyraChatTypeChannelsDesc": return "فعال بودن در کانال‌ها";
+            case "VeyraChatTypeBots": return "ربات‌ها";
+            case "VeyraChatTypeBotsDesc": return "فعال بودن در گفتگو با ربات‌ها";
+            case "VeyraGhostMode": return "حالت روح کامل";
+            case "VeyraGhostModeDesc": return "عدم ارسال وضعیت خوانده شدن پیام‌ها";
+            case "VeyraHideTyping": return "مخفی کردن وضعیت تایپ";
+            case "VeyraHideTypingDesc": return "عدم ارسال وضعیت در حال نوشتن (typing...)";
+            case "VeyraBlockSecretChat": return "مسدودسازی چت محرمانه ورودی";
+            case "VeyraBlockSecretChatDesc": return "رد خودکار درخواست‌های چت محرمانه";
+            case "VeyraHideConnectingToProxy": return "مخفی کردن وضعیت اتصال به پروکسی";
+            case "VeyraHideConnectingToProxyDesc": return "مخفی کردن متن در حال اتصال در عنوان و منو";
+            case "VeyraSettingsLock": return "قفل تنظیمات";
+            case "VeyraSettingsLockSet": return "تنظیم رمز عبور";
+            case "VeyraSettingsLockChange": return "تغییر رمز عبور";
+            case "VeyraSettingsLockOn": return "فعال";
+            case "VeyraSettingsLockOff": return "غیرفعال";
+            case "VeyraSettingsLockRemove": return "غیرفعال کردن قفل تنظیمات";
+            case "VeyraSettingsLockRemoved": return "قفل تنظیمات غیرفعال شد";
+            case "VeyraDisableGlobalSearch": return "غیرفعال‌سازی جستجوی جهانی";
+            case "VeyraDisableGlobalSearchDesc": return "عدم جستجوی کانال‌ها و کاربران عمومی در نوار جستجو";
+            case "VeyraDisableThumbsInDialogList": return "مخفی کردن پیش‌نمایش رسانه در چت‌ها";
+            case "VeyraDisableThumbsInDialogListDesc": return "عدم نمایش تصویر کوچک عکس و ویدیو در لیست گفتگوها";
+            case "VeyraEnableLastSeenDots": return "نشانگر رنگی آخرین بازدید";
+            case "VeyraEnableLastSeenDotsDesc": return "نمایش نقطه رنگی زمان تقریبی آفلاین بودن مخاطب";
+            case "VeyraSortByUnread": return "اولویت چت‌های خوانده‌نشده";
+            case "VeyraSortByUnreadDesc": return "انتقال چت‌های خوانده‌نشده به بالای لیست گفتگوها";
+            case "VeyraSortByUnmuted": return "اولویت چت‌های صدادار";
+            case "VeyraSortByUnmutedDesc": return "انتقال چت‌های بدون بی‌صدا بالاتر از چت‌های بی‌صدا";
+            case "VeyraMentionByName": return "منشن با نام";
+            case "VeyraMentionByNameDesc": return "درج نام کاربر به جای آیدی کاربری هنگام منشن کردن";
+            case "VeyraHideSendAsButton": return "مخفی کردن دکمه ارسال با عنوان";
+            case "VeyraHideSendAsButtonDesc": return "مخفی کردن دکمه تغییر کانال ارسال‌کننده در نوار پیام";
+            case "VeyraDisableQuickReaction": return "غیرفعال‌سازی ری‌اکشن سریع";
+            case "VeyraDisableQuickReactionDesc": return "جلوگیری از ارسال ری‌اکشن با دوبار ضربه روی پیام";
+            case "VeyraFormatTimeWithSeconds": return "نمایش ثانیه در زمان پیام";
+            case "VeyraFormatTimeWithSecondsDesc": return "نمایش زمان دقیق پیام به همراه ثانیه";
+            case "VeyraStripBotLinkParams": return "حذف پارامترهای ردیابی لینک ربات‌ها";
+            case "VeyraStripBotLinkParamsDesc": return "حذف کدهای تبلیغاتی و ردیابی از لینک‌ها";
+            case "VeyraAnonymousForwardNoQuote": return "فوروارد پیش‌فرض بدون نقل قول";
+            case "VeyraAnonymousForwardNoQuoteDesc": return "مخفی کردن نام فرستنده اصلی هنگام فوروارد پیام‌ها";
+            case "VeyraDisableBigEmoji": return "غیرفعال‌سازی ایموجی‌های بزرگ";
+            case "VeyraDisableBigEmojiDesc": return "نمایش تک ایموجی‌ها به اندازه متن عادی";
+            case "VeyraJumpToFirstMessage": return "پرش به اولین پیام";
+            case "VeyraJumpToFirstMessageDesc": return "افزودن گزینه پرش به اولین پیام در منوی سه‌نقطه";
+            case "VeyraCopyDialogId": return "کپی شناسه گفتگو";
+            case "VeyraCopyDialogIdDesc": return "افزودن گزینه کپی شناسه در منوی سه‌نقطه";
+            case "VeyraRearCameraVideoMessages": return "دوربین پشت برای پیام ویدیویی";
+            case "VeyraRearCameraVideoMessagesDesc": return "شروع پیام ویدیویی دایره‌ای با دوربین پشت";
+            case "VeyraSendCaptionWithSticker": return "ارسال متن همراه استیکر";
+            case "VeyraSendCaptionWithStickerDesc": return "پیوست کردن متن نوار ورودی به عنوان کپشن استیکر";
+            case "VeyraSendCaptionWithGif": return "ارسال متن همراه گیف";
+            case "VeyraSendCaptionWithGifDesc": return "پیوست کردن متن نوار ورودی به عنوان کپشن گیف";
+            case "VeyraKeepOriginalFilename": return "حفظ نام اصلی فایل در دانلود";
+            case "VeyraKeepOriginalFilenameDesc": return "نگهداری نام اولیه فایل‌ها هنگام ذخیره‌سازی";
+            case "VeyraConfirmCall": return "تأیید قبل از برقراری تماس";
+            case "VeyraConfirmCallDesc": return "نمایش دیالوگ تأییدیه قبل از تماس صوتی یا تصویری";
+            case "VeyraConfirmLink": return "تأیید باز کردن لینک‌ها";
+            case "VeyraConfirmLinkDesc": return "درخواست تأیید پیش از باز کردن لینک‌های اینترنتی";
+            case "VeyraCleanUrls": return "پاکسازی لینک‌ها هنگام کپی";
+            case "VeyraCleanUrlsDesc": return "حذف خودکار کدهای ردیابی هنگام کپی کردن لینک‌ها";
+            case "VeyraDisableUndo": return "حذف شمارش معکوس لغو عملیات";
+            case "VeyraDisableUndoDesc": return "اجرای سریع دستورات بدون انتظار ۵ ثانیه‌ای";
+            case "VeyraDisableLinkPreview": return "غیرفعال‌سازی پیش‌نمایش لینک";
+            case "VeyraDisableLinkPreviewDesc": return "عدم دریافت پیش‌نمایش پیوندها هنگام تایپ";
+            case "VeyraDisableVibration": return "غیرفعال‌سازی لرزش (ویبره)";
+            case "VeyraDisableVibrationDesc": return "خاموش کردن کلیه ویبره‌ها و بازخوردهای لمسی";
+            case "VeyraPersianCalendar": return "تقویم هجری شمسی";
+            case "VeyraPersianCalendarDesc": return "نمایش تاریخ‌ها به صورت گاه‌شماری شمسی";
+            case "VeyraShowProfileId": return "نمایش شناسه تلگرام و دیتاسنتر";
+            case "VeyraShowProfileIdDesc": return "نمایش و امکان کپی شناسه کاربری و DC در پروفایل";
+            case "VeyraBypassRestrictions": return "عبور از محدودیت‌های محتوا";
+            case "VeyraBypassRestrictionsDesc": return "امکان مشاهده کانال‌ها و رسانه‌های محدودشده اندروید";
+            case "VeyraDisableTrending": return "مخفی کردن استیکرهای پرطرفدار";
+            case "VeyraDisableTrendingDesc": return "مخفی‌سازی زبانه استیکرهای محبوب";
+            case "VeyraExportSettings": return "کپی تنظیمات در کلیپ‌بورد (JSON)";
+            case "VeyraExportCopied": return "تنظیمات به صورت JSON در کلیپ‌بورد کپی شد";
+            case "VeyraImportSettings": return "وارد کردن تنظیمات از JSON";
+            case "VeyraImportSuccess": return "تنظیمات با موفقیت وارد شد";
+            case "VeyraResetSettings": return "بازنشانی تنظیمات به پیش‌فرض";
+            case "VeyraEditHistory": return "تاریخچه ویرایش پیام‌ها";
+            case "VeyraEditHistoryDesc": return "ذخیره و مشاهده نسخه‌های قبلی پیام‌های ویرایش‌شده";
+            case "VeyraEditHistoryEnable": return "فعال‌سازی تاریخچه ویرایش";
+            case "VeyraEditHistoryEnableDesc": return "ثبت نسخه‌های قدیمی هنگام ویرایش پیام‌ها";
+            case "VeyraEditHistoryLimit": return "حداکثر تعداد ویرایش هر پیام";
+            case "VeyraEditHistoryLimitDesc": return "تعداد ویرایش‌های قابل ذخیره برای هر پیام (بین ۵ تا ۱۰۰)";
+            case "VeyraEditHistoryDropOldest": return "حذف قدیمی‌ترین ویرایش";
+            case "VeyraEditHistoryDropOldestDesc": return "حذف نسخه قدیمی در صورت پر شدن ظرفیت پیام";
+            case "VeyraEditHistoryClear": return "پاکسازی تمام تاریخچه ویرایش";
+            case "VeyraEditHistoryCleared": return "تمام تاریخچه ویرایش با موفقیت پاک شد";
+            case "VeyraCustomHeaderTitle": return "عنوان بالای گفتگوها";
+            case "VeyraUseProfileName": return "استفاده از نام پروفایل";
+            case "VeyraCustomHeaderTitleDesc": return "تنظیم متن دلخواه برای بالای صفحه اصلی چت‌ها";
+            case "VeyraCustomHeaderTitleDialog": return "عنوان بالای صفحه را وارد کنید (خالی بگذارید تا پیش‌فرض شود):";
+            case "VeyraEmergencyTitle": return "منوی اضطراری";
+            case "VeyraEmergencyLocalWipe": return "پاکسازی محلی (Local Wipe)";
+            case "VeyraEmergencyLocalWipeDesc": return "پاکسازی تمام داده‌ها، کش، فایل‌ها و خروج فوری از حساب.";
+            case "VeyraEmergencyFullWipe": return "انهدام کامل (Full Wipe)";
+            case "VeyraEmergencyFullWipeDesc": return "حذف پیام‌های ارسالی گروه‌ها، حذف دوطرفه پی‌وی‌ها، ترک کانال‌ها و حذف کامل اکانت.";
+            case "VeyraEmergencyNoInternetTitle": return "عدم اتصال به اینترنت";
+            case "VeyraEmergencyNoInternet": return "اتصال اینترنت برقرار نیست. انهدام کامل نیازمند دسترسی به شبکه است.";
+            case "VeyraEmergencyRunLocal": return "اجرای پاکسازی محلی";
+            case "VeyraEmergencyConfirmLocal": return "آیا مطمئن هستید؟ تمامی داده‌های تلگرام، فایل‌های دانلودشده و کش پاک خواهند شد و از حساب کاربری خارج می‌شوید.";
+            case "VeyraEmergencyConfirmFull": return "هشدار امنیتی: آیا از انهدام کامل اطمینان دارید؟ تمام پیام‌های ارسالی شما در گروه‌ها پاک، پی‌وی‌ها دوطرفه حذف، کانال‌ها ترک و اکانت شما برای همیشه پاک خواهد شد.";
+            case "VeyraEmergencyProgress": return "در حال اجرای پروتکل اضطراری…";
+            case "VeyraBlockScreenCapture": return "مسدودسازی اسکرین‌شات";
+            case "VeyraBlockScreenCaptureDesc": return "جلوگیری از ضبط صفحه و تصویربرداری در تمام صفحات برنامه";
+            case "VeyraHideChat": return "مخفی کردن گفتگو";
+            case "VeyraChatHidden": return "گفتگو مخفی شد";
+            default: return null;
+        }
+    }
+
     private String getStringInternal(String key, int res) {
         return getStringInternal(key, null, 0, res);
     }
 
     private String getStringInternal(String key, String fallback, int fallbackRes, int res) {
+        try {
+            LocaleInfo info = getCurrentLocaleInfo();
+            String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+            if (lang.startsWith("fa")) {
+                String faStr = getVeyraFarsiString(key);
+                if (faStr != null) {
+                    return faStr;
+                }
+            }
+        } catch (Exception ignored) {}
         if ("DeletedMessage".equals(key)) {
             try {
                 LocaleInfo info = getCurrentLocaleInfo();

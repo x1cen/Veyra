@@ -156,7 +156,14 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> presentFragment(new VeyraEditHistorySettingsActivity())
         ));
 
-        // Category 3: Privacy & Security
+        // Category 3: Anti-Delete Messages
+        r.add(VeyraSettingsRow.category(
+                LocaleController.getString("VeyraAntiDelete", R.string.VeyraAntiDelete),
+                LocaleController.getString("VeyraAntiDeleteDesc", R.string.VeyraAntiDeleteDesc),
+                () -> presentFragment(new VeyraAntiDeleteSettingsActivity())
+        ));
+
+        // Category 4: Privacy & Security
         r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
                 LocaleController.getString("VeyraPrivacySecurityDesc", R.string.VeyraPrivacySecurityDesc),
@@ -232,15 +239,20 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         return r;
     }
 
-    private boolean isCheckingForUpdates = false;
+    private static boolean isCheckingForUpdates = false;
 
     private void checkForUpdates() {
+        checkForUpdates(getParentActivity(), this);
+    }
+
+    public static void checkForUpdates(android.app.Activity parentActivity, BaseFragment fragment) {
         if (isCheckingForUpdates) {
             return;
         }
+        if (parentActivity == null || fragment == null) return;
         isCheckingForUpdates = true;
         final boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-        BulletinFactory.of(VeyraSettingsActivity.this).createSimpleBulletin(
+        BulletinFactory.of(fragment).createSimpleBulletin(
                 R.raw.chats_infotip,
                 isFarsi ? "در حال بررسی به‌روزرسانی..." : "Checking for updates…"
         ).show();
@@ -298,11 +310,11 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
             AndroidUtilities.runOnUIThread(() -> {
                 isCheckingForUpdates = false;
-                if (getParentActivity() == null) {
+                if (fragment.getParentActivity() == null) {
                     return;
                 }
                 if (!fetchOk) {
-                    BulletinFactory.of(VeyraSettingsActivity.this).createErrorBulletin(
+                    BulletinFactory.of(fragment).createErrorBulletin(
                             isFarsi ? "خطا در بررسی به‌روزرسانی. اتصال اینترنت را بررسی کنید."
                                     : "Failed to check for updates. Check your connection."
                     ).show();
@@ -329,12 +341,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                             .replaceAll("\\[(.+?)\\]\\(.*?\\)", "$1") // [text](url)
                             .replaceAll("\\n{3,}", "\n\n")            // collapse triple newlines
                             .trim();
-                    new AlertDialog.Builder(getParentActivity())
+                    new AlertDialog.Builder(fragment.getParentActivity())
                             .setTitle(title)
                             .setMessage(msg)
                             .setPositiveButton(isFarsi ? "به‌روزرسانی" : "Update", (dialog, which) -> {
                                 try {
-                                    Browser.openUrl(getParentActivity(), targetUrl);
+                                    Browser.openUrl(fragment.getParentActivity(), targetUrl);
                                 } catch (Exception e) {
                                     FileLog.e(e);
                                 }
@@ -342,10 +354,10 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                             .setNegativeButton(isFarsi ? "بعداً" : "Later", null)
                             .show();
                 } else {
-                    BulletinFactory.of(VeyraSettingsActivity.this).createSimpleBulletin(
+                    BulletinFactory.of(fragment).createSimpleBulletin(
                             R.raw.chats_infotip,
                             isFarsi ? ("شما از آخرین نسخه ویرا (" + currentVersion + ") استفاده می‌کنید")
-                                    : ("You're on the latest version (" + currentVersion + ")")
+                                    : ("You have the latest version of Veyra (" + currentVersion + ")")
                     ).show();
                 }
             });

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="AppName">ویرا</string>
+    <string name="AppNameBeta">ویرا پیش‌نمایش</string>
+
+    <string name="VeyraSettings">تنظیمات ویرا</string>
+    <string name="MessageDetails">جزئیات پیام</string>
+    <string name="ExportAsJson">خروجی JSON</string>
+    <string name="ShowJson">نمایش JSON</string>
+    <string name="ViewDetails">مشاهده جزئیات</string>
+    <string name="CopyDialogId">کپی شناسه گفتگو</string>
+    <string name="JumpToFirstMessage">پرش به اولین پیام</string>
+    <string name="DialogIdCopied">شناسه گفتگو در کلیپ‌بورد کپی شد</string>
+
+    <!-- Veyra Settings Categories -->
+    <string name="VeyraSettingsCategories">دسته‌بندی‌ها</string>
+    <string name="VeyraPrivacySecurity">حریم خصوصی و امنیت</string>
+    <string name="VeyraPrivacySecurityDesc">وضعیت آنلاین، قفل تنظیمات، مسدودسازی نشست‌ها</string>
+    <string name="VeyraChatList">لیست گفتگوها</string>
+    <string name="VeyraChatListDesc">فیلتر جستجو، پیش‌نمایش رسانه، نشانگر آنلاین، عنوان اختصاصی</string>
+    <string name="VeyraComposingMessages">نوشتن و پیام‌ها</string>
+    <string name="VeyraComposingMessagesDesc">منشن با نام، ارسال با عنوان، ری‌اکشن سریع، نمایش ثانیه</string>
+    <string name="VeyraMediaCamera">رسانه و دوربین</string>
+    <string name="VeyraMediaCameraDesc">دوربین پشت برای پیام ویدیویی، ارسال متن همراه استیکر و گیف</string>
+    <string name="VeyraControlsGeneral">کنترل‌ها و تنظیمات عمومی</string>
+    <string name="VeyraControlsGeneralDesc">تأیید تماس/لینک، پاکسازی لینک‌ها، تقویم شمسی، شناسه پروفایل</string>
+    <string name="VeyraBackupRestore">پشتیبان‌گیری و بازیابی</string>
+    <string name="VeyraBackupRestoreDesc">خروجی گرفتن، وارد کردن و بازنشانی تنظیمات</string>
+    <string name="VeyraAbout">درباره ویرا</string>
+    <string name="VeyraUnlockedLimits">محدودیت‌های آزادشده</string>
+    <string name="VeyraUnlockedLimitsDesc">۱۰۰ سنجاق، ۵۰۰ استیکر، ۱۰۰۰ گیف، ۳۰ پوشه</string>
+    <string name="VeyraAdFree">تجربه بدون تبلیغات</string>
+    <string name="VeyraAdFreeDesc">تبلیغات رسمی تلگرام به طور دائمی غیرفعال است</string>
+    <string name="VeyraVersion">نسخه ویرا</string>
+    <string name="VeyraHelpChannel">کانال اطلاع‌رسانی ویرا</string>
+    <string name="VeyraUpdateAvailableTitle">نسخه جدید ویرا %1$s موجود است</string>
+    <string name="VeyraCheckForUpdates">بررسی به‌روزرسانی</string>
+
+    <!-- Online Status & Privacy -->
+    <string name="VeyraOnlineStatus">وضعیت آنلاین</string>
+    <string name="VeyraOnlineModeDefault">نمایش آنلاین (پیش‌فرض)</string>
+    <string name="VeyraOnlineModeHide">مخفی کردن وضعیت آنلاین</string>
+    <string name="VeyraOnlineModeHideAfterMsg">مخفی کردن آنلاین + آفلاین شدن بعد ارسال پیام</string>
+    <string name="VeyraOnlineModeAlways">همیشه آنلاین</string>
+    <string name="VeyraReadOnReply">خواندن پیام با ارسال پاسخ</string>
+    <string name="VeyraReadOnReplyDesc">پیام‌ها خوانده نمی‌شوند تا زمانی که به آن‌ها پاسخ دهید</string>
+
+    <!-- Anti-Delete Section -->
+    <string name="VeyraAntiDelete">ضدحذف پیام‌ها</string>
+    <string name="VeyraAntiDeleteDesc">نگهداری پیام‌های حذف‌شده با برچسب \'حذف شده\'</string>
+    <string name="VeyraAntiDeleteEnable">فعال‌سازی ضدحذف پیام‌ها</string>
+    <string name="VeyraAntiDeleteEnableDesc">نگهداری پیام‌های حذف‌شده در چت‌های مشخص‌شده</string>
+    <string name="VeyraChatTypes">نوع گفتگوها</string>
+    <string name="VeyraChatTypePrivate">چت‌های خصوصی</string>
+    <string name="VeyraChatTypePrivateDesc">فعال بودن در گفتگوهای دونفره خصوصی</string>
+    <string name="VeyraChatTypeGroups">گروه‌ها</string>
+    <string name="VeyraChatTypeGroupsDesc">فعال بودن در گروه‌های عادی و سوپرگروه‌ها</string>
+    <string name="VeyraChatTypeChannels">کانال‌ها</string>
+    <string name="VeyraChatTypeChannelsDesc">فعال بودن در کانال‌ها</string>
+    <string name="VeyraChatTypeBots">ربات‌ها</string>
+    <string name="VeyraChatTypeBotsDesc">فعال بودن در گفتگو با ربات‌ها</string>
+
+    <!-- Ghost Mode -->
+    <string name="VeyraGhostMode">حالت روح کامل</string>
+    <string name="VeyraGhostModeDesc">عدم ارسال وضعیت خوانده شدن پیام‌ها</string>
+    <string name="VeyraHideTyping">مخفی کردن وضعیت تایپ</string>
+    <string name="VeyraHideTypingDesc">عدم ارسال وضعیت در حال نوشتن (typing...)</string>
+    <string name="VeyraBlockSecretChat">مسدودسازی چت محرمانه ورودی</string>
+    <string name="VeyraBlockSecretChatDesc">رد خودکار درخواست‌های چت محرمانه</string>
+    <string name="VeyraHideConnectingToProxy">مخفی کردن وضعیت اتصال به پروکسی</string>
+    <string name="VeyraHideConnectingToProxyDesc">مخفی کردن متن در حال اتصال در عنوان و منو</string>
+    <string name="VeyraSettingsLock">قفل تنظیمات</string>
+    <string name="VeyraSettingsLockSet">تنظیم رمز عبور</string>
+    <string name="VeyraSettingsLockChange">تغییر رمز عبور</string>
+    <string name="VeyraSettingsLockOn">فعال</string>
+    <string name="VeyraSettingsLockOff">غیرفعال</string>
+    <string name="VeyraSettingsLockRemove">غیرفعال کردن قفل تنظیمات</string>
+    <string name="VeyraSettingsLockRemoved">قفل تنظیمات غیرفعال شد</string>
+
+    <!-- Chat List -->
+    <string name="VeyraDisableGlobalSearch">غیرفعال‌سازی جستجوی جهانی</string>
+    <string name="VeyraDisableGlobalSearchDesc">عدم جستجوی کانال‌ها و کاربران عمومی در نوار جستجو</string>
+    <string name="VeyraDisableThumbsInDialogList">مخفی کردن پیش‌نمایش رسانه در چت‌ها</string>
+    <string name="VeyraDisableThumbsInDialogListDesc">عدم نمایش تصویر کوچک عکس و ویدیو در لیست گفتگوها</string>
+    <string name="VeyraEnableLastSeenDots">نشانگر رنگی آخرین بازدید</string>
+    <string name="VeyraEnableLastSeenDotsDesc">نمایش نقطه رنگی زمان تقریبی آفلاین بودن مخاطب</string>
+    <string name="VeyraSortByUnread">اولویت چت‌های خوانده‌نشده</string>
+    <string name="VeyraSortByUnreadDesc">انتقال چت‌های خوانده‌نشده به بالای لیست گفتگوها</string>
+    <string name="VeyraSortByUnmuted">اولویت چت‌های صدادار</string>
+    <string name="VeyraSortByUnmutedDesc">انتقال چت‌های بدون بی‌صدا بالاتر از چت‌های بی‌صدا</string>
+
+    <!-- Composing & Messages -->
+    <string name="VeyraMentionByName">منشن با نام</string>
+    <string name="VeyraMentionByNameDesc">درج نام کاربر به جای آیدی کاربری هنگام منشن کردن</string>
+    <string name="VeyraHideSendAsButton">مخفی کردن دکمه ارسال با عنوان</string>
+    <string name="VeyraHideSendAsButtonDesc">مخفی کردن دکمه تغییر کانال ارسال‌کننده در نوار پیام</string>
+    <string name="VeyraDisableQuickReaction">غیرفعال‌سازی ری‌اکشن سریع</string>
+    <string name="VeyraDisableQuickReactionDesc">جلوگیری از ارسال ری‌اکشن با دوبار ضربه روی پیام</string>
+    <string name="VeyraFormatTimeWithSeconds">نمایش ثانیه در زمان پیام</string>
+    <string name="VeyraFormatTimeWithSecondsDesc">نمایش زمان دقیق پیام به همراه ثانیه</string>
+    <string name="VeyraStripBotLinkParams">حذف پارامترهای ردیابی لینک ربات‌ها</string>
+    <string name="VeyraStripBotLinkParamsDesc">حذف کدهای تبلیغاتی و ردیابی از لینک‌ها</string>
+    <string name="VeyraAnonymousForwardNoQuote">فوروارد پیش‌فرض بدون نقل قول</string>
+    <string name="VeyraAnonymousForwardNoQuoteDesc">مخفی کردن نام فرستنده اصلی هنگام فوروارد پیام‌ها</string>
+    <string name="VeyraDisableBigEmoji">غیرفعال‌سازی ایموجی‌های بزرگ</string>
+    <string name="VeyraDisableBigEmojiDesc">نمایش تک ایموجی‌ها به اندازه متن عادی</string>
+    <string name="VeyraJumpToFirstMessage">پرش به اولین پیام</string>
+    <string name="VeyraJumpToFirstMessageDesc">افزودن گزینه پرش به اولین پیام در منوی سه‌نقطه</string>
+    <string name="VeyraCopyDialogId">کپی شناسه گفتگو</string>
+    <string name="VeyraCopyDialogIdDesc">افزودن گزینه کپی شناسه در منوی سه‌نقطه</string>
+
+    <!-- Media & Camera -->
+    <string name="VeyraRearCameraVideoMessages">دوربین پشت برای پیام ویدیویی</string>
+    <string name="VeyraRearCameraVideoMessagesDesc">شروع پیام ویدیویی دایره‌ای با دوربین پشت</string>
+    <string name="VeyraSendCaptionWithSticker">ارسال متن همراه استیکر</string>
+    <string name="VeyraSendCaptionWithStickerDesc">پیوست کردن متن نوار ورودی به عنوان کپشن استیکر</string>
+    <string name="VeyraSendCaptionWithGif">ارسال متن همراه گیف</string>
+    <string name="VeyraSendCaptionWithGifDesc">پیوست کردن متن نوار ورودی به عنوان کپشن گیف</string>
+    <string name="VeyraKeepOriginalFilename">حفظ نام اصلی فایل در دانلود</string>
+    <string name="VeyraKeepOriginalFilenameDesc">نگهداری نام اولیه فایل‌ها هنگام ذخیره‌سازی</string>
+
+    <!-- Controls & General -->
+    <string name="VeyraConfirmCall">تأیید قبل از برقراری تماس</string>
+    <string name="VeyraConfirmCallDesc">نمایش دیالوگ تأییدیه قبل از تماس صوتی یا تصویری</string>
+    <string name="VeyraConfirmLink">تأیید باز کردن لینک‌ها</string>
+    <string name="VeyraConfirmLinkDesc">درخواست تأیید پیش از باز کردن لینک‌های اینترنتی</string>
+    <string name="VeyraCleanUrls">پاکسازی لینک‌ها هنگام کپی</string>
+    <string name="VeyraCleanUrlsDesc">حذف خودکار کدهای ردیابی هنگام کپی کردن لینک‌ها</string>
+    <string name="VeyraDisableUndo">حذف شمارش معکوس لغو عملیات</string>
+    <string name="VeyraDisableUndoDesc">اجرای سریع دستورات بدون انتظار ۵ ثانیه‌ای</string>
+    <string name="VeyraDisableLinkPreview">غیرفعال‌سازی پیش‌نمایش لینک</string>
+    <string name="VeyraDisableLinkPreviewDesc">عدم دریافت پیش‌نمایش پیوندها هنگام تایپ</string>
+    <string name="VeyraDisableVibration">غیرفعال‌سازی لرزش (ویبره)</string>
+    <string name="VeyraDisableVibrationDesc">خاموش کردن کلیه ویبره‌ها و بازخوردهای لمسی</string>
+    <string name="VeyraPersianCalendar">تقویم هجری شمسی</string>
+    <string name="VeyraPersianCalendarDesc">نمایش تاریخ‌ها به صورت گاه‌شماری شمسی</string>
+    <string name="VeyraShowProfileId">نمایش شناسه تلگرام و دیتاسنتر</string>
+    <string name="VeyraShowProfileIdDesc">نمایش و امکان کپی شناسه کاربری و DC در پروفایل</string>
+    <string name="VeyraBypassRestrictions">عبور از محدودیت‌های محتوا</string>
+    <string name="VeyraBypassRestrictionsDesc">امکان مشاهده کانال‌ها و رسانه‌های محدودشده اندروید</string>
+    <string name="VeyraDisableTrending">مخفی کردن استیکرهای پرطرفدار</string>
+    <string name="VeyraDisableTrendingDesc">مخفی‌سازی زبانه استیکرهای محبوب</string>
+
+    <!-- Backup & Restore -->
+    <string name="VeyraExportSettings">کپی تنظیمات در کلیپ‌بورد (JSON)</string>
+    <string name="VeyraExportCopied">تنظیمات به صورت JSON در کلیپ‌بورد کپی شد</string>
+    <string name="VeyraImportSettings">وارد کردن تنظیمات از JSON</string>
+    <string name="VeyraImportSuccess">تنظیمات با موفقیت وارد شد</string>
+    <string name="VeyraResetSettings">بازنشانی تنظیمات به پیش‌فرض</string>
+
+    <!-- Edit History -->
+    <string name="VeyraEditHistory">تاریخچه ویرایش پیام‌ها</string>
+    <string name="VeyraEditHistoryDesc">ذخیره و مشاهده نسخه‌های قبلی پیام‌های ویرایش‌شده</string>
+    <string name="VeyraEditHistoryEnable">فعال‌سازی تاریخچه ویرایش</string>
+    <string name="VeyraEditHistoryEnableDesc">ثبت نسخه‌های قدیمی هنگام ویرایش پیام‌ها</string>
+    <string name="VeyraEditHistoryLimit">حداکثر تعداد ویرایش هر پیام</string>
+    <string name="VeyraEditHistoryLimitDesc">تعداد ویرایش‌های قابل ذخیره برای هر پیام (بین ۵ تا ۱۰۰)</string>
+    <string name="VeyraEditHistoryDropOldest">حذف قدیمی‌ترین ویرایش</string>
+    <string name="VeyraEditHistoryDropOldestDesc">حذف نسخه قدیمی در صورت پر شدن ظرفیت پیام</string>
+    <string name="VeyraEditHistoryClear">پاکسازی تمام تاریخچه ویرایش</string>
+    <string name="VeyraEditHistoryCleared">تمام تاریخچه ویرایش با موفقیت پاک شد</string>
+    <string name="EditHistory">تاریخچه</string>
+    <string name="OriginalMessage">پیام اصلی</string>
+
+    <!-- Custom Header Title -->
+    <string name="VeyraCustomHeaderTitle">عنوان بالای گفتگوها</string>
+    <string name="VeyraUseProfileName">استفاده از نام پروفایل</string>
+    <string name="VeyraCustomHeaderTitleDesc">تنظیم متن دلخواه برای بالای صفحه اصلی چت‌ها</string>
+    <string name="VeyraCustomHeaderTitleDialog">عنوان بالای صفحه را وارد کنید (خالی بگذارید تا پیش‌فرض شود):</string>
+
+    <!-- Emergency Menu -->
+    <string name="VeyraEmergencyTitle">منوی اضطراری</string>
+    <string name="VeyraEmergencyLocalWipe">پاکسازی محلی (Local Wipe)</string>
+    <string name="VeyraEmergencyLocalWipeDesc">پاکسازی تمام داده‌ها، کش، فایل‌ها و خروج فوری از حساب.</string>
+    <string name="VeyraEmergencyFullWipe">انهدام کامل (Full Wipe)</string>
+    <string name="VeyraEmergencyFullWipeDesc">حذف پیام‌های ارسالی گروه‌ها، حذف دوطرفه پی‌وی‌ها، ترک کانال‌ها و حذف کامل اکانت.</string>
+    <string name="VeyraEmergencyNoInternetTitle">عدم اتصال به اینترنت</string>
+    <string name="VeyraEmergencyNoInternet">اتصال اینترنت برقرار نیست. انهدام کامل نیازمند دسترسی به شبکه است.</string>
+    <string name="VeyraEmergencyRunLocal">اجرای پاکسازی محلی</string>
+    <string name="VeyraEmergencyConfirmLocal">آیا مطمئن هستید؟ تمامی داده‌های تلگرام، فایل‌های دانلودشده و کش پاک خواهند شد و از حساب کاربری خارج می‌شوید.</string>
+    <string name="VeyraEmergencyConfirmFull">هشدار امنیتی: آیا از انهدام کامل اطمینان دارید؟ تمام پیام‌های ارسالی شما در گروه‌ها پاک، پی‌وی‌ها دوطرفه حذف، کانال‌ها ترک و اکانت شما برای همیشه پاک خواهد شد.</string>
+    <string name="VeyraEmergencyProgress">در حال اجرای پروتکل اضطراری…</string>
+
+    <!-- Other items -->
+    <string name="VeyraBlockScreenCapture">مسدودسازی اسکرین‌شات</string>
+    <string name="VeyraBlockScreenCaptureDesc">جلوگیری از ضبط صفحه و تصویربرداری در تمام صفحات برنامه</string>
+    <string name="VeyraHideChat">مخفی کردن گفتگو</string>
+    <string name="VeyraChatHidden">گفتگو مخفی شد</string>
+</resources>

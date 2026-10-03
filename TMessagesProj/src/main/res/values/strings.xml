@@ -2730,6 +2730,17 @@
     <string name="VeyraReadOnReplyDesc">Messages are not marked as read until you reply</string>
     <string name="VeyraAntiDelete">Anti-Delete Messages</string>
     <string name="VeyraAntiDeleteDesc">Keep deleted messages with \'Deleted\' label</string>
+    <string name="VeyraAntiDeleteEnable">Enable Anti-Delete</string>
+    <string name="VeyraAntiDeleteEnableDesc">Keep deleted messages with \'Deleted\' label across selected chats</string>
+    <string name="VeyraChatTypes">Chat Types</string>
+    <string name="VeyraChatTypePrivate">Private Chats</string>
+    <string name="VeyraChatTypePrivateDesc">Enable for one-on-one direct messages</string>
+    <string name="VeyraChatTypeGroups">Groups</string>
+    <string name="VeyraChatTypeGroupsDesc">Enable for basic groups and supergroups</string>
+    <string name="VeyraChatTypeChannels">Channels</string>
+    <string name="VeyraChatTypeChannelsDesc">Enable for broadcast channels</string>
+    <string name="VeyraChatTypeBots">Bots</string>
+    <string name="VeyraChatTypeBotsDesc">Enable for bot conversations</string>
     <string name="VeyraGhostMode">Full Ghost Mode</string>
     <string name="VeyraGhostModeDesc">Never send read receipts</string>
     <string name="VeyraHideTyping">Hide Typing Status</string>

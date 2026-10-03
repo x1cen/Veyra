@@ -58,6 +58,42 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraChatTypes", R.string.VeyraChatTypes)));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
+                LocaleController.getString("VeyraChatTypePrivateDesc", R.string.VeyraChatTypePrivateDesc),
+                () -> VeyraConfig.editHistoryPrivate,
+                v -> VeyraConfig.setEditHistoryPrivate(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups),
+                LocaleController.getString("VeyraChatTypeGroupsDesc", R.string.VeyraChatTypeGroupsDesc),
+                () -> VeyraConfig.editHistoryGroups,
+                v -> VeyraConfig.setEditHistoryGroups(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels),
+                LocaleController.getString("VeyraChatTypeChannelsDesc", R.string.VeyraChatTypeChannelsDesc),
+                () -> VeyraConfig.editHistoryChannels,
+                v -> VeyraConfig.setEditHistoryChannels(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots),
+                LocaleController.getString("VeyraChatTypeBotsDesc", R.string.VeyraChatTypeBotsDesc),
+                () -> VeyraConfig.editHistoryBots,
+                v -> VeyraConfig.setEditHistoryBots(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
         r.add(VeyraSettingsRow.button(
                 LocaleController.getString("VeyraEditHistoryClear", R.string.VeyraEditHistoryClear),
                 true,

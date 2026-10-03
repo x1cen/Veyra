@@ -28,6 +28,10 @@ public class VeyraConfig {
 
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
+    public static boolean antiDeletePrivate = true;
+    public static boolean antiDeleteGroups = true;
+    public static boolean antiDeleteChannels = true;
+    public static boolean antiDeleteBots = true;
     public static boolean ghostMode = true;
     public static boolean hideTyping = true;
     public static boolean readOnReply = true;
@@ -58,6 +62,10 @@ public class VeyraConfig {
 
     // Message Edit History
     public static boolean editHistoryEnabled = true;
+    public static boolean editHistoryPrivate = true;
+    public static boolean editHistoryGroups = true;
+    public static boolean editHistoryChannels = true;
+    public static boolean editHistoryBots = false;
     public static int editHistoryLimit = 10;
     public static boolean editHistoryDropOldest = true;
 
@@ -121,6 +129,10 @@ public class VeyraConfig {
         if (configLoaded) return;
         preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
         antiDelete = preferences.getBoolean("antiDelete", true);
+        antiDeletePrivate = preferences.getBoolean("antiDeletePrivate", true);
+        antiDeleteGroups = preferences.getBoolean("antiDeleteGroups", true);
+        antiDeleteChannels = preferences.getBoolean("antiDeleteChannels", true);
+        antiDeleteBots = preferences.getBoolean("antiDeleteBots", true);
         ghostMode = preferences.getBoolean("ghostMode", true);
         hideTyping = preferences.getBoolean("hideTyping", true);
         readOnReply = preferences.getBoolean("readOnReply", true);
@@ -138,6 +150,10 @@ public class VeyraConfig {
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
 
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
+        editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
+        editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
+        editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
+        editHistoryBots = preferences.getBoolean("editHistoryBots", false);
         editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
         editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
         confirmCall = preferences.getBoolean("confirmCall", true);
@@ -187,6 +203,68 @@ public class VeyraConfig {
     public static void setAntiDelete(boolean val) {
         antiDelete = val;
         save("antiDelete", val);
+    }
+    public static void setAntiDeletePrivate(boolean val) {
+        antiDeletePrivate = val;
+        save("antiDeletePrivate", val);
+    }
+    public static void setAntiDeleteGroups(boolean val) {
+        antiDeleteGroups = val;
+        save("antiDeleteGroups", val);
+    }
+    public static void setAntiDeleteChannels(boolean val) {
+        antiDeleteChannels = val;
+        save("antiDeleteChannels", val);
+    }
+    public static void setAntiDeleteBots(boolean val) {
+        antiDeleteBots = val;
+        save("antiDeleteBots", val);
+    }
+
+    public static boolean isChatTypeAllowedForAntiDelete(long dialogId) {
+        if (!antiDelete) return false;
+        try {
+            int currentAccount = UserConfig.selectedAccount;
+            if (dialogId > 0) {
+                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                if (user != null && user.bot) {
+                    return antiDeleteBots;
+                }
+                return antiDeletePrivate;
+            } else {
+                long chatId = -dialogId;
+                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
+                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                    return antiDeleteChannels;
+                }
+                return antiDeleteGroups;
+            }
+        } catch (Exception e) {
+            return antiDelete;
+        }
+    }
+
+    public static boolean isChatTypeAllowedForEditHistory(long dialogId) {
+        if (!editHistoryEnabled) return false;
+        try {
+            int currentAccount = UserConfig.selectedAccount;
+            if (dialogId > 0) {
+                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                if (user != null && user.bot) {
+                    return editHistoryBots;
+                }
+                return editHistoryPrivate;
+            } else {
+                long chatId = -dialogId;
+                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
+                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                    return editHistoryChannels;
+                }
+                return editHistoryGroups;
+            }
+        } catch (Exception e) {
+            return editHistoryEnabled;
+        }
     }
     public static void setGhostMode(boolean val) {
         ghostMode = val;
@@ -243,6 +321,22 @@ public class VeyraConfig {
     public static void setEditHistoryEnabled(boolean val) {
         editHistoryEnabled = val;
         save("editHistoryEnabled", val);
+    }
+    public static void setEditHistoryPrivate(boolean val) {
+        editHistoryPrivate = val;
+        save("editHistoryPrivate", val);
+    }
+    public static void setEditHistoryGroups(boolean val) {
+        editHistoryGroups = val;
+        save("editHistoryGroups", val);
+    }
+    public static void setEditHistoryChannels(boolean val) {
+        editHistoryChannels = val;
+        save("editHistoryChannels", val);
+    }
+    public static void setEditHistoryBots(boolean val) {
+        editHistoryBots = val;
+        save("editHistoryBots", val);
     }
     public static void setEditHistoryLimit(int val) {
         editHistoryLimit = val;

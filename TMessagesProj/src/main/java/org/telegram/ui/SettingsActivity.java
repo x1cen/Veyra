@@ -744,8 +744,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(18, IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom, R.drawable.settings_faq, getString(R.string.TelegramFAQ)));
         items.add(SettingCell.Factory.of(23, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, getString(R.string.TelegramFeatures)));
         items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
-        items.add(SettingCell.Factory.of(102, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.msg_channel, "Veyra Channel", "@GetVeyra"));
-        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "Github", "https://github.com/x1cen/Veyra"));
+        items.add(SettingCell.Factory.of(102, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.msg_channel, "Veyra Channel"));
+        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "Github"));
+        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates)));
 
         if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
             items.add(UItem.asShadow(null));
@@ -822,6 +823,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
             case 102:
                 Browser.openUrl(getParentActivity(), "https://t.me/GetVeyra");
+                break;
+            case 103:
+                VeyraSettingsActivity.checkForUpdates(getParentActivity(), this);
                 break;
             case 1:
                 presentSettingFragment(new UserInfoActivity());

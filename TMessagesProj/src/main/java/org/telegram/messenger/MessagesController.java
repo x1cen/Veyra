@@ -17677,11 +17677,12 @@ public class MessagesController extends BaseController implements NotificationCe
             });
             return;
         }
+        final boolean isAntiDeleteAllowed = VeyraConfig.isChatTypeAllowedForAntiDelete(dialogId);
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
                 boolean isRemotePeerRevoke = true;
-                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, VeyraConfig.antiDelete ? isRemotePeerRevoke : false);
-                if (VeyraConfig.antiDelete) {
+                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, isAntiDeleteAllowed ? isRemotePeerRevoke : false);
+                if (isAntiDeleteAllowed) {
                     if (channelId == 0) {
                         for (int b = 0, size2 = ids.size(); b < size2; b++) {
                             Integer id = ids.get(b);
@@ -17706,11 +17707,12 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             });
-//            getMessagesStorage().deletePushMessages(dialogId, ids);
-//            ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, false, true, 0, 0);
-//            getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
-            // TODO: 8/11/26 add DB stuff here
-            List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
+            if (isAntiDeleteAllowed) {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
+            } else {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+            }
         });
     }
 
@@ -21291,9 +21293,14 @@ public class MessagesController extends BaseController implements NotificationCe
                 long key = deletedMessages.keyAt(a);
                 List<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
-//                    ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0); // TODO: 8/11/26 rework for agram mark
-                    List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
-                    getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    boolean allowAntiDelete = VeyraConfig.isChatTypeAllowedForAntiDelete(key);
+                    if (allowAntiDelete) {
+                        List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    } else {
+                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    }
                 });
             }
         }

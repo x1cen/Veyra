@@ -20,10 +20,10 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity)));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.category(
                 LocaleController.getString("VeyraAntiDelete", R.string.VeyraAntiDelete),
                 LocaleController.getString("VeyraAntiDeleteDesc", R.string.VeyraAntiDeleteDesc),
-                () -> VeyraConfig.antiDelete, v -> VeyraConfig.setAntiDelete(v), true
+                () -> presentFragment(new VeyraAntiDeleteSettingsActivity())
         ));
         r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraBlockSecretChat", R.string.VeyraBlockSecretChat),

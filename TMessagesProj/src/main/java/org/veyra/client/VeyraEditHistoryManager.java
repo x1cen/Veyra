@@ -66,7 +66,7 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void logEdit(long dialogId, int messageId, int date, String text) {
-        if (!VeyraConfig.editHistoryEnabled || TextUtils.isEmpty(text)) {
+        if (!VeyraConfig.isChatTypeAllowedForEditHistory(dialogId) || TextUtils.isEmpty(text)) {
             return;
         }
         try {
