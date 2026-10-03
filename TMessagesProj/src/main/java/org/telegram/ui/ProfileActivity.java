@@ -6285,16 +6285,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (chatId != 0) {
             final TLRPC.Chat chat = getMessagesController().getChat(chatId);
             final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chatId);
-            presentFragment(new JsonViewerActivity(() -> {
-                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
-                if (chat != null) {
-                    root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
-                }
-                if (cInfo != null) {
-                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
-                }
-                return MessageDetailsActivity.prettyGson.toJson(root);
-            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+            org.veyra.client.VeyraGroupInfoSheet sheet = new org.veyra.client.VeyraGroupInfoSheet(
+                    getParentActivity(), chat, cInfo, currentAccount);
+            sheet.show();
         } else if (currentEncryptedChat != null) {
             presentFragment(new JsonViewerActivity(() -> {
                 com.google.gson.JsonObject root = new com.google.gson.JsonObject();

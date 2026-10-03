@@ -12270,16 +12270,12 @@ public class ChatActivity extends BaseFragment implements
                 return MessageDetailsActivity.prettyGson.toJson(root);
             }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         } else if (currentChat != null) {
+            // For groups/channels — show a clean info sheet instead of raw JSON
             final TLRPC.Chat chat = currentChat;
             final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chat.id);
-            presentFragment(new JsonViewerActivity(() -> {
-                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
-                root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
-                if (cInfo != null) {
-                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
-                }
-                return MessageDetailsActivity.prettyGson.toJson(root);
-            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+            org.veyra.client.VeyraGroupInfoSheet sheet = new org.veyra.client.VeyraGroupInfoSheet(
+                    getParentActivity(), chat, cInfo, currentAccount);
+            sheet.show();
         } else if (currentEncryptedChat != null) {
             presentFragment(new JsonViewerActivity(() -> {
                 com.google.gson.JsonObject root = new com.google.gson.JsonObject();
