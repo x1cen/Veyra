@@ -142,7 +142,7 @@ public final class VeyraEditHistoryManager {
 
             // Check edit limit per message
             boolean dropOldest = VeyraConfig.editHistoryDropOldest;
-            int maxEdits = Math.max(1, Math.min(50, VeyraConfig.editHistoryMaxEdits));
+            int maxEdits = Math.max(1, Math.min(50, VeyraConfig.editHistoryLimit));
             Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             int total = 0;
