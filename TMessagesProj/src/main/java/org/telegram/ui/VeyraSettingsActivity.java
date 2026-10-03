@@ -254,10 +254,10 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         if (parentActivity == null || fragment == null) return;
         isCheckingForUpdates = true;
         final boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-        BulletinFactory.of(fragment).createSimpleBulletin(
-                R.raw.chats_infotip,
-                isFarsi ? "در حال بررسی به‌روزرسانی..." : "Checking for updates…"
-        ).show();
+        final AlertDialog progressDialog = new AlertDialog(parentActivity, AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.setMessage(isFarsi ? "در حال بررسی به روزرسانی..." : "Checking for updates...");
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.showDelayed(150);
 
         Utilities.externalNetworkQueue.postRunnable(() -> {
             String latestTag = null;
@@ -312,14 +312,20 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
             AndroidUtilities.runOnUIThread(() -> {
                 isCheckingForUpdates = false;
+                try {
+                    progressDialog.dismiss();
+                } catch (Exception ignore) {
+                }
                 if (fragment.getParentActivity() == null) {
                     return;
                 }
                 if (!fetchOk) {
-                    BulletinFactory.of(fragment).createErrorBulletin(
-                            isFarsi ? "خطا در بررسی به‌روزرسانی. اتصال اینترنت را بررسی کنید."
-                                    : "Failed to check for updates. Check your connection."
-                    ).show();
+                    AlertDialog.Builder errBuilder = new AlertDialog.Builder(fragment.getParentActivity());
+                    errBuilder.setTitle(isFarsi ? "خطا" : "Error");
+                    errBuilder.setMessage(isFarsi ? "خطا در بررسی به روزرسانی. اتصال اینترنت را بررسی کنید."
+                            : "Failed to check for updates. Check your connection.");
+                    errBuilder.setPositiveButton(LocaleController.getString("OK", R.string.OK), null);
+                    fragment.showDialog(errBuilder.create());
                     return;
                 }
 
@@ -346,21 +352,22 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                     AlertDialog.Builder builder = new AlertDialog.Builder(fragment.getParentActivity())
                             .setTitle(title)
                             .setMessage(msg)
-                            .setPositiveButton(isFarsi ? "به‌روزرسانی" : "Update", (dialog, which) -> {
+                            .setPositiveButton(isFarsi ? "به روزرسانی" : "Update", (dialog, which) -> {
                                 try {
                                     Browser.openUrl(fragment.getParentActivity(), targetUrl);
                                 } catch (Exception e) {
                                     FileLog.e(e);
                                 }
                             })
-                            .setNegativeButton(isFarsi ? "بعداً" : "Later", null);
+                            .setNegativeButton(isFarsi ? "بعدا" : "Later", null);
                     fragment.showDialog(builder.create());
                 } else {
-                    BulletinFactory.of(fragment).createSimpleBulletin(
-                            R.raw.chats_infotip,
-                            isFarsi ? ("شما از آخرین نسخه ویرا (" + currentVersion + ") استفاده می‌کنید")
-                                    : ("You have the latest version of Veyra (" + currentVersion + ")")
-                    ).show();
+                    AlertDialog.Builder upToDateBuilder = new AlertDialog.Builder(fragment.getParentActivity());
+                    upToDateBuilder.setTitle(isFarsi ? "به روزرسانی ویرا" : "Veyra Update");
+                    upToDateBuilder.setMessage(isFarsi ? ("شما از آخرین نسخه ویرا (" + currentVersion + ") استفاده می کنید.")
+                            : ("You have the latest version of Veyra (" + currentVersion + ")."));
+                    upToDateBuilder.setPositiveButton(LocaleController.getString("OK", R.string.OK), null);
+                    fragment.showDialog(upToDateBuilder.create());
                 }
             });
         });

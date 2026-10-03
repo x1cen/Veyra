@@ -544,7 +544,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         subtitleView.setText(sb);
 
-        versionView.setText("Veyra " + getVersionName() + "\ngithub.com/x1cen/Veyra");
+        versionView.setText("Veyra " + getVersionName());
     }
 
 
