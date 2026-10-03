@@ -64,6 +64,10 @@ public class VeyraConfig {
     public static boolean editHistoryEnabled = true;
     public static boolean reactionHistoryEnabled = true;
     public static int reactionHistoryLimit = 20;
+    public static boolean reactionHistoryPrivate = true;
+    public static boolean reactionHistoryGroups = true;
+    public static boolean reactionHistoryChannels = false;
+    public static boolean reactionHistoryBots = false;
     public static boolean editHistoryPrivate = true;
     public static boolean editHistoryGroups = true;
     public static boolean editHistoryChannels = true;
@@ -154,6 +158,10 @@ public class VeyraConfig {
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
         reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
         reactionHistoryLimit = preferences.getInt("reactionHistoryLimit", 20);
+        reactionHistoryPrivate = preferences.getBoolean("reactionHistoryPrivate", true);
+        reactionHistoryGroups = preferences.getBoolean("reactionHistoryGroups", true);
+        reactionHistoryChannels = preferences.getBoolean("reactionHistoryChannels", false);
+        reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
         editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
         editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
         editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
@@ -278,16 +286,16 @@ public class VeyraConfig {
             if (dialogId > 0) {
                 org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
                 if (user != null && user.bot) {
-                    return false;
+                    return reactionHistoryBots;
                 }
-                return true;
+                return reactionHistoryPrivate;
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
                 if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
-                    return false;
+                    return reactionHistoryChannels;
                 }
-                return true;
+                return reactionHistoryGroups;
             }
         } catch (Exception e) {
             return false;
@@ -356,6 +364,22 @@ public class VeyraConfig {
     public static void setReactionHistoryLimit(int val) {
         reactionHistoryLimit = val;
         save("reactionHistoryLimit", val);
+    }
+    public static void setReactionHistoryPrivate(boolean val) {
+        reactionHistoryPrivate = val;
+        save("reactionHistoryPrivate", val);
+    }
+    public static void setReactionHistoryGroups(boolean val) {
+        reactionHistoryGroups = val;
+        save("reactionHistoryGroups", val);
+    }
+    public static void setReactionHistoryChannels(boolean val) {
+        reactionHistoryChannels = val;
+        save("reactionHistoryChannels", val);
+    }
+    public static void setReactionHistoryBots(boolean val) {
+        reactionHistoryBots = val;
+        save("reactionHistoryBots", val);
     }
     public static void setEditHistoryPrivate(boolean val) {
         editHistoryPrivate = val;

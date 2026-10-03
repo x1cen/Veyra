@@ -9582,6 +9582,39 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         videoSubtitleTextView.setVisibility(View.GONE);
         containerView.addView(videoSubtitleTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 24, 0, 24, 60));
 
+        // Make subtitle draggable
+        videoSubtitleTextView.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+            private int lastAction;
+
+            @Override
+            public boolean onTouch(View view, android.view.MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        dX = view.getX() - event.getRawX();
+                        dY = view.getY() - event.getRawY();
+                        lastAction = android.view.MotionEvent.ACTION_DOWN;
+                        return true;
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+                        // Clamp inside screen
+                        if (containerView != null) {
+                            newX = Math.max(0, Math.min(newX, containerView.getWidth() - view.getWidth()));
+                            newY = Math.max(0, Math.min(newY, containerView.getHeight() - view.getHeight()));
+                        }
+                        view.setX(newX);
+                        view.setY(newY);
+                        lastAction = android.view.MotionEvent.ACTION_MOVE;
+                        return true;
+                    case android.view.MotionEvent.ACTION_UP:
+                        return lastAction == android.view.MotionEvent.ACTION_MOVE;
+                    default:
+                        return false;
+                }
+            }
+        });
+
         videoPlayerControlFrameLayout = new VideoPlayerControlFrameLayout(containerView.getContext());
         containerView.addView(videoPlayerControlFrameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.BOTTOM | Gravity.LEFT));
 

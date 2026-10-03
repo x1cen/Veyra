@@ -109,6 +109,42 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraReactionChatTypes", R.string.VeyraReactionChatTypes)));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
+                LocaleController.getString("VeyraChatTypePrivateDesc", R.string.VeyraChatTypePrivateDesc),
+                () -> VeyraConfig.reactionHistoryPrivate,
+                v -> VeyraConfig.setReactionHistoryPrivate(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups),
+                LocaleController.getString("VeyraChatTypeGroupsDesc", R.string.VeyraChatTypeGroupsDesc),
+                () -> VeyraConfig.reactionHistoryGroups,
+                v -> VeyraConfig.setReactionHistoryGroups(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels),
+                LocaleController.getString("VeyraChatTypeChannelsDesc", R.string.VeyraChatTypeChannelsDesc),
+                () -> VeyraConfig.reactionHistoryChannels,
+                v -> VeyraConfig.setReactionHistoryChannels(v),
+                false
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots),
+                LocaleController.getString("VeyraChatTypeBotsDesc", R.string.VeyraChatTypeBotsDesc),
+                () -> VeyraConfig.reactionHistoryBots,
+                v -> VeyraConfig.setReactionHistoryBots(v),
+                false
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
         r.add(VeyraSettingsRow.button(
                 LocaleController.getString("VeyraEditHistoryClear", R.string.VeyraEditHistoryClear),
                 true,

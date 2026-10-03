@@ -1302,7 +1302,7 @@
     <string name="DeleteTheseChatsBothSides">Delete chats</string>
     <string name="SlideToCancel2">Slide to cancel</string>
     <string name="CancelRound">Cancel</string>
-    <string name="SaveToDownloads">Save to downloads</string>
+    <string name="SaveToDownloads">Save to</string>
     <string name="SaveToGIFs">Save to GIFs</string>
     <string name="SaveToMusic">Save to music</string>
     <string name="ShareFile">Share</string>
@@ -2732,7 +2732,8 @@
     <string name="VeyraAntiDeleteDesc">Keep deleted messages with \'Deleted\' label</string>
     <string name="VeyraAntiDeleteEnable">Enable Anti-Delete</string>
     <string name="VeyraAntiDeleteEnableDesc">Keep deleted messages with \'Deleted\' label across selected chats</string>
-    <string name="VeyraChatTypes">Chat Types</string>
+    <string name="VeyraChatTypes">Chat Types (Edit History)</string>
+    <string name="VeyraReactionChatTypes">Chat Types (Reaction History)</string>
     <string name="VeyraChatTypePrivate">Private Chats</string>
     <string name="VeyraChatTypePrivateDesc">Enable for one-on-one direct messages</string>
     <string name="VeyraChatTypeGroups">Groups</string>
@@ -3558,9 +3559,9 @@
     <string name="GifSavedHint">Added to saved GIFs</string>
     <string name="GifSavedToDownloadsHintLinked">GIF saved to **downloads**.</string>
     <string name="AudioSavedHint">File saved to music</string>
-    <string name="FileSavedHintLinked">File saved to **downloads**.</string>
-    <string name="FilesSavedHintLinked_one">File saved to **downloads**.</string>
-    <string name="FilesSavedHintLinked_other">%1$d files saved to **downloads**.</string>
+    <string name="FileSavedHintLinked">File saved to **Documents**.</string>
+    <string name="FilesSavedHintLinked_one">File saved to **Documents**.</string>
+    <string name="FilesSavedHintLinked_other">%1$d files saved to **Documents**.</string>
     <string name="PhotosSavedHint_one">Photo saved to gallery</string>
     <string name="PhotosSavedHint_other">%1$d photos saved to gallery</string>
     <string name="LivePhotosSavedHint_one">Motion Photo saved to gallery</string>

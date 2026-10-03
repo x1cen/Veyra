@@ -1459,7 +1459,8 @@ public class LocaleController {
             case "VeyraAntiDeleteDesc": return "نگهداری پیام‌های حذف‌شده با برچسب 'حذف شده'";
             case "VeyraAntiDeleteEnable": return "فعال‌سازی ضدحذف پیام‌ها";
             case "VeyraAntiDeleteEnableDesc": return "نگهداری پیام‌های حذف‌شده در چت‌های مشخص‌شده";
-            case "VeyraChatTypes": return "نوع گفتگوها";
+            case "VeyraChatTypes": return "نوع گفتگوها (تاریخچه ادیت)";
+            case "VeyraReactionChatTypes": return "نوع گفتگوها (تاریخچه ری اکشن)";
             case "VeyraChatTypePrivate": return "چت‌های خصوصی";
             case "VeyraChatTypePrivateDesc": return "فعال بودن در گفتگوهای دونفره خصوصی";
             case "VeyraChatTypeGroups": return "گروه‌ها";

@@ -912,9 +912,30 @@ public final class BulletinFactory {
         layout.textView.setText(AndroidUtilities.replaceSingleTag(fileType.getText(filesAmount), () -> {
             if (LaunchActivity.instance == null || LaunchActivity.instance.isFinishing()) return;
 
-            Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            LaunchActivity.instance.startActivity(intent);
+            if (fileType == FileType.UNKNOWN || fileType == FileType.UNKNOWNS) {
+                try {
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOCUMENTS + "/Telegram").mkdirs();
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setDataAndType(
+                            android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3ATelegram%2FDocuments"),
+                            "vnd.android.document/root");
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    LaunchActivity.instance.startActivity(intent);
+                } catch (Exception e) {
+                    try {
+                        Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        LaunchActivity.instance.startActivity(intent);
+                    } catch (Exception e2) {
+                        org.telegram.messenger.FileLog.e(e2);
+                    }
+                }
+            } else {
+                Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                LaunchActivity.instance.startActivity(intent);
+            }
         }));
         if (fileType.icon.paddingBottom != 0) {
             layout.setIconPaddingBottom(fileType.icon.paddingBottom);
