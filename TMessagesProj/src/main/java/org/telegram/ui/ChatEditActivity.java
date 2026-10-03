@@ -1283,7 +1283,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             });
             channelAffiliateProgramsCell.setVisibility(View.GONE);
 
-            if (ChatObject.isChannel(currentChat) || currentChat.gigagroup) {
+            if ((ChatObject.isChannel(currentChat) || currentChat.gigagroup) && ChatObject.hasAdminRights(currentChat)) {
                 logCell = new TextCell(context);
                 logCell.setTextAndIcon(LocaleController.getString(R.string.EventLog), R.drawable.msg_log, false);
                 logCell.setBackground(Theme.getSelectorDrawable(false));

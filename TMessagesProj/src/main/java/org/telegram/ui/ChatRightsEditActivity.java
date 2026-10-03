@@ -639,9 +639,6 @@ public class ChatRightsEditActivity extends BaseFragment implements Notification
         });
 
         listView.setOnItemClickListener((view, position) -> {
-            if (!canEdit && (!currentChat.creator || currentType != TYPE_ADMIN || position != anonymousRow)) {
-                return;
-            }
             if (position == sendMediaRow) {
                 if (view instanceof TextCheckCell2 && !((TextCheckCell2) view).isEnabled()) {
                     return;
@@ -680,6 +677,9 @@ public class ChatRightsEditActivity extends BaseFragment implements Notification
                 } else {
                     listViewAdapter.notifyItemRangeRemoved(channelStoriesRow + 1, 3);
                 }
+                return;
+            }
+            if (!canEdit && (!currentChat.creator || currentType != TYPE_ADMIN || position != anonymousRow)) {
                 return;
             }
             if (position == 0) {

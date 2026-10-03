@@ -868,6 +868,9 @@ public class ChatUsersActivity extends BaseFragment implements NotificationCente
                 listViewAdapter.notifyItemChanged(payRow);
             } else if (listAdapter) {
                 if (isExpandableSendMediaRow(position)) {
+                    if (!ChatObject.canBlockUsers(currentChat)) {
+                        return;
+                    }
                     CheckBoxCell checkBoxCell = (CheckBoxCell) view;
                     if (position == sendMediaPhotosRow) {
                         defaultBannedRights.send_photos = !defaultBannedRights.send_photos;
@@ -1189,6 +1192,12 @@ public class ChatUsersActivity extends BaseFragment implements NotificationCente
                         presentFragment(fragment);
                     }
                     return;
+                } else if (position == sendMediaRow) {
+                    DiffCallback diffCallback = saveState();
+                    sendMediaExpanded = !sendMediaExpanded;
+                    AndroidUtilities.updateVisibleRows(listView);
+                    updateListAnimated(diffCallback);
+                    return;
                 } else if (position > permissionsSectionRow && position <= Math.max(manageTopicsRow, changeInfoRow) || position == manageLinkedPeersRow) {
                     TextCheckCell2 checkCell = (TextCheckCell2) view;
                     if (!checkCell.isEnabled() || !ChatObject.canBlockUsers(currentChat)) {
@@ -1202,14 +1211,6 @@ public class ChatUsersActivity extends BaseFragment implements NotificationCente
                         } else {
                             BulletinFactory.of(this).createErrorBulletin(getString("EditCantEditPermissions", R.string.EditCantEditPermissions)).show();
                         }
-                        return;
-                    }
-                    if (position == sendMediaRow) {
-                        //defaultBannedRights.send_media = !defaultBannedRights.send_media;
-                        DiffCallback diffCallback = saveState();
-                        sendMediaExpanded = !sendMediaExpanded;
-                        AndroidUtilities.updateVisibleRows(listView);
-                        updateListAnimated(diffCallback);
                         return;
                     }
                     checkCell.setChecked(!checkCell.isChecked());
