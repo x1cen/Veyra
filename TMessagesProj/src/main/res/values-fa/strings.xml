@@ -59,10 +59,22 @@
     <string name="VeyraChatTypeChannelsDesc">فعال بودن در کانال‌ها</string>
     <string name="VeyraChatTypeBots">ربات‌ها</string>
     <string name="VeyraChatTypeBotsDesc">فعال بودن در گفتگو با ربات‌ها</string>
+    <string name="VeyraAntiDeleteClear">پاکسازی تمام پیام‌های حذف‌شده</string>
+    <string name="VeyraAntiDeleteCleared">تمام پیام‌های حذف‌شده با موفقیت پاک شدند</string>
 
     <!-- Ghost Mode -->
     <string name="VeyraGhostMode">حالت روح کامل</string>
-    <string name="VeyraGhostModeDesc">عدم ارسال وضعیت خوانده شدن پیام‌ها</string>
+    <string name="VeyraGhostModeDesc">عدم ارسال وضعیت آنلاین و خوانده شدن پیام‌ها</string>
+    <string name="VeyraGhostHideOnline">مخفی کردن وضعیت آنلاین</string>
+    <string name="VeyraGhostHideOnlineDesc">عدم ارسال وضعیت آنلاین به سرورهای تلگرام</string>
+    <string name="VeyraGhostHideTyping">مخفی کردن وضعیت تایپ و نوشتن</string>
+    <string name="VeyraGhostHideTypingDesc">عدم ارسال وضعیت در حال نوشتن، ضبط صدا یا ارسال فایل</string>
+    <string name="VeyraGhostHideRead">مخفی کردن رسید خواندن (تیک دوم)</string>
+    <string name="VeyraGhostHideReadDesc">عدم ارسال تیک دوم و وضعیت خوانده شدن برای پیام‌ها</string>
+    <string name="VeyraGhostHideReadContents">مخفی کردن شنیده شدن ویس و ویدیو</string>
+    <string name="VeyraGhostHideReadContentsDesc">عدم ارسال وضعیت شنیده شدن ویس و دیدن پیام ویدیویی</string>
+    <string name="VeyraGhostHideStories">مشاهده مخفیانه استوری‌ها</string>
+    <string name="VeyraGhostHideStoriesDesc">تماشای ناشناس استوری‌ها بدون ثبت در لیست بازدیدها</string>
     <string name="VeyraHideTyping">مخفی کردن وضعیت تایپ</string>
     <string name="VeyraHideTypingDesc">عدم ارسال وضعیت در حال نوشتن (typing...)</string>
     <string name="VeyraBlockSecretChat">مسدودسازی چت محرمانه ورودی</string>

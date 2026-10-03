@@ -1,8 +1,10 @@
 package org.telegram.ui;
 
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.ui.Components.BulletinFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +64,20 @@ public class VeyraAntiDeleteSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.antiDeleteBots,
                 v -> VeyraConfig.setAntiDeleteBots(v),
                 true
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.button(
+                LocaleController.getString("VeyraAntiDeleteClear", R.string.VeyraAntiDeleteClear),
+                true,
+                false,
+                () -> {
+                    MessagesStorage.getInstance(currentAccount).clearAllAntiDelete();
+                    BulletinFactory.of(VeyraAntiDeleteSettingsActivity.this)
+                            .createSuccessBulletin(LocaleController.getString("VeyraAntiDeleteCleared", R.string.VeyraAntiDeleteCleared))
+                            .show();
+                }
         ));
 
         r.add(VeyraSettingsRow.shadow());

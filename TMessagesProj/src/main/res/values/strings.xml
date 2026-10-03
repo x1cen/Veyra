@@ -2741,6 +2741,8 @@
     <string name="VeyraChatTypeChannelsDesc">Enable for broadcast channels</string>
     <string name="VeyraChatTypeBots">Bots</string>
     <string name="VeyraChatTypeBotsDesc">Enable for bot conversations</string>
+    <string name="VeyraAntiDeleteClear">Clear All Retained Deleted Messages</string>
+    <string name="VeyraAntiDeleteCleared">All retained deleted messages cleared</string>
     <string name="VeyraGhostMode">Full Ghost Mode</string>
     <string name="VeyraGhostModeDesc">Never send read receipts</string>
     <string name="VeyraHideTyping">Hide Typing Status</string>

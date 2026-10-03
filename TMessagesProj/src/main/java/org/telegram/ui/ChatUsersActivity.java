@@ -730,6 +730,10 @@ public class ChatUsersActivity extends BaseFragment implements NotificationCente
 
             if (type == TYPE_KICKED) {
                 doneItem = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, dp(56), getString("Done", R.string.Done));
+                if (!ChatObject.canBlockUsers(currentChat)) {
+                    doneItem.setEnabled(false);
+                    doneItem.setAlpha(0.35f);
+                }
             }
         } else if (type == TYPE_ADMIN && ChatObject.isChannelAndNotMegaGroup(currentChat) && ChatObject.hasAdminRights(currentChat)) {
             ActionBarMenu menu = actionBar.createMenu();
@@ -1187,7 +1191,7 @@ public class ChatUsersActivity extends BaseFragment implements NotificationCente
                     return;
                 } else if (position > permissionsSectionRow && position <= Math.max(manageTopicsRow, changeInfoRow) || position == manageLinkedPeersRow) {
                     TextCheckCell2 checkCell = (TextCheckCell2) view;
-                    if (!checkCell.isEnabled()) {
+                    if (!checkCell.isEnabled() || !ChatObject.canBlockUsers(currentChat)) {
                         return;
                     }
                     if (checkCell.hasIcon()) {

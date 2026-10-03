@@ -4028,7 +4028,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         undoView.showWithAction(did, UndoView.ACTION_REMOVED_FROM_FOLDER, neverShow.size(), filter, null, null);
                     }
                     hideActionMode(false);
-                } else if (id == pin || id == read || id == delete || id == clear || id == mute || id == archive || id == block || id == archive2 || id == pin2) {
+                } else if (id == pin || id == read || id == delete || id == clear || id == mute || id == archive || id == block || id == archive2 || id == pin2 || id == veyra_hide_chat) {
                     performSelectedDialogsAction(selectedDialogs, id, true, false);
                 }
             }
@@ -9276,11 +9276,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             for (int a = 0; a < selectedDialogs.size(); a++) {
                 org.veyra.client.HiddenContentManager.hideDialog(selectedDialogs.get(a));
             }
+            dialogsListFrozen = false;
+            frozenDialogsList = null;
             hideActionMode(false);
             if (viewPages != null) {
                 for (int a = 0; a < viewPages.length; a++) {
                     if (viewPages[a] != null) {
                         reloadViewPageDialogs(viewPages[a], true);
+                        if (viewPages[a].dialogsAdapter != null) {
+                            viewPages[a].dialogsAdapter.notifyDataSetChanged();
+                        }
                     }
                 }
             }

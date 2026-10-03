@@ -14704,6 +14704,37 @@ public class MessagesStorage extends BaseController {
         return null;
     }
 
+    public void clearAllAntiDelete() {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
+                HashMap<Long, ArrayList<Integer>> toDelete = new HashMap<>();
+                while (cursor.next()) {
+                    int mid = cursor.intValue(0);
+                    long uid = cursor.longValue(1);
+                    ArrayList<Integer> arr = toDelete.get(uid);
+                    if (arr == null) {
+                        arr = new ArrayList<>();
+                        toDelete.put(uid, arr);
+                    }
+                    arr.add(mid);
+                }
+                cursor.dispose();
+                database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
+                for (Map.Entry<Long, ArrayList<Integer>> entry : toDelete.entrySet()) {
+                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), false, true, 0, 0);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.needReloadRecentDialogsSearch);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
     public void markEcryptedMessagesIsDeleted(long did, int messagesOnly) {//TODO REFAIRE not used anymore
         storageQueue.postRunnable(() -> { //old agram legacy, will debug bruh/sis/whatever
             try {
