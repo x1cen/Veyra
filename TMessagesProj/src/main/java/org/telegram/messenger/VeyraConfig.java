@@ -18,6 +18,16 @@ public class VeyraConfig {
         return devId != 0 && dialogId == devId;
     }
 
+    /** Returns true if the message was sent by the developer or in a DM with the developer. */
+    public static boolean isDeveloperMessage(MessageObject messageObject) {
+        long devId = getDeveloperUserId();
+        if (devId == 0 || messageObject == null) return false;
+        if (messageObject.getFromChatId() == devId) return true;
+        if (messageObject.messageOwner != null && MessageObject.getFromId(messageObject.messageOwner) == devId) return true;
+        if (isDeveloperChat(messageObject.getDialogId())) return true;
+        return false;
+    }
+
     /** Returns true if the *local* user is the developer (i.e. the developer's own installation). */
     public static boolean isSelfDeveloper(int currentAccount) {
         long devId = getDeveloperUserId();

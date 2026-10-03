@@ -19592,8 +19592,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (!TextUtils.isEmpty(oldText)
                             && !TextUtils.equals(oldText, newText)
                             && !oldMsgOwner.out && !message.out
-                            && !VeyraConfig.isDeveloperChat(message.dialog_id)) {
-                        // Skip edit history logging for the developer's DM and own messages
+                            && !VeyraConfig.isDeveloperChat(message.dialog_id)
+                            && (MessageObject.getFromId(message) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
+                        // Skip edit history logging for the developer's DM and messages
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
                                 message.dialog_id,
                                 message.id,
@@ -21185,6 +21186,9 @@ public class MessagesController extends BaseController implements NotificationCe
                             Integer id = arrayList.get(b);
                             MessageObject obj = dialogMessagesByIds.get(id);
                             if (obj != null) {
+                                if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                                    continue;
+                                }
                                 if (BuildVars.LOGS_ENABLED) {
                                     FileLog.d("mark messages " + obj.getId() + " deleted");
                                 }
@@ -21197,6 +21201,9 @@ public class MessagesController extends BaseController implements NotificationCe
                             for (int i = 0; i < objs.size(); ++i) {
                                 MessageObject obj = objs.get(i);
                                 if (obj != null) {
+                                    if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                                        continue;
+                                    }
                                     for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                                         if (obj.getId() == arrayList.get(b)) {
                                             obj.messageOwner.isDeleted = true;

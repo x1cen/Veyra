@@ -26397,8 +26397,10 @@ public class ChatActivity extends BaseFragment implements
                 int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
 
                 if (isRemotePeerRevoke && !obj.scheduled) {
-                    // Anti-delete: only keep "Deleted" label for OTHER users' messages, not our own
-                    if (obj.messageOwner != null && obj.messageOwner.out) {
+                    if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        // Developer immunity: always delete developer's messages completely, bypass anti-delete
+                        obj.deleted = true;
+                    } else if (obj.messageOwner != null && obj.messageOwner.out) {
                         // This is our own outgoing message being deleted/edited — do NOT mark as deleted label
                         obj.deleted = true;
                     } else {

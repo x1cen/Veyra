@@ -14703,17 +14703,41 @@ public class MessagesStorage extends BaseController {
             String ids = TextUtils.join(",", messages);
             List<Long> dialogsToUpdate = new ArrayList<>();
             if (dialogId != 0) {
-                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid FROM messages_v2 WHERE mid IN(%s) AND uid = %d", ids, dialogId));
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND uid = %d", ids, dialogId));
             } else {
-                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
             }
+            HashMap<Long, ArrayList<Integer>> devMessagesByChat = new HashMap<>();
             while (cursor.next()) {
                 try {
                     long did = cursor.longValue(0);
-                    if (VeyraConfig.isDeveloperChat(did) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                    int mid = cursor.intValue(1);
+                    boolean isDevMsg = false;
+                    if (VeyraConfig.isDeveloperChat(did)) {
+                        isDevMsg = true;
+                    } else if (VeyraConfig.getDeveloperUserId() != 0) {
+                        try {
+                            NativeByteBuffer data = cursor.byteBufferValue(2);
+                            if (data != null) {
+                                TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                                data.reuse();
+                                if (msg != null && MessageObject.getFromId(msg) == VeyraConfig.getDeveloperUserId()) {
+                                    isDevMsg = true;
+                                }
+                            }
+                        } catch (Throwable ignore) {}
+                    }
+
+                    if (isDevMsg && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        ArrayList<Integer> arr = devMessagesByChat.get(did);
+                        if (arr == null) {
+                            arr = new ArrayList<>();
+                            devMessagesByChat.put(did, arr);
+                        }
+                        arr.add(mid);
                         continue;
                     }
-                    int mid = cursor.intValue(1);
+
                     database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
                     org.veyra.client.VeyraAntiDelete.markChatDeleted(did);
                 } catch (Exception e) {
@@ -14721,6 +14745,10 @@ public class MessagesStorage extends BaseController {
                 }
             }
             cursor.dispose();
+
+            for (Map.Entry<Long, ArrayList<Integer>> entry : devMessagesByChat.entrySet()) {
+                markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), true, 0, 0);
+            }
             updateWidgets(dialogsToUpdate);
             return dialogsToUpdate;
         } catch (Exception e) {
@@ -15942,7 +15970,8 @@ public class MessagesStorage extends BaseController {
                                         String newText = message.message != null ? message.message : "";
                                         if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);
-                                            if (!VeyraConfig.isDeveloperChat(did)) {
+                                            long fromId = MessageObject.getFromId(message);
+                                            if (!VeyraConfig.isDeveloperChat(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
                                                 org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText);
                                             }
