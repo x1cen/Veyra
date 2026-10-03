@@ -1601,6 +1601,8 @@ public class LocaleController {
             case "VeyraReactionHistoryLimitDesc": return "حداکثر تعداد واکنش های ذخیره شده برای هر پیام (بین ۵ تا ۱۰۰)";
             case "VeyraNoEditHistory": return "هیچ ویرایشی برای این پیام ثبت نشده است.";
             case "VeyraNoReactionHistory": return "هیچ واکنشی برای این پیام ثبت نشده است.";
+            case "ShowMore": return "نمایش بیشتر";
+            case "ShowLess": return "نمایش کمتر";
             default: return null;
         }
     }

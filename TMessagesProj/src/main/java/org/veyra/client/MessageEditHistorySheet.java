@@ -409,6 +409,53 @@ public class MessageEditHistorySheet extends BottomSheet {
         messageText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         card.addView(messageText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
+        final int COLLAPSED_MAX_LINES = 4;
+        TextView showMoreButton = new TextView(context);
+        showMoreButton.setText(LocaleController.getString("ShowMore", R.string.ShowMore));
+        showMoreButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        showMoreButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        showMoreButton.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
+        showMoreButton.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(2));
+
+        int newlines = 0;
+        if (text != null) {
+            for (int i = 0; i < text.length(); i++) {
+                if (text.charAt(i) == '\n') newlines++;
+            }
+        }
+        boolean isInitiallyLong = (text != null && (text.length() > 180 || newlines >= COLLAPSED_MAX_LINES));
+
+        final boolean[] isExpanded = new boolean[]{false};
+        if (isInitiallyLong) {
+            messageText.setMaxLines(COLLAPSED_MAX_LINES);
+            messageText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            showMoreButton.setVisibility(View.VISIBLE);
+        } else {
+            messageText.setMaxLines(Integer.MAX_VALUE);
+            showMoreButton.setVisibility(View.GONE);
+            messageText.post(() -> {
+                if (!isExpanded[0] && messageText.getLayout() != null && messageText.getLineCount() > COLLAPSED_MAX_LINES) {
+                    messageText.setMaxLines(COLLAPSED_MAX_LINES);
+                    messageText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    showMoreButton.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+
+        showMoreButton.setOnClickListener(v -> {
+            isExpanded[0] = !isExpanded[0];
+            if (isExpanded[0]) {
+                messageText.setMaxLines(Integer.MAX_VALUE);
+                messageText.setEllipsize(null);
+                showMoreButton.setText(LocaleController.getString("ShowLess", R.string.ShowLess));
+            } else {
+                messageText.setMaxLines(COLLAPSED_MAX_LINES);
+                messageText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                showMoreButton.setText(LocaleController.getString("ShowMore", R.string.ShowMore));
+            }
+        });
+        card.addView(showMoreButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
         card.setOnClickListener(v -> {
             AndroidUtilities.addToClipboard(text);
             BulletinFactory.of(fragment).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
