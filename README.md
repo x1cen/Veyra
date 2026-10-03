@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml"><img src="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml/badge.svg?branch=main" alt="Build Status"></a>
   <a href="https://github.com/x1cen/Veyra/releases/latest"><img src="https://img.shields.io/github/v/release/x1cen/Veyra?label=Stable%20Release" alt="Latest Release"></a>
-  <a href="https://github.com/DrKLO/Telegram"><img src="https://img.shields.io/badge/Upstream%20Base-v12.9.2%2B-2481CC.svg" alt="Upstream Base"></a>
+  <a href="https://github.com/DrKLO/Telegram"><img src="https://img.shields.io/badge/Upstream%20Base-v12.10.x-2481CC.svg" alt="Upstream Base"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--2.0-blue.svg" alt="License"></a>
 </p>
 
@@ -32,13 +32,13 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Granular Ghost Mode: separate toggles for each privacy signal, online status, typing and recording indicators, read receipts, voice and video note playback status, and story view visibility. All enabled by default.
 * Mark as Read on Reply: messages stay marked unread until you actually reply to the conversation.
 * Anti-Delete Message Retention: keeps messages and media that conversation partners revoke. Deleted incoming messages get a dimmed appearance with a DELETED label. Your own sent messages are not affected. The Anti-Delete settings screen has per-chat-type toggles (private, groups, channels, bots) plus a Clear All button to wipe every retained record at once.
-* Message Edit History: logs previous versions of edited messages automatically, with per-chat-type toggles matching Anti-Delete. Set a per-message limit (5 to 100 versions), choose what happens on overflow (drop the oldest entry or stop logging), and view the full edit timeline from the History button in the message context menu.
+* Message Edit and Reaction History: logs previous versions of edited messages automatically, with a dedicated second tab for tracking added and removed reactions. Long message texts feature expandable Show more and Show less toggles. Includes per-chat-type filters, configurable retention limits (5 to 100 entries), and full AES-256-GCM encryption at rest.
 * Hide Typing Indicator: stops "typing..." and audio-recording indicators from reaching the other side.
 * Block Incoming Secret Chats: automatically declines secret chat requests from other users.
 * Hide Proxy Connecting Status: hides the "Connecting to proxy..." line everywhere it would normally show.
 * Variable-Length Security PINs (6 to 24 digits): flexible PIN length for the Main Passcode, Duress Code, and Settings Lock.
-* Accurate Edited Marker: a message is marked edited only when its text actually changed, reactions never trigger the badge.
-* Emergency Duress Code: a secondary PIN that silently wipes all local app data and accounts the moment it's entered.
+* Accurate Edited Marker: a message is marked edited only when its text actually changed, retaining the official Telegram edit timestamp.
+* Emergency Duress System: a secondary PIN and menu action with scoped local wipe (all accounts) and full remote wipe (current account) with automatic offline fallback.
 * Dedicated Settings Lock: protect the Veyra settings screen with its own PIN, separate from the app passcode.
 
 ### 👥 Contact and Profile Intelligence
@@ -46,12 +46,14 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Mutual Contact Indicator: a blue dot on the bottom-left of a user's avatar in the chat list shows when they also have your number saved.
 * Mutual Contact Row in Profile: a row on the user's profile page spells out mutual contact status explicitly.
 * Telegram Premium Status Row: shows whether a user currently has an active Premium subscription, visible on every private user's profile.
-* Group and Channel Permissions View: non-admin members can open the group or channel info panel and see the full set of member permissions (sending messages, media, polls, and so on) in read-only form, instead of hitting a dead end.
+* Group and Channel Permissions View: non-admin members can open the group info panel to inspect member permissions. The Media permissions section expands to display granular sub-permissions (photos, videos, voice messages, files, polls, reactions) in clean read-only mode, while privileged administrative sections like Recent Actions are cleanly suppressed for regular members.
 
-### 🗂️ Media Storage
+### 🗂️ Media Storage and Files
 
 * Structured Media Organisation: saved media lands in dedicated subfolders under `Documents/Telegram/`, Video Notes, Voice Notes, Videos, Photos, Audio, Documents, and Animations, kept separate from the regular gallery.
-* Download-State Gated Save Options: "Save to gallery" and "Save to downloads" only appear once a file has fully downloaded, so you can't trigger an empty-save error.
+* Reliable File and Document Opening: standard FileProvider integration resolving dynamic runtime package authorities, enabling immediate opening of APK installers, PDFs, and media files without octet-stream errors.
+* Draggable Subtitle Overlay: video player subtitles can be repositioned freely anywhere on the screen by dragging.
+* Download-State Gated Save Options: "Save to gallery" and "Save to" only appear once a file has fully downloaded, avoiding empty-save errors.
 * Video Message Quality Enhancement: round video messages record at 640x640 with a 2.8 Mbps bitrate for a noticeably sharper result.
 * Video Message Watermark Removal: the Telegram logo overlay is not rendered onto recorded or saved round video messages.
 
@@ -111,6 +113,13 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 ### 🌐 Network and Anti-Censorship
 
 * Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, letting it bypass DPI restrictions without native overhead.
+
+### 🔄 Upstream Telegram 12.10.x Core Sync
+
+* High-Performance Deserialization: replaced reflection-based constructor lookups in `TLClassStore` with direct factory lambdas, eliminating invocation overhead and hardening against R8 obfuscation regressions.
+* Theme Parsing Resiliency: ported upstream fixes for parsing themes with CRLF line endings, preventing boundary errors on custom themes.
+* Viewer Polish: flicker-free media transitions in `PhotoViewer` using transparent placeholders and clean editor popup dismissals.
+* Upstream Strings: synchronized official strings covering modern Telegram features, Camera2 video message recording, and group welcome messages.
 
 ### 🔒 Security Layer
 
@@ -219,7 +228,7 @@ The Veyra-specific code is kept modular so it doesn't entangle with upstream Tel
 
 4. The built package lands at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.1.2.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.1.17.apk
    ```
 
 ---
