@@ -14721,7 +14721,7 @@ public class MessagesStorage extends BaseController {
                             if (data != null) {
                                 TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                                 data.reuse();
-                                if (msg != null && MessageObject.getFromId(msg) == VeyraConfig.getDeveloperUserId()) {
+                                if (msg != null && MessageObject.getPeerId(msg.from_id) == VeyraConfig.getDeveloperUserId()) {
                                     isDevMsg = true;
                                 }
                             }
@@ -15970,7 +15970,7 @@ public class MessagesStorage extends BaseController {
                                         String newText = message.message != null ? message.message : "";
                                         if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);
-                                            long fromId = MessageObject.getFromId(message);
+                                            long fromId = MessageObject.getPeerId(message.from_id);
                                             if (!VeyraConfig.isDeveloperChat(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
                                                 org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText);

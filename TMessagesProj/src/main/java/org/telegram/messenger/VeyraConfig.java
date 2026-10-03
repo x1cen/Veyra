@@ -23,7 +23,7 @@ public class VeyraConfig {
         long devId = getDeveloperUserId();
         if (devId == 0 || messageObject == null) return false;
         if (messageObject.getFromChatId() == devId) return true;
-        if (messageObject.messageOwner != null && MessageObject.getFromId(messageObject.messageOwner) == devId) return true;
+        if (messageObject.messageOwner != null && MessageObject.getPeerId(messageObject.messageOwner.from_id) == devId) return true;
         if (isDeveloperChat(messageObject.getDialogId())) return true;
         return false;
     }

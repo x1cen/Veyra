@@ -19593,7 +19593,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             && !TextUtils.equals(oldText, newText)
                             && !oldMsgOwner.out && !message.out
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)
-                            && (MessageObject.getFromId(message) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
+                            && (MessageObject.getPeerId(message.from_id) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                         // Skip edit history logging for the developer's DM and messages
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
                                 message.dialog_id,
