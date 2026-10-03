@@ -4225,8 +4225,6 @@ public class AndroidUtilities {
             } else {
                 String realMimeType = null;
                 try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     MimeTypeMap myMime = MimeTypeMap.getSingleton();
                     int idx = fileName.lastIndexOf('.');
                     if (idx != -1) {
@@ -4239,65 +4237,50 @@ public class AndroidUtilities {
                             }
                         }
                     }
-                    if (Build.VERSION.SDK_INT >= 24) {
-                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), realMimeType != null ? realMimeType : "text/plain");
-                    } else {
-                        intent.setDataAndType(Uri.fromFile(f), realMimeType != null ? realMimeType : "text/plain");
+                    if (realMimeType == null && document.mime_type != null && !document.mime_type.isEmpty()) {
+                        realMimeType = document.mime_type;
                     }
-                    if (realMimeType != null) {
-                        try {
-                            activity.startActivityForResult(intent, 500);
-                        } catch (Exception e) {
-                            try {
-                                Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
-                                chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                activity.startActivityForResult(chooser, 500);
-                            } catch (Exception e2) {
-                                try {
-                                    if (Build.VERSION.SDK_INT >= 24) {
-                                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "*/*");
-                                    } else {
-                                        intent.setDataAndType(Uri.fromFile(f), "*/*");
-                                    }
-                                    Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
-                                    chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                    activity.startActivityForResult(chooser, 500);
-                                } catch (Exception e3) {
-                                    if (Build.VERSION.SDK_INT >= 24) {
-                                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
-                                    } else {
-                                        intent.setDataAndType(Uri.fromFile(f), "text/plain");
-                                    }
-                                    activity.startActivityForResult(intent, 500);
-                                }
-                            }
+                    // For generic/unknown MIME types always use a chooser with */*
+                    boolean useWildcard = realMimeType == null
+                            || realMimeType.equals("application/octet-stream")
+                            || realMimeType.equals("application/binary");
+                    final String mimeForIntent = useWildcard ? "*/*" : realMimeType;
+
+                    Uri fileUri;
+                    try {
+                        if (Build.VERSION.SDK_INT >= 24) {
+                            fileUri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f);
+                        } else {
+                            fileUri = Uri.fromFile(f);
                         }
-                    } else {
+                    } catch (Exception providerEx) {
+                        FileLog.e(providerEx);
+                        fileUri = Uri.fromFile(f);
+                    }
+
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    intent.setDataAndType(fileUri, mimeForIntent);
+
+                    // Always try a direct start first, then fall back to chooser, then */* chooser
+                    try {
+                        activity.startActivityForResult(intent, 500);
+                    } catch (Exception e) {
                         try {
-                            activity.startActivityForResult(intent, 500);
-                        } catch (Exception e) {
-                            Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                            Intent chooser = Intent.createChooser(intent, !TextUtils.isEmpty(fileName) ? fileName : "");
                             chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             activity.startActivityForResult(chooser, 500);
+                        } catch (Exception e2) {
+                            Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
+                            wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                            wildcardIntent.setDataAndType(fileUri, "*/*");
+                            Intent chooser2 = Intent.createChooser(wildcardIntent, !TextUtils.isEmpty(fileName) ? fileName : "");
+                            chooser2.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            activity.startActivityForResult(chooser2, 500);
                         }
                     }
                 } catch (Exception e) {
-                    if (activity == null) {
-                        return;
-                    }
-                    AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-                    Map<String, Integer> colorsReplacement = new HashMap<>();
-                    colorsReplacement.put("info1.**", parentFragment.getThemedColor(Theme.key_dialogTopBackground));
-                    colorsReplacement.put("info2.**", parentFragment.getThemedColor(Theme.key_dialogTopBackground));
-                    builder.setTopAnimation(R.raw.not_available, AlertsCreator.NEW_DENY_DIALOG_TOP_ICON_SIZE, false, parentFragment.getThemedColor(Theme.key_dialogTopBackground), colorsReplacement);
-                    builder.setTopAnimationIsNew(true);
-                    builder.setPositiveButton(getString(R.string.OK), null);
-                    builder.setMessage(LocaleController.formatString("NoHandleAppInstalled", R.string.NoHandleAppInstalled, message.getDocument().mime_type));
-                    if (parentFragment != null) {
-                        parentFragment.showDialog(builder.create());
-                    } else {
-                        builder.show();
-                    }
+                    FileLog.e(e);
                 }
             }
         }
