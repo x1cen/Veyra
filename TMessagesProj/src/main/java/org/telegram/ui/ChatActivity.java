@@ -26727,8 +26727,11 @@ public class ChatActivity extends BaseFragment implements
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
                 if (TextUtils.equals(oldText, newText)) {
                     if (old.messageOwner.edit_date == 0) {
-                        messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        messageObject.messageOwner.edit_date = 0;
+                        // Only strip Edited label for incoming messages — not our own edits
+                        if (!messageObject.isOut()) {
+                            messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                            messageObject.messageOwner.edit_date = 0;
+                        }
                     } else {
                         messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
                     }

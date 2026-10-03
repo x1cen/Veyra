@@ -19591,8 +19591,12 @@ public class MessagesController extends BaseController implements NotificationCe
                     String newText = message.message != null ? message.message : "";
                     if (TextUtils.equals(oldText, newText)) {
                         if (oldMsgOwner.edit_date == 0) {
-                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                            message.edit_date = 0;
+                            // For own outgoing messages (edit in-flight), keep the new edit_date from server
+                            // so the label doesn't flash. For incoming messages suppress the Edited label.
+                            if (!message.out) {
+                                message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                message.edit_date = 0;
+                            }
                         } else {
                             message.edit_date = oldMsgOwner.edit_date;
                         }
