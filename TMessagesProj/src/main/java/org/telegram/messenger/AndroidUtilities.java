@@ -4331,7 +4331,28 @@ public class AndroidUtilities {
                 }
             } catch (Exception e) {
                 FileLog.e(e);
-                fileUri = Uri.fromFile(f);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    // FileProvider failed — file path not covered by provider_paths.xml
+                    // Try content URI via MediaStore as fallback, or just return false
+                    try {
+                        android.content.ContentValues values = new android.content.ContentValues();
+                        values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+                        values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, realMimeType.equals("*/*") ? "application/octet-stream" : realMimeType);
+                        // Last resort: use ACTION_SEND intent instead of VIEW
+                        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                        sendIntent.setType(realMimeType);
+                        sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f));
+                        sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        Intent chooser = Intent.createChooser(sendIntent, fileName != null ? fileName : "");
+                        activity.startActivityForResult(chooser, 500);
+                        return true;
+                    } catch (Exception e2) {
+                        FileLog.e(e2);
+                        return false;
+                    }
+                } else {
+                    fileUri = Uri.fromFile(f);
+                }
             }
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
