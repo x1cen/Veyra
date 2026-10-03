@@ -34898,9 +34898,6 @@ public class ChatActivity extends BaseFragment implements
         if (getParentActivity() == null) {
             return;
         }
-        if (message != null && message.getFileName() != null && message.getFileName().toLowerCase().endsWith(".apk")) {
-            return;
-        }
         // Before showing error, try a last-resort wildcard chooser
         try {
             File f = null;

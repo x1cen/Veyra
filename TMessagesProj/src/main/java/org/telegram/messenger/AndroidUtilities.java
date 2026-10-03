@@ -4223,7 +4223,61 @@ public class AndroidUtilities {
                     parentFragment.showDialog(builder.create());
                 }
             } else {
-                openForView(f, fileName, document.mime_type, activity, null, false);
+                String realMimeType = null;
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    MimeTypeMap myMime = MimeTypeMap.getSingleton();
+                    int idx = fileName.lastIndexOf('.');
+                    if (idx != -1) {
+                        String ext = fileName.substring(idx + 1);
+                        realMimeType = myMime.getMimeTypeFromExtension(ext.toLowerCase());
+                        if (realMimeType == null) {
+                            realMimeType = document.mime_type;
+                            if (realMimeType == null || realMimeType.length() == 0) {
+                                realMimeType = null;
+                            }
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), realMimeType != null ? realMimeType : "text/plain");
+                    } else {
+                        intent.setDataAndType(Uri.fromFile(f), realMimeType != null ? realMimeType : "text/plain");
+                    }
+                    if (realMimeType != null) {
+                        try {
+                            activity.startActivityForResult(intent, 500);
+                        } catch (Exception e) {
+                            if (Build.VERSION.SDK_INT >= 24) {
+                                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
+                            } else {
+                                intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                            }
+                            activity.startActivityForResult(intent, 500);
+                        }
+                    } else {
+                        activity.startActivityForResult(intent, 500);
+                    }
+                } catch (Exception e) {
+                    if (activity == null) {
+                        return;
+                    }
+                    AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+                    Map<String, Integer> colorsReplacement = new HashMap<>();
+                    colorsReplacement.put("info1", parentFragment != null ? parentFragment.getThemedColor(Theme.key_dialogTopBackground) : 0);
+                    colorsReplacement.put("info2", parentFragment != null ? parentFragment.getThemedColor(Theme.key_dialogTopBackground) : 0);
+                    if (parentFragment != null) {
+                        builder.setTopAnimation(R.raw.not_available, AlertsCreator.NEW_DENY_DIALOG_TOP_ICON_SIZE, false, parentFragment.getThemedColor(Theme.key_dialogTopBackground), colorsReplacement);
+                    }
+                    builder.setTopAnimationIsNew(true);
+                    builder.setPositiveButton(getString(R.string.OK), null);
+                    builder.setMessage(LocaleController.formatString("NoHandleAppInstalled", R.string.NoHandleAppInstalled, message.getDocument().mime_type));
+                    if (parentFragment != null) {
+                        parentFragment.showDialog(builder.create());
+                    } else {
+                        builder.show();
+                    }
+                }
             }
         }
     }
@@ -4231,6 +4285,8 @@ public class AndroidUtilities {
     public static boolean openForView(File f, String fileName, String mimeType, final Activity activity, Theme.ResourcesProvider resourcesProvider, boolean restrict) {
         if (f != null && f.exists()) {
             String realMimeType = null;
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             MimeTypeMap myMime = MimeTypeMap.getSingleton();
             int idx = fileName == null ? -1 : fileName.lastIndexOf('.');
             if (idx != -1) {
@@ -4246,95 +4302,28 @@ public class AndroidUtilities {
                     }
                 }
             }
-            if (realMimeType == null && mimeType != null && !mimeType.isEmpty()) {
-                realMimeType = mimeType;
-            }
-
-            boolean isApk = "application/vnd.android.package-archive".equals(realMimeType)
-                    || (fileName != null && fileName.toLowerCase().endsWith(".apk"));
-
-            if (isApk) {
+            if (realMimeType != null && realMimeType.equals("application/vnd.android.package-archive")) {
                 if (restrict) return true;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ApplicationLoader.applicationContext.getPackageManager().canRequestPackageInstalls()) {
                     AlertsCreator.createApkRestrictedDialog(activity, resourcesProvider).show();
                     return true;
                 }
-                Uri apkUri;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    apkUri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f);
-                } else {
-                    apkUri = Uri.fromFile(f);
-                }
-                Intent installIntent = new Intent(Intent.ACTION_VIEW);
-                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                installIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                String[] installerPackages = {"com.google.android.packageinstaller", "com.android.packageinstaller", "com.samsung.android.packageinstaller"};
-                for (String pkg : installerPackages) {
-                    try {
-                        activity.grantUriPermission(pkg, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    } catch (Exception ignore) {}
-                }
-
-                try {
-                    activity.startActivity(installIntent);
-                    return true;
-                } catch (Exception e) {
-                    FileLog.e(e);
-                    for (String pkg : installerPackages) {
-                        try {
-                            Intent explicitIntent = new Intent(Intent.ACTION_VIEW);
-                            explicitIntent.setPackage(pkg);
-                            explicitIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                            explicitIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            activity.startActivity(explicitIntent);
-                            return true;
-                        } catch (Exception ignore) {}
-                    }
-                    try {
-                        Intent altIntent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-                        altIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                        altIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        activity.startActivity(altIntent);
-                        return true;
-                    } catch (Exception e2) {
-                        FileLog.e(e2);
-                    }
-                }
-                return false;
             }
-
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            Uri fileUri;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                fileUri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f);
+                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), realMimeType != null ? realMimeType : "text/plain");
             } else {
-                fileUri = Uri.fromFile(f);
+                intent.setDataAndType(Uri.fromFile(f), realMimeType != null ? realMimeType : "text/plain");
             }
-            intent.setDataAndType(fileUri, realMimeType != null ? realMimeType : "text/plain");
-
             if (realMimeType != null) {
                 try {
                     activity.startActivityForResult(intent, 500);
                 } catch (Exception e) {
-                    try {
-                        Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
-                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        activity.startActivityForResult(chooser, 500);
-                    } catch (Exception e2) {
-                        try {
-                            Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
-                            wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            wildcardIntent.setDataAndType(fileUri, "*/*");
-                            Intent chooser = Intent.createChooser(wildcardIntent, fileName != null ? fileName : "");
-                            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            activity.startActivityForResult(chooser, 500);
-                        } catch (Exception e3) {
-                            intent.setDataAndType(fileUri, "text/plain");
-                            activity.startActivityForResult(intent, 500);
-                        }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
+                    } else {
+                        intent.setDataAndType(Uri.fromFile(f), "text/plain");
                     }
+                    activity.startActivityForResult(intent, 500);
                 }
             } else {
                 activity.startActivityForResult(intent, 500);

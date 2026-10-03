@@ -79,17 +79,6 @@
 
     <queries>
         <package android:name="com.google.android.apps.maps"/>
-        <package android:name="com.google.android.packageinstaller"/>
-        <package android:name="com.android.packageinstaller"/>
-        <package android:name="com.samsung.android.packageinstaller"/>
-        <intent>
-            <action android:name="android.intent.action.VIEW"/>
-            <data android:mimeType="application/vnd.android.package-archive"/>
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.INSTALL_PACKAGE"/>
-            <data android:mimeType="application/vnd.android.package-archive"/>
-        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="http"/>
