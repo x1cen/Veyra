@@ -2,7 +2,7 @@
   <img src="assets/logo.png" width="220" alt="Veyra Logo" />
 </p>
 
-<h1 align="center">Veyra</h1>
+<h1 align="center">🛡️ Veyra</h1>
 
 <p align="center">
   <b>Privacy-first Telegram client for Android</b><br>
@@ -20,13 +20,13 @@
 
 ## Overview
 
-Veyra is a privacy-first Android client built on the official upstream Telegram codebase. It keeps the stability and speed of stock Telegram, and adds privacy protections, power-user utilities, full ad removal, anti-censorship networking, and its own visual identity on top.
+Veyra is a privacy-first Android client built on the official upstream Telegram codebase. It keeps the stability and speed people already expect from stock Telegram, then adds privacy protections, power-user utilities, full ad removal, anti-censorship networking, and its own visual identity.
 
 ---
 
 ## Key Features
 
-### Privacy and Stealth
+### 🛡️ Privacy and Stealth
 
 * Online Status Visibility Control: choose whether to broadcast your online status, hide your presence completely, go offline automatically after sending a message, or stay always online.
 * Granular Ghost Mode: separate toggles for each privacy signal, online status, typing and recording indicators, read receipts, voice and video note playback status, and story view visibility. All enabled by default.
@@ -41,21 +41,21 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Emergency Duress Code: a secondary PIN that silently wipes all local app data and accounts the moment it's entered.
 * Dedicated Settings Lock: protect the Veyra settings screen with its own PIN, separate from the app passcode.
 
-### Contact and Profile Intelligence
+### 👥 Contact and Profile Intelligence
 
 * Mutual Contact Indicator: a blue dot on the bottom-left of a user's avatar in the chat list shows when they also have your number saved.
 * Mutual Contact Row in Profile: a row on the user's profile page spells out mutual contact status explicitly.
 * Telegram Premium Status Row: shows whether a user currently has an active Premium subscription, visible on every private user's profile.
 * Group and Channel Permissions View: non-admin members can open the group or channel info panel and see the full set of member permissions (sending messages, media, polls, and so on) in read-only form, instead of hitting a dead end.
 
-### Media Storage
+### 🗂️ Media Storage
 
 * Structured Media Organisation: saved media lands in dedicated subfolders under `Documents/Telegram/`, Video Notes, Voice Notes, Videos, Photos, Audio, Documents, and Animations, kept separate from the regular gallery.
 * Download-State Gated Save Options: "Save to gallery" and "Save to downloads" only appear once a file has fully downloaded, so you can't trigger an empty-save error.
 * Video Message Quality Enhancement: round video messages record at 640x640 with a 2.8 Mbps bitrate for a noticeably sharper result.
 * Video Message Watermark Removal: the Telegram logo overlay is not rendered onto recorded or saved round video messages.
 
-### Composing and Chat Actions
+### 💬 Composing and Chat Actions
 
 * Hide Content: long-press any message to hide it locally. Hidden messages disappear from the chat view without being deleted. Tap the Chats tab 7 times in quick succession to bring everything back.
 * Delete Veyra Cache on Message Delete: manually deleting a message that Anti-Delete had retained also wipes the matching Veyra records (anti-delete entry and edit history) for that message.
@@ -70,13 +70,13 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Jump to First Message: jump straight to a chat's first message from the 3-dot menu.
 * Copy Dialog ID: quickly copy a chat's Telegram Dialog or Peer ID.
 
-### Media and Camera
+### 🖼️ Media and Camera
 
 * Rear Camera for Video Messages: round video messages default to the rear camera.
 * Send Typed Text with Stickers and GIFs: typed captions are kept when you send a sticker or GIF alongside them.
 * Keep Original Filename on Download: downloaded documents keep their original filename.
 
-### Chat List
+### 📋 Chat List
 
 * Mutual Contact Dot: blue indicator dot on the avatar for mutual contacts, same as above.
 * Disable Global Search: stops queries from reaching public Telegram channels, bots, and users.
@@ -84,7 +84,7 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Colored Last-Seen Indicator Dots: live dots on avatars (yellow under 15 minutes, orange under 30, red under 60).
 * Dialog ordering stays chronological by default, newest activity always surfaces to the top. Pinning unread or unmuted chats above the rest is available as an opt-in setting and is off by default.
 
-### Power Controls and Interaction
+### ⚙️ Power Controls and Interaction
 
 * Message Details Inspector: inspect message ID, DC, sender ID, exact media byte size, and timestamps, exportable as JSON.
 * Bulk Message Operations: forward multiple messages to Saved Messages, or unpin several pinned messages, in one action.
@@ -96,23 +96,23 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Disable Vibration: a single switch for all haptic feedback.
 * Disable Link Previews by Default: stops the automatic webpage lookup while composing a message.
 
-### Group Administration
+### 🛠️ Group Administration
 
 * Delete All Messages in Group: wipe an entire group's history after a confirmation prompt.
 * Upgrade Group to Supergroup: convert a basic group into a supergroup.
 * Auto-Delete Timer: set up automatic message deletion for private chats and groups.
 
-### QR Code Integration
+### 📱 QR Code Integration
 
 * Login via QR Code: log in by scanning a generated QR code.
 * Direct QR Login Confirmation: scan and approve login QR codes in one step.
 * Share via QR Code: export sticker packs, channels, groups, and proxies as QR codes.
 
-### Network and Anti-Censorship
+### 🌐 Network and Anti-Censorship
 
 * Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, letting it bypass DPI restrictions without native overhead.
 
-### Security Layer
+### 🔒 Security Layer
 
 * Screen Capture Blocking: a toggle in Privacy Settings (off by default) that applies `FLAG_SECURE` to app windows, blocking screenshots and recent-apps thumbnails from leaking conversation content.
 * Emergency Wipe System (7-tap logo trigger): tapping the Telegram logo 7 times rapidly opens the emergency protocol menu, with confirmation required before either action runs:
@@ -123,11 +123,11 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * AES-256-GCM Encryption API: a built-in encryption layer for sensitive local data (session tokens, preferences) using AES-256-GCM with randomised 12-byte IVs. Everything Veyra stores locally is encrypted this way except the user-facing `Documents` folder, which stays as plain files by design so you can access what you save from outside the app.
 * Session Token Integrity: HMAC-SHA256 validation protects session tokens against tampering.
 
-### Stealth and Content Management
+### 🙈 Stealth and Content Management
 
 * Hidden Chats and Messages: hide an entire conversation from the chat list, or hide individual messages. Restore everything hidden with 7 quick taps on the Chats tab.
 
-### UI and Regional Features
+### 🎨 UI and Regional Features
 
 * Native Persian Solar Calendar: dates and numbers switch to the Persian Solar Hijri (Shamsi) calendar when the `fa` locale is active, with full Farsi translations throughout the app.
 * Telegram ID and DC in Profiles: tap to copy a user's ID or DC straight from their profile.
@@ -232,7 +232,7 @@ Continuous integration and artifact distribution run through GitHub Actions:
 
 ---
 
-## Donations and Support
+## 💖 Donations and Support
 
 If Veyra has been useful to you and you'd like to support ongoing development, contributions are welcome through any of these:
 
