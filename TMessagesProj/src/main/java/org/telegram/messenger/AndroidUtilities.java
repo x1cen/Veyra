@@ -4307,7 +4307,11 @@ public class AndroidUtilities {
             if (realMimeType == null && mimeType != null && !mimeType.isEmpty()) {
                 realMimeType = mimeType;
             }
-            if (realMimeType == null) {
+            // Normalize generic/unknown MIME types to wildcard so the system shows an app picker
+            if (realMimeType == null
+                    || realMimeType.equals("application/octet-stream")
+                    || realMimeType.equals("application/binary")
+                    || realMimeType.equals("application/x-binary")) {
                 realMimeType = "*/*";
             }
             if (realMimeType.equals("application/vnd.android.package-archive")) {

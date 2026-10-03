@@ -34890,6 +34890,32 @@ public class ChatActivity extends BaseFragment implements
         if (getParentActivity() == null) {
             return;
         }
+        // Before showing error, try a last-resort wildcard chooser
+        try {
+            File f = null;
+            if (message.messageOwner.attachPath != null && !message.messageOwner.attachPath.isEmpty()) {
+                f = new File(message.messageOwner.attachPath);
+            }
+            if (f == null || !f.exists()) {
+                f = getFileLoader().getPathToMessage(message.messageOwner);
+            }
+            if (f != null && f.exists()) {
+                Uri fileUri;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    fileUri = androidx.core.content.FileProvider.getUriForFile(getParentActivity(), org.telegram.messenger.ApplicationLoader.getApplicationId() + ".provider", f);
+                } else {
+                    fileUri = android.net.Uri.fromFile(f);
+                }
+                Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
+                wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                wildcardIntent.setDataAndType(fileUri, "*/*");
+                Intent chooser = Intent.createChooser(wildcardIntent, message.getFileName());
+                chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getParentActivity().startActivityForResult(chooser, 500);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
         builder.setTitle(LocaleController.getString(R.string.AppName));
         builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
