@@ -910,37 +910,80 @@ public final class BulletinFactory {
         }
         layout.setAnimation(fileType.icon.resId, fileType.icon.layers);
         layout.textView.setText(AndroidUtilities.replaceSingleTag(fileType.getText(filesAmount), () -> {
-            if (LaunchActivity.instance == null || LaunchActivity.instance.isFinishing()) return;
-
-            if (fileType == FileType.UNKNOWN || fileType == FileType.UNKNOWNS) {
-                try {
-                    android.os.Environment.getExternalStoragePublicDirectory(
-                            android.os.Environment.DIRECTORY_DOCUMENTS + "/Telegram").mkdirs();
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setDataAndType(
-                            android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3ATelegram%2FDocuments"),
-                            "vnd.android.document/root");
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    LaunchActivity.instance.startActivity(intent);
-                } catch (Exception e) {
-                    try {
-                        Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        LaunchActivity.instance.startActivity(intent);
-                    } catch (Exception e2) {
-                        org.telegram.messenger.FileLog.e(e2);
-                    }
-                }
-            } else {
-                Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                LaunchActivity.instance.startActivity(intent);
-            }
+            openDocumentsFolder();
         }));
         if (fileType.icon.paddingBottom != 0) {
             layout.setIconPaddingBottom(fileType.icon.paddingBottom);
         }
         return create(layout, Bulletin.DURATION_SHORT);
+    }
+
+    private static void openDocumentsFolder() {
+        if (LaunchActivity.instance == null || LaunchActivity.instance.isFinishing()) return;
+        try {
+            java.io.File documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS);
+            java.io.File telegramDir = new java.io.File(documentsDir, "Telegram");
+            java.io.File telegramDocsDir = new java.io.File(telegramDir, "Documents");
+            if (!telegramDocsDir.exists()) {
+                telegramDocsDir.mkdirs();
+            }
+
+            // 1. SAF with directory MIME type targeting Documents/Telegram
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(
+                        android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADocuments%2FTelegram"),
+                        "vnd.android.document/directory");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                LaunchActivity.instance.startActivity(intent);
+                return;
+            } catch (Exception ignored) {}
+
+            // 2. Samsung My Files app (Galaxy devices)
+            try {
+                Intent samsungIntent = LaunchActivity.instance.getPackageManager().getLaunchIntentForPackage("com.sec.android.app.myfiles");
+                if (samsungIntent != null) {
+                    samsungIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    LaunchActivity.instance.startActivity(samsungIntent);
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            // 3. FileProvider with resource/folder
+            try {
+                java.io.File folderToOpen = telegramDocsDir.exists() ? telegramDocsDir : (telegramDir.exists() ? telegramDir : documentsDir);
+                android.net.Uri folderUri = androidx.core.content.FileProvider.getUriForFile(LaunchActivity.instance, ApplicationLoader.getApplicationId() + ".provider", folderToOpen);
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(folderUri, "resource/folder");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                LaunchActivity.instance.startActivity(intent);
+                return;
+            } catch (Exception ignored) {}
+
+            // 4. Google Files app
+            try {
+                Intent filesIntent = LaunchActivity.instance.getPackageManager().getLaunchIntentForPackage("com.google.android.apps.nbu.files");
+                if (filesIntent != null) {
+                    filesIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    LaunchActivity.instance.startActivity(filesIntent);
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            // 5. Standard Documents root via SAF
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(
+                        android.net.Uri.parse("content://com.android.externalstorage.documents/root/primary"),
+                        "vnd.android.document/root");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                LaunchActivity.instance.startActivity(intent);
+                return;
+            } catch (Exception ignored) {}
+
+        } catch (Exception e) {
+            org.telegram.messenger.FileLog.e(e);
+        }
     }
 
     public Bulletin createErrorBulletin(CharSequence errorMessage) {

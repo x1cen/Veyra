@@ -1634,6 +1634,46 @@ public class LocaleController {
                 return "deleted";
             }
         }
+        if ("SaveToDownloads".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "ذخیره در";
+            } catch (Exception ignored) {}
+            return "Save To";
+        }
+        if ("FileSavedHintLinked".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "فایل در **Documents** ذخیره شد.";
+            } catch (Exception ignored) {}
+            return "File saved to **Documents**.";
+        }
+        if ("PhotoSavedToDownloadsHintLinked".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "عکس در **Documents** ذخیره شد.";
+            } catch (Exception ignored) {}
+            return "Photo saved to **Documents**.";
+        }
+        if ("VideoSavedToDownloadsHintLinked".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "ویدیو در **Documents** ذخیره شد.";
+            } catch (Exception ignored) {}
+            return "Video saved to **Documents**.";
+        }
+        if ("GifSavedToDownloadsHintLinked".equals(key)) {
+            try {
+                LocaleInfo info = getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "گیف در **Documents** ذخیره شد.";
+            } catch (Exception ignored) {}
+            return "GIF saved to **Documents**.";
+        }
         if ("THKillTheAPP".equals(key)) {
             try {
                 LocaleInfo info = getCurrentLocaleInfo();
@@ -1849,6 +1889,16 @@ public class LocaleController {
     }
 
     public static String formatPluralString(String key, int plural, Object... args) {
+        if ("FilesSavedHintLinked".equals(key)) {
+            try {
+                LocaleInfo info = getInstance().getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) {
+                    return plural == 1 ? "فایل در **Documents** ذخیره شد." : String.format(getInstance().currentLocale != null ? getInstance().currentLocale : java.util.Locale.US, "%d فایل در **Documents** ذخیره شد.", plural);
+                }
+            } catch (Exception ignored) {}
+            return plural == 1 ? "File saved to **Documents**." : String.format(getInstance().currentLocale != null ? getInstance().currentLocale : java.util.Locale.US, "%d files saved to **Documents**.", plural);
+        }
         if (key == null || key.length() == 0 || getInstance().currentPluralRules == null) {
             return "LOC_ERR:" + key;
         }
@@ -1991,6 +2041,22 @@ public class LocaleController {
     }
 
     public static String formatString(String key, String fallback, int res, int fallbackRes, Object... args) {
+        if ("FileSavedHintLinked".equals(key) || "FilesSavedHintLinked_one".equals(key)) {
+            try {
+                LocaleInfo info = getInstance().getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return "فایل در **Documents** ذخیره شد.";
+            } catch (Exception ignored) {}
+            return "File saved to **Documents**.";
+        }
+        if ("FilesSavedHintLinked_other".equals(key)) {
+            try {
+                LocaleInfo info = getInstance().getCurrentLocaleInfo();
+                String lang = info != null && info.shortName != null ? info.shortName.toLowerCase() : "";
+                if (lang.startsWith("fa")) return String.format(getInstance().currentLocale != null ? getInstance().currentLocale : java.util.Locale.US, "%d فایل در **Documents** ذخیره شد.", args);
+            } catch (Exception ignored) {}
+            return String.format(getInstance().currentLocale != null ? getInstance().currentLocale : java.util.Locale.US, "%d files saved to **Documents**.", args);
+        }
         try {
             String value = BuildVars.USE_CLOUD_STRINGS ? getInstance().localeValues.get(key) : null;
             if (value == null) {

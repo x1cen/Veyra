@@ -1302,7 +1302,7 @@
     <string name="DeleteTheseChatsBothSides">Delete chats</string>
     <string name="SlideToCancel2">Slide to cancel</string>
     <string name="CancelRound">Cancel</string>
-    <string name="SaveToDownloads">Save to</string>
+    <string name="SaveToDownloads">Save To</string>
     <string name="SaveToGIFs">Save to GIFs</string>
     <string name="SaveToMusic">Save to music</string>
     <string name="ShareFile">Share</string>
@@ -3554,10 +3554,10 @@
     <string name="PhotoSavedHint">Photo saved to gallery</string>
     <string name="LivePhotoSavedHint">Motion Photo saved to gallery</string>
     <string name="VideoSavedHint">Video saved to gallery</string>
-    <string name="PhotoSavedToDownloadsHintLinked">Photo saved to **downloads**.</string>
-    <string name="VideoSavedToDownloadsHintLinked">Video saved to **downloads**.</string>
+    <string name="PhotoSavedToDownloadsHintLinked">Photo saved to **Documents**.</string>
+    <string name="VideoSavedToDownloadsHintLinked">Video saved to **Documents**.</string>
     <string name="GifSavedHint">Added to saved GIFs</string>
-    <string name="GifSavedToDownloadsHintLinked">GIF saved to **downloads**.</string>
+    <string name="GifSavedToDownloadsHintLinked">GIF saved to **Documents**.</string>
     <string name="AudioSavedHint">File saved to music</string>
     <string name="FileSavedHintLinked">File saved to **Documents**.</string>
     <string name="FilesSavedHintLinked_one">File saved to **Documents**.</string>
