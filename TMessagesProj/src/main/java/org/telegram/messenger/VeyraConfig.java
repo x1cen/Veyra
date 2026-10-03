@@ -269,7 +269,11 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                if (chat == null) {
+                    // Unknown type — conservative: require both groups AND channels to be enabled
+                    return editHistoryGroups && editHistoryChannels;
+                }
+                if (ChatObject.isChannel(chat) && !chat.megagroup) {
                     return editHistoryChannels;
                 }
                 return editHistoryGroups;
@@ -292,7 +296,12 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                if (chat == null) {
+                    // Chat not yet cached — safe default: only allow if both groups and channels are on.
+                    // This prevents accidentally logging reactions for channels/bots when their type is unknown.
+                    return reactionHistoryGroups && reactionHistoryChannels;
+                }
+                if (ChatObject.isChannel(chat) && !chat.megagroup) {
                     return reactionHistoryChannels;
                 }
                 return reactionHistoryGroups;
