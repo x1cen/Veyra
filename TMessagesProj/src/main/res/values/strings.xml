@@ -11350,6 +11350,8 @@
     <string name="VeyraEditHistoryDropOldestDesc">When limit is reached, discard the oldest edit instead of ignoring new ones</string>
     <string name="VeyraEditHistoryClear">Clear All Edit History</string>
     <string name="VeyraEditHistoryCleared">All edit history cleared</string>
+    <string name="VeyraReactionHistoryClear">Clear All Reaction History</string>
+    <string name="VeyraReactionHistoryCleared">All reaction history cleared</string>
 
     <string name="EditHistory">History</string>
     <string name="OriginalMessage">Original Message</string>

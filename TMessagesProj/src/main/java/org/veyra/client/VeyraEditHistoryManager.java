@@ -18,7 +18,7 @@ import java.util.List;
 public final class VeyraEditHistoryManager {
 
     private static final String DB_NAME = "veyra_edit_history.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final String TABLE_NAME = "edit_history";
     private static final String REACTION_TABLE_NAME = "reaction_history";
 
@@ -43,14 +43,16 @@ public final class VeyraEditHistoryManager {
         public final String reaction;
         public final int count;
         public final long userId;
+        public final String action; // "add" or "remove"
 
-        public ReactionEntry(long dialogId, int messageId, int date, String reaction, int count, long userId) {
+        public ReactionEntry(long dialogId, int messageId, int date, String reaction, int count, long userId, String action) {
             this.dialogId = dialogId;
             this.messageId = messageId;
             this.date = date;
             this.reaction = reaction;
             this.count = count;
             this.userId = userId;
+            this.action = action;
         }
     }
 
@@ -75,7 +77,8 @@ public final class VeyraEditHistoryManager {
                     "date INTEGER, " +
                     "reaction TEXT, " +
                     "count INTEGER, " +
-                    "user_id INTEGER);");
+                    "user_id INTEGER, " +
+                    "action TEXT DEFAULT 'add');");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_react_msg ON " + REACTION_TABLE_NAME + " (dialog_id, message_id);");
         }
 
@@ -91,6 +94,11 @@ public final class VeyraEditHistoryManager {
                         "count INTEGER, " +
                         "user_id INTEGER);");
                 db.execSQL("CREATE INDEX IF NOT EXISTS idx_react_msg ON " + REACTION_TABLE_NAME + " (dialog_id, message_id);");
+            }
+            if (oldVersion < 3) {
+                try {
+                    db.execSQL("ALTER TABLE " + REACTION_TABLE_NAME + " ADD COLUMN action TEXT DEFAULT 'add';");
+                } catch (Exception ignored) {}
             }
         }
     }
@@ -119,37 +127,36 @@ public final class VeyraEditHistoryManager {
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             if (checkCursor != null) {
                 if (checkCursor.moveToFirst()) {
-                    // Decrypt stored value to compare
-                    String stored = checkCursor.getString(0);
-                    String storedDecrypted = VeyraKeyStore.decryptString(stored);
-                    if (storedDecrypted == null) storedDecrypted = stored;
-                    if (TextUtils.equals(storedDecrypted, text)) {
-                        checkCursor.close();
-                        return;
+                    String lastRaw = checkCursor.getString(0);
+                    checkCursor.close();
+                    // Decrypt to compare
+                    String lastDecrypted = VeyraKeyStore.decryptString(lastRaw);
+                    if (lastDecrypted == null) lastDecrypted = lastRaw;
+                    if (text.equals(lastDecrypted)) {
+                        return; // no change
                     }
+                } else {
+                    checkCursor.close();
                 }
-                checkCursor.close();
             }
 
+            // Check edit limit per message
+            boolean dropOldest = VeyraConfig.editHistoryDropOldest;
+            int maxEdits = Math.max(1, Math.min(50, VeyraConfig.editHistoryMaxEdits));
             Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
-            int count = 0;
+            int total = 0;
             if (countCursor != null) {
-                if (countCursor.moveToFirst()) {
-                    count = countCursor.getInt(0);
-                }
+                if (countCursor.moveToFirst()) total = countCursor.getInt(0);
                 countCursor.close();
             }
-
-            int limit = Math.max(5, Math.min(100, VeyraConfig.editHistoryLimit));
-            if (count >= limit) {
-                if (VeyraConfig.editHistoryDropOldest) {
-                    int deleteCount = count - limit + 1;
-                    db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE id IN (" +
-                            "SELECT id FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
-                            new Object[]{dialogId, messageId, deleteCount});
+            if (total >= maxEdits) {
+                if (dropOldest) {
+                    db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE id = (SELECT id FROM " + TABLE_NAME +
+                            " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT 1)",
+                            new Object[]{dialogId, messageId});
                 } else {
-                    return;
+                    return; // limit reached and we don't drop oldest
                 }
             }
 
@@ -166,6 +173,9 @@ public final class VeyraEditHistoryManager {
 
     public static List<EditEntry> getHistory(long dialogId, int messageId) {
         List<EditEntry> list = new ArrayList<>();
+        if (!VeyraConfig.editHistoryEnabled) {
+            return list;
+        }
         try {
             SQLiteDatabase db = getHelper().getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT date, text FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
@@ -173,10 +183,9 @@ public final class VeyraEditHistoryManager {
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     int date = cursor.getInt(0);
-                    String encryptedText = cursor.getString(1);
-                    // Decrypt on read
-                    String text = VeyraKeyStore.decryptString(encryptedText);
-                    if (text == null) text = encryptedText; // fallback for legacy plain rows
+                    String raw = cursor.getString(1);
+                    String text = VeyraKeyStore.decryptString(raw);
+                    if (text == null) text = raw;
                     list.add(new EditEntry(dialogId, messageId, date, text));
                 }
                 cursor.close();
@@ -196,9 +205,7 @@ public final class VeyraEditHistoryManager {
             Cursor cursor = db.rawQuery("SELECT 1 FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? LIMIT 1",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             boolean exists = cursor != null && cursor.moveToFirst();
-            if (cursor != null) {
-                cursor.close();
-            }
+            if (cursor != null) cursor.close();
             return exists;
         } catch (Exception e) {
             FileLog.e(e);
@@ -219,18 +226,22 @@ public final class VeyraEditHistoryManager {
         if (messageIds == null || messageIds.isEmpty()) return;
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < messageIds.size(); i++) {
-                if (i > 0) sb.append(",");
-                sb.append(messageIds.get(i));
+            db.beginTransaction();
+            try {
+                for (int msgId : messageIds) {
+                    db.delete(TABLE_NAME, "dialog_id = ? AND message_id = ?", new String[]{String.valueOf(dialogId), String.valueOf(msgId)});
+                    db.delete(REACTION_TABLE_NAME, "dialog_id = ? AND message_id = ?", new String[]{String.valueOf(dialogId), String.valueOf(msgId)});
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
             }
-            db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE dialog_id = " + dialogId + " AND message_id IN (" + sb.toString() + ")");
-            db.execSQL("DELETE FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = " + dialogId + " AND message_id IN (" + sb.toString() + ")");
         } catch (Exception e) {
             FileLog.e(e);
         }
     }
 
+    /** Clear all edit+reaction history for all dialogs. */
     public static void clearAll() {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
@@ -241,7 +252,27 @@ public final class VeyraEditHistoryManager {
         }
     }
 
-    /** Clear all edit history entries for a single dialog (e.g. on "Deleted Chat" wipe). */
+    /** Clear only edit history (message edits). */
+    public static void clearAllEdits() {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(TABLE_NAME, null, null);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** Clear only reaction history. */
+    public static void clearAllReactions() {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(REACTION_TABLE_NAME, null, null);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** Clear all edit history entries for a single dialog. */
     public static void clearDialog(long dialogId) {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
@@ -252,34 +283,73 @@ public final class VeyraEditHistoryManager {
         }
     }
 
-    public static void logReaction(long dialogId, int messageId, int date, String reaction, int count, long userId) {
+    /**
+     * Log a reaction change event. Only logs reactions from OTHER users (not self).
+     * Determines if this is an "add" or "remove" by comparing to previous state.
+     *
+     * @param dialogId   the dialog
+     * @param messageId  the message
+     * @param date       timestamp
+     * @param reaction   emoji string
+     * @param newCount   current total count for this reaction
+     * @param userId     peer who reacted (0 if unknown)
+     * @param selfUserId current user id — reactions from self are ignored
+     */
+    public static void logReaction(long dialogId, int messageId, int date, String reaction,
+                                   int newCount, long userId, long selfUserId) {
         if (!VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
+            return;
+        }
+        // Ignore own reactions
+        if (selfUserId != 0 && userId == selfUserId) {
             return;
         }
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
 
-            if (userId != 0) {
-                Cursor c = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? AND user_id = ? AND reaction = ? LIMIT 1",
-                        new String[]{String.valueOf(dialogId), String.valueOf(messageId), String.valueOf(userId), reaction});
-                boolean exists = c != null && c.moveToFirst();
-                if (c != null) c.close();
-                if (exists) {
-                    return;
-                }
-            } else {
-                Cursor c = db.rawQuery("SELECT count FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
-                        new String[]{String.valueOf(dialogId), String.valueOf(messageId), reaction});
-                if (c != null) {
-                    if (c.moveToFirst() && c.getInt(0) == count) {
-                        c.close();
+            // Determine action: compare newCount to last logged count for this reaction
+            String action = "add";
+            Cursor lastCursor = db.rawQuery(
+                    "SELECT count FROM " + REACTION_TABLE_NAME +
+                            " WHERE dialog_id = ? AND message_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
+                    new String[]{String.valueOf(dialogId), String.valueOf(messageId), reaction});
+            if (lastCursor != null) {
+                if (lastCursor.moveToFirst()) {
+                    int lastCount = lastCursor.getInt(0);
+                    if (newCount < lastCount) {
+                        action = "remove";
+                    } else if (newCount == lastCount) {
+                        // No change — skip
+                        lastCursor.close();
                         return;
                     }
-                    c.close();
+                }
+                lastCursor.close();
+            }
+
+            // For user-specific reactions: avoid duplicate user+reaction entry for same action
+            if (userId != 0) {
+                Cursor c = db.rawQuery(
+                        "SELECT action FROM " + REACTION_TABLE_NAME +
+                                " WHERE dialog_id = ? AND message_id = ? AND user_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
+                        new String[]{String.valueOf(dialogId), String.valueOf(messageId),
+                                String.valueOf(userId), reaction});
+                if (c != null) {
+                    if (c.moveToFirst()) {
+                        String lastAction = c.getString(0);
+                        c.close();
+                        if (action.equals(lastAction)) {
+                            return; // same action repeated — skip
+                        }
+                    } else {
+                        c.close();
+                    }
                 }
             }
 
-            Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?",
+            // Check limit per message
+            Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + REACTION_TABLE_NAME +
+                    " WHERE dialog_id = ? AND message_id = ?",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             int total = 0;
             if (countCursor != null) {
@@ -288,10 +358,10 @@ public final class VeyraEditHistoryManager {
             }
             int limit = Math.max(5, Math.min(100, VeyraConfig.reactionHistoryLimit));
             if (total >= limit) {
-                int toDelete = total - limit + 1;
-                db.execSQL("DELETE FROM " + REACTION_TABLE_NAME + " WHERE id IN (" +
-                        "SELECT id FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
-                        new Object[]{dialogId, messageId, toDelete});
+                db.execSQL("DELETE FROM " + REACTION_TABLE_NAME +
+                        " WHERE id IN (SELECT id FROM " + REACTION_TABLE_NAME +
+                        " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
+                        new Object[]{dialogId, messageId, total - limit + 1});
             }
 
             ContentValues values = new ContentValues();
@@ -299,8 +369,9 @@ public final class VeyraEditHistoryManager {
             values.put("message_id", messageId);
             values.put("date", date);
             values.put("reaction", reaction);
-            values.put("count", count);
+            values.put("count", newCount);
             values.put("user_id", userId);
+            values.put("action", action);
             db.insert(REACTION_TABLE_NAME, null, values);
         } catch (Exception e) {
             FileLog.e(e);
@@ -314,7 +385,8 @@ public final class VeyraEditHistoryManager {
         }
         try {
             SQLiteDatabase db = getHelper().getReadableDatabase();
-            Cursor cursor = db.rawQuery("SELECT date, reaction, count, user_id FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
+            Cursor cursor = db.rawQuery("SELECT date, reaction, count, user_id, COALESCE(action,'add') FROM " +
+                    REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             if (cursor != null) {
                 while (cursor.moveToNext()) {
@@ -322,7 +394,8 @@ public final class VeyraEditHistoryManager {
                     String reaction = cursor.getString(1);
                     int count = cursor.getInt(2);
                     long userId = cursor.getLong(3);
-                    list.add(new ReactionEntry(dialogId, messageId, date, reaction, count, userId));
+                    String action = cursor.getString(4);
+                    list.add(new ReactionEntry(dialogId, messageId, date, reaction, count, userId, action));
                 }
                 cursor.close();
             }
@@ -338,12 +411,11 @@ public final class VeyraEditHistoryManager {
         }
         try {
             SQLiteDatabase db = getHelper().getReadableDatabase();
-            Cursor cursor = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? LIMIT 1",
+            Cursor cursor = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME +
+                    " WHERE dialog_id = ? AND message_id = ? LIMIT 1",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             boolean exists = cursor != null && cursor.moveToFirst();
-            if (cursor != null) {
-                cursor.close();
-            }
+            if (cursor != null) cursor.close();
             return exists;
         } catch (Exception e) {
             FileLog.e(e);

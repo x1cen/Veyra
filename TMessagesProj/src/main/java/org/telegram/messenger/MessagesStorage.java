@@ -5284,6 +5284,7 @@ public class MessagesStorage extends BaseController {
                                 MessageObject.updateReactions(message, reactions);
                                 if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
+                                    long mySelfId = getUserConfig().clientUserId;
                                     if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
                                         for (int r = 0; r < reactions.recent_reactions.size(); r++) {
                                             TLRPC.MessagePeerReaction mpr = reactions.recent_reactions.get(r);
@@ -5291,13 +5292,13 @@ public class MessagesStorage extends BaseController {
                                                 long peerId = MessageObject.getPeerId(mpr.peer_id);
                                                 String emoji = "";
                                                 if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "⭐️";
+                                                    emoji = "\u2b50\ufe0f";
                                                 } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
                                                     emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
                                                 }
                                                 if (!TextUtils.isEmpty(emoji)) {
                                                     int rDate = mpr.date > 0 ? mpr.date : nowTime;
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, rDate, emoji, 1, peerId);
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, rDate, emoji, 1, peerId, mySelfId);
                                                 }
                                             }
                                         }
@@ -5307,12 +5308,12 @@ public class MessagesStorage extends BaseController {
                                             if (rc != null) {
                                                 String emoji = "";
                                                 if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "⭐️";
+                                                    emoji = "\u2b50\ufe0f";
                                                 } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
                                                     emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
                                                 }
                                                 if (!TextUtils.isEmpty(emoji)) {
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0);
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0, mySelfId);
                                                 }
                                             }
                                         }

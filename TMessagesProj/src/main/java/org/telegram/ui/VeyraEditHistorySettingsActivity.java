@@ -150,9 +150,21 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
                 true,
                 false,
                 () -> {
-                    VeyraEditHistoryManager.clearAll();
+                    VeyraEditHistoryManager.clearAllEdits();
                     BulletinFactory.of(VeyraEditHistorySettingsActivity.this)
                             .createSuccessBulletin(LocaleController.getString("VeyraEditHistoryCleared", R.string.VeyraEditHistoryCleared))
+                            .show();
+                }
+        ));
+
+        r.add(VeyraSettingsRow.button(
+                LocaleController.getString("VeyraReactionHistoryClear", R.string.VeyraReactionHistoryClear),
+                true,
+                false,
+                () -> {
+                    VeyraEditHistoryManager.clearAllReactions();
+                    BulletinFactory.of(VeyraEditHistorySettingsActivity.this)
+                            .createSuccessBulletin(LocaleController.getString("VeyraReactionHistoryCleared", R.string.VeyraReactionHistoryCleared))
                             .show();
                 }
         ));

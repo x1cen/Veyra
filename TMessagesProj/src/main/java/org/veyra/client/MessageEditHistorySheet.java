@@ -189,10 +189,37 @@ public class MessageEditHistorySheet extends BottomSheet {
 
     private boolean populateReactions(Context context, LinearLayout container, MessageObject messageObject, long dialogId, int messageId) {
         boolean found = false;
-        java.util.HashSet<String> seen = new java.util.HashSet<>();
 
-        if (messageObject.messageOwner != null && messageObject.messageOwner.reactions != null) {
+        // DB history shows timestamped add/remove events — always show this first
+        List<VeyraEditHistoryManager.ReactionEntry> dbHistory = VeyraEditHistoryManager.getReactionHistory(dialogId, messageId);
+        if (dbHistory != null && !dbHistory.isEmpty()) {
+            for (int i = 0; i < dbHistory.size(); i++) {
+                VeyraEditHistoryManager.ReactionEntry entry = dbHistory.get(i);
+                String userName;
+                if (entry.userId != 0) {
+                    TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(entry.userId);
+                    if (user != null) {
+                        if (!android.text.TextUtils.isEmpty(user.username)) {
+                            userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
+                        } else {
+                            userName = UserObject.getUserName(user);
+                        }
+                    } else {
+                        userName = "User " + entry.userId;
+                    }
+                } else {
+                    userName = LocaleController.getString("Reactions", R.string.Reactions);
+                }
+                String action = entry.action != null ? entry.action : "add";
+                container.addView(createReactionCard(context, entry.reaction, userName, entry.date, entry.count, action));
+                found = true;
+            }
+        }
+
+        // If no DB history, fall back to live reactions on the message
+        if (!found && messageObject.messageOwner != null && messageObject.messageOwner.reactions != null) {
             TLRPC.TL_messageReactions reactions = messageObject.messageOwner.reactions;
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
             if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
                 for (int i = 0; i < reactions.recent_reactions.size(); i++) {
                     TLRPC.MessagePeerReaction pr = reactions.recent_reactions.get(i);
@@ -212,13 +239,12 @@ public class MessageEditHistorySheet extends BottomSheet {
                             } else {
                                 userName = peerId != 0 ? ("User " + peerId) : LocaleController.getString("Reactions", R.string.Reactions);
                             }
-                            container.addView(createReactionCard(context, emoji, userName, pr.date, 1));
+                            container.addView(createReactionCard(context, emoji, userName, pr.date, 1, "add"));
                             found = true;
                         }
                     }
                 }
             }
-
             if (reactions.results != null && !reactions.results.isEmpty()) {
                 for (int i = 0; i < reactions.results.size(); i++) {
                     TLRPC.ReactionCount rc = reactions.results.get(i);
@@ -228,33 +254,6 @@ public class MessageEditHistorySheet extends BottomSheet {
                         container.addView(createReactionCountBadge(context, emoji, rc.count, detail));
                         found = true;
                     }
-                }
-            }
-        }
-
-        List<VeyraEditHistoryManager.ReactionEntry> dbHistory = VeyraEditHistoryManager.getReactionHistory(dialogId, messageId);
-        if (dbHistory != null && !dbHistory.isEmpty()) {
-            for (int i = 0; i < dbHistory.size(); i++) {
-                VeyraEditHistoryManager.ReactionEntry entry = dbHistory.get(i);
-                String key = entry.reaction + "_" + entry.userId;
-                if (entry.userId == 0 || seen.add(key)) {
-                    String userName;
-                    if (entry.userId != 0) {
-                        TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(entry.userId);
-                        if (user != null) {
-                            if (!android.text.TextUtils.isEmpty(user.username)) {
-                                userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
-                            } else {
-                                userName = UserObject.getUserName(user);
-                            }
-                        } else {
-                            userName = "User " + entry.userId;
-                        }
-                    } else {
-                        userName = LocaleController.getString("Reactions", R.string.Reactions);
-                    }
-                    container.addView(createReactionCard(context, entry.reaction, userName, entry.date, entry.count));
-                    found = true;
                 }
             }
         }
@@ -273,14 +272,17 @@ public class MessageEditHistorySheet extends BottomSheet {
         return "❤️";
     }
 
-    private View createReactionCard(Context context, String emoji, String title, int date, int count) {
+    private View createReactionCard(Context context, String emoji, String title, int date, int count, String action) {
+        boolean isRemove = "remove".equals(action);
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
 
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(AndroidUtilities.dp(10));
-        bg.setColor(Theme.getColor(Theme.key_chat_inBubble));
+        bg.setColor(isRemove
+                ? 0x22FF4444  // faint red for remove
+                : Theme.getColor(Theme.key_chat_inBubble));
         card.setBackground(bg);
 
         LinearLayout row = new LinearLayout(context);
@@ -301,6 +303,13 @@ public class MessageEditHistorySheet extends BottomSheet {
         nameView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         nameView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         centerLayout.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+        // Action badge
+        TextView actionView = new TextView(context);
+        actionView.setText(isRemove ? "- removed" : "+ added");
+        actionView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+        actionView.setTextColor(isRemove ? 0xFFFF4444 : 0xFF4CAF50);
+        centerLayout.addView(actionView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
         if (count > 1) {
             TextView countView = new TextView(context);

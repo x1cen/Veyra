@@ -1567,8 +1567,10 @@ public class LocaleController {
             case "VeyraEditHistoryLimitDesc": return "تعداد ویرایش‌های قابل ذخیره برای هر پیام (بین ۵ تا ۱۰۰)";
             case "VeyraEditHistoryDropOldest": return "حذف قدیمی‌ترین ویرایش";
             case "VeyraEditHistoryDropOldestDesc": return "حذف نسخه قدیمی در صورت پر شدن ظرفیت پیام";
-            case "VeyraEditHistoryClear": return "پاکسازی تمام تاریخچه ویرایش";
-            case "VeyraEditHistoryCleared": return "تمام تاریخچه ویرایش با موفقیت پاک شد";
+            case "VeyraEditHistoryClear": return "حذف تمام تاریخچه ادیت";
+            case "VeyraEditHistoryCleared": return "تمام تاریخچه ادیت حذف شد";
+            case "VeyraReactionHistoryClear": return "حذف تمام تاریخچه ری اکشن";
+            case "VeyraReactionHistoryCleared": return "تمام تاریخچه ری اکشن حذف شد";
             case "VeyraCustomHeaderTitle": return "عنوان بالای گفتگوها";
             case "VeyraUseProfileName": return "استفاده از نام پروفایل";
             case "VeyraCustomHeaderTitleDesc": return "تنظیم متن دلخواه برای بالای صفحه اصلی چت‌ها";
