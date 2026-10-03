@@ -116,11 +116,20 @@ public class ApplicationLoader extends Application {
     }
 
     public static String getApplicationId() {
-        return applicationLoaderInstance.onGetApplicationId();
+        if (applicationContext != null) {
+            return applicationContext.getPackageName();
+        }
+        if (applicationLoaderInstance != null) {
+            String id = applicationLoaderInstance.onGetApplicationId();
+            if (id != null) {
+                return id;
+            }
+        }
+        return BuildVars.BUILD_VEYRA;
     }
 
     protected String onGetApplicationId() {
-        return null;
+        return applicationContext != null ? applicationContext.getPackageName() : BuildVars.BUILD_VEYRA;
     }
 
     public static boolean isHuaweiStoreBuild() {

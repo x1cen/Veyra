@@ -4259,7 +4259,7 @@ public class AndroidUtilities {
                     }
 
                     Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     intent.setDataAndType(fileUri, mimeForIntent);
 
                     // Always try a direct start first, then fall back to chooser, then */* chooser
@@ -4272,7 +4272,7 @@ public class AndroidUtilities {
                             activity.startActivityForResult(chooser, 500);
                         } catch (Exception e2) {
                             Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
-                            wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                            wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             wildcardIntent.setDataAndType(fileUri, "*/*");
                             Intent chooser2 = Intent.createChooser(wildcardIntent, !TextUtils.isEmpty(fileName) ? fileName : "");
                             chooser2.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -4289,6 +4289,8 @@ public class AndroidUtilities {
     public static boolean openForView(File f, String fileName, String mimeType, final Activity activity, Theme.ResourcesProvider resourcesProvider, boolean restrict) {
         if (f != null && f.exists()) {
             String realMimeType = null;
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             MimeTypeMap myMime = MimeTypeMap.getSingleton();
             int idx = fileName == null ? -1 : fileName.lastIndexOf('.');
             if (idx != -1) {
@@ -4304,87 +4306,52 @@ public class AndroidUtilities {
                     }
                 }
             }
-            if (realMimeType == null && mimeType != null && !mimeType.isEmpty()) {
-                realMimeType = mimeType;
-            }
-            // Normalize generic/unknown MIME types to wildcard so the system shows an app picker
-            if (realMimeType == null
-                    || realMimeType.equals("application/octet-stream")
-                    || realMimeType.equals("application/binary")
-                    || realMimeType.equals("application/x-binary")) {
-                realMimeType = "*/*";
-            }
-            if (realMimeType.equals("application/vnd.android.package-archive")) {
+            if (realMimeType != null && realMimeType.equals("application/vnd.android.package-archive")) {
                 if (restrict) return true;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ApplicationLoader.applicationContext.getPackageManager().canRequestPackageInstalls()) {
                     AlertsCreator.createApkRestrictedDialog(activity, resourcesProvider).show();
                     return true;
                 }
             }
-
-            Uri fileUri;
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    fileUri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f);
-                } else {
-                    fileUri = Uri.fromFile(f);
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    // FileProvider failed — file path not covered by provider_paths.xml
-                    // Try content URI via MediaStore as fallback, or just return false
-                    try {
-                        android.content.ContentValues values = new android.content.ContentValues();
-                        values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-                        values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, realMimeType.equals("*/*") ? "application/octet-stream" : realMimeType);
-                        // Last resort: use ACTION_SEND intent instead of VIEW
-                        Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                        sendIntent.setType(realMimeType);
-                        sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(f));
-                        sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        Intent chooser = Intent.createChooser(sendIntent, fileName != null ? fileName : "");
-                        activity.startActivityForResult(chooser, 500);
-                        return true;
-                    } catch (Exception e2) {
-                        FileLog.e(e2);
-                        return false;
-                    }
-                } else {
-                    fileUri = Uri.fromFile(f);
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), realMimeType != null ? realMimeType : "text/plain");
+            } else {
+                intent.setDataAndType(Uri.fromFile(f), realMimeType != null ? realMimeType : "text/plain");
             }
-
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            intent.setDataAndType(fileUri, realMimeType);
-
-            try {
-                activity.startActivityForResult(intent, 500);
-                return true;
-            } catch (Exception e) {
-                // No app handles this exact MIME — try a chooser
+            if (realMimeType != null) {
                 try {
-                    Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
-                    chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    activity.startActivityForResult(chooser, 500);
-                    return true;
-                } catch (Exception e2) {
-                    // Retry with wildcard MIME
+                    activity.startActivityForResult(intent, 500);
+                } catch (Exception e) {
                     try {
-                        Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
-                        wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        wildcardIntent.setDataAndType(fileUri, "*/*");
-                        Intent chooser2 = Intent.createChooser(wildcardIntent, fileName != null ? fileName : "");
-                        chooser2.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        activity.startActivityForResult(chooser2, 500);
-                        return true;
-                    } catch (Exception e3) {
-                        FileLog.e(e3);
-                        return false;
+                        Intent chooser = Intent.createChooser(intent, fileName != null ? fileName : "");
+                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        activity.startActivityForResult(chooser, 500);
+                    } catch (Exception e2) {
+                        try {
+                            Intent wildcardIntent = new Intent(Intent.ACTION_VIEW);
+                            wildcardIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                wildcardIntent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "*/*");
+                            } else {
+                                wildcardIntent.setDataAndType(Uri.fromFile(f), "*/*");
+                            }
+                            Intent chooser = Intent.createChooser(wildcardIntent, fileName != null ? fileName : "");
+                            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            activity.startActivityForResult(chooser, 500);
+                        } catch (Exception e3) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "text/plain");
+                            } else {
+                                intent.setDataAndType(Uri.fromFile(f), "text/plain");
+                            }
+                            activity.startActivityForResult(intent, 500);
+                        }
                     }
                 }
+            } else {
+                activity.startActivityForResult(intent, 500);
             }
+            return true;
         }
         return false;
     }

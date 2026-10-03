@@ -51,9 +51,7 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
 
     @Override
     protected String onGetApplicationId() {
-//        return BuildConfig.APPLICATION_ID;
-//        return BuildVars.BUILD_VEYRA;
-        return BuildVars.BUILD_DUROV;
+        return ApplicationLoader.applicationContext != null ? ApplicationLoader.applicationContext.getPackageName() : BuildVars.BUILD_VEYRA;
     }
 
     @Override
