@@ -1711,6 +1711,15 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
                     itemInternals.add(new ItemInternal(VIEW_TYPE_DIALOG, array.get(k)));
                 }
             }
+            if (org.veyra.client.HiddenContentManager.hasHiddenDialogs()) {
+                for (int i = 0; i < itemInternals.size(); ++i) {
+                    ItemInternal item = itemInternals.get(i);
+                    if (item.viewType == VIEW_TYPE_DIALOG && item.dialog != null && org.veyra.client.HiddenContentManager.isDialogHidden(item.dialog.id)) {
+                        itemInternals.remove(i);
+                        i--;
+                    }
+                }
+            }
             itemInternals.add(new ItemInternal(VIEW_TYPE_LAST_EMPTY));
             return;
         }
@@ -1803,6 +1812,16 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             for (int i = 0; i < itemInternals.size(); ++i) {
                 ItemInternal item = itemInternals.get(i);
                 if (item.viewType == VIEW_TYPE_DIALOG && item.dialog != null && messagesController.isHiddenByUndo(item.dialog.id)) {
+                    itemInternals.remove(i);
+                    i--;
+                }
+            }
+        }
+
+        if (org.veyra.client.HiddenContentManager.hasHiddenDialogs()) {
+            for (int i = 0; i < itemInternals.size(); ++i) {
+                ItemInternal item = itemInternals.get(i);
+                if (item.viewType == VIEW_TYPE_DIALOG && item.dialog != null && org.veyra.client.HiddenContentManager.isDialogHidden(item.dialog.id)) {
                     itemInternals.remove(i);
                     i--;
                 }

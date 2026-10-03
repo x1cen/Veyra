@@ -21298,7 +21298,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
                         getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
                     } else {
-                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0);
+                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList instanceof ArrayList ? (ArrayList<Integer>) arrayList : new ArrayList<>(arrayList), false, true, 0, 0);
                         getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
                     }
                 });

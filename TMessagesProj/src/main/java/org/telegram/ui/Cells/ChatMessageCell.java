@@ -20082,6 +20082,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return right;
     }
 
+    @Override
+    public void draw(Canvas canvas) {
+        if (deleted) {
+            canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), 165);
+            super.draw(canvas);
+            canvas.restore();
+        } else {
+            super.draw(canvas);
+        }
+    }
+
     @SuppressLint("WrongCall")
     @Override
     protected void onDraw(Canvas canvas) {

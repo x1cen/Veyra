@@ -525,6 +525,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                         finishFragment();
                     }
                 } else if (id == done_button) {
+                    if (currentChat != null && !ChatObject.canChangeChatInfo(currentChat) && currentUser == null) {
+                        return;
+                    }
                     processDone();
                 }
             }
@@ -825,8 +828,11 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         descriptionTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         descriptionTextView.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
         descriptionTextView.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        descriptionTextView.setEnabled(currentUser != null || ChatObject.canChangeChatInfo(currentChat));
-        descriptionTextView.setFocusable(descriptionTextView.isEnabled());
+        descriptionTextView.setEnabled(canEditInfo);
+        descriptionTextView.setFocusable(canEditInfo);
+        if (!canEditInfo) {
+            descriptionTextView.setCursorVisible(false);
+        }
         inputFilters = new InputFilter[1];
         inputFilters[0] = new InputFilter.LengthFilter(255);
         descriptionTextView.setFilters(inputFilters);
@@ -1173,9 +1179,15 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
 
         ActionBarMenu menu = actionBar.createMenu();
-        if (currentUser != null || ChatObject.canChangeChatInfo(currentChat)) {
-            doneButton = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, dp(56));
-            doneButton.setContentDescription(getString("Done", R.string.Done));
+        doneButton = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, dp(56));
+        doneButton.setContentDescription(getString("Done", R.string.Done));
+        boolean canSave = currentUser != null || ChatObject.canChangeChatInfo(currentChat);
+        if (!canSave) {
+            doneButton.setEnabled(false);
+            doneButton.setAlpha(0.35f);
+        } else {
+            doneButton.setEnabled(true);
+            doneButton.setAlpha(1.0f);
         }
 
         if (locationCell != null || /*signCell != null ||*/ historyCell != null || typeCell != null || linkedCell != null || forumsCell != null) {

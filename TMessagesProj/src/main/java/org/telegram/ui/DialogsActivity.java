@@ -9277,6 +9277,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 org.veyra.client.HiddenContentManager.hideDialog(selectedDialogs.get(a));
             }
             hideActionMode(false);
+            if (viewPages != null) {
+                for (int a = 0; a < viewPages.length; a++) {
+                    if (viewPages[a] != null) {
+                        reloadViewPageDialogs(viewPages[a], true);
+                    }
+                }
+            }
             getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
             getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
             if (getParentActivity() != null) {

@@ -12515,6 +12515,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
 
 
+        if (otherItem != null) {
+            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
+        }
+
         isCallAvailable = callItemVisible;
 
         if (actionsView != null) {
