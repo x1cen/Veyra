@@ -5,8 +5,8 @@
 <h1 align="center">Veyra</h1>
 
 <p align="center">
-  <b>Executive Privacy-First Telegram Client for Android</b><br>
-  Built on official upstream Telegram architecture with sovereign privacy and power-user features
+  <b>Privacy-first Telegram client for Android</b><br>
+  Built on the official upstream Telegram codebase, with extra privacy controls and power-user tools layered on top
 </p>
 
 <p align="center">
@@ -20,120 +20,121 @@
 
 ## Overview
 
-**Veyra** is an executive-tier, privacy-first Android client built upon the official upstream Telegram codebase. It harmonizes the rock-solid stability and speed of official Telegram with advanced privacy protections, power-user utilities, full ad suppression, anti-censorship networking, and an exclusive visual identity.
+Veyra is a privacy-first Android client built on the official upstream Telegram codebase. It keeps the stability and speed of stock Telegram, and adds privacy protections, power-user utilities, full ad removal, anti-censorship networking, and its own visual identity on top.
 
 ---
 
 ## Key Features
 
-### 🛡️ Privacy & Stealth
+### Privacy and Stealth
 
-* **Online Status Visibility Control:** Choose whether to broadcast your online status, completely hide your online presence, hide online status and go offline after sending messages, or stay always online.
-* **Granular Ghost Mode:** Individual toggles for each privacy signal — online status, typing/recording actions, read receipts, voice & video note played status, and story view visibility. All enabled by default.
-* **Mark as Read on Reply:** Messages remain unread until you actively reply to the conversation.
-* **Anti-Delete Message Retention:** Retains messages and media revoked by conversation partners. Deleted incoming messages are visually marked with a red border and red timestamp. Your own sent messages are unaffected.
-* **Message Edit History:** Automatically logs previous versions of edited messages. Configure per-message limit (5–100), overflow behaviour (drop oldest or stop logging), and view the full edit timeline with a single tap on the **History** button in the message context menu.
-* **Hide Typing Indicator:** Prevents sending "typing..." or audio recording indicators to peers.
-* **Block Incoming Secret Chats:** Auto-declines secret chat initiation requests from other users.
-* **Hide Proxy Connecting Status:** Hides the "Connecting to proxy..." status line in all surfaces.
-* **Variable-Length Security PINs (6–24 Digits):** Flexible PIN lengths across Main Passcode, Duress Code, and Settings Lock.
-* **Accurate "Edited" Marker:** Messages are marked as edited only when the text is genuinely changed — reactions never trigger an edited badge.
-* **Emergency Duress Code:** Dedicated secondary PIN that silently wipes all local app data and accounts upon entry.
-* **Dedicated Settings Lock:** Protect Veyra Settings with a separate PIN.
+* Online Status Visibility Control: choose whether to broadcast your online status, hide your presence completely, go offline automatically after sending a message, or stay always online.
+* Granular Ghost Mode: separate toggles for each privacy signal, online status, typing and recording indicators, read receipts, voice and video note playback status, and story view visibility. All enabled by default.
+* Mark as Read on Reply: messages stay marked unread until you actually reply to the conversation.
+* Anti-Delete Message Retention: keeps messages and media that conversation partners revoke. Deleted incoming messages get a dimmed appearance with a DELETED label. Your own sent messages are not affected. The Anti-Delete settings screen has per-chat-type toggles (private, groups, channels, bots) plus a Clear All button to wipe every retained record at once.
+* Message Edit History: logs previous versions of edited messages automatically, with per-chat-type toggles matching Anti-Delete. Set a per-message limit (5 to 100 versions), choose what happens on overflow (drop the oldest entry or stop logging), and view the full edit timeline from the History button in the message context menu.
+* Hide Typing Indicator: stops "typing..." and audio-recording indicators from reaching the other side.
+* Block Incoming Secret Chats: automatically declines secret chat requests from other users.
+* Hide Proxy Connecting Status: hides the "Connecting to proxy..." line everywhere it would normally show.
+* Variable-Length Security PINs (6 to 24 digits): flexible PIN length for the Main Passcode, Duress Code, and Settings Lock.
+* Accurate Edited Marker: a message is marked edited only when its text actually changed, reactions never trigger the badge.
+* Emergency Duress Code: a secondary PIN that silently wipes all local app data and accounts the moment it's entered.
+* Dedicated Settings Lock: protect the Veyra settings screen with its own PIN, separate from the app passcode.
 
-### 👥 Contact & Profile Intelligence
+### Contact and Profile Intelligence
 
-* **Mutual Contact Indicator:** A blue dot appears on the bottom-left of a user's avatar in the chat list when they have also saved your number (mutual contact).
-* **Mutual Contact Row in Profile:** An info row in the user's profile page explicitly confirms mutual contact status.
-* **Telegram Premium Status Row:** Displays whether the user currently has an active Telegram Premium subscription — visible in every private user profile.
+* Mutual Contact Indicator: a blue dot on the bottom-left of a user's avatar in the chat list shows when they also have your number saved.
+* Mutual Contact Row in Profile: a row on the user's profile page spells out mutual contact status explicitly.
+* Telegram Premium Status Row: shows whether a user currently has an active Premium subscription, visible on every private user's profile.
+* Group and Channel Permissions View: non-admin members can open the group or channel info panel and see the full set of member permissions (sending messages, media, polls, and so on) in read-only form, instead of hitting a dead end.
 
-### 🗂️ Media Storage
+### Media Storage
 
-* **Structured Media Organisation:** Saved media is filed into dedicated subfolders inside `Documents/Telegram/` — `Video Notes/`, `Voice Notes/`, `Videos/`, `Photos/`, `Audio/`, `Documents/`, `Animations/` — independently of the gallery.
-* **Download-State Gated Save Options:** "Save to gallery" and "Save to downloads" options appear only after a file has been fully downloaded, preventing empty-save errors.
-* **Video Message Quality Enhancement:** Round video messages record at 640×640 resolution with 2.8 Mbps bitrate for significantly sharper clarity.
-* **Video Message Watermark Removal:** The Telegram logo overlay is not rendered onto recorded or saved round video messages.
+* Structured Media Organisation: saved media lands in dedicated subfolders under `Documents/Telegram/`, Video Notes, Voice Notes, Videos, Photos, Audio, Documents, and Animations, kept separate from the regular gallery.
+* Download-State Gated Save Options: "Save to gallery" and "Save to downloads" only appear once a file has fully downloaded, so you can't trigger an empty-save error.
+* Video Message Quality Enhancement: round video messages record at 640x640 with a 2.8 Mbps bitrate for a noticeably sharper result.
+* Video Message Watermark Removal: the Telegram logo overlay is not rendered onto recorded or saved round video messages.
 
-### 💬 Composing & Chat Actions
+### Composing and Chat Actions
 
-* **Hide Content:** Long-press any message to hide it locally. Hidden messages are removed from the chat view without deletion. Tap the Chats tab 7 times in quick succession to restore all hidden messages.
-* **Delete Veyra Cache on Message Delete:** When you manually delete a message that was retained by anti-delete, both the Telegram local entry and all Veyra cached data (anti-delete record, edit history) are wiped together.
-* **Deleted Account Chat Handling:** When a conversation partner deletes their Telegram account, the input bar is replaced with a **"Deleted Chat"** button. Tapping it shows a confirmation dialog and then performs a full cleanup — dialog, Veyra anti-delete records, and edit history — in one action.
-* **Mention by Name:** Insert the user's real display name instead of `@username`.
-* **Hide "Send As" Button:** Hides the channel/profile identity switch button.
-* **Disable Quick Reaction Double-Tap:** Prevent accidental emoji reactions.
-* **Timestamps with Seconds:** Accurate display including exact seconds.
-* **Strip Bot Link Trackers:** Auto-strip `utm_*`, `fbclid`, `gclid` from external links.
-* **Anonymous Forward by Default:** Default forward previews hide sender name and quote.
-* **Disable Large Emoji Rendering:** Render single emojis at normal text size.
-* **Jump to First Message:** Jump to the first message in any chat from the 3-dot menu.
-* **Copy Dialog ID:** Quickly copy the Telegram Dialog/Peer ID.
+* Hide Content: long-press any message to hide it locally. Hidden messages disappear from the chat view without being deleted. Tap the Chats tab 7 times in quick succession to bring everything back.
+* Delete Veyra Cache on Message Delete: manually deleting a message that Anti-Delete had retained also wipes the matching Veyra records (anti-delete entry and edit history) for that message.
+* Deleted Account Chat Handling: when a conversation partner deletes their Telegram account, the input bar is replaced with a "Deleted Chat" button. Tapping it asks for confirmation, then cleans up the dialog along with its Veyra anti-delete records and edit history in one pass.
+* Mention by Name: insert a user's real display name instead of their `@username`.
+* Hide Send As Button: hides the channel and profile identity switcher.
+* Disable Quick Reaction Double-Tap: stops accidental emoji reactions from double-taps.
+* Timestamps with Seconds: message times show the exact second, not just hour and minute.
+* Strip Bot Link Trackers: strips `utm_*`, `fbclid`, and `gclid` parameters from links automatically.
+* Anonymous Forward by Default: forwarded messages hide the sender name and quote by default.
+* Disable Large Emoji Rendering: single emoji render at normal text size instead of oversized.
+* Jump to First Message: jump straight to a chat's first message from the 3-dot menu.
+* Copy Dialog ID: quickly copy a chat's Telegram Dialog or Peer ID.
 
-### 🖼️ Media & Camera
+### Media and Camera
 
-* **Rear Camera for Video Messages:** Record round video messages with the rear camera by default.
-* **Send Typed Text with Stickers & GIFs:** Retain typed captions when sending stickers or GIFs.
-* **Keep Original Filename on Download:** Preserve original document filenames.
+* Rear Camera for Video Messages: round video messages default to the rear camera.
+* Send Typed Text with Stickers and GIFs: typed captions are kept when you send a sticker or GIF alongside them.
+* Keep Original Filename on Download: downloaded documents keep their original filename.
 
-### 📋 Chat List
+### Chat List
 
-* **Mutual Contact Dot:** Blue indicator dot on avatar for mutual contacts (see above).
-* **Disable Global Search:** Prevent querying public Telegram channels, bots, and users globally.
-* **Disable Media Thumbnails in Dialogs:** Hide video/photo previews in the chat list.
-* **Colored Last-Seen Indicator Dots:** Real-time dots on user avatars (yellow ≤15m, orange ≤30m, red ≤60m).
-* **Dialog Priority Sorting:** Sort unread chats or unmuted dialogs at the top.
+* Mutual Contact Dot: blue indicator dot on the avatar for mutual contacts, same as above.
+* Disable Global Search: stops queries from reaching public Telegram channels, bots, and users.
+* Disable Media Thumbnails in Dialogs: hides video and photo previews in the chat list.
+* Colored Last-Seen Indicator Dots: live dots on avatars (yellow under 15 minutes, orange under 30, red under 60).
+* Dialog ordering stays chronological by default, newest activity always surfaces to the top. Pinning unread or unmuted chats above the rest is available as an opt-in setting and is off by default.
 
-### ⚙️ Power Controls & Interaction
+### Power Controls and Interaction
 
-* **Message Details Inspector:** Inspect Message ID, DC, Sender ID, exact media bytes, timestamps — exportable as JSON.
-* **Bulk Message Operations:** Forward multiple messages to Saved Messages or unpin multiple pinned messages in bulk.
-* **Rich Inline Button Actions:** Long-press bot inline buttons to copy callback data, queries, IDs, or URLs.
-* **Call Confirmation Dialog:** Confirm before launching VoIP calls.
-* **External Link Confirmation:** Confirm before opening external URLs.
-* **Automatic Tracker Stripper:** Auto-clean `utm_*`, `fbclid`, `gclid`, `si`, `igsh`.
-* **Skip 5-Second Undo Toast:** Execute delete/clear/archive instantly.
-* **Disable Vibration:** Global haptic feedback switch.
-* **Disable Link Previews by Default:** Stops automatic webpage search when composing.
+* Message Details Inspector: inspect message ID, DC, sender ID, exact media byte size, and timestamps, exportable as JSON.
+* Bulk Message Operations: forward multiple messages to Saved Messages, or unpin several pinned messages, in one action.
+* Rich Inline Button Actions: long-press a bot's inline buttons to copy their callback data, query, ID, or URL.
+* Call Confirmation Dialog: asks for confirmation before placing a VoIP call.
+* External Link Confirmation: asks for confirmation before opening an external URL.
+* Automatic Tracker Stripper: cleans `utm_*`, `fbclid`, `gclid`, `si`, and `igsh` automatically.
+* Skip 5-Second Undo Toast: delete, clear, and archive actions happen instantly instead of waiting on the undo window.
+* Disable Vibration: a single switch for all haptic feedback.
+* Disable Link Previews by Default: stops the automatic webpage lookup while composing a message.
 
-### 👥 Group Administration
+### Group Administration
 
-* **Delete All Messages in Group:** Purge entire group histories with a confirmation dialog.
-* **Upgrade Group to Supergroup:** Convert basic groups to supergroups.
-* **Auto-Delete Timer:** Configure message auto-deletion for private chats and groups.
+* Delete All Messages in Group: wipe an entire group's history after a confirmation prompt.
+* Upgrade Group to Supergroup: convert a basic group into a supergroup.
+* Auto-Delete Timer: set up automatic message deletion for private chats and groups.
 
-### 📱 QR Code Integration
+### QR Code Integration
 
-* **Login via QR Code:** Log in by scanning a generated QR code.
-* **Direct QR Login Confirmation:** Instant scan and approval of login QR codes.
-* **Share via QR Code:** Export sticker packs, channels, groups, proxies as QR codes.
+* Login via QR Code: log in by scanning a generated QR code.
+* Direct QR Login Confirmation: scan and approve login QR codes in one step.
+* Share via QR Code: export sticker packs, channels, groups, and proxies as QR codes.
 
-### 🌐 Network & Anti-Censorship
+### Network and Anti-Censorship
 
-* **Native WEB Proxy Tunnel:** Full Web Proxy transport via isolated background Android System WebView, enabling bypass of DPI restrictions without native overhead.
+* Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, letting it bypass DPI restrictions without native overhead.
 
-### 🔒 Security Layer
+### Security Layer
 
-* **Screen Capture Blocking:** Configurable toggle in Privacy Settings (off by default) — applies `FLAG_SECURE` to app windows to prevent screenshots and recent-apps thumbnails from leaking conversation content.
-* **Emergency Wipe System (7-Tap Logo Trigger):** Tapping 7 times rapidly on the Telegram logo opens the emergency protocol menu:
-  * **Local Emergency Wipe:** Instantly and securely purges all local databases, cached data, downloaded media, and the `Documents/Telegram` folder, followed by an immediate application logout.
-  * **Full Remote Wipe & Account Self-Destruction:** Checks network status, wipes local media and documents, leaves all joined groups and channels, executes 2-way chat deletion across all private contacts, and permanently terminates the Telegram account. In offline mode, prompts user for local wipe or retry.
-* **Root & Magisk Compatibility:** Fully compatible with Magisk-rooted Android environments without false-positive lockouts, while maintaining active memory and session integrity safeguards.
-* **Diagnostic & Crash Logging:** Automatically catches unhandled exceptions and saves detailed crash traces and device metrics to `Documents/Telegram/crash_log.txt` and `Documents/Telegram/Logs/veyra_crashes.log`.
-* **AES-256-GCM Encryption API:** Provides a built-in encryption layer for sensitive local data (session tokens, preferences) using AES-256-GCM with randomised 12-byte IVs.
-* **Session Token Integrity:** HMAC-SHA256 validation guards session tokens against tampering.
+* Screen Capture Blocking: a toggle in Privacy Settings (off by default) that applies `FLAG_SECURE` to app windows, blocking screenshots and recent-apps thumbnails from leaking conversation content.
+* Emergency Wipe System (7-tap logo trigger): tapping the Telegram logo 7 times rapidly opens the emergency protocol menu, with confirmation required before either action runs:
+  * Local Emergency Wipe: immediately and securely purges all local databases, cached data, downloaded media, and the `Documents/Telegram` folder, then logs the app out.
+  * Full Remote Wipe and Account Self-Destruction: checks network status, wipes local media and documents, leaves every joined group and channel, runs two-way chat deletion across all private contacts, and permanently deletes the Telegram account. In offline mode, it prompts you to do a local wipe instead or retry once back online.
+* Root and Magisk Compatibility: works normally on Magisk-rooted Android without false-positive lockouts, while keeping active memory and session integrity checks in place.
+* Diagnostic and Crash Logging: catches unhandled exceptions automatically and saves crash traces plus device metrics to `Documents/Telegram/crash_log.txt` and `Documents/Telegram/Logs/veyra_crashes.log`.
+* AES-256-GCM Encryption API: a built-in encryption layer for sensitive local data (session tokens, preferences) using AES-256-GCM with randomised 12-byte IVs. Everything Veyra stores locally is encrypted this way except the user-facing `Documents` folder, which stays as plain files by design so you can access what you save from outside the app.
+* Session Token Integrity: HMAC-SHA256 validation protects session tokens against tampering.
 
-### 🙈 Stealth & Content Management
+### Stealth and Content Management
 
-* **Hidden Chats & Messages:** Hide any conversation from the chat list or hide individual messages. Restore all hidden items at any time with 7 rapid taps on the Chats tab.
+* Hidden Chats and Messages: hide an entire conversation from the chat list, or hide individual messages. Restore everything hidden with 7 quick taps on the Chats tab.
 
-### 🎨 UI & Regional Features
+### UI and Regional Features
 
-* **Native Persian Solar Calendar:** Dates and numbers in Persian Solar Hijri (Shamsi) when `fa` locale is selected.
-* **Telegram ID & DC in Profiles:** Clickable User ID and DC with one-tap copy.
-* **Permanent Ad Suppression:** Disables sponsored posts and search ads without Premium.
-* **Unrestricted Forward & Copy:** Bypasses forward/copy restrictions in protected chats.
-* **Expanded Limits:** Up to 100 pinned chats, 500 favourite stickers, 1000 GIFs, 30 folders.
-* **Settings JSON Backup & Restore:** Export and restore your Veyra configuration as JSON.
+* Native Persian Solar Calendar: dates and numbers switch to the Persian Solar Hijri (Shamsi) calendar when the `fa` locale is active, with full Farsi translations throughout the app.
+* Telegram ID and DC in Profiles: tap to copy a user's ID or DC straight from their profile.
+* Permanent Ad Suppression: sponsored posts and search ads stay off, no Premium required.
+* Unrestricted Forward and Copy: bypasses forward and copy restrictions in protected chats.
+* Expanded Limits: up to 100 pinned chats, 500 favourite stickers, 1000 GIFs, and 30 folders.
+* Settings JSON Backup and Restore: export your Veyra configuration as JSON and restore it later.
 
 ---
 
@@ -145,10 +146,11 @@
 | Online Status Toggle (Show / Hide) | Privacy Settings Only | Partial | Instant Client Toggle |
 | Granular Ghost Mode (5 signals) | No | No | Full |
 | Mark as Read on Reply | No | No | Built-in |
-| Anti-Delete Message Cache | No | Modded | SQLite-safe with Deleted Badge |
-| Message Edit History Log | No | No | Built-in (5–100 edits, viewer) |
+| Anti-Delete Message Cache | No | Modded | Per-chat-type, with Clear All |
+| Message Edit History Log | No | No | Built-in (5 to 100 edits, per-chat-type, viewer) |
 | Mutual Contact Indicator | No | No | Blue dot + profile row |
 | Telegram Premium Status in Profile | No | No | Active / Not active row |
+| Group Permissions View for Non-Admins | No | No | Read-only permissions panel |
 | Structured Media Storage | No | Partial | 7 typed subfolders |
 | Video Message HQ Recording | 384p / 1 Mbps | No | 640p / 2.8 Mbps |
 | Screen Capture Blocking | No | No | FLAG_SECURE on all windows |
@@ -156,7 +158,7 @@
 | AES-256-GCM Data Encryption | No | No | Built-in API |
 | Message Details & JSON Export | No | Third-Party | Built-in Native |
 | Bot Button Long-Press Menu | No | Limited | Full (Callback/ID/Query/URL) |
-| Native Solar Hijri (Shamsi) Calendar | No | Third-party pack | Fully Native |
+| Native Solar Hijri (Shamsi) Calendar | No | Third-party pack | Fully Native, with Farsi UI |
 | URL Tracker Removal (`cleanUrl`) | No | No | Automatic |
 | Web Proxy (WebView Tunnel) | Experimental | No | Fully Integrated |
 | Call & Link Action Confirmation | No | No | Built-in Modal Prompts |
@@ -166,23 +168,24 @@
 
 ---
 
-## Architecture & Codebase Structure
+## Architecture and Codebase Structure
 
-The enhancements in Veyra are modularised to preserve upstream stability:
+The Veyra-specific code is kept modular so it doesn't entangle with upstream Telegram internals:
 
-* `org.telegram.messenger.VeyraConfig` — Persistent configuration controller for all privacy switches and feature flags.
-* `org.telegram.ui.VeyraSettingsActivity` — Unified settings hub with Ghost Mode and Edit History sub-screens.
-* `org.veyra.client.VeyraEmergencyHandler` — Emergency protocol executor: local wipe and full remote self-destruction.
-* `org.veyra.client.VeyraCrashHandler` — Diagnostic and crash reporter logging to public storage.
-* `org.veyra.client.VeyraSecurityGuard` — Security layer: FLAG_SECURE, hook detection, AES-256-GCM, HMAC session validation.
-* `org.veyra.client.VeyraMediaSaver` — Structured media storage engine routing files to typed subfolders.
-* `org.veyra.client.VeyraEditHistoryManager` — SQLite-backed edit history log with configurable per-message limit.
-* `org.veyra.client.HiddenContentManager` — Local hide/restore manager for temporarily hidden messages.
-* `org.telegram.ui.MessageDetailsActivity` — Native inspection view for technical message metadata and JSON export.
-* `org.telegram.messenger.shamsicalendar.*` — Clean, standalone Persian Solar Hijri calendar calculations.
-* `org.telegram.utils.proxy.*` — Web Proxy transport infrastructure.
-* `org.telegram.messenger.MessagesController` — Ad-suppression, online status, anti-delete bypass.
-* `org.telegram.tgnet.ConnectionsManager` — Low-level network filter for Ghost Mode and typing/presence suppression.
+* `org.telegram.messenger.VeyraConfig`: persistent configuration controller for all privacy switches and feature flags, including per-chat-type rules for Anti-Delete and Edit History.
+* `org.telegram.ui.VeyraSettingsActivity`: the main Veyra settings hub, linking out to Ghost Mode, Anti-Delete, and Edit History sub-screens.
+* `org.veyra.client.VeyraEmergencyHandler`: emergency protocol executor for the local wipe and full remote self-destruction flows.
+* `org.veyra.client.VeyraCrashHandler`: diagnostic and crash reporter that logs to public storage.
+* `org.veyra.client.VeyraSecurityGuard`: the security layer, FLAG_SECURE, hook detection, AES-256-GCM, HMAC session validation.
+* `org.veyra.client.VeyraMediaSaver`: structured media storage engine that routes saved files into typed subfolders.
+* `org.veyra.client.VeyraEditHistoryManager`: SQLite-backed edit history log with a configurable per-message limit and per-chat-type rules.
+* `org.veyra.client.VeyraAntiDelete`: SQLite-backed anti-delete record store with per-chat-type rules and bulk clear support.
+* `org.veyra.client.HiddenContentManager`: local hide/restore manager for chats and messages hidden from view.
+* `org.telegram.ui.MessageDetailsActivity`: native inspection view for technical message metadata and JSON export.
+* `org.telegram.messenger.shamsicalendar.*`: standalone Persian Solar Hijri calendar calculations.
+* `org.telegram.utils.proxy.*`: web proxy transport infrastructure.
+* `org.telegram.messenger.MessagesController`: ad suppression, online status, and anti-delete logic hooks.
+* `org.telegram.tgnet.ConnectionsManager`: low-level network filter for Ghost Mode and typing/presence suppression.
 
 ---
 
@@ -197,7 +200,7 @@ The enhancements in Veyra are modularised to preserve upstream stability:
 
 ### Local Compilation
 
-1. Clone the repository and checkout the `main` branch:
+1. Clone the repository and check out the `main` branch:
    ```bash
    git clone https://github.com/x1cen/Veyra.git -b main
    cd Veyra
@@ -214,61 +217,61 @@ The enhancements in Veyra are modularised to preserve upstream stability:
    ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache
    ```
 
-4. The built package will be located at:
+4. The built package lands at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.0.15.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.1.1.apk
    ```
 
 ---
 
 ## Automated CI/CD (GitHub Actions)
 
-Continuous integration and artifact distribution are automated via GitHub Actions:
-* **Workflow:** `.github/workflows/veyra-build.yml`
-* **Release Artifacts:** Automatically builds, signs, and uploads release APKs to [GitHub Releases](https://github.com/x1cen/Veyra/releases).
+Continuous integration and artifact distribution run through GitHub Actions:
+* Workflow: `.github/workflows/veyra-build.yml`
+* Release Artifacts: builds, signs, and uploads release APKs to [GitHub Releases](https://github.com/x1cen/Veyra/releases) automatically.
 
 ---
 
-## Donations & Support
+## Donations and Support
 
-If you find Veyra useful and would like to support ongoing development and maintenance, contributions are gratefully welcomed:
+If Veyra has been useful to you and you'd like to support ongoing development, contributions are welcome through any of these:
 
-* **GRAM:**
+* GRAM:
   ```
   UQCyGgaTKVc4U2db4fO6T2HlhEcRjDrCzQudpLjRdOYnAlye
   ```
 
-* **USDT (BEP-20):**
+* USDT (BEP-20):
   ```
   0xfB7e73F63C3A22BcbffF5A9f5452D9f6c95a2772
   ```
 
-* **BTC:**
+* BTC:
   ```
   bc1qr4njyyu9a3w5lckhlws68xrfy0d0dy7vdfy2qa
   ```
 
-* **TRX:**
+* TRX:
   ```
   TNaktPgTmzpz8LUYexmTY9Tfi5yK6JLbVp
   ```
 
-* **ETH:**
+* ETH:
   ```
   0xfB7e73F63C3A22BcbffF5A9f5452D9f6c95a2772
   ```
 
 ---
 
-## Security & Privacy Guarantee
+## Security and Privacy Guarantee
 
-* Veyra never routes, proxies, or stores your personal data, credentials, or private keys on external third-party servers.
+* Veyra never routes, proxies, or stores your personal data, credentials, or private keys on any third-party server.
 * All network traffic connects directly to official Telegram MTProto datacenters.
-* All sensitive signing keys and API secrets are maintained in encrypted GitHub Secrets and injected at build time — never committed to source code.
-* Screen capture is blocked at the window level across all activities.
+* All signing keys and API secrets live in encrypted GitHub Secrets and get injected at build time. None of them are ever committed to source code.
+* Screen capture is blocked at the window level across every activity, when the setting is turned on.
 
 ---
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 (GPLv2), in compliance with Telegram for Android upstream licensing terms.
+This project is licensed under the GNU General Public License v2.0 (GPLv2), in compliance with Telegram for Android's upstream licensing terms.
