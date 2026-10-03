@@ -14722,7 +14722,7 @@ public class MessagesStorage extends BaseController {
                 cursor.dispose();
                 database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
                 for (Map.Entry<Long, ArrayList<Integer>> entry : toDelete.entrySet()) {
-                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), false, true, 0, 0);
+                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), false, 0, 0);
                 }
                 AndroidUtilities.runOnUIThread(() -> {
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.needReloadRecentDialogsSearch);
