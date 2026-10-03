@@ -209,7 +209,7 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         this.audioDisabled = audioDisabled;
         mediaDataSourceFactory = new ExtendedDefaultDataSourceFactory(ApplicationLoader.applicationContext, "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/47.0 (Chrome)");
         trackSelector = new DefaultTrackSelector(ApplicationLoader.applicationContext, new AdaptiveTrackSelection.Factory());
-        DefaultTrackSelector.Parameters.Builder trackBuilder = trackSelector.buildUponParameters();
+        TrackSelectionParameters.Builder trackBuilder = trackSelector.getParameters().buildUpon();
         trackBuilder.setSelectUndeterminedTextLanguage(true);
         try {
             String lang = LocaleController.getInstance().getCurrentLocale().getLanguage();
