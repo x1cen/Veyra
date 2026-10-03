@@ -26727,7 +26727,19 @@ public class ChatActivity extends BaseFragment implements
             if (old.messageOwner != null && messageObject.messageOwner != null) {
                 String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
-                if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText) && !old.isOut() && !messageObject.isOut()) {
+                boolean textChanged = !TextUtils.equals(oldText, newText);
+                boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+                boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
+
+                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
+                } else if (!textChanged && wasEditedBefore) {
+                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                }
+
+                if (textChanged && !old.isOut() && !messageObject.isOut()) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
                         org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);
@@ -34884,6 +34896,9 @@ public class ChatActivity extends BaseFragment implements
 
     private void alertUserOpenError(MessageObject message) {
         if (getParentActivity() == null) {
+            return;
+        }
+        if (message != null && message.getFileName() != null && message.getFileName().toLowerCase().endsWith(".apk")) {
             return;
         }
         // Before showing error, try a last-resort wildcard chooser
