@@ -15,6 +15,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
+import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
@@ -94,7 +95,7 @@ public class VeyraEmergencyHandler {
 
         new Thread(() -> {
             try {
-                executeFullWipeBlocking(currentAccount);
+                executeFullWipeAllAccountsBlocking();
             } catch (Throwable t) {
                 FileLog.e(t);
             }
@@ -103,6 +104,56 @@ public class VeyraEmergencyHandler {
                 executeLocalWipe(context);
             });
         }).start();
+    }
+
+    public static void executeFullWipeAllAccountsBlocking() {
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (UserConfig.getInstance(a).isClientActivated()) {
+                try {
+                    executeFullWipeBlocking(a);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            }
+        }
+    }
+
+    public static void executeDuressAction(Context context, int action, boolean fallbackToLocal) {
+        if (action == SharedConfig.DURESS_ACTION_LOCAL_WIPE) {
+            executeLocalWipe(context);
+            return;
+        }
+
+        boolean isOnline = false;
+        try {
+            isOnline = ApplicationLoader.isNetworkOnline();
+            if (!isOnline && ApplicationLoader.applicationContext != null) {
+                ConnectivityManager cm = (ConnectivityManager)
+                        ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo ni = cm != null ? cm.getActiveNetworkInfo() : null;
+                isOnline = (ni != null && ni.isConnected());
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+
+        if (!isOnline) {
+            if (fallbackToLocal) {
+                FileLog.d("Duress: No internet, falling back to Local Wipe");
+                executeLocalWipe(context);
+            }
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                executeFullWipeAllAccountsBlocking();
+            } catch (Throwable t) {
+                FileLog.e(t);
+            } finally {
+                AndroidUtilities.runOnUIThread(() -> executeLocalWipe(context));
+            }
+        }, "DuressFullWipeThread").start();
     }
 
     /**

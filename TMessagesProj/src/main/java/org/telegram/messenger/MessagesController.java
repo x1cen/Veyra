@@ -19582,18 +19582,28 @@ public class MessagesController extends BaseController implements NotificationCe
 
                 ImageLoader.saveMessageThumbs(message);
                 MessageObject oldMsg = dialogMessagesByIds.get(message.id);
-                if (oldMsg != null && oldMsg.messageOwner != null) {
-                    if (!oldMsg.isEdited() && TextUtils.equals(oldMsg.messageOwner.message, message.message)) {
-                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        message.edit_date = 0;
-                    } else if (!TextUtils.isEmpty(oldMsg.messageOwner.message)
+                TLRPC.Message oldMsgOwner = oldMsg != null ? oldMsg.messageOwner : null;
+                if (oldMsgOwner == null) {
+                    oldMsgOwner = getMessagesStorage().getMessage(message.dialog_id, message.id);
+                }
+                if (oldMsgOwner != null) {
+                    String oldText = oldMsgOwner.message != null ? oldMsgOwner.message : "";
+                    String newText = message.message != null ? message.message : "";
+                    if (TextUtils.equals(oldText, newText)) {
+                        if (oldMsgOwner.edit_date == 0) {
+                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                            message.edit_date = 0;
+                        } else {
+                            message.edit_date = oldMsgOwner.edit_date;
+                        }
+                    } else if (!TextUtils.isEmpty(oldText)
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)) {
                         // Skip edit history logging for the developer's DM
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
                                 message.dialog_id,
                                 message.id,
-                                oldMsg.messageOwner.edit_date > 0 ? oldMsg.messageOwner.edit_date : oldMsg.messageOwner.date,
-                                oldMsg.messageOwner.message
+                                oldMsgOwner.edit_date > 0 ? oldMsgOwner.edit_date : oldMsgOwner.date,
+                                oldText
                         );
                     }
                 }

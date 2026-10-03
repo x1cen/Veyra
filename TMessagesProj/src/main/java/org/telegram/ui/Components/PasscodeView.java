@@ -617,7 +617,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 return;
             }
             if (SharedConfig.checkDuress(password)) {
-                VeyraSecurity.wipeAllDataAndReset(getContext());
+                org.veyra.client.VeyraEmergencyHandler.executeDuressAction(getContext(), SharedConfig.duressAction, SharedConfig.duressFallbackToLocal);
                 return;
             }
             if (!SharedConfig.checkPasscode(password)) {

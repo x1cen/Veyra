@@ -1587,6 +1587,15 @@ public class LocaleController {
             case "VeyraBlockScreenCaptureDesc": return "جلوگیری از ضبط صفحه و تصویربرداری در تمام صفحات برنامه";
             case "VeyraHideChat": return "مخفی کردن گفتگو";
             case "VeyraChatHidden": return "گفتگو مخفی شد";
+            case "VeyraDuressAction": return "اقدام کد اضطراری";
+            case "VeyraDuressFallback": return "جایگزینی خودکار با پاکسازی محلی";
+            case "VeyraDuressFallbackDetail": return "در صورتی که انهدام کامل انتخاب شده باشد اما اتصال اینترنت برقرار نباشد، برای حفظ امنیت داده ها پاکسازی محلی انجام می شود.";
+            case "VeyraEditHistoryTabMessages": return "پیام ها";
+            case "VeyraEditHistoryTabReactions": return "واکنش ها";
+            case "VeyraReactionHistoryEnable": return "تاریخچه واکنش ها";
+            case "VeyraReactionHistoryEnableDesc": return "ثبت و نمایش تب واکنش ها در پنل تاریخچه";
+            case "VeyraNoEditHistory": return "هیچ ویرایشی برای این پیام ثبت نشده است.";
+            case "VeyraNoReactionHistory": return "هیچ واکنشی برای این پیام ثبت نشده است.";
             default: return null;
         }
     }

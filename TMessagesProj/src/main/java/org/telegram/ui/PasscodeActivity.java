@@ -137,6 +137,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     @Keep
     private int changeDuressCodeRow;
     @Keep
+    private int duressActionRow;
+    @Keep
+    private int duressFallbackRow;
+    private int duressFallbackDetailRow;
+    @Keep
     private int fingerprintRow;
     @Keep
     private int shufflePinButtons;
@@ -334,6 +339,34 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         presentFragment(new PasscodeActivity(TYPE_SETUP_CODE));
                     } else if (position == changeDuressCodeRow) {
                         presentFragment(new PasscodeActivity(TYPE_SETUP_DURESS));
+                    } else if (position == duressActionRow) {
+                        if (getParentActivity() == null) {
+                            return;
+                        }
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                        builder.setTitle(LocaleController.getString("VeyraDuressAction", R.string.VeyraDuressAction));
+                        final String[] items = new String[]{
+                                LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe),
+                                LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe)
+                        };
+                        builder.setItems(items, (dialog, which) -> {
+                            SharedConfig.duressAction = which;
+                            if (which == SharedConfig.DURESS_ACTION_FULL_WIPE) {
+                                SharedConfig.duressFallbackToLocal = true;
+                            }
+                            SharedConfig.saveConfig();
+                            if (listAdapter != null) {
+                                listAdapter.notifyDataSetChanged();
+                            }
+                        });
+                        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                        showDialog(builder.create());
+                    } else if (position == duressFallbackRow) {
+                        SharedConfig.duressFallbackToLocal = !SharedConfig.duressFallbackToLocal;
+                        SharedConfig.saveConfig();
+                        if (view instanceof TextCheckCell) {
+                            ((TextCheckCell) view).setChecked(SharedConfig.duressFallbackToLocal);
+                        }
                     } else if (position == autoLockRow) {
                         if (getParentActivity() == null) {
                             return;
@@ -886,6 +919,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         captureDetailRow = -1;
         disablePasscodeRow = -1;
         disableDuressRow = -1;
+        duressActionRow = -1;
+        duressFallbackRow = -1;
+        duressFallbackDetailRow = -1;
 
         if (!isDuressBruh(type)) {
             shufflePinButtons = rowCount++;
@@ -896,6 +932,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             captureDetailRow = rowCount++;
             disablePasscodeRow = rowCount++;
         } else {
+            duressActionRow = rowCount++;
+            duressFallbackRow = rowCount++;
+            duressFallbackDetailRow = rowCount++;
             disableDuressRow = rowCount++;
         }
 
@@ -1165,7 +1204,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
             return position == fingerprintRow || position == shufflePinButtons || position == autoLockRow || position == captureRow ||
-                    position == changePasscodeRow || position == changeDuressCodeRow || position == disablePasscodeRow|| position == disableDuressRow;
+                    position == changePasscodeRow || position == changeDuressCodeRow || position == duressActionRow || position == duressFallbackRow || position == disablePasscodeRow|| position == disableDuressRow;
         }
 
         @Override
@@ -1210,6 +1249,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         textCell.setTextAndCheck(LocaleController.getString(R.string.ShufflePinButton), SharedConfig.shufflePinButtons, false);
                     } else if (position == captureRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.ScreenCaptureShowContent), SharedConfig.allowScreenCapture, false);
+                    } else if (position == duressFallbackRow) {
+                        textCell.setTextAndCheck(LocaleController.getString("VeyraDuressFallback", R.string.VeyraDuressFallback), SharedConfig.duressFallbackToLocal, false);
                     }
                     break;
                 }
@@ -1233,6 +1274,13 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                             textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
                             textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                         }
+                    } else if (position == duressActionRow) {
+                        String actionText = SharedConfig.duressAction == SharedConfig.DURESS_ACTION_FULL_WIPE
+                                ? LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe)
+                                : LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe);
+                        textCell.setTextAndValue(LocaleController.getString("VeyraDuressAction", R.string.VeyraDuressAction), actionText, true);
+                        textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
+                        textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     } else if (position == autoLockRow) {
                         String val;
                         if (SharedConfig.autoLockIn == 0) {
@@ -1284,6 +1332,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     } else if (position == captureDetailRow) {
                         cell.setText(LocaleController.getString(R.string.ScreenCaptureInfo));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+                    } else if (position == duressFallbackDetailRow) {
+                        cell.setText(LocaleController.getString("VeyraDuressFallbackDetail", R.string.VeyraDuressFallbackDetail));
+                        cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
                     }
                     break;
                 }
@@ -1292,11 +1343,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
         @Override
         public int getItemViewType(int position) {
-            if (position == fingerprintRow || position == captureRow || position == shufflePinButtons) {
+            if (position == fingerprintRow || position == captureRow || position == shufflePinButtons || position == duressFallbackRow) {
                 return VIEW_TYPE_CHECK;
-            } else if (position == changePasscodeRow || position == changeDuressCodeRow || position == autoLockRow || position == disablePasscodeRow || position == disableDuressRow) {
+            } else if (position == changePasscodeRow || position == changeDuressCodeRow || position == duressActionRow || position == autoLockRow || position == disablePasscodeRow || position == disableDuressRow) {
                 return VIEW_TYPE_SETTING;
-            } else if (position == autoLockDetailRow || position == captureDetailRow || position == hintRow) {
+            } else if (position == autoLockDetailRow || position == captureDetailRow || position == duressFallbackDetailRow || position == hintRow) {
                 return VIEW_TYPE_INFO;
             } else if (position == captureHeaderRow) {
                 return VIEW_TYPE_HEADER;

@@ -198,4 +198,14 @@
     <string name="VeyraBlockScreenCaptureDesc">جلوگیری از ضبط صفحه و تصویربرداری در تمام صفحات برنامه</string>
     <string name="VeyraHideChat">مخفی کردن گفتگو</string>
     <string name="VeyraChatHidden">گفتگو مخفی شد</string>
+
+    <string name="VeyraDuressAction">اقدام کد اضطراری</string>
+    <string name="VeyraDuressFallback">جایگزینی خودکار با پاکسازی محلی</string>
+    <string name="VeyraDuressFallbackDetail">در صورتی که انهدام کامل انتخاب شده باشد اما اتصال اینترنت برقرار نباشد، برای حفظ امنیت داده ها پاکسازی محلی انجام می شود.</string>
+    <string name="VeyraEditHistoryTabMessages">پیام ها</string>
+    <string name="VeyraEditHistoryTabReactions">واکنش ها</string>
+    <string name="VeyraReactionHistoryEnable">تاریخچه واکنش ها</string>
+    <string name="VeyraReactionHistoryEnableDesc">ثبت و نمایش تب واکنش ها در پنل تاریخچه</string>
+    <string name="VeyraNoEditHistory">هیچ ویرایشی برای این پیام ثبت نشده است.</string>
+    <string name="VeyraNoReactionHistory">هیچ واکنشی برای این پیام ثبت نشده است.</string>
 </resources>

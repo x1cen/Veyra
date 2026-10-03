@@ -5282,6 +5282,23 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
+                                if (reactions != null && reactions.results != null && VeyraConfig.reactionHistoryEnabled) {
+                                    int nowTime = (int) (System.currentTimeMillis() / 1000);
+                                    for (int r = 0; r < reactions.results.size(); r++) {
+                                        TLRPC.ReactionCount rc = reactions.results.get(r);
+                                        if (rc != null) {
+                                            String emoji = "";
+                                            if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                emoji = "⭐️";
+                                            } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
+                                            }
+                                            if (!TextUtils.isEmpty(emoji)) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0);
+                                            }
+                                        }
+                                    }
+                                }
                                 SQLitePreparedStatement state;
                                 if (i == 0) {
                                     state = database.executeFast("UPDATE messages_v2 SET data = ? WHERE mid = ? AND uid = ?");
@@ -15900,11 +15917,22 @@ public class MessagesStorage extends BaseController {
                                     if (reactionUpdates != null) {
                                         reactionUpdates.add(new SavedReactionsUpdate(selfId, oldMessage, message));
                                     }
-                                    if (oldMessage != null && !TextUtils.isEmpty(oldMessage.message) && !TextUtils.equals(oldMessage.message, message.message)) {
-                                        long did = MessageObject.getDialogId(message);
-                                        if (!VeyraConfig.isDeveloperChat(did)) {
-                                            int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
-                                            org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldMessage.message);
+                                    if (oldMessage != null) {
+                                        String oldText = oldMessage.message != null ? oldMessage.message : "";
+                                        String newText = message.message != null ? message.message : "";
+                                        if (TextUtils.equals(oldText, newText)) {
+                                            if (oldMessage.edit_date == 0) {
+                                                message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                                message.edit_date = 0;
+                                            } else {
+                                                message.edit_date = oldMessage.edit_date;
+                                            }
+                                        } else if (!TextUtils.isEmpty(oldText)) {
+                                            long did = MessageObject.getDialogId(message);
+                                            if (!VeyraConfig.isDeveloperChat(did)) {
+                                                int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
+                                                org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText);
+                                            }
                                         }
                                     }
                                     int send_state = cursor.intValue(5);

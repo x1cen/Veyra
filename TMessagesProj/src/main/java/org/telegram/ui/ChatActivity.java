@@ -26722,15 +26722,19 @@ public class ChatActivity extends BaseFragment implements
 
             addToPolls(messageObject, old);
             if (old.messageOwner != null && messageObject.messageOwner != null) {
-                // If the old message was not edited and its content hasn't changed,
-                // server updates (like reactions) sent via updateEditMessage must not mark it as edited.
-                if (!old.isEdited() && TextUtils.equals(old.messageOwner.message, messageObject.messageOwner.message)) {
-                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                    messageObject.messageOwner.edit_date = 0;
-                } else if (!TextUtils.isEmpty(old.messageOwner.message) && !TextUtils.equals(old.messageOwner.message, messageObject.messageOwner.message)) {
+                String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
+                String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
+                if (TextUtils.equals(oldText, newText)) {
+                    if (old.messageOwner.edit_date == 0) {
+                        messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                        messageObject.messageOwner.edit_date = 0;
+                    } else {
+                        messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    }
+                } else if (!TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText)) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
-                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, old.messageOwner.message);
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);
                     }
                 }
             }
@@ -45901,7 +45905,9 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_EDIT);
                     icons.add(R.drawable.msg_edit);
                 }
-                if (selectedObject != null && (selectedObject.isEdited() || VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId()))) {
+                boolean hasMsgHist = selectedObject != null && VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
+                boolean hasReactHist = selectedObject != null && VeyraConfig.reactionHistoryEnabled && (selectedObject.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId()));
+                if (selectedObject != null && (hasMsgHist || hasReactHist)) {
                     items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
                     options.add(OPTION_VIEW_EDIT_HISTORY);
                     icons.add(R.drawable.msg_recent);

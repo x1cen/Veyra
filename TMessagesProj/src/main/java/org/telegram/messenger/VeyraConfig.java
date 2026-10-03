@@ -62,6 +62,7 @@ public class VeyraConfig {
 
     // Message Edit History
     public static boolean editHistoryEnabled = true;
+    public static boolean reactionHistoryEnabled = true;
     public static boolean editHistoryPrivate = true;
     public static boolean editHistoryGroups = true;
     public static boolean editHistoryChannels = true;
@@ -150,6 +151,7 @@ public class VeyraConfig {
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
 
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
+        reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
         editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
         editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
         editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
@@ -321,6 +323,10 @@ public class VeyraConfig {
     public static void setEditHistoryEnabled(boolean val) {
         editHistoryEnabled = val;
         save("editHistoryEnabled", val);
+    }
+    public static void setReactionHistoryEnabled(boolean val) {
+        reactionHistoryEnabled = val;
+        save("reactionHistoryEnabled", val);
     }
     public static void setEditHistoryPrivate(boolean val) {
         editHistoryPrivate = val;

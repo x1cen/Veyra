@@ -41,6 +41,14 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
                 true
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraReactionHistoryEnable", R.string.VeyraReactionHistoryEnable),
+                LocaleController.getString("VeyraReactionHistoryEnableDesc", R.string.VeyraReactionHistoryEnableDesc),
+                () -> VeyraConfig.reactionHistoryEnabled,
+                v -> VeyraConfig.setReactionHistoryEnabled(v),
+                true
+        ));
+
         r.add(VeyraSettingsRow.detail(
                 LocaleController.getString("VeyraEditHistoryLimit", R.string.VeyraEditHistoryLimit),
                 () -> String.valueOf(VeyraConfig.editHistoryLimit),

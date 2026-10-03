@@ -18,8 +18,9 @@ import java.util.List;
 public final class VeyraEditHistoryManager {
 
     private static final String DB_NAME = "veyra_edit_history.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final String TABLE_NAME = "edit_history";
+    private static final String REACTION_TABLE_NAME = "reaction_history";
 
     public static class EditEntry {
         public final long dialogId;
@@ -32,6 +33,24 @@ public final class VeyraEditHistoryManager {
             this.messageId = messageId;
             this.date = date;
             this.text = text;
+        }
+    }
+
+    public static class ReactionEntry {
+        public final long dialogId;
+        public final int messageId;
+        public final int date;
+        public final String reaction;
+        public final int count;
+        public final long userId;
+
+        public ReactionEntry(long dialogId, int messageId, int date, String reaction, int count, long userId) {
+            this.dialogId = dialogId;
+            this.messageId = messageId;
+            this.date = date;
+            this.reaction = reaction;
+            this.count = count;
+            this.userId = userId;
         }
     }
 
@@ -49,10 +68,30 @@ public final class VeyraEditHistoryManager {
                     "date INTEGER, " +
                     "text TEXT);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_msg ON " + TABLE_NAME + " (dialog_id, message_id);");
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + REACTION_TABLE_NAME + " (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "dialog_id INTEGER, " +
+                    "message_id INTEGER, " +
+                    "date INTEGER, " +
+                    "reaction TEXT, " +
+                    "count INTEGER, " +
+                    "user_id INTEGER);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_react_msg ON " + REACTION_TABLE_NAME + " (dialog_id, message_id);");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (oldVersion < 2) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS " + REACTION_TABLE_NAME + " (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "dialog_id INTEGER, " +
+                        "message_id INTEGER, " +
+                        "date INTEGER, " +
+                        "reaction TEXT, " +
+                        "count INTEGER, " +
+                        "user_id INTEGER);");
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_react_msg ON " + REACTION_TABLE_NAME + " (dialog_id, message_id);");
+            }
         }
     }
 
@@ -186,6 +225,7 @@ public final class VeyraEditHistoryManager {
                 sb.append(messageIds.get(i));
             }
             db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE dialog_id = " + dialogId + " AND message_id IN (" + sb.toString() + ")");
+            db.execSQL("DELETE FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = " + dialogId + " AND message_id IN (" + sb.toString() + ")");
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -195,6 +235,7 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(TABLE_NAME, null, null);
+            db.delete(REACTION_TABLE_NAME, null, null);
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -205,8 +246,72 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+            db.delete(REACTION_TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
         } catch (Exception e) {
             FileLog.e(e);
+        }
+    }
+
+    public static void logReaction(long dialogId, int messageId, int date, String reaction, int count, long userId) {
+        if (!VeyraConfig.reactionHistoryEnabled || TextUtils.isEmpty(reaction)) {
+            return;
+        }
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put("dialog_id", dialogId);
+            values.put("message_id", messageId);
+            values.put("date", date);
+            values.put("reaction", reaction);
+            values.put("count", count);
+            values.put("user_id", userId);
+            db.insert(REACTION_TABLE_NAME, null, values);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public static List<ReactionEntry> getReactionHistory(long dialogId, int messageId) {
+        List<ReactionEntry> list = new ArrayList<>();
+        if (!VeyraConfig.reactionHistoryEnabled) {
+            return list;
+        }
+        try {
+            SQLiteDatabase db = getHelper().getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT date, reaction, count, user_id FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
+                    new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    int date = cursor.getInt(0);
+                    String reaction = cursor.getString(1);
+                    int count = cursor.getInt(2);
+                    long userId = cursor.getLong(3);
+                    list.add(new ReactionEntry(dialogId, messageId, date, reaction, count, userId));
+                }
+                cursor.close();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return list;
+    }
+
+    public static boolean hasReactionHistory(long dialogId, int messageId) {
+        if (!VeyraConfig.reactionHistoryEnabled) {
+            return false;
+        }
+        try {
+            SQLiteDatabase db = getHelper().getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? LIMIT 1",
+                    new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            boolean exists = cursor != null && cursor.moveToFirst();
+            if (cursor != null) {
+                cursor.close();
+            }
+            return exists;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
         }
     }
 }

@@ -225,6 +225,10 @@ public class SharedConfig {
     public static int passcodeType;
     public static String passcodeHash = "";
     public static String duressHash = "";
+    public static final int DURESS_ACTION_LOCAL_WIPE = 0;
+    public static final int DURESS_ACTION_FULL_WIPE = 1;
+    public static int duressAction = DURESS_ACTION_LOCAL_WIPE;
+    public static boolean duressFallbackToLocal = true;
     public static long passcodeRetryInMs;
     public static long lastUptimeMillis;
     public static int badPasscodeTries;
@@ -458,6 +462,8 @@ public class SharedConfig {
                 editor.putBoolean("saveIncomingPhotos", saveIncomingPhotos);
                 editor.putString("passcodeHash1", passcodeHash);
                 editor.putString("duressHash", duressHash);
+                editor.putInt("duressAction", duressAction);
+                editor.putBoolean("duressFallbackToLocal", duressFallbackToLocal);
                 editor.putString("passcodeSalt", passcodeSalt.length > 0 ? Base64.encodeToString(passcodeSalt, Base64.DEFAULT) : "");
                 editor.putBoolean("appLocked", appLocked);
                 editor.putInt("passcodeType", passcodeType);
@@ -529,24 +535,40 @@ public class SharedConfig {
 
     public static void saveAccounts() {
         FileLog.d("Save accounts: " + activeAccounts);
-        ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE).edit()
-                .putString("active_accounts", StringUtils.join(activeAccounts, ","))
-                .apply();
+        try {
+            String joined = StringUtils.join(activeAccounts, ",");
+            ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE).edit()
+                    .putString("active_accounts", joined)
+                    .apply();
+            ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE).edit()
+                    .putString("active_accounts", joined)
+                    .apply();
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
     }
 
     public static void loadAccounts(SharedPreferences preferences) {
         activeAccounts.clear();
-        String raw = preferences.getString("active_accounts", "");
-        if (!raw.isEmpty()) {
+        String raw = "";
+        try {
+            raw = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Context.MODE_PRIVATE).getString("active_accounts", "");
+        } catch (Throwable ignored) {}
+        if ((raw == null || raw.isEmpty()) && preferences != null) {
+            raw = preferences.getString("active_accounts", "");
+        }
+        if (raw != null && !raw.isEmpty()) {
             for (String part : raw.split(",")) {
                 if (StringUtils.isBlank(part)) continue;
                 try {
                     activeAccounts.add(Integer.parseInt(part.trim()));
                 } catch (NumberFormatException ignored) {}
             }
-            return;
+            if (!activeAccounts.isEmpty()) {
+                return;
+            }
         }
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
             UserConfig uc = UserConfig.getInstance(i);
             uc.loadConfig();
             if (uc.isClientActivated()) {
@@ -570,6 +592,8 @@ public class SharedConfig {
             saveIncomingPhotos = preferences.getBoolean("saveIncomingPhotos", false);
             passcodeHash = preferences.getString("passcodeHash1", "");
             duressHash = preferences.getString("duressHash", "");
+            duressAction = preferences.getInt("duressAction", DURESS_ACTION_LOCAL_WIPE);
+            duressFallbackToLocal = preferences.getBoolean("duressFallbackToLocal", true);
             appLocked = preferences.getBoolean("appLocked", false);
             passcodeType = preferences.getInt("passcodeType", 0);
             passcodeRetryInMs = preferences.getLong("passcodeRetryInMs", 0);
@@ -898,6 +922,8 @@ public class SharedConfig {
         badPasscodeTries = 0;
         passcodeHash = "";
         duressHash = "";
+        duressAction = DURESS_ACTION_LOCAL_WIPE;
+        duressFallbackToLocal = true;
         passcodeSalt = new byte[0];
         autoLockIn = 60 * 60;
         lastPauseTime = 0;

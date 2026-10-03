@@ -248,6 +248,17 @@ public class ApplicationLoader extends Application {
         }
 
         boolean pushInited = false;
+        if (SharedConfig.activeAccounts.isEmpty()) {
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig.getInstance(a).loadConfig();
+                if (UserConfig.getInstance(a).isClientActivated()) {
+                    SharedConfig.activeAccounts.add(a);
+                }
+            }
+            if (!SharedConfig.activeAccounts.isEmpty()) {
+                SharedConfig.saveAccounts();
+            }
+        }
         for (int a : SharedConfig.activeAccounts) {
             UserConfig.getInstance(a).loadConfig();
             MessagesController.getInstance(a);

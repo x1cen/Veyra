@@ -225,7 +225,15 @@ public class UserConfig extends BaseController {
     }
 
     public static boolean isValidAccount(int num) {
-        return SharedConfig.activeAccounts.contains(num) && getInstance(num).isClientActivated();
+        if (num < 0 || num >= MAX_ACCOUNT_COUNT) {
+            return false;
+        }
+        boolean activated = getInstance(num).isClientActivated();
+        if (activated && !SharedConfig.activeAccounts.contains(num)) {
+            SharedConfig.activeAccounts.add(num);
+            SharedConfig.saveAccounts();
+        }
+        return activated;
     }
 
     public boolean isClientActivated() {
@@ -532,7 +540,7 @@ public class UserConfig extends BaseController {
         lastHintsSyncTime = (int) (System.currentTimeMillis() / 1000) - 25 * 60 * 60;
         resetSavedPassword();
         boolean hasActivated = false;
-        for (int a : SharedConfig.activeAccounts) {
+        for (int a = 0; a < MAX_ACCOUNT_COUNT; a++) {
             if (a != currentAccount && getInstance(a).isClientActivated()) {
                 hasActivated = true;
                 break;
