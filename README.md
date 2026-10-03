@@ -241,7 +241,7 @@ Continuous integration and artifact distribution run through GitHub Actions:
 
 ---
 
-## 💖 Donations and Support
+## Donations and Support
 
 If Veyra has been useful to you and you'd like to support ongoing development, contributions are welcome through any of these:
 
