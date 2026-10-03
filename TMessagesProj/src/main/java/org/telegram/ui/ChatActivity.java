@@ -23412,9 +23412,8 @@ public class ChatActivity extends BaseFragment implements
                 return;
             }
             int loadIndex = did == dialog_id ? 0 : 1;
-            doOnIdle(() -> {
-                replaceMessageObjects(messageObjects, loadIndex, false);
-            });
+            // Run immediately without doOnIdle — NotificationCenter already allows this during animation
+            replaceMessageObjects(messageObjects, loadIndex, false);
         } else if (id == NotificationCenter.notificationsSettingsUpdated) {
             updateTitleIcons();
             if (ChatObject.isChannel(currentChat) || UserObject.isReplyUser(currentUser) || currentUser != null && currentUser.id == UserObject.VERIFY) {
