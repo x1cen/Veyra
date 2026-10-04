@@ -10062,6 +10062,8 @@ public class TLRPC {
                     return new TL_replyKeyboardForceReply_layer129();
                 case TL_replyInlineMarkup.constructor:
                     return new TL_replyInlineMarkup();
+                case TL_replyInlineMarkup_layer229.constructor:
+                    return new TL_replyInlineMarkup_layer229();
                 default:
                     return null;
             }
@@ -70793,6 +70795,273 @@ public class TLRPC {
             if (hasFlag(flags, FLAG_1)) {
                 stream.writeByteArray(data);
             }
+        }
+    }
+
+    // ─── Layer 229: new inline markup types ───────────────────────────────────
+
+    /** InlineButtonType base */
+    public static abstract class InlineButtonType extends TLObject {
+        public String url;
+        public byte[] data;
+        public boolean requires_password;
+        public String fwd_text;
+        public int button_id;
+        public boolean request_write_access;
+        public InputUser bot;
+        public boolean same_peer;
+        public String query;
+        public ArrayList<InlineQueryPeerType> peer_types = new ArrayList<>();
+        public long user_id;
+        public InputUser inputUser;
+        public String copy_text;
+
+        public static InlineButtonType TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            InlineButtonType result = null;
+            switch (constructor) {
+                case TL_inlineButtonTypeUrl.constructor:       result = new TL_inlineButtonTypeUrl(); break;
+                case TL_inlineButtonTypeCallback.constructor:  result = new TL_inlineButtonTypeCallback(); break;
+                case TL_inlineButtonTypeUrlAuth.constructor:   result = new TL_inlineButtonTypeUrlAuth(); break;
+                case TL_inlineButtonTypeSwitchInline.constructor: result = new TL_inlineButtonTypeSwitchInline(); break;
+                case TL_inlineButtonTypeWebView.constructor:   result = new TL_inlineButtonTypeWebView(); break;
+                case TL_inlineButtonTypeBuy.constructor:       result = new TL_inlineButtonTypeBuy(); break;
+                case TL_inlineButtonTypeGame.constructor:      result = new TL_inlineButtonTypeGame(); break;
+                case TL_inlineButtonTypeUserProfile.constructor: result = new TL_inlineButtonTypeUserProfile(); break;
+                case TL_inlineButtonTypeCopy.constructor:      result = new TL_inlineButtonTypeCopy(); break;
+                case TL_inlineButtonTypeDisabled.constructor:  result = new TL_inlineButtonTypeDisabled(); break;
+            }
+            return TLdeserialize(InlineButtonType.class, result, stream, constructor, exception);
+        }
+    }
+
+    public static class TL_inlineButtonTypeUrl extends InlineButtonType {
+        public static final int constructor = 0xeca4f8d4;
+        public void readParams(InputSerializedData stream, boolean exception) { url = stream.readString(exception); }
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); stream.writeString(url); }
+    }
+
+    public static class TL_inlineButtonTypeCallback extends InlineButtonType {
+        public static final int constructor = 0x2955bc38;
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            requires_password = hasFlag(flags, FLAG_0);
+            data = stream.readByteArray(exception);
+        }
+        public int flags;
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, requires_password);
+            stream.writeInt32(flags);
+            stream.writeByteArray(data);
+        }
+    }
+
+    public static class TL_inlineButtonTypeUrlAuth extends InlineButtonType {
+        public static final int constructor = 0xbfd02da2;
+        public int flags;
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            if (hasFlag(flags, FLAG_0)) fwd_text = stream.readString(exception);
+            url = stream.readString(exception);
+            button_id = stream.readInt32(exception);
+        }
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, fwd_text != null);
+            stream.writeInt32(flags);
+            if (hasFlag(flags, FLAG_0)) stream.writeString(fwd_text);
+            stream.writeString(url);
+            stream.writeInt32(button_id);
+        }
+    }
+
+    public static class TL_inlineButtonTypeSwitchInline extends InlineButtonType {
+        public static final int constructor = 0x93773ff5;
+        public int flags;
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            same_peer = hasFlag(flags, FLAG_0);
+            query = stream.readString(exception);
+            if (hasFlag(flags, FLAG_1)) peer_types = Vector.deserialize(stream, InlineQueryPeerType::TLdeserialize, exception);
+        }
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, same_peer);
+            flags = setFlag(flags, FLAG_1, peer_types != null && !peer_types.isEmpty());
+            stream.writeInt32(flags);
+            stream.writeString(query);
+            if (hasFlag(flags, FLAG_1)) Vector.serialize(stream, peer_types);
+        }
+    }
+
+    public static class TL_inlineButtonTypeWebView extends InlineButtonType {
+        public static final int constructor = 0x3bcab5b4;
+        public void readParams(InputSerializedData stream, boolean exception) { url = stream.readString(exception); }
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); stream.writeString(url); }
+    }
+
+    public static class TL_inlineButtonTypeBuy extends InlineButtonType {
+        public static final int constructor = 0x48bad7a5;
+        public void readParams(InputSerializedData stream, boolean exception) {}
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    public static class TL_inlineButtonTypeGame extends InlineButtonType {
+        public static final int constructor = 0x5cd3709d;
+        public void readParams(InputSerializedData stream, boolean exception) {}
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    public static class TL_inlineButtonTypeUserProfile extends InlineButtonType {
+        public static final int constructor = 0x3fa33fcf;
+        public void readParams(InputSerializedData stream, boolean exception) { user_id = stream.readInt64(exception); }
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); stream.writeInt64(user_id); }
+    }
+
+    public static class TL_inlineButtonTypeCopy extends InlineButtonType {
+        public static final int constructor = 0xb41d3272;
+        public void readParams(InputSerializedData stream, boolean exception) { copy_text = stream.readString(exception); }
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); stream.writeString(copy_text); }
+    }
+
+    public static class TL_inlineButtonTypeDisabled extends InlineButtonType {
+        public static final int constructor = 0xa438619d;
+        public void readParams(InputSerializedData stream, boolean exception) {}
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    /** keyboardInlineButton#11c1a322 */
+    public static class TL_keyboardInlineButton extends TLObject {
+        public static final int constructor = 0x11c1a322;
+        public int flags;
+        public TL_keyboardButtonStyle style;
+        public String text;
+        public InlineButtonType type;
+
+        public static TL_keyboardInlineButton TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            final TL_keyboardInlineButton r = constructor != TL_keyboardInlineButton.constructor ? null : new TL_keyboardInlineButton();
+            return TLdeserialize(TL_keyboardInlineButton.class, r, stream, constructor, exception);
+        }
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            if (hasFlag(flags, 1 << 10)) style = TL_keyboardButtonStyle.TLdeserialize(stream, stream.readInt32(exception), exception);
+            text = stream.readString(exception);
+            type = InlineButtonType.TLdeserialize(stream, stream.readInt32(exception), exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, 1 << 10, style != null);
+            stream.writeInt32(flags);
+            if (style != null) style.serializeToStream(stream);
+            stream.writeString(text);
+            type.serializeToStream(stream);
+        }
+
+        /** Bridge: expose as a KeyboardButton so ChatActivity / BotButton can handle it uniformly */
+        public KeyboardButton toKeyboardButton() {
+            if (type instanceof TL_inlineButtonTypeUrl || type instanceof TL_inlineButtonTypeWebView) {
+                TL_keyboardButtonUrl btn = new TL_keyboardButtonUrl();
+                btn.text = text;
+                btn.url = type.url;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeCallback) {
+                TL_keyboardButtonCallback btn = new TL_keyboardButtonCallback();
+                btn.text = text;
+                btn.data = ((TL_inlineButtonTypeCallback) type).data;
+                btn.requires_password = ((TL_inlineButtonTypeCallback) type).requires_password;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeUrlAuth) {
+                TL_keyboardButtonUrlAuth btn = new TL_keyboardButtonUrlAuth();
+                btn.text = text;
+                btn.url = type.url;
+                btn.fwd_text = type.fwd_text;
+                btn.button_id = type.button_id;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeSwitchInline) {
+                TL_keyboardButtonSwitchInline btn = new TL_keyboardButtonSwitchInline();
+                btn.text = text;
+                btn.query = type.query;
+                btn.same_peer = type.same_peer;
+                btn.peer_types = type.peer_types;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeBuy) {
+                TL_keyboardButtonBuy btn = new TL_keyboardButtonBuy();
+                btn.text = text;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeGame) {
+                TL_keyboardButtonGame btn = new TL_keyboardButtonGame();
+                btn.text = text;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeUserProfile) {
+                TL_keyboardButtonUserProfile btn = new TL_keyboardButtonUserProfile();
+                btn.text = text;
+                btn.user_id = type.user_id;
+                return btn;
+            } else if (type instanceof TL_inlineButtonTypeCopy) {
+                TL_keyboardButtonCopy btn = new TL_keyboardButtonCopy();
+                btn.text = text;
+                btn.copy_text = ((TL_inlineButtonTypeCopy) type).copy_text;
+                return btn;
+            } else {
+                // Disabled or unknown: plain button with no action
+                TL_keyboardButton btn = new TL_keyboardButton();
+                btn.text = text;
+                return btn;
+            }
+        }
+    }
+
+    /** keyboardInlineButtonRow#19420af6 — bridges into TL_keyboardButtonRow */
+    public static class TL_keyboardInlineButtonRow extends TLObject {
+        public static final int constructor = 0x19420af6;
+        public ArrayList<TL_keyboardInlineButton> buttons = new ArrayList<>();
+
+        public static TL_keyboardInlineButtonRow TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            final TL_keyboardInlineButtonRow r = constructor != TL_keyboardInlineButtonRow.constructor ? null : new TL_keyboardInlineButtonRow();
+            return TLdeserialize(TL_keyboardInlineButtonRow.class, r, stream, constructor, exception);
+        }
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            buttons = Vector.deserialize(stream, TL_keyboardInlineButton::TLdeserialize, exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            Vector.serialize(stream, buttons);
+        }
+
+        /** Convert to legacy TL_keyboardButtonRow for the rest of the UI code */
+        public TL_keyboardButtonRow toLegacyRow() {
+            TL_keyboardButtonRow row = new TL_keyboardButtonRow();
+            for (TL_keyboardInlineButton ib : buttons) {
+                row.buttons.add(ib.toKeyboardButton());
+            }
+            return row;
+        }
+    }
+
+    /** replyInlineMarkup#b2b15770 — layer 229 replacement */
+    public static class TL_replyInlineMarkup_layer229 extends TL_replyInlineMarkup {
+        public static final int constructor = 0xb2b15770;
+
+        @Override
+        public void readParams(InputSerializedData stream, boolean exception) {
+            int flags = stream.readInt32(exception);
+            // flags.5 = force_reply (ignored for now)
+            ArrayList<TL_keyboardInlineButtonRow> inlineRows = Vector.deserialize(stream, TL_keyboardInlineButtonRow::TLdeserialize, exception);
+            rows = new ArrayList<>();
+            for (TL_keyboardInlineButtonRow ir : inlineRows) {
+                rows.add(ir.toLegacyRow());
+            }
+        }
+
+        @Override
+        public void serializeToStream(OutputSerializedData stream) {
+            // Serialize as legacy format so we stay compatible
+            stream.writeInt32(TL_replyInlineMarkup.constructor);
+            Vector.serialize(stream, rows);
         }
     }
 }
