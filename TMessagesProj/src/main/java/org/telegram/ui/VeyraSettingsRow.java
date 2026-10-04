@@ -22,6 +22,8 @@ public class VeyraSettingsRow {
     public boolean needDivider = true;
     public boolean redText = false;
     public int icon;
+    public int iconColorTop;
+    public int iconColorBottom;
 
     public static VeyraSettingsRow header(String title) {
         VeyraSettingsRow row = new VeyraSettingsRow();
@@ -71,14 +73,20 @@ public class VeyraSettingsRow {
     }
 
     // A clickable row that opens a sub-section (used on the main Veyra Settings hub).
-    public static VeyraSettingsRow category(int icon, String title, Runnable onClick) {
+    public static VeyraSettingsRow category(int iconColorTop, int iconColorBottom, int icon, String title, Runnable onClick) {
         VeyraSettingsRow row = new VeyraSettingsRow();
         row.type = Type.CATEGORY;
+        row.iconColorTop = iconColorTop;
+        row.iconColorBottom = iconColorBottom;
         row.icon = icon;
         row.title = title;
         row.needDivider = true;
         row.onClick = onClick;
         return row;
+    }
+
+    public static VeyraSettingsRow category(int icon, String title, Runnable onClick) {
+        return category(0xFF4F85F6, 0xFF3568E8, icon, title, onClick);
     }
 
     public static VeyraSettingsRow category(String title, String subtitle, Runnable onClick) {

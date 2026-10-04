@@ -1,9 +1,19 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DefaultItemAnimator;
@@ -90,6 +100,8 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listView.setVerticalScrollBarEnabled(false);
         listView.setItemAnimator(new DefaultItemAnimator());
+        listView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), AndroidUtilities.dp(16));
+        listView.setClipToPadding(false);
         frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         listAdapter = new RowAdapter(context);
@@ -159,28 +171,25 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
             View view;
             switch (viewType) {
                 case 1:
-                    view = new HeaderCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    HeaderCell headerCell = new HeaderCell(mContext);
+                    headerCell.setBackgroundColor(0);
+                    view = headerCell;
                     break;
                 case 2:
                     view = new TextCheckCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 3:
                     view = new TextSettingsCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 4:
                     view = new TextDetailSettingsCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 5:
-                    TextCell textCell2 = new TextCell(mContext);
-                    textCell2.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                    view = textCell2;
+                    view = new CategoryCell(mContext);
                     break;
                 default:
-                    view = new ShadowSectionCell(mContext);
+                    view = new View(mContext);
+                    view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(12)));
                     break;
             }
             return new RecyclerListView.Holder(view);
@@ -192,45 +201,54 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                 return;
             }
             VeyraSettingsRow row = rows.get(position);
-            switch (holder.getItemViewType()) {
-                case 1: {
-                    ((HeaderCell) holder.itemView).setText(row.title);
-                    break;
-                }
-                case 2: {
-                    TextCheckCell checkCell = (TextCheckCell) holder.itemView;
-                    boolean checked = row.getter != null && row.getter.getAsBoolean();
-                    if (row.subtitle != null) {
-                        checkCell.setTextAndValueAndCheck(row.title, row.subtitle, checked, true, row.needDivider);
-                    } else {
-                        checkCell.setTextAndCheck(row.title, checked, row.needDivider);
+
+            if (row.type != VeyraSettingsRow.Type.HEADER && row.type != VeyraSettingsRow.Type.SHADOW) {
+                boolean isTop = (position == 0 || rows.get(position - 1).type == VeyraSettingsRow.Type.HEADER || rows.get(position - 1).type == VeyraSettingsRow.Type.SHADOW);
+                boolean isBottom = (position == rows.size() - 1 || rows.get(position + 1).type == VeyraSettingsRow.Type.HEADER || rows.get(position + 1).type == VeyraSettingsRow.Type.SHADOW);
+
+                int topRad = isTop ? 14 : 0;
+                int bottomRad = isBottom ? 14 : 0;
+                boolean needDivider = !isBottom && row.needDivider;
+
+                int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+                int selColor = Theme.getColor(Theme.key_listSelector);
+                holder.itemView.setBackground(Theme.createRadSelectorDrawable(bgColor, selColor, topRad, bottomRad));
+
+                switch (holder.getItemViewType()) {
+                    case 2: {
+                        TextCheckCell checkCell = (TextCheckCell) holder.itemView;
+                        boolean checked = row.getter != null && row.getter.getAsBoolean();
+                        if (row.subtitle != null) {
+                            checkCell.setTextAndValueAndCheck(row.title, row.subtitle, checked, true, needDivider);
+                        } else {
+                            checkCell.setTextAndCheck(row.title, checked, needDivider);
+                        }
+                        break;
                     }
-                    break;
-                }
-                case 3: {
-                    TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
-                    textCell.setText(row.title, row.needDivider);
-                    if (row.redText) {
-                        textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+                    case 3: {
+                        TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
+                        textCell.setText(row.title, needDivider);
+                        if (row.redText) {
+                            textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+                        }
+                        break;
                     }
-                    break;
-                }
-                case 4: {
-                    TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
-                    String value = row.valueSupplier != null ? row.valueSupplier.get() : row.subtitle;
-                    detailCell.setTextAndValue(row.title, value, row.needDivider);
-                    break;
-                }
-                case 5: {
-                    TextCell cell = (TextCell) holder.itemView;
-                    if (row.icon != 0) {
-                        cell.setTextAndIcon(row.title, row.icon, row.needDivider);
-                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
-                    } else {
-                        cell.setText(row.title, row.needDivider);
+                    case 4: {
+                        TextDetailSettingsCell detailCell = (TextDetailSettingsCell) holder.itemView;
+                        String value = row.valueSupplier != null ? row.valueSupplier.get() : row.subtitle;
+                        detailCell.setTextAndValue(row.title, value, needDivider);
+                        break;
                     }
-                    break;
+                    case 5: {
+                        CategoryCell catCell = (CategoryCell) holder.itemView;
+                        int cTop = row.iconColorTop != 0 ? row.iconColorTop : 0xFF4F85F6;
+                        int cBot = row.iconColorBottom != 0 ? row.iconColorBottom : 0xFF3568E8;
+                        catCell.set(cTop, cBot, row.icon, row.title, row.subtitle, needDivider);
+                        break;
+                    }
                 }
+            } else if (holder.getItemViewType() == 1) {
+                ((HeaderCell) holder.itemView).setText(row.title);
             }
         }
 
@@ -252,6 +270,92 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                     return 5;
                 default:
                     return 0;
+            }
+        }
+    }
+
+    public static class CategoryCell extends FrameLayout {
+        private final FrameLayout iconLayout;
+        private final ImageView iconView;
+        private final TextView titleView;
+        private final TextView subtitleView;
+        private final ImageView arrowView;
+        private boolean needDivider;
+
+        public CategoryCell(Context context) {
+            super(context);
+
+            iconLayout = new FrameLayout(context);
+            addView(iconLayout, LayoutHelper.createFrame(28, 28, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL, 16, 0, 16, 0));
+
+            iconView = new ImageView(context);
+            iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            iconView.setColorFilter(new PorterDuffColorFilter(0xffffffff, PorterDuff.Mode.SRC_IN));
+            iconLayout.addView(iconView, LayoutHelper.createFrame(20, 20, Gravity.CENTER));
+
+            LinearLayout textLayout = new LinearLayout(context);
+            textLayout.setOrientation(LinearLayout.VERTICAL);
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            textLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            subtitleView = new TextView(context);
+            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            subtitleView.setVisibility(GONE);
+            textLayout.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+            if (LocaleController.isRTL) {
+                addView(textLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 44, 0, 60, 0));
+            } else {
+                addView(textLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 60, 0, 44, 0));
+            }
+
+            arrowView = new ImageView(context);
+            arrowView.setImageResource(R.drawable.msg_arrowright);
+            arrowView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
+            if (LocaleController.isRTL) {
+                arrowView.setScaleX(-1.0f);
+            }
+            addView(arrowView, LayoutHelper.createFrame(24, 24, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 16, 0, 16, 0));
+
+            setWillNotDraw(false);
+        }
+
+        public void set(int iconColorTop, int iconColorBottom, int icon, CharSequence title, CharSequence subtitle, boolean divider) {
+            GradientDrawable gd = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{iconColorTop, iconColorBottom});
+            gd.setCornerRadius(AndroidUtilities.dp(10));
+            iconLayout.setBackground(gd);
+            iconView.setImageResource(icon);
+            titleView.setText(title);
+            if (!TextUtils.isEmpty(subtitle)) {
+                subtitleView.setText(subtitle);
+                subtitleView.setVisibility(VISIBLE);
+            } else {
+                subtitleView.setVisibility(GONE);
+            }
+            needDivider = divider;
+            invalidate();
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(
+                    MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(subtitleView.getVisibility() == VISIBLE ? 58 : 50), MeasureSpec.EXACTLY)
+            );
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (needDivider) {
+                int left = LocaleController.isRTL ? 0 : AndroidUtilities.dp(60);
+                int right = LocaleController.isRTL ? getMeasuredWidth() - AndroidUtilities.dp(60) : getMeasuredWidth();
+                canvas.drawLine(left, getMeasuredHeight() - 1, right, getMeasuredHeight() - 1, Theme.dividerPaint);
             }
         }
     }

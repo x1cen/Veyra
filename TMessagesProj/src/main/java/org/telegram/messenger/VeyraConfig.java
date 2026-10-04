@@ -101,12 +101,29 @@ public class VeyraConfig {
 
     public static boolean reactionHistoryEnabled = true;
     public static int reactionHistoryLimit = 20;
+    public static boolean reactionHistoryDropOldest = true;
     public static boolean reactionHistoryPrivate = true;
     public static boolean reactionHistoryGroups = true;
     public static boolean reactionHistoryGroupsOnlyPrivate = true;
     public static boolean reactionHistoryChannels = false;
     public static boolean reactionHistoryChannelsOnlyPrivate = true;
     public static boolean reactionHistoryBots = false;
+
+    // Ignore Owner / Admin in Groups & Channels (Recent Actions already log them)
+    public static boolean antiDeleteGroupsIgnoreOwner = true;
+    public static boolean antiDeleteGroupsIgnoreAdmin = false;
+    public static boolean antiDeleteChannelsIgnoreOwner = true;
+    public static boolean antiDeleteChannelsIgnoreAdmin = false;
+
+    public static boolean editHistoryGroupsIgnoreOwner = true;
+    public static boolean editHistoryGroupsIgnoreAdmin = false;
+    public static boolean editHistoryChannelsIgnoreOwner = true;
+    public static boolean editHistoryChannelsIgnoreAdmin = false;
+
+    public static boolean reactionHistoryGroupsIgnoreOwner = true;
+    public static boolean reactionHistoryGroupsIgnoreAdmin = false;
+    public static boolean reactionHistoryChannelsIgnoreOwner = true;
+    public static boolean reactionHistoryChannelsIgnoreAdmin = false;
 
     // ==================== Controls & Interaction ====================
     public static boolean confirmCall = true;
@@ -202,12 +219,28 @@ public class VeyraConfig {
 
         reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
         reactionHistoryLimit = preferences.getInt("reactionHistoryLimit", 20);
+        reactionHistoryDropOldest = preferences.getBoolean("reactionHistoryDropOldest", true);
         reactionHistoryPrivate = preferences.getBoolean("reactionHistoryPrivate", true);
         reactionHistoryGroups = preferences.getBoolean("reactionHistoryGroups", true);
         reactionHistoryGroupsOnlyPrivate = preferences.getBoolean("reactionHistoryGroupsOnlyPrivate", true);
         reactionHistoryChannels = preferences.getBoolean("reactionHistoryChannels", false);
         reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", true);
         reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
+
+        antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", true);
+        antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", false);
+        antiDeleteChannelsIgnoreOwner = preferences.getBoolean("antiDeleteChannelsIgnoreOwner", true);
+        antiDeleteChannelsIgnoreAdmin = preferences.getBoolean("antiDeleteChannelsIgnoreAdmin", false);
+
+        editHistoryGroupsIgnoreOwner = preferences.getBoolean("editHistoryGroupsIgnoreOwner", true);
+        editHistoryGroupsIgnoreAdmin = preferences.getBoolean("editHistoryGroupsIgnoreAdmin", false);
+        editHistoryChannelsIgnoreOwner = preferences.getBoolean("editHistoryChannelsIgnoreOwner", true);
+        editHistoryChannelsIgnoreAdmin = preferences.getBoolean("editHistoryChannelsIgnoreAdmin", false);
+
+        reactionHistoryGroupsIgnoreOwner = preferences.getBoolean("reactionHistoryGroupsIgnoreOwner", true);
+        reactionHistoryGroupsIgnoreAdmin = preferences.getBoolean("reactionHistoryGroupsIgnoreAdmin", false);
+        reactionHistoryChannelsIgnoreOwner = preferences.getBoolean("reactionHistoryChannelsIgnoreOwner", true);
+        reactionHistoryChannelsIgnoreAdmin = preferences.getBoolean("reactionHistoryChannelsIgnoreAdmin", false);
 
         loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
         loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
@@ -408,6 +441,60 @@ public class VeyraConfig {
         }
     }
 
+    public static boolean isIgnoreOwner(int category, int peerType) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) return antiDeleteGroupsIgnoreOwner;
+            if (peerType == PEER_CHANNEL) return antiDeleteChannelsIgnoreOwner;
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) return editHistoryGroupsIgnoreOwner;
+            if (peerType == PEER_CHANNEL) return editHistoryChannelsIgnoreOwner;
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) return reactionHistoryGroupsIgnoreOwner;
+            if (peerType == PEER_CHANNEL) return reactionHistoryChannelsIgnoreOwner;
+        }
+        return false;
+    }
+
+    public static void setIgnoreOwner(int category, int peerType, boolean val) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) { antiDeleteGroupsIgnoreOwner = val; save("antiDeleteGroupsIgnoreOwner", val); }
+            else if (peerType == PEER_CHANNEL) { antiDeleteChannelsIgnoreOwner = val; save("antiDeleteChannelsIgnoreOwner", val); }
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) { editHistoryGroupsIgnoreOwner = val; save("editHistoryGroupsIgnoreOwner", val); }
+            else if (peerType == PEER_CHANNEL) { editHistoryChannelsIgnoreOwner = val; save("editHistoryChannelsIgnoreOwner", val); }
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) { reactionHistoryGroupsIgnoreOwner = val; save("reactionHistoryGroupsIgnoreOwner", val); }
+            else if (peerType == PEER_CHANNEL) { reactionHistoryChannelsIgnoreOwner = val; save("reactionHistoryChannelsIgnoreOwner", val); }
+        }
+    }
+
+    public static boolean isIgnoreAdmin(int category, int peerType) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) return antiDeleteGroupsIgnoreAdmin;
+            if (peerType == PEER_CHANNEL) return antiDeleteChannelsIgnoreAdmin;
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) return editHistoryGroupsIgnoreAdmin;
+            if (peerType == PEER_CHANNEL) return editHistoryChannelsIgnoreAdmin;
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) return reactionHistoryGroupsIgnoreAdmin;
+            if (peerType == PEER_CHANNEL) return reactionHistoryChannelsIgnoreAdmin;
+        }
+        return false;
+    }
+
+    public static void setIgnoreAdmin(int category, int peerType, boolean val) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) { antiDeleteGroupsIgnoreAdmin = val; save("antiDeleteGroupsIgnoreAdmin", val); }
+            else if (peerType == PEER_CHANNEL) { antiDeleteChannelsIgnoreAdmin = val; save("antiDeleteChannelsIgnoreAdmin", val); }
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) { editHistoryGroupsIgnoreAdmin = val; save("editHistoryGroupsIgnoreAdmin", val); }
+            else if (peerType == PEER_CHANNEL) { editHistoryChannelsIgnoreAdmin = val; save("editHistoryChannelsIgnoreAdmin", val); }
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) { reactionHistoryGroupsIgnoreAdmin = val; save("reactionHistoryGroupsIgnoreAdmin", val); }
+            else if (peerType == PEER_CHANNEL) { reactionHistoryChannelsIgnoreAdmin = val; save("reactionHistoryChannelsIgnoreAdmin", val); }
+        }
+    }
+
     public static void setAntiDelete(boolean val) {
         antiDelete = val;
         save("antiDelete", val);
@@ -446,13 +533,19 @@ public class VeyraConfig {
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
                 boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                boolean isOwner = chat != null && chat.creator;
+                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!antiDeleteChannels) return false;
                     if (antiDeleteChannelsOnlyPrivate && !isPrivate) return false;
+                    if (antiDeleteChannelsIgnoreOwner && isOwner) return false;
+                    if (antiDeleteChannelsIgnoreAdmin && isAdmin) return false;
                     return true;
                 } else {
                     if (!antiDeleteGroups) return false;
                     if (antiDeleteGroupsOnlyPrivate && !isPrivate) return false;
+                    if (antiDeleteGroupsIgnoreOwner && isOwner) return false;
+                    if (antiDeleteGroupsIgnoreAdmin && isAdmin) return false;
                     return true;
                 }
             }
@@ -478,13 +571,19 @@ public class VeyraConfig {
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
                 boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                boolean isOwner = chat != null && chat.creator;
+                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!editHistoryChannels) return false;
                     if (editHistoryChannelsOnlyPrivate && !isPrivate) return false;
+                    if (editHistoryChannelsIgnoreOwner && isOwner) return false;
+                    if (editHistoryChannelsIgnoreAdmin && isAdmin) return false;
                     return true;
                 } else {
                     if (!editHistoryGroups) return false;
                     if (editHistoryGroupsOnlyPrivate && !isPrivate) return false;
+                    if (editHistoryGroupsIgnoreOwner && isOwner) return false;
+                    if (editHistoryGroupsIgnoreAdmin && isAdmin) return false;
                     return true;
                 }
             }
@@ -510,13 +609,19 @@ public class VeyraConfig {
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
                 boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                boolean isOwner = chat != null && chat.creator;
+                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!reactionHistoryChannels) return false;
                     if (reactionHistoryChannelsOnlyPrivate && !isPrivate) return false;
+                    if (reactionHistoryChannelsIgnoreOwner && isOwner) return false;
+                    if (reactionHistoryChannelsIgnoreAdmin && isAdmin) return false;
                     return true;
                 } else {
                     if (!reactionHistoryGroups) return false;
                     if (reactionHistoryGroupsOnlyPrivate && !isPrivate) return false;
+                    if (reactionHistoryGroupsIgnoreOwner && isOwner) return false;
+                    if (reactionHistoryGroupsIgnoreAdmin && isAdmin) return false;
                     return true;
                 }
             }
@@ -587,6 +692,10 @@ public class VeyraConfig {
     public static void setReactionHistoryLimit(int val) {
         reactionHistoryLimit = val;
         save("reactionHistoryLimit", val);
+    }
+    public static void setReactionHistoryDropOldest(boolean val) {
+        reactionHistoryDropOldest = val;
+        save("reactionHistoryDropOldest", val);
     }
     public static void setReactionHistoryPrivate(boolean val) {
         reactionHistoryPrivate = val;

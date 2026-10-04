@@ -52,6 +52,8 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
     private ListAdapter listAdapter;
 
     private int onlyPrivateRow = -1;
+    private int ignoreOwnerRow = -1;
+    private int ignoreAdminRow = -1;
     private int onlyPrivateInfoRow = -1;
     private int exceptionsHeaderRow = -1;
     private int addExceptionRow = -1;
@@ -91,6 +93,8 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
         if (peerType == VeyraConfig.PEER_GROUP || peerType == VeyraConfig.PEER_CHANNEL) {
             onlyPrivateRow = rowCount++;
+            ignoreOwnerRow = rowCount++;
+            ignoreAdminRow = rowCount++;
             onlyPrivateInfoRow = rowCount++;
         }
 
@@ -162,6 +166,8 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         listView = new RecyclerListView(context);
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         listView.setVerticalScrollBarEnabled(false);
+        listView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), AndroidUtilities.dp(16));
+        listView.setClipToPadding(false);
         listAdapter = new ListAdapter(context);
         listView.setAdapter(listAdapter);
 
@@ -169,6 +175,18 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
             if (position == onlyPrivateRow) {
                 boolean val = !VeyraConfig.isOnlyPrivate(category, peerType);
                 VeyraConfig.setOnlyPrivate(category, peerType, val);
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(val);
+                }
+            } else if (position == ignoreOwnerRow) {
+                boolean val = !VeyraConfig.isIgnoreOwner(category, peerType);
+                VeyraConfig.setIgnoreOwner(category, peerType, val);
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(val);
+                }
+            } else if (position == ignoreAdminRow) {
+                boolean val = !VeyraConfig.isIgnoreAdmin(category, peerType);
+                VeyraConfig.setIgnoreAdmin(category, peerType, val);
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(val);
                 }
@@ -276,7 +294,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int pos = holder.getAdapterPosition();
-            return pos == onlyPrivateRow || pos == addExceptionRow || (pos >= exceptionsStartRow && pos < exceptionsEndRow) || pos == deleteAllExceptionsRow;
+            return pos == onlyPrivateRow || pos == ignoreOwnerRow || pos == ignoreAdminRow || pos == addExceptionRow || (pos >= exceptionsStartRow && pos < exceptionsEndRow) || pos == deleteAllExceptionsRow;
         }
 
         @NonNull
@@ -286,26 +304,25 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
             switch (viewType) {
                 case 0:
                     view = new TextCheckCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 1:
                     view = new TextInfoPrivacyCell(mContext);
                     break;
                 case 2:
-                    view = new HeaderCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    HeaderCell headerCell = new HeaderCell(mContext);
+                    headerCell.setBackgroundColor(0);
+                    view = headerCell;
                     break;
                 case 3:
                     view = new TextCell(mContext);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 4:
                     view = new UserCell(mContext, 4, 0, false, false);
-                    view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
                 case 5:
                 default:
-                    view = new ShadowSectionCell(mContext);
+                    view = new View(mContext);
+                    view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(12)));
                     break;
             }
             return new RecyclerListView.Holder(view);
@@ -313,23 +330,68 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            int topRad = 0;
+            int bottomRad = 0;
+            boolean isCardItem = false;
+            if (position == onlyPrivateRow) {
+                topRad = 14;
+                bottomRad = 0;
+                isCardItem = true;
+            } else if (position == ignoreOwnerRow) {
+                topRad = 0;
+                bottomRad = 0;
+                isCardItem = true;
+            } else if (position == ignoreAdminRow) {
+                topRad = 0;
+                bottomRad = 14;
+                isCardItem = true;
+            } else if (position == addExceptionRow) {
+                topRad = 14;
+                bottomRad = (exceptionsList.isEmpty() && deleteAllExceptionsRow == -1) ? 14 : 0;
+                isCardItem = true;
+            } else if (position >= exceptionsStartRow && position < exceptionsEndRow) {
+                topRad = 0;
+                bottomRad = (position == exceptionsEndRow - 1 && deleteAllExceptionsRow == -1) ? 14 : 0;
+                isCardItem = true;
+            } else if (position == deleteAllExceptionsRow) {
+                topRad = 0;
+                bottomRad = 14;
+                isCardItem = true;
+            }
+
+            if (isCardItem) {
+                int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+                int selColor = Theme.getColor(Theme.key_listSelector);
+                holder.itemView.setBackground(Theme.createRadSelectorDrawable(bgColor, selColor, topRad, bottomRad));
+            }
+
             switch (holder.getItemViewType()) {
                 case 0: {
                     TextCheckCell checkCell = (TextCheckCell) holder.itemView;
-                    if (peerType == VeyraConfig.PEER_GROUP) {
-                        checkCell.setTextAndCheck("Only Private Groups", VeyraConfig.isOnlyPrivate(category, peerType), false);
-                    } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-                        checkCell.setTextAndCheck("Only Private Channels", VeyraConfig.isOnlyPrivate(category, peerType), false);
+                    if (position == onlyPrivateRow) {
+                        if (peerType == VeyraConfig.PEER_GROUP) {
+                            checkCell.setTextAndCheck("Only Private Groups", VeyraConfig.isOnlyPrivate(category, peerType), true);
+                        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
+                            checkCell.setTextAndCheck("Only Private Channels", VeyraConfig.isOnlyPrivate(category, peerType), true);
+                        }
+                    } else if (position == ignoreOwnerRow) {
+                        if (peerType == VeyraConfig.PEER_GROUP) {
+                            checkCell.setTextAndCheck("Ignore Groups I Own", VeyraConfig.isIgnoreOwner(category, peerType), true);
+                        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
+                            checkCell.setTextAndCheck("Ignore Channels I Own", VeyraConfig.isIgnoreOwner(category, peerType), true);
+                        }
+                    } else if (position == ignoreAdminRow) {
+                        if (peerType == VeyraConfig.PEER_GROUP) {
+                            checkCell.setTextAndCheck("Ignore Groups Where I Am Admin", VeyraConfig.isIgnoreAdmin(category, peerType), false);
+                        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
+                            checkCell.setTextAndCheck("Ignore Channels Where I Am Admin", VeyraConfig.isIgnoreAdmin(category, peerType), false);
+                        }
                     }
                     break;
                 }
                 case 1: {
                     TextInfoPrivacyCell infoCell = (TextInfoPrivacyCell) holder.itemView;
-                    if (peerType == VeyraConfig.PEER_GROUP) {
-                        infoCell.setText("When enabled, only private groups will be included by default.");
-                    } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-                        infoCell.setText("When enabled, only private channels will be included by default.");
-                    }
+                    infoCell.setText("Admins and owners can already view deleted and edited messages in Recent Actions.");
                     break;
                 }
                 case 2: {
@@ -340,7 +402,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 case 3: {
                     TextCell textCell = (TextCell) holder.itemView;
                     if (position == addExceptionRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("NotificationsAddAnException", R.string.NotificationsAddAnException), R.drawable.msg_contact_add, true);
+                        textCell.setTextAndIcon(LocaleController.getString("NotificationsAddAnException", R.string.NotificationsAddAnException), R.drawable.msg_contact_add, !exceptionsList.isEmpty());
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
                     } else if (position == deleteAllExceptionsRow) {
                         textCell.setText(LocaleController.getString("NotificationsDeleteAllException", R.string.NotificationsDeleteAllException), false);
@@ -368,7 +430,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == onlyPrivateRow) {
+            if (position == onlyPrivateRow || position == ignoreOwnerRow || position == ignoreAdminRow) {
                 return 0;
             } else if (position == onlyPrivateInfoRow) {
                 return 1;

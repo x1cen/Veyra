@@ -118,6 +118,14 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
                 }
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                "Drop Oldest on Overflow",
+                "When limit is reached, discard older edits to record new ones",
+                () -> VeyraConfig.editHistoryDropOldest,
+                v -> VeyraConfig.setEditHistoryDropOldest(v),
+                true
+        ));
+
         r.add(VeyraSettingsRow.button(
                 "Clear All Edit History",
                 true,

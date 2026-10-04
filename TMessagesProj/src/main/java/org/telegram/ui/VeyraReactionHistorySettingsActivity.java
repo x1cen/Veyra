@@ -114,6 +114,14 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
                 }
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                "Drop Oldest on Overflow",
+                "When limit is reached, discard older reactions to record new ones",
+                () -> VeyraConfig.reactionHistoryDropOldest,
+                v -> VeyraConfig.setReactionHistoryDropOldest(v),
+                true
+        ));
+
         r.add(VeyraSettingsRow.button(
                 "Clear All Reaction History",
                 true,

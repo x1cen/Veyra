@@ -152,9 +152,10 @@ public final class VeyraEditHistoryManager {
             }
             if (total >= maxEdits) {
                 if (dropOldest) {
-                    db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE id = (SELECT id FROM " + TABLE_NAME +
-                            " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT 1)",
-                            new Object[]{dialogId, messageId});
+                    int toDelete = total - maxEdits + 1;
+                    db.execSQL("DELETE FROM " + TABLE_NAME + " WHERE id IN (SELECT id FROM " + TABLE_NAME +
+                            " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
+                            new Object[]{dialogId, messageId, toDelete});
                 } else {
                     return; // limit reached and we don't drop oldest
                 }
@@ -357,11 +358,16 @@ public final class VeyraEditHistoryManager {
                 countCursor.close();
             }
             int limit = Math.max(5, Math.min(100, VeyraConfig.reactionHistoryLimit));
+            boolean dropOldest = VeyraConfig.reactionHistoryDropOldest;
             if (total >= limit) {
-                db.execSQL("DELETE FROM " + REACTION_TABLE_NAME +
-                        " WHERE id IN (SELECT id FROM " + REACTION_TABLE_NAME +
-                        " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
-                        new Object[]{dialogId, messageId, total - limit + 1});
+                if (dropOldest) {
+                    db.execSQL("DELETE FROM " + REACTION_TABLE_NAME +
+                            " WHERE id IN (SELECT id FROM " + REACTION_TABLE_NAME +
+                            " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
+                            new Object[]{dialogId, messageId, total - limit + 1});
+                } else {
+                    return;
+                }
             }
 
             ContentValues values = new ContentValues();

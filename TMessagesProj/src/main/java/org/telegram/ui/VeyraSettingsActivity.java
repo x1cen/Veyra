@@ -24,6 +24,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
+import org.telegram.ui.Components.IconBackgroundColors;
 import org.telegram.ui.Components.LayoutHelper;
 
 import org.json.JSONObject;
@@ -145,26 +146,31 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         // Section 1: Features & Privacy
         r.add(VeyraSettingsRow.header("Features & Privacy"));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
                 R.drawable.msg_secret,
                 LocaleController.getString("VeyraGhostMode", R.string.VeyraGhostMode),
                 () -> presentFragment(new VeyraGhostModeSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom,
                 R.drawable.msg_delete,
                 LocaleController.getString("VeyraAntiDelete", R.string.VeyraAntiDelete),
                 () -> presentFragment(new VeyraAntiDeleteSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom,
                 R.drawable.msg_edit,
                 LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory),
                 () -> presentFragment(new VeyraEditHistorySettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom,
                 R.drawable.msg_reactions,
                 "Reaction History",
                 () -> presentFragment(new VeyraReactionHistorySettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom,
                 R.drawable.msg_permissions,
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
                 () -> presentFragment(new VeyraPrivacySettingsActivity())
@@ -174,16 +180,19 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         // Section 2: Chats & Appearance
         r.add(VeyraSettingsRow.header("Chats & Appearance"));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom,
                 R.drawable.msg_discussion,
                 LocaleController.getString("VeyraChatList", R.string.VeyraChatList),
                 () -> presentFragment(new VeyraChatListSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
                 R.drawable.msg_message,
                 LocaleController.getString("VeyraComposingMessages", R.string.VeyraComposingMessages),
                 () -> presentFragment(new VeyraComposingSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom,
                 R.drawable.msg_media,
                 LocaleController.getString("VeyraMediaCamera", R.string.VeyraMediaCamera),
                 () -> presentFragment(new VeyraMediaSettingsActivity())
@@ -193,11 +202,13 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         // Section 3: General & Tools
         r.add(VeyraSettingsRow.header("General"));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.GRAY.top, IconBackgroundColors.GRAY.bottom,
                 R.drawable.msg_settings_old,
                 LocaleController.getString("VeyraControlsGeneral", R.string.VeyraControlsGeneral),
                 () -> presentFragment(new VeyraControlsSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom,
                 R.drawable.msg_fave,
                 LocaleController.getString("VeyraBackupRestore", R.string.VeyraBackupRestore),
                 () -> presentFragment(new VeyraBackupSettingsActivity())
