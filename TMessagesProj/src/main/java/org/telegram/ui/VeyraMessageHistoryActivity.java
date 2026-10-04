@@ -373,14 +373,12 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 messageCell.setFullyDraw(true);
                 messageCell.setDelegate(new ChatMessageCell.ChatMessageCellDelegate() {
                     @Override
-                    public boolean didLongPress(ChatMessageCell cell, float x, float y) {
+                    public void didLongPress(ChatMessageCell cell, float x, float y) {
                         MessageObject obj = cell.getMessageObject();
                         if (obj != null && !TextUtils.isEmpty(obj.messageText)) {
                             AndroidUtilities.addToClipboard(obj.messageText.toString());
                             BulletinFactory.of(VeyraMessageHistoryActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
-                            return true;
                         }
-                        return false;
                     }
 
                     @Override
