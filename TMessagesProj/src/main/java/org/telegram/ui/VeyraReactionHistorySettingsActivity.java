@@ -101,18 +101,11 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
                 true,
                 () -> {
                     if (getParentActivity() == null) return;
-                    String[] options = {"5", "10", "20", "50"};
-                    int currentIdx = 2;
-                    for (int i = 0; i < options.length; i++) {
-                        if (Integer.parseInt(options[i]) == VeyraConfig.reactionHistoryLimit) {
-                            currentIdx = i;
-                            break;
-                        }
-                    }
+                    CharSequence[] options = {"5", "10", "20", "50"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                     builder.setTitle("Max Reactions Per Message");
-                    builder.setSingleChoiceItems(options, currentIdx, (dialog, which) -> {
-                        VeyraConfig.setReactionHistoryLimit(Integer.parseInt(options[which]));
+                    builder.setItems(options, (dialog, which) -> {
+                        VeyraConfig.setReactionHistoryLimit(Integer.parseInt(options[which].toString()));
                         dialog.dismiss();
                         reloadRows();
                     });
@@ -131,7 +124,7 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
                     builder.setTitle("Clear All Reaction History");
                     builder.setMessage("Are you sure you want to delete all saved reaction history across all chats?");
                     builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
-                        VeyraEditHistoryManager.clearAll();
+                        VeyraEditHistoryManager.clearAllReactions();
                         BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Reaction history cleared").show();
                     });
                     builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);

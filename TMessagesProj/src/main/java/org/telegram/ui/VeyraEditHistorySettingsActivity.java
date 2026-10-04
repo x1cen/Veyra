@@ -97,26 +97,19 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraHistoryLimits", R.string.VeyraHistoryLimits)));
+        r.add(VeyraSettingsRow.header("Limits"));
 
         r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraMaxEditsPerMessage", R.string.VeyraMaxEditsPerMessage),
+                "Max Edits Per Message",
                 () -> String.valueOf(VeyraConfig.editHistoryLimit),
                 true,
                 () -> {
                     if (getParentActivity() == null) return;
-                    String[] options = {"5", "10", "20", "50"};
-                    int currentIdx = 1;
-                    for (int i = 0; i < options.length; i++) {
-                        if (Integer.parseInt(options[i]) == VeyraConfig.editHistoryLimit) {
-                            currentIdx = i;
-                            break;
-                        }
-                    }
+                    CharSequence[] options = {"5", "10", "20", "50"};
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("VeyraMaxEditsPerMessage", R.string.VeyraMaxEditsPerMessage));
-                    builder.setSingleChoiceItems(options, currentIdx, (dialog, which) -> {
-                        VeyraConfig.setEditHistoryLimit(Integer.parseInt(options[which]));
+                    builder.setTitle("Max Edits Per Message");
+                    builder.setItems(options, (dialog, which) -> {
+                        VeyraConfig.setEditHistoryLimit(Integer.parseInt(options[which].toString()));
                         dialog.dismiss();
                         reloadRows();
                     });
@@ -126,17 +119,17 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         ));
 
         r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraClearAllEditHistory", R.string.VeyraClearAllEditHistory),
+                "Clear All Edit History",
                 true,
                 false,
                 () -> {
                     if (getParentActivity() == null) return;
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("VeyraClearAllEditHistory", R.string.VeyraClearAllEditHistory));
-                    builder.setMessage(LocaleController.getString("VeyraClearAllEditHistoryConfirm", R.string.VeyraClearAllEditHistoryConfirm));
+                    builder.setTitle("Clear All Edit History");
+                    builder.setMessage("Are you sure you want to delete all saved edit history across all chats?");
                     builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
-                        VeyraEditHistoryManager.clearAll();
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraEditHistoryCleared", R.string.VeyraEditHistoryCleared)).show();
+                        VeyraEditHistoryManager.clearAllEdits();
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Edit history cleared").show();
                     });
                     builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
                     AlertDialog alert = builder.create();

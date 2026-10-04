@@ -1,6 +1,11 @@
 package org.telegram.messenger;
 
 import android.content.SharedPreferences;
+import android.text.TextUtils;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class VeyraConfig {
     private static SharedPreferences preferences;

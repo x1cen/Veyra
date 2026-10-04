@@ -97,20 +97,20 @@ public class VeyraAntiDeleteSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraActions", R.string.VeyraActions)));
+        r.add(VeyraSettingsRow.header("Actions"));
 
         r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraClearAllAntiDelete", R.string.VeyraClearAllAntiDelete),
+                "Clear All Deleted Messages",
                 true,
                 false,
                 () -> {
                     if (getParentActivity() == null) return;
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("VeyraClearAllAntiDelete", R.string.VeyraClearAllAntiDelete));
-                    builder.setMessage(LocaleController.getString("VeyraClearAllAntiDeleteConfirm", R.string.VeyraClearAllAntiDeleteConfirm));
+                    builder.setTitle("Clear All Deleted Messages");
+                    builder.setMessage("Are you sure you want to permanently clear all retained deleted messages across all chats?");
                     builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
                         MessagesStorage.getInstance(currentAccount).clearAllAntiDelete();
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraAntiDeleteCleared", R.string.VeyraAntiDeleteCleared)).show();
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Deleted messages cleared").show();
                     });
                     builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
                     AlertDialog alert = builder.create();

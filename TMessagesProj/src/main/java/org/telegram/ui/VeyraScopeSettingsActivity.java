@@ -136,13 +136,13 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
         String title;
         if (peerType == VeyraConfig.PEER_PRIVATE) {
-            title = LocaleController.getString("PrivateChats", R.string.PrivateChats);
+            title = LocaleController.getString("SaveToGalleryPrivate", R.string.SaveToGalleryPrivate);
         } else if (peerType == VeyraConfig.PEER_GROUP) {
-            title = LocaleController.getString("Groups", R.string.Groups);
+            title = LocaleController.getString("SaveToGalleryGroups", R.string.SaveToGalleryGroups);
         } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-            title = LocaleController.getString("Channels", R.string.Channels);
+            title = LocaleController.getString("SaveToGalleryChannels", R.string.SaveToGalleryChannels);
         } else {
-            title = LocaleController.getString("Bots", R.string.Bots);
+            title = LocaleController.getString("ChannelBots", R.string.ChannelBots);
         }
         actionBar.setTitle(title);
 
@@ -229,7 +229,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(LocaleController.getString("Delete", R.string.Delete));
-        builder.setMessage(LocaleController.getString("NotificationsDeleteExceptionConfirmation", R.string.NotificationsDeleteExceptionConfirmation));
+        builder.setMessage("Are you sure you want to delete this exception?");
         builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
             VeyraConfig.removeException(category, dialogId);
             updateRows();

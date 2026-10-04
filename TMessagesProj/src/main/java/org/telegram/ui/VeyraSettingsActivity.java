@@ -174,12 +174,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         // Section 2: Chats & Appearance
         r.add(VeyraSettingsRow.header("Chats & Appearance"));
         r.add(VeyraSettingsRow.category(
-                R.drawable.msg_chats,
+                R.drawable.msg_discussion,
                 LocaleController.getString("VeyraChatList", R.string.VeyraChatList),
                 () -> presentFragment(new VeyraChatListSettingsActivity())
         ));
         r.add(VeyraSettingsRow.category(
-                R.drawable.msg_newchat,
+                R.drawable.msg_message,
                 LocaleController.getString("VeyraComposingMessages", R.string.VeyraComposingMessages),
                 () -> presentFragment(new VeyraComposingSettingsActivity())
         ));
