@@ -17,6 +17,7 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
+import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Cells.TextSettingsCell;
@@ -99,11 +100,25 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
             }
             VeyraSettingsRow row = rows.get(position);
             if (row.type == VeyraSettingsRow.Type.TOGGLE && row.getter != null && row.setter != null) {
-                boolean newVal = !row.getter.getAsBoolean();
-                row.setter.accept(newVal);
-                ((TextCheckCell) view).setChecked(newVal);
-                if (row.onToggled != null) {
-                    row.onToggled.run();
+                if (row.onClick != null) {
+                    boolean isRightSide = LocaleController.isRTL ? x <= AndroidUtilities.dp(76) : x >= view.getMeasuredWidth() - AndroidUtilities.dp(76);
+                    if (isRightSide) {
+                        boolean newVal = !row.getter.getAsBoolean();
+                        row.setter.accept(newVal);
+                        ((TextCheckCell) view).setChecked(newVal);
+                        if (row.onToggled != null) {
+                            row.onToggled.run();
+                        }
+                    } else {
+                        row.onClick.run();
+                    }
+                } else {
+                    boolean newVal = !row.getter.getAsBoolean();
+                    row.setter.accept(newVal);
+                    ((TextCheckCell) view).setChecked(newVal);
+                    if (row.onToggled != null) {
+                        row.onToggled.run();
+                    }
                 }
             } else if (row.onClick != null) {
                 row.onClick.run();
@@ -158,6 +173,11 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                     view = new TextDetailSettingsCell(mContext);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                     break;
+                case 5:
+                    TextCell textCell2 = new TextCell(mContext);
+                    textCell2.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    view = textCell2;
+                    break;
                 default:
                     view = new ShadowSectionCell(mContext);
                     break;
@@ -200,6 +220,16 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                     detailCell.setTextAndValue(row.title, value, row.needDivider);
                     break;
                 }
+                case 5: {
+                    TextCell cell = (TextCell) holder.itemView;
+                    if (row.icon != 0) {
+                        cell.setTextAndIcon(row.title, row.icon, row.needDivider);
+                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
+                    } else {
+                        cell.setText(row.title, row.needDivider);
+                    }
+                    break;
+                }
             }
         }
 
@@ -216,8 +246,9 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                 case BUTTON:
                     return 3;
                 case DETAIL:
-                case CATEGORY:
                     return 4;
+                case CATEGORY:
+                    return 5;
                 default:
                     return 0;
             }

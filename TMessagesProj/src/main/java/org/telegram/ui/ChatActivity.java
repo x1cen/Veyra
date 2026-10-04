@@ -1680,6 +1680,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_view_details = 83;
     private final static int veyra_copy_dialog_id = 84;
     private final static int veyra_jump_to_first = 85;
+    private final static int veyra_clear_chat_cache = 86;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3948,6 +3949,24 @@ public class ChatActivity extends BaseFragment implements
                     }
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
+                } else if (id == veyra_clear_chat_cache) {
+                    if (getParentActivity() == null) {
+                        return;
+                    }
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                    builder.setTitle("Clear Veyra Cache");
+                    builder.setMessage("Are you sure you want to clear Veyra cache for this chat? All deleted messages and edit/reaction history for this chat will be permanently deleted.");
+                    builder.setPositiveButton("Clear", (dialogInterface, i) -> {
+                        getMessagesController().clearVeyraCacheForDialog(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Veyra cache cleared for this chat").show();
+                    });
+                    builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                    AlertDialog dialog = builder.create();
+                    showDialog(dialog);
+                    TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                    if (button != null) {
+                        button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+                    }
                 } else if (id == veyra_copy_dialog_id) {
                     AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
                     BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
@@ -4590,6 +4609,7 @@ public class ChatActivity extends BaseFragment implements
 
         if (headerItem != null) {
             headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
+            headerItem.lazilyAddSubItem(veyra_clear_chat_cache, R.drawable.msg_clearcache, "Clear Veyra Cache");
             if (VeyraConfig.copyDialogId) {
                 headerItem.lazilyAddSubItem(veyra_copy_dialog_id, R.drawable.msg_copy, LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
             }
@@ -19149,7 +19169,8 @@ public class ChatActivity extends BaseFragment implements
                     if (messageObject.canEditMessage(currentChat)) {
                         canEditMessagesCount--;
                     }
-                    if (!messageObject.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat)) {
+                    boolean isMsgDeleted = messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted);
+                    if (!isMsgDeleted && !messageObject.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat)) {
                         cantDeleteMessagesCount--;
                     }
                     boolean noforwards = isPeerNoForwards();
@@ -19186,7 +19207,8 @@ public class ChatActivity extends BaseFragment implements
                     if (messageObject.canEditMessage(currentChat)) {
                         canEditMessagesCount++;
                     }
-                    if (!messageObject.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat)) {
+                    boolean isMsgDeleted = messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted);
+                    if (!isMsgDeleted && !messageObject.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat)) {
                         cantDeleteMessagesCount++;
                     }
                     boolean noforwards = isPeerNoForwards();
@@ -26731,20 +26753,10 @@ public class ChatActivity extends BaseFragment implements
             if (old.messageOwner != null && messageObject.messageOwner != null) {
                 String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
-                boolean textChanged = !TextUtils.equals(oldText, newText);
-                boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
-                boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
-
-                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                    messageObject.messageOwner.edit_date = 0;
-                } else if (!textChanged && wasEditedBefore) {
-                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
-                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                }
+                boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {
-                    if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id)) {
+                    if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id) && org.telegram.messenger.VeyraConfig.isChatTypeAllowedForEditHistory(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
                         org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);
                     }

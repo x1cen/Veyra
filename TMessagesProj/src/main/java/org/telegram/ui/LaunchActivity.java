@@ -1239,7 +1239,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
     private void switchToAvailableAccountOrLogout() {
         int account = -1;
-        for (int a : SharedConfig.activeAccounts) {
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (UserConfig.getInstance(a).isClientActivated()) {
                 account = a;
                 break;

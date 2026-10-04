@@ -71,12 +71,34 @@ public class VeyraSettingsRow {
     }
 
     // A clickable row that opens a sub-section (used on the main Veyra Settings hub).
+    public static VeyraSettingsRow category(int icon, String title, Runnable onClick) {
+        VeyraSettingsRow row = new VeyraSettingsRow();
+        row.type = Type.CATEGORY;
+        row.icon = icon;
+        row.title = title;
+        row.needDivider = true;
+        row.onClick = onClick;
+        return row;
+    }
+
     public static VeyraSettingsRow category(String title, String subtitle, Runnable onClick) {
         VeyraSettingsRow row = new VeyraSettingsRow();
         row.type = Type.CATEGORY;
         row.title = title;
         row.subtitle = subtitle;
         row.needDivider = true;
+        row.onClick = onClick;
+        return row;
+    }
+
+    public static VeyraSettingsRow toggleWithAction(String title, String subtitle, BooleanSupplier getter, Consumer<Boolean> setter, boolean divider, Runnable onClick) {
+        VeyraSettingsRow row = new VeyraSettingsRow();
+        row.type = Type.TOGGLE;
+        row.title = title;
+        row.subtitle = subtitle;
+        row.getter = getter;
+        row.setter = setter;
+        row.needDivider = divider;
         row.onClick = onClick;
         return row;
     }

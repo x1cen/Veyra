@@ -14803,6 +14803,33 @@ public class MessagesStorage extends BaseController {
         });
     }
 
+    public void clearVeyraCacheForDialog(long dialogId) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_message_deletions WHERE uid = %d", dialogId));
+                ArrayList<Integer> mids = new ArrayList<>();
+                while (cursor.next()) {
+                    mids.add(cursor.intValue(0));
+                }
+                cursor.dispose();
+
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
+                if (!mids.isEmpty()) {
+                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                }
+                org.veyra.client.VeyraEditHistoryManager.clearDialog(dialogId);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (!mids.isEmpty()) {
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    }
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
     public void markEcryptedMessagesIsDeleted(long did, int messagesOnly) {//TODO REFAIRE not used anymore
         storageQueue.postRunnable(() -> { //old agram legacy, will debug bruh/sis/whatever
             try {
@@ -15971,21 +15998,12 @@ public class MessagesStorage extends BaseController {
                                     if (oldMessage != null) {
                                         String oldText = oldMessage.message != null ? oldMessage.message : "";
                                         String newText = message.message != null ? message.message : "";
-                                        boolean textChanged = !TextUtils.equals(oldText, newText);
-                                        boolean wasEditedBefore = oldMessage.edit_date != 0 || (oldMessage.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
-
-                                        if (!textChanged && !wasEditedBefore) {
-                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                            message.edit_date = 0;
-                                        } else if (!textChanged && wasEditedBefore) {
-                                            message.edit_date = oldMessage.edit_date;
-                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                                        }
+                                        boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
 
                                         if (textChanged && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);
                                             long fromId = MessageObject.getPeerId(message.from_id);
-                                            if (!VeyraConfig.isDeveloperChat(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
+                                            if (!VeyraConfig.isDeveloperChat(did) && VeyraConfig.isChatTypeAllowedForEditHistory(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
                                                 org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText);
                                             }

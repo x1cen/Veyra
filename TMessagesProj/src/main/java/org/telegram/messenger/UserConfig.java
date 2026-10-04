@@ -228,7 +228,11 @@ public class UserConfig extends BaseController {
         if (num < 0 || num >= MAX_ACCOUNT_COUNT) {
             return false;
         }
-        boolean activated = getInstance(num).isClientActivated();
+        UserConfig uc = getInstance(num);
+        if (!uc.isConfigLoaded()) {
+            uc.loadConfig();
+        }
+        boolean activated = uc.isClientActivated();
         if (activated && !SharedConfig.activeAccounts.contains(num)) {
             SharedConfig.activeAccounts.add(num);
             SharedConfig.saveAccounts();
@@ -238,6 +242,9 @@ public class UserConfig extends BaseController {
 
     public boolean isClientActivated() {
         synchronized (sync) {
+            if (!configLoaded) {
+                loadConfig();
+            }
             return currentUser != null;
         }
     }

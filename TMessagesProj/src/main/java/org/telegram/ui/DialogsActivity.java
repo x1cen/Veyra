@@ -11111,12 +11111,51 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             return dialogs;
         } else if (dialogsType == DIALOGS_TYPE_FORWARD) {
             return messagesController.dialogsForward;
-        } else if (dialogsType == DIALOGS_TYPE_USERS_ONLY || dialogsType == DIALOGS_TYPE_IMPORT_HISTORY_USERS) {
-            return messagesController.dialogsUsersOnly;
         } else if (dialogsType == DIALOGS_TYPE_CHANNELS_ONLY) {
+            if (arguments != null && arguments.getBoolean("onlyPrivateChannels", false)) {
+                ArrayList<TLRPC.Dialog> list = new ArrayList<>();
+                for (TLRPC.Dialog d : messagesController.dialogsChannelsOnly) {
+                    TLRPC.Chat chat = messagesController.getChat(-d.id);
+                    if (chat != null && (chat.username == null || chat.username.isEmpty())) {
+                        list.add(d);
+                    }
+                }
+                return list;
+            }
             return messagesController.dialogsChannelsOnly;
         } else if (dialogsType == DIALOGS_TYPE_GROUPS_ONLY || dialogsType == DIALOGS_TYPE_IMPORT_HISTORY_GROUPS) {
+            if (arguments != null && arguments.getBoolean("onlyPrivateGroups", false)) {
+                ArrayList<TLRPC.Dialog> list = new ArrayList<>();
+                for (TLRPC.Dialog d : messagesController.dialogsGroupsOnly) {
+                    TLRPC.Chat chat = messagesController.getChat(-d.id);
+                    if (chat != null && (chat.username == null || chat.username.isEmpty())) {
+                        list.add(d);
+                    }
+                }
+                return list;
+            }
             return messagesController.dialogsGroupsOnly;
+        } else if (dialogsType == DIALOGS_TYPE_USERS_ONLY || dialogsType == DIALOGS_TYPE_IMPORT_HISTORY_USERS) {
+            if (arguments != null && arguments.getBoolean("onlyBots", false)) {
+                ArrayList<TLRPC.Dialog> list = new ArrayList<>();
+                for (TLRPC.Dialog d : messagesController.dialogsUsersOnly) {
+                    TLRPC.User user = messagesController.getUser(d.id);
+                    if (user != null && user.bot) {
+                        list.add(d);
+                    }
+                }
+                return list;
+            } else if (arguments != null && arguments.getBoolean("onlyUsers", false)) {
+                ArrayList<TLRPC.Dialog> list = new ArrayList<>();
+                for (TLRPC.Dialog d : messagesController.dialogsUsersOnly) {
+                    TLRPC.User user = messagesController.getUser(d.id);
+                    if (user != null && !user.bot) {
+                        list.add(d);
+                    }
+                }
+                return list;
+            }
+            return messagesController.dialogsUsersOnly;
         } else if (dialogsType == 7 || dialogsType == 8) {
             MessagesController.DialogFilter dialogFilter = messagesController.selectedDialogFilter[dialogsType == 7 ? 0 : 1];
             if (dialogFilter == null) {

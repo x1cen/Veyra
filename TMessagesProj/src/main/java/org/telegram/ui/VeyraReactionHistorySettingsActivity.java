@@ -14,40 +14,38 @@ import org.veyra.client.VeyraEditHistoryManager;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity {
+public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActivity {
 
     @Override
     protected String getScreenTitle() {
-        return LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory);
+        return "Reaction History";
     }
 
     @Override
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory)));
-
+        r.add(VeyraSettingsRow.header("Reaction History"));
         r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraEditHistoryEnable", R.string.VeyraEditHistoryEnable),
-                LocaleController.getString("VeyraEditHistoryEnableDesc", R.string.VeyraEditHistoryEnableDesc),
-                () -> VeyraConfig.editHistoryEnabled,
-                v -> VeyraConfig.setEditHistoryEnabled(v),
+                "Enable Reaction History",
+                "Keep track of reactions added to messages",
+                () -> VeyraConfig.reactionHistoryEnabled,
+                v -> VeyraConfig.setReactionHistoryEnabled(v),
                 true
         ));
-
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraChatTypes", R.string.VeyraChatTypes)));
+        r.add(VeyraSettingsRow.header("Automatic Storage"));
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
                 "Tap to configure exceptions",
-                () -> VeyraConfig.editHistoryPrivate,
-                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_PRIVATE, v),
+                () -> VeyraConfig.reactionHistoryPrivate,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_REACTION_HISTORY, VeyraConfig.PEER_PRIVATE, v),
                 true,
                 () -> {
                     android.os.Bundle b = new android.os.Bundle();
-                    b.putInt("category", VeyraConfig.CATEGORY_EDIT_HISTORY);
+                    b.putInt("category", VeyraConfig.CATEGORY_REACTION_HISTORY);
                     b.putInt("peerType", VeyraConfig.PEER_PRIVATE);
                     presentFragment(new VeyraScopeSettingsActivity(b));
                 }
@@ -56,12 +54,12 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups),
                 "Tap to configure exceptions and private group filter",
-                () -> VeyraConfig.editHistoryGroups,
-                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_GROUP, v),
+                () -> VeyraConfig.reactionHistoryGroups,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_REACTION_HISTORY, VeyraConfig.PEER_GROUP, v),
                 true,
                 () -> {
                     android.os.Bundle b = new android.os.Bundle();
-                    b.putInt("category", VeyraConfig.CATEGORY_EDIT_HISTORY);
+                    b.putInt("category", VeyraConfig.CATEGORY_REACTION_HISTORY);
                     b.putInt("peerType", VeyraConfig.PEER_GROUP);
                     presentFragment(new VeyraScopeSettingsActivity(b));
                 }
@@ -70,12 +68,12 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels),
                 "Tap to configure exceptions and private channel filter",
-                () -> VeyraConfig.editHistoryChannels,
-                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_CHANNEL, v),
+                () -> VeyraConfig.reactionHistoryChannels,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_REACTION_HISTORY, VeyraConfig.PEER_CHANNEL, v),
                 true,
                 () -> {
                     android.os.Bundle b = new android.os.Bundle();
-                    b.putInt("category", VeyraConfig.CATEGORY_EDIT_HISTORY);
+                    b.putInt("category", VeyraConfig.CATEGORY_REACTION_HISTORY);
                     b.putInt("peerType", VeyraConfig.PEER_CHANNEL);
                     presentFragment(new VeyraScopeSettingsActivity(b));
                 }
@@ -84,39 +82,37 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots),
                 "Tap to configure exceptions",
-                () -> VeyraConfig.editHistoryBots,
-                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_BOT, v),
+                () -> VeyraConfig.reactionHistoryBots,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_REACTION_HISTORY, VeyraConfig.PEER_BOT, v),
                 true,
                 () -> {
                     android.os.Bundle b = new android.os.Bundle();
-                    b.putInt("category", VeyraConfig.CATEGORY_EDIT_HISTORY);
+                    b.putInt("category", VeyraConfig.CATEGORY_REACTION_HISTORY);
                     b.putInt("peerType", VeyraConfig.PEER_BOT);
                     presentFragment(new VeyraScopeSettingsActivity(b));
                 }
         ));
-
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraHistoryLimits", R.string.VeyraHistoryLimits)));
-
+        r.add(VeyraSettingsRow.header("Settings & Actions"));
         r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraMaxEditsPerMessage", R.string.VeyraMaxEditsPerMessage),
-                () -> String.valueOf(VeyraConfig.editHistoryLimit),
+                "Max Reactions Per Message",
+                () -> String.valueOf(VeyraConfig.reactionHistoryLimit),
                 true,
                 () -> {
                     if (getParentActivity() == null) return;
                     String[] options = {"5", "10", "20", "50"};
-                    int currentIdx = 1;
+                    int currentIdx = 2;
                     for (int i = 0; i < options.length; i++) {
-                        if (Integer.parseInt(options[i]) == VeyraConfig.editHistoryLimit) {
+                        if (Integer.parseInt(options[i]) == VeyraConfig.reactionHistoryLimit) {
                             currentIdx = i;
                             break;
                         }
                     }
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("VeyraMaxEditsPerMessage", R.string.VeyraMaxEditsPerMessage));
+                    builder.setTitle("Max Reactions Per Message");
                     builder.setSingleChoiceItems(options, currentIdx, (dialog, which) -> {
-                        VeyraConfig.setEditHistoryLimit(Integer.parseInt(options[which]));
+                        VeyraConfig.setReactionHistoryLimit(Integer.parseInt(options[which]));
                         dialog.dismiss();
                         reloadRows();
                     });
@@ -126,17 +122,17 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
         ));
 
         r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraClearAllEditHistory", R.string.VeyraClearAllEditHistory),
+                "Clear All Reaction History",
                 true,
                 false,
                 () -> {
                     if (getParentActivity() == null) return;
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle(LocaleController.getString("VeyraClearAllEditHistory", R.string.VeyraClearAllEditHistory));
-                    builder.setMessage(LocaleController.getString("VeyraClearAllEditHistoryConfirm", R.string.VeyraClearAllEditHistoryConfirm));
+                    builder.setTitle("Clear All Reaction History");
+                    builder.setMessage("Are you sure you want to delete all saved reaction history across all chats?");
                     builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
                         VeyraEditHistoryManager.clearAll();
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraEditHistoryCleared", R.string.VeyraEditHistoryCleared)).show();
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Reaction history cleared").show();
                     });
                     builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
                     AlertDialog alert = builder.create();
@@ -147,7 +143,6 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
                     }
                 }
         ));
-
         r.add(VeyraSettingsRow.shadow());
 
         return r;

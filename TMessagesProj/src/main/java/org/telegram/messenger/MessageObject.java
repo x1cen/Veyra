@@ -541,9 +541,6 @@ public class MessageObject {
     }
 
     public static void normalizeFlags(TLRPC.Message message) {
-        if (message.edit_date == 0) {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-        }
         if (message.from_id == null) {
             message.flags &= ~256;
         }
@@ -3970,9 +3967,6 @@ public class MessageObject {
         }
         message.reactions = reactions;
         message.flags |= 1048576;
-        if (message.edit_date == 0) {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-        }
     }
 
     public boolean hasReactions() {

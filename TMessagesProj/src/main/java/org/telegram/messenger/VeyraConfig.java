@@ -38,12 +38,23 @@ public class VeyraConfig {
         return selfId == devId;
     }
 
+    public static final int CATEGORY_ANTI_DELETE = 1;
+    public static final int CATEGORY_EDIT_HISTORY = 2;
+    public static final int CATEGORY_REACTION_HISTORY = 3;
+
+    public static final int PEER_PRIVATE = 1;
+    public static final int PEER_GROUP = 2;
+    public static final int PEER_CHANNEL = 3;
+    public static final int PEER_BOT = 4;
+
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
     public static boolean antiDeletePrivate = true;
     public static boolean antiDeleteGroups = true;
+    public static boolean antiDeleteGroupsOnlyPrivate = true;
     public static boolean antiDeleteChannels = true;
-    public static boolean antiDeleteBots = true;
+    public static boolean antiDeleteChannelsOnlyPrivate = true;
+    public static boolean antiDeleteBots = false;
     public static boolean ghostMode = true;
     public static boolean hideTyping = true;
     public static boolean readOnReply = true;
@@ -74,18 +85,23 @@ public class VeyraConfig {
 
     // Message Edit History
     public static boolean editHistoryEnabled = true;
+    public static boolean editHistoryPrivate = true;
+    public static boolean editHistoryGroups = true;
+    public static boolean editHistoryGroupsOnlyPrivate = true;
+    public static boolean editHistoryChannels = true;
+    public static boolean editHistoryChannelsOnlyPrivate = true;
+    public static boolean editHistoryBots = false;
+    public static int editHistoryLimit = 10;
+    public static boolean editHistoryDropOldest = true;
+
     public static boolean reactionHistoryEnabled = true;
     public static int reactionHistoryLimit = 20;
     public static boolean reactionHistoryPrivate = true;
     public static boolean reactionHistoryGroups = true;
+    public static boolean reactionHistoryGroupsOnlyPrivate = true;
     public static boolean reactionHistoryChannels = false;
+    public static boolean reactionHistoryChannelsOnlyPrivate = true;
     public static boolean reactionHistoryBots = false;
-    public static boolean editHistoryPrivate = true;
-    public static boolean editHistoryGroups = true;
-    public static boolean editHistoryChannels = true;
-    public static boolean editHistoryBots = false;
-    public static int editHistoryLimit = 10;
-    public static boolean editHistoryDropOldest = true;
 
     // ==================== Controls & Interaction ====================
     public static boolean confirmCall = true;
@@ -149,8 +165,10 @@ public class VeyraConfig {
         antiDelete = preferences.getBoolean("antiDelete", true);
         antiDeletePrivate = preferences.getBoolean("antiDeletePrivate", true);
         antiDeleteGroups = preferences.getBoolean("antiDeleteGroups", true);
+        antiDeleteGroupsOnlyPrivate = preferences.getBoolean("antiDeleteGroupsOnlyPrivate", true);
         antiDeleteChannels = preferences.getBoolean("antiDeleteChannels", true);
-        antiDeleteBots = preferences.getBoolean("antiDeleteBots", true);
+        antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", true);
+        antiDeleteBots = preferences.getBoolean("antiDeleteBots", false);
         ghostMode = preferences.getBoolean("ghostMode", true);
         hideTyping = preferences.getBoolean("hideTyping", true);
         readOnReply = preferences.getBoolean("readOnReply", true);
@@ -168,18 +186,27 @@ public class VeyraConfig {
         highQualityVideoMessages = preferences.getBoolean("highQualityVideoMessages", true);
 
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
+        editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
+        editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
+        editHistoryGroupsOnlyPrivate = preferences.getBoolean("editHistoryGroupsOnlyPrivate", true);
+        editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
+        editHistoryChannelsOnlyPrivate = preferences.getBoolean("editHistoryChannelsOnlyPrivate", true);
+        editHistoryBots = preferences.getBoolean("editHistoryBots", false);
+        editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
+        editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
+
         reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
         reactionHistoryLimit = preferences.getInt("reactionHistoryLimit", 20);
         reactionHistoryPrivate = preferences.getBoolean("reactionHistoryPrivate", true);
         reactionHistoryGroups = preferences.getBoolean("reactionHistoryGroups", true);
+        reactionHistoryGroupsOnlyPrivate = preferences.getBoolean("reactionHistoryGroupsOnlyPrivate", true);
         reactionHistoryChannels = preferences.getBoolean("reactionHistoryChannels", false);
+        reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", true);
         reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
-        editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
-        editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
-        editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
-        editHistoryBots = preferences.getBoolean("editHistoryBots", false);
-        editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
-        editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
+
+        loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
+        loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
+        loadExceptions(CATEGORY_REACTION_HISTORY, preferences.getString("reactionHistoryExceptions", ""));
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
         cleanUrls = preferences.getBoolean("cleanUrls", true);
@@ -224,6 +251,158 @@ public class VeyraConfig {
         configLoaded = true;
     }
 
+    private static final HashMap<Long, Boolean> antiDeleteExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> editHistoryExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> reactionHistoryExceptions = new HashMap<>();
+
+    public static HashMap<Long, Boolean> getExceptions(int category) {
+        if (category == CATEGORY_ANTI_DELETE) return antiDeleteExceptions;
+        if (category == CATEGORY_EDIT_HISTORY) return editHistoryExceptions;
+        return reactionHistoryExceptions;
+    }
+
+    public static Boolean getException(int category, long dialogId) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        synchronized (map) {
+            return map.get(dialogId);
+        }
+    }
+
+    public static void addException(int category, long dialogId, boolean enabled) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        synchronized (map) {
+            map.put(dialogId, enabled);
+            saveExceptions(category);
+        }
+    }
+
+    public static void removeException(int category, long dialogId) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        synchronized (map) {
+            map.remove(dialogId);
+            saveExceptions(category);
+        }
+    }
+
+    public static void clearExceptions(int category, int peerType) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        synchronized (map) {
+            int currentAccount = UserConfig.selectedAccount;
+            ArrayList<Long> toRemove = new ArrayList<>();
+            for (Long did : map.keySet()) {
+                if (peerType == PEER_PRIVATE && did > 0) {
+                    org.telegram.tgnet.TLRPC.User u = MessagesController.getInstance(currentAccount).getUser(did);
+                    if (u == null || !u.bot) toRemove.add(did);
+                } else if (peerType == PEER_BOT && did > 0) {
+                    org.telegram.tgnet.TLRPC.User u = MessagesController.getInstance(currentAccount).getUser(did);
+                    if (u != null && u.bot) toRemove.add(did);
+                } else if (peerType == PEER_GROUP && did < 0) {
+                    org.telegram.tgnet.TLRPC.Chat c = MessagesController.getInstance(currentAccount).getChat(-did);
+                    if (c == null || !ChatObject.isChannel(c) || c.megagroup) toRemove.add(did);
+                } else if (peerType == PEER_CHANNEL && did < 0) {
+                    org.telegram.tgnet.TLRPC.Chat c = MessagesController.getInstance(currentAccount).getChat(-did);
+                    if (c != null && ChatObject.isChannel(c) && !c.megagroup) toRemove.add(did);
+                }
+            }
+            for (Long did : toRemove) {
+                map.remove(did);
+            }
+            saveExceptions(category);
+        }
+    }
+
+    private static void saveExceptions(int category) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Long, Boolean> entry : map.entrySet()) {
+            if (sb.length() > 0) sb.append(";");
+            sb.append(entry.getKey()).append(":").append(entry.getValue());
+        }
+        String key = category == CATEGORY_ANTI_DELETE ? "antiDeleteExceptions" : (category == CATEGORY_EDIT_HISTORY ? "editHistoryExceptions" : "reactionHistoryExceptions");
+        save(key, sb.toString());
+    }
+
+    private static void loadExceptions(int category, String raw) {
+        HashMap<Long, Boolean> map = getExceptions(category);
+        map.clear();
+        if (TextUtils.isEmpty(raw)) return;
+        String[] parts = raw.split(";");
+        for (String p : parts) {
+            String[] kv = p.split(":");
+            if (kv.length == 2) {
+                try {
+                    map.put(Long.parseLong(kv[0]), Boolean.parseBoolean(kv[1]));
+                } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    public static boolean isPeerEnabled(int category, int peerType) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_PRIVATE) return antiDeletePrivate;
+            if (peerType == PEER_GROUP) return antiDeleteGroups;
+            if (peerType == PEER_CHANNEL) return antiDeleteChannels;
+            if (peerType == PEER_BOT) return antiDeleteBots;
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_PRIVATE) return editHistoryPrivate;
+            if (peerType == PEER_GROUP) return editHistoryGroups;
+            if (peerType == PEER_CHANNEL) return editHistoryChannels;
+            if (peerType == PEER_BOT) return editHistoryBots;
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_PRIVATE) return reactionHistoryPrivate;
+            if (peerType == PEER_GROUP) return reactionHistoryGroups;
+            if (peerType == PEER_CHANNEL) return reactionHistoryChannels;
+            if (peerType == PEER_BOT) return reactionHistoryBots;
+        }
+        return false;
+    }
+
+    public static void setPeerEnabled(int category, int peerType, boolean val) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_PRIVATE) { antiDeletePrivate = val; save("antiDeletePrivate", val); }
+            else if (peerType == PEER_GROUP) { antiDeleteGroups = val; save("antiDeleteGroups", val); }
+            else if (peerType == PEER_CHANNEL) { antiDeleteChannels = val; save("antiDeleteChannels", val); }
+            else if (peerType == PEER_BOT) { antiDeleteBots = val; save("antiDeleteBots", val); }
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_PRIVATE) { editHistoryPrivate = val; save("editHistoryPrivate", val); }
+            else if (peerType == PEER_GROUP) { editHistoryGroups = val; save("editHistoryGroups", val); }
+            else if (peerType == PEER_CHANNEL) { editHistoryChannels = val; save("editHistoryChannels", val); }
+            else if (peerType == PEER_BOT) { editHistoryBots = val; save("editHistoryBots", val); }
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_PRIVATE) { reactionHistoryPrivate = val; save("reactionHistoryPrivate", val); }
+            else if (peerType == PEER_GROUP) { reactionHistoryGroups = val; save("reactionHistoryGroups", val); }
+            else if (peerType == PEER_CHANNEL) { reactionHistoryChannels = val; save("reactionHistoryChannels", val); }
+            else if (peerType == PEER_BOT) { reactionHistoryBots = val; save("reactionHistoryBots", val); }
+        }
+    }
+
+    public static boolean isOnlyPrivate(int category, int peerType) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) return antiDeleteGroupsOnlyPrivate;
+            if (peerType == PEER_CHANNEL) return antiDeleteChannelsOnlyPrivate;
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) return editHistoryGroupsOnlyPrivate;
+            if (peerType == PEER_CHANNEL) return editHistoryChannelsOnlyPrivate;
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) return reactionHistoryGroupsOnlyPrivate;
+            if (peerType == PEER_CHANNEL) return reactionHistoryChannelsOnlyPrivate;
+        }
+        return false;
+    }
+
+    public static void setOnlyPrivate(int category, int peerType, boolean val) {
+        if (category == CATEGORY_ANTI_DELETE) {
+            if (peerType == PEER_GROUP) { antiDeleteGroupsOnlyPrivate = val; save("antiDeleteGroupsOnlyPrivate", val); }
+            else if (peerType == PEER_CHANNEL) { antiDeleteChannelsOnlyPrivate = val; save("antiDeleteChannelsOnlyPrivate", val); }
+        } else if (category == CATEGORY_EDIT_HISTORY) {
+            if (peerType == PEER_GROUP) { editHistoryGroupsOnlyPrivate = val; save("editHistoryGroupsOnlyPrivate", val); }
+            else if (peerType == PEER_CHANNEL) { editHistoryChannelsOnlyPrivate = val; save("editHistoryChannelsOnlyPrivate", val); }
+        } else if (category == CATEGORY_REACTION_HISTORY) {
+            if (peerType == PEER_GROUP) { reactionHistoryGroupsOnlyPrivate = val; save("reactionHistoryGroupsOnlyPrivate", val); }
+            else if (peerType == PEER_CHANNEL) { reactionHistoryChannelsOnlyPrivate = val; save("reactionHistoryChannelsOnlyPrivate", val); }
+        }
+    }
+
     public static void setAntiDelete(boolean val) {
         antiDelete = val;
         save("antiDelete", val);
@@ -247,6 +426,8 @@ public class VeyraConfig {
 
     public static boolean isChatTypeAllowedForAntiDelete(long dialogId) {
         if (!antiDelete) return false;
+        Boolean exc = getException(CATEGORY_ANTI_DELETE, dialogId);
+        if (exc != null) return exc;
         try {
             int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
@@ -258,10 +439,17 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
-                    return antiDeleteChannels;
+                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                if (isChannel) {
+                    if (!antiDeleteChannels) return false;
+                    if (antiDeleteChannelsOnlyPrivate && !isPrivate) return false;
+                    return true;
+                } else {
+                    if (!antiDeleteGroups) return false;
+                    if (antiDeleteGroupsOnlyPrivate && !isPrivate) return false;
+                    return true;
                 }
-                return antiDeleteGroups;
             }
         } catch (Exception e) {
             return antiDelete;
@@ -270,6 +458,8 @@ public class VeyraConfig {
 
     public static boolean isChatTypeAllowedForEditHistory(long dialogId) {
         if (!editHistoryEnabled) return false;
+        Boolean exc = getException(CATEGORY_EDIT_HISTORY, dialogId);
+        if (exc != null) return exc;
         try {
             int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
@@ -281,14 +471,17 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                if (chat == null) {
-                    // Unknown type — conservative: require both groups AND channels to be enabled
-                    return editHistoryGroups && editHistoryChannels;
+                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                if (isChannel) {
+                    if (!editHistoryChannels) return false;
+                    if (editHistoryChannelsOnlyPrivate && !isPrivate) return false;
+                    return true;
+                } else {
+                    if (!editHistoryGroups) return false;
+                    if (editHistoryGroupsOnlyPrivate && !isPrivate) return false;
+                    return true;
                 }
-                if (ChatObject.isChannel(chat) && !chat.megagroup) {
-                    return editHistoryChannels;
-                }
-                return editHistoryGroups;
             }
         } catch (Exception e) {
             return editHistoryEnabled;
@@ -297,6 +490,8 @@ public class VeyraConfig {
 
     public static boolean isChatTypeAllowedForReactionHistory(long dialogId) {
         if (!reactionHistoryEnabled) return false;
+        Boolean exc = getException(CATEGORY_REACTION_HISTORY, dialogId);
+        if (exc != null) return exc;
         try {
             int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
@@ -308,15 +503,17 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                if (chat == null) {
-                    // Chat not yet cached — safe default: only allow if both groups and channels are on.
-                    // This prevents accidentally logging reactions for channels/bots when their type is unknown.
-                    return reactionHistoryGroups && reactionHistoryChannels;
+                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
+                if (isChannel) {
+                    if (!reactionHistoryChannels) return false;
+                    if (reactionHistoryChannelsOnlyPrivate && !isPrivate) return false;
+                    return true;
+                } else {
+                    if (!reactionHistoryGroups) return false;
+                    if (reactionHistoryGroupsOnlyPrivate && !isPrivate) return false;
+                    return true;
                 }
-                if (ChatObject.isChannel(chat) && !chat.megagroup) {
-                    return reactionHistoryChannels;
-                }
-                return reactionHistoryGroups;
             }
         } catch (Exception e) {
             return false;

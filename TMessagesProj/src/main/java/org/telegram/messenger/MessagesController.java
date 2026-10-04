@@ -9360,6 +9360,10 @@ public class MessagesController extends BaseController implements NotificationCe
         deleteMessages(messages, randoms, encryptedChat, dialogId, forAll, mode, false, 0, null, topicId);
     }
 
+    public void clearVeyraCacheForDialog(long dialogId) {
+        getMessagesStorage().clearVeyraCacheForDialog(dialogId);
+    }
+
     public void deleteMessages(ArrayList<Integer> messages, ArrayList<Long> randoms, TLRPC.EncryptedChat encryptedChat, long dialogId, int topicId, boolean forAll, int mode, boolean cacheOnly) {
         deleteMessages(messages, randoms, encryptedChat, dialogId, forAll, mode, cacheOnly, 0, null, topicId);
     }
@@ -16186,10 +16190,13 @@ public class MessagesController extends BaseController implements NotificationCe
             TL_account.unregisterDevice req = new TL_account.unregisterDevice();
             req.token = SharedConfig.pushString;
             req.token_type = SharedConfig.pushType;
-            for (int a : SharedConfig.activeAccounts) {
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                 UserConfig userConfig = UserConfig.getInstance(a);
                 if (a != currentAccount && userConfig.isClientActivated()) {
-                    req.other_uids.add(userConfig.getClientUserId());
+                    long uid = userConfig.getClientUserId();
+                    if (uid != 0 && !req.other_uids.contains(uid)) {
+                        req.other_uids.add(uid);
+                    }
                 }
             }
             getConnectionsManager().sendRequest(req, (response, error) -> {
@@ -16233,7 +16240,7 @@ public class MessagesController extends BaseController implements NotificationCe
         if (shouldHandle) {
             if (UserConfig.selectedAccount == currentAccount) {
                 int account = -1;
-                for (int a : SharedConfig.activeAccounts) {
+                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                     if (a != currentAccount && UserConfig.getInstance(a).isClientActivated()) {
                         account = a;
                         break;
@@ -16273,13 +16280,15 @@ public class MessagesController extends BaseController implements NotificationCe
         req.token = regid;
         req.no_muted = false;
         req.secret = SharedConfig.pushAuthKey;
-        for (int a : SharedConfig.activeAccounts) {
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             UserConfig userConfig = UserConfig.getInstance(a);
             if (a != currentAccount && userConfig.isClientActivated()) {
                 long uid = userConfig.getClientUserId();
-                req.other_uids.add(uid);
-                if (BuildVars.LOGS_ENABLED) {
-                    FileLog.d("add other uid = " + uid + " for account " + currentAccount);
+                if (uid != 0 && !req.other_uids.contains(uid)) {
+                    req.other_uids.add(uid);
+                    if (BuildVars.LOGS_ENABLED) {
+                        FileLog.d("add other uid = " + uid + " for account " + currentAccount);
+                    }
                 }
             }
         }
@@ -19589,21 +19598,12 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (oldMsgOwner != null) {
                     String oldText = oldMsgOwner.message != null ? oldMsgOwner.message : "";
                     String newText = message.message != null ? message.message : "";
-                    boolean textChanged = !TextUtils.equals(oldText, newText);
-                    boolean wasEditedBefore = oldMsgOwner.edit_date != 0 || (oldMsgOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
-                    boolean isCurrentlyEditing = (oldMsg != null && oldMsg.isEditing()) || message.send_state == MessageObject.MESSAGE_SEND_STATE_EDITING;
-
-                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        message.edit_date = 0;
-                    } else if (!textChanged && wasEditedBefore) {
-                        message.edit_date = oldMsgOwner.edit_date;
-                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                    }
+                    boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
 
                     if (textChanged
                             && !oldMsgOwner.out && !message.out
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)
+                            && VeyraConfig.isChatTypeAllowedForEditHistory(message.dialog_id)
                             && (MessageObject.getPeerId(message.from_id) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                         // Skip edit history logging for the developer's DM and messages
                         org.veyra.client.VeyraEditHistoryManager.logEdit(

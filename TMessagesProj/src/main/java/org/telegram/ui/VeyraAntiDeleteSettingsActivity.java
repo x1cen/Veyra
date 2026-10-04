@@ -1,9 +1,14 @@
 package org.telegram.ui;
 
+import android.content.DialogInterface;
+import android.widget.TextView;
+
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 
 import java.util.ArrayList;
@@ -34,49 +39,86 @@ public class VeyraAntiDeleteSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraChatTypes", R.string.VeyraChatTypes)));
 
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
-                LocaleController.getString("VeyraChatTypePrivateDesc", R.string.VeyraChatTypePrivateDesc),
+                "Tap to configure exceptions",
                 () -> VeyraConfig.antiDeletePrivate,
-                v -> VeyraConfig.setAntiDeletePrivate(v),
-                true
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_ANTI_DELETE, VeyraConfig.PEER_PRIVATE, v),
+                true,
+                () -> {
+                    android.os.Bundle b = new android.os.Bundle();
+                    b.putInt("category", VeyraConfig.CATEGORY_ANTI_DELETE);
+                    b.putInt("peerType", VeyraConfig.PEER_PRIVATE);
+                    presentFragment(new VeyraScopeSettingsActivity(b));
+                }
         ));
 
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups),
-                LocaleController.getString("VeyraChatTypeGroupsDesc", R.string.VeyraChatTypeGroupsDesc),
+                "Tap to configure exceptions and private group filter",
                 () -> VeyraConfig.antiDeleteGroups,
-                v -> VeyraConfig.setAntiDeleteGroups(v),
-                true
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_ANTI_DELETE, VeyraConfig.PEER_GROUP, v),
+                true,
+                () -> {
+                    android.os.Bundle b = new android.os.Bundle();
+                    b.putInt("category", VeyraConfig.CATEGORY_ANTI_DELETE);
+                    b.putInt("peerType", VeyraConfig.PEER_GROUP);
+                    presentFragment(new VeyraScopeSettingsActivity(b));
+                }
         ));
 
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels),
-                LocaleController.getString("VeyraChatTypeChannelsDesc", R.string.VeyraChatTypeChannelsDesc),
+                "Tap to configure exceptions and private channel filter",
                 () -> VeyraConfig.antiDeleteChannels,
-                v -> VeyraConfig.setAntiDeleteChannels(v),
-                true
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_ANTI_DELETE, VeyraConfig.PEER_CHANNEL, v),
+                true,
+                () -> {
+                    android.os.Bundle b = new android.os.Bundle();
+                    b.putInt("category", VeyraConfig.CATEGORY_ANTI_DELETE);
+                    b.putInt("peerType", VeyraConfig.PEER_CHANNEL);
+                    presentFragment(new VeyraScopeSettingsActivity(b));
+                }
         ));
 
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots),
-                LocaleController.getString("VeyraChatTypeBotsDesc", R.string.VeyraChatTypeBotsDesc),
+                "Tap to configure exceptions",
                 () -> VeyraConfig.antiDeleteBots,
-                v -> VeyraConfig.setAntiDeleteBots(v),
-                true
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_ANTI_DELETE, VeyraConfig.PEER_BOT, v),
+                true,
+                () -> {
+                    android.os.Bundle b = new android.os.Bundle();
+                    b.putInt("category", VeyraConfig.CATEGORY_ANTI_DELETE);
+                    b.putInt("peerType", VeyraConfig.PEER_BOT);
+                    presentFragment(new VeyraScopeSettingsActivity(b));
+                }
         ));
 
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraActions", R.string.VeyraActions)));
+
         r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraAntiDeleteClear", R.string.VeyraAntiDeleteClear),
+                LocaleController.getString("VeyraClearAllAntiDelete", R.string.VeyraClearAllAntiDelete),
                 true,
                 false,
                 () -> {
-                    MessagesStorage.getInstance(currentAccount).clearAllAntiDelete();
-                    BulletinFactory.of(VeyraAntiDeleteSettingsActivity.this)
-                            .createSuccessBulletin(LocaleController.getString("VeyraAntiDeleteCleared", R.string.VeyraAntiDeleteCleared))
-                            .show();
+                    if (getParentActivity() == null) return;
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                    builder.setTitle(LocaleController.getString("VeyraClearAllAntiDelete", R.string.VeyraClearAllAntiDelete));
+                    builder.setMessage(LocaleController.getString("VeyraClearAllAntiDeleteConfirm", R.string.VeyraClearAllAntiDeleteConfirm));
+                    builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
+                        MessagesStorage.getInstance(currentAccount).clearAllAntiDelete();
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraAntiDeleteCleared", R.string.VeyraAntiDeleteCleared)).show();
+                    });
+                    builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                    AlertDialog alert = builder.create();
+                    showDialog(alert);
+                    TextView btn = (TextView) alert.getButton(DialogInterface.BUTTON_POSITIVE);
+                    if (btn != null) {
+                        btn.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+                    }
                 }
         ));
 

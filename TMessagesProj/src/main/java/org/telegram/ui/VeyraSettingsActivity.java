@@ -142,71 +142,66 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraSettingsCategories", R.string.VeyraSettingsCategories)));
-
-        // Category 1: Ghost Mode
+        // Section 1: Features & Privacy
+        r.add(VeyraSettingsRow.header("Features & Privacy"));
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_secret,
                 LocaleController.getString("VeyraGhostMode", R.string.VeyraGhostMode),
-                LocaleController.getString("VeyraGhostModeDesc", R.string.VeyraGhostModeDesc),
                 () -> presentFragment(new VeyraGhostModeSettingsActivity())
         ));
-
-        // Category 2: Message Edit History
         r.add(VeyraSettingsRow.category(
-                LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory),
-                LocaleController.getString("VeyraEditHistoryDesc", R.string.VeyraEditHistoryDesc),
-                () -> presentFragment(new VeyraEditHistorySettingsActivity())
-        ));
-
-        // Category 3: Anti-Delete Messages
-        r.add(VeyraSettingsRow.category(
+                R.drawable.msg_delete,
                 LocaleController.getString("VeyraAntiDelete", R.string.VeyraAntiDelete),
-                LocaleController.getString("VeyraAntiDeleteDesc", R.string.VeyraAntiDeleteDesc),
                 () -> presentFragment(new VeyraAntiDeleteSettingsActivity())
         ));
-
-        // Category 4: Privacy & Security
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_edit,
+                LocaleController.getString("VeyraEditHistory", R.string.VeyraEditHistory),
+                () -> presentFragment(new VeyraEditHistorySettingsActivity())
+        ));
+        r.add(VeyraSettingsRow.category(
+                R.drawable.msg_reactions,
+                "Reaction History",
+                () -> presentFragment(new VeyraReactionHistorySettingsActivity())
+        ));
+        r.add(VeyraSettingsRow.category(
+                R.drawable.msg_permissions,
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
-                LocaleController.getString("VeyraPrivacySecurityDesc", R.string.VeyraPrivacySecurityDesc),
                 () -> presentFragment(new VeyraPrivacySettingsActivity())
         ));
+        r.add(VeyraSettingsRow.shadow());
 
-        // Category 4: Chat List
+        // Section 2: Chats & Appearance
+        r.add(VeyraSettingsRow.header("Chats & Appearance"));
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_chats,
                 LocaleController.getString("VeyraChatList", R.string.VeyraChatList),
-                LocaleController.getString("VeyraChatListDesc", R.string.VeyraChatListDesc),
                 () -> presentFragment(new VeyraChatListSettingsActivity())
         ));
-
-        // Category 5: Composing & Messages
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_newchat,
                 LocaleController.getString("VeyraComposingMessages", R.string.VeyraComposingMessages),
-                LocaleController.getString("VeyraComposingMessagesDesc", R.string.VeyraComposingMessagesDesc),
                 () -> presentFragment(new VeyraComposingSettingsActivity())
         ));
-
-        // Category 6: Media & Camera
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_media,
                 LocaleController.getString("VeyraMediaCamera", R.string.VeyraMediaCamera),
-                LocaleController.getString("VeyraMediaCameraDesc", R.string.VeyraMediaCameraDesc),
                 () -> presentFragment(new VeyraMediaSettingsActivity())
         ));
+        r.add(VeyraSettingsRow.shadow());
 
-        // Category 7: Controls & General
+        // Section 3: General & Tools
+        r.add(VeyraSettingsRow.header("General"));
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_settings_old,
                 LocaleController.getString("VeyraControlsGeneral", R.string.VeyraControlsGeneral),
-                LocaleController.getString("VeyraControlsGeneralDesc", R.string.VeyraControlsGeneralDesc),
                 () -> presentFragment(new VeyraControlsSettingsActivity())
         ));
-
-        // Category 8: Backup & Restore
         r.add(VeyraSettingsRow.category(
+                R.drawable.msg_fave,
                 LocaleController.getString("VeyraBackupRestore", R.string.VeyraBackupRestore),
-                LocaleController.getString("VeyraBackupRestoreDesc", R.string.VeyraBackupRestoreDesc),
                 () -> presentFragment(new VeyraBackupSettingsActivity())
         ));
-
         r.add(VeyraSettingsRow.shadow());
 
         // About section
