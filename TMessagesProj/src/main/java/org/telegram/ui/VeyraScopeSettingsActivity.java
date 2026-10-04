@@ -51,6 +51,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
     private RecyclerListView listView;
     private ListAdapter listAdapter;
 
+    private int optionsHeaderRow = -1;
     private int onlyPrivateRow = -1;
     private int ignoreOwnerRow = -1;
     private int ignoreAdminRow = -1;
@@ -82,7 +83,10 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
     private void updateRows() {
         rowCount = 0;
+        optionsHeaderRow = -1;
         onlyPrivateRow = -1;
+        ignoreOwnerRow = -1;
+        ignoreAdminRow = -1;
         onlyPrivateInfoRow = -1;
         exceptionsHeaderRow = -1;
         addExceptionRow = -1;
@@ -92,6 +96,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         lastDividerRow = -1;
 
         if (peerType == VeyraConfig.PEER_GROUP || peerType == VeyraConfig.PEER_CHANNEL) {
+            optionsHeaderRow = rowCount++;
             onlyPrivateRow = rowCount++;
             ignoreOwnerRow = rowCount++;
             ignoreAdminRow = rowCount++;
@@ -396,7 +401,11 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 }
                 case 2: {
                     HeaderCell headerCell = (HeaderCell) holder.itemView;
-                    headerCell.setText(LocaleController.getString("NotificationsExceptions", R.string.NotificationsExceptions));
+                    if (position == optionsHeaderRow) {
+                        headerCell.setText(LocaleController.getString("VeyraFilterOptions", R.string.VeyraFilterOptions));
+                    } else if (position == exceptionsHeaderRow) {
+                        headerCell.setText(LocaleController.getString("NotificationsExceptions", R.string.NotificationsExceptions));
+                    }
                     break;
                 }
                 case 3: {
@@ -434,7 +443,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 return 0;
             } else if (position == onlyPrivateInfoRow) {
                 return 1;
-            } else if (position == exceptionsHeaderRow) {
+            } else if (position == optionsHeaderRow || position == exceptionsHeaderRow) {
                 return 2;
             } else if (position == addExceptionRow || position == deleteAllExceptionsRow) {
                 return 3;

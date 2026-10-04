@@ -2733,6 +2733,7 @@
     <string name="VeyraAntiDeleteEnable">Enable Anti-Delete</string>
     <string name="VeyraAntiDeleteEnableDesc">Keep deleted messages with \'Deleted\' label across selected chats</string>
     <string name="VeyraChatTypes">Filter Chats</string>
+    <string name="VeyraFilterOptions">Filter Options</string>
     <string name="VeyraReactionChatTypes">Filter Chats</string>
     <string name="VeyraChatTypePrivate">Private Chats</string>
     <string name="VeyraChatTypePrivateDesc">Enable for one-on-one direct messages</string>
