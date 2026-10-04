@@ -1,17 +1,19 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
-import android.text.style.CharacterStyle;
-import android.text.style.URLSpan;
+import android.text.method.LinkMovementMethod;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -25,20 +27,15 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserObject;
-import org.telegram.messenger.VeyraConfig;
-import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.ChatActionCell;
-import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EmptyTextProgressView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
-import org.telegram.ui.Components.URLSpanMono;
 import org.veyra.client.VeyraEditHistoryManager;
 
 import java.util.ArrayList;
@@ -55,32 +52,32 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private RecyclerListView messagesListView;
     private FrameLayout reactionsContainer;
 
-    private static class MessageItem {
-        final boolean isAction;
-        final String actionLabel;
-        final MessageObject messageObject;
+    public static class VersionEntry {
+        public final int versionIndex;
+        public final int totalVersions;
+        public final int date;
+        public final int prevDate;
+        public final MessageObject messageObject;
+        public final String rawText;
 
-        MessageItem(String actionLabel) {
-            this.isAction = true;
-            this.actionLabel = actionLabel;
-            this.messageObject = null;
-        }
-
-        MessageItem(MessageObject messageObject) {
-            this.isAction = false;
-            this.actionLabel = null;
+        public VersionEntry(int versionIndex, int totalVersions, int date, int prevDate, MessageObject messageObject, String rawText) {
+            this.versionIndex = versionIndex;
+            this.totalVersions = totalVersions;
+            this.date = date;
+            this.prevDate = prevDate;
             this.messageObject = messageObject;
+            this.rawText = rawText;
         }
     }
 
-    private static class ReactionItem {
-        final String emoji;
-        final String title;
-        final int date;
-        final int count;
-        final String action; // "add" or "remove"
+    public static class ReactionItem {
+        public final String emoji;
+        public final String title;
+        public final int date;
+        public final int count;
+        public final String action; // "add" or "remove"
 
-        ReactionItem(String emoji, String title, int date, int count, String action) {
+        public ReactionItem(String emoji, String title, int date, int count, String action) {
             this.emoji = emoji;
             this.title = title;
             this.date = date;
@@ -89,7 +86,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         }
     }
 
-    private final ArrayList<MessageItem> messageItems = new ArrayList<>();
+    private final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
     private final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
 
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject) {
@@ -106,7 +103,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     }
 
     private void loadData() {
-        messageItems.clear();
+        versionEntries.clear();
         reactionItems.clear();
 
         if (currentMessageObject == null) return;
@@ -114,32 +111,28 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         // 1. Load Edit History
         List<VeyraEditHistoryManager.EditEntry> history = VeyraEditHistoryManager.getHistory(dialogId, messageId);
+        int totalVersions = (history != null ? history.size() : 0) + 1;
+
+        int prevDate = 0;
         if (history != null && !history.isEmpty()) {
             for (int i = 0; i < history.size(); i++) {
                 VeyraEditHistoryManager.EditEntry entry = history.get(i);
-                String label;
-                if (i == 0) {
-                    label = LocaleController.getString("OriginalMessage", R.string.OriginalMessage) + " • " + LocaleController.formatDateTime(entry.date, false);
-                } else {
-                    label = "Edit #" + i + " • " + LocaleController.formatDateTime(entry.date, false);
-                }
-                messageItems.add(new MessageItem(label));
-                messageItems.add(new MessageItem(entry.toMessageObject(currentAccount)));
+                MessageObject msgObj = entry.toMessageObject(currentAccount);
+                versionEntries.add(new VersionEntry(i, totalVersions, entry.date, prevDate, msgObj, entry.text));
+                prevDate = entry.date;
             }
 
             // Current Version
             int curDate = (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.edit_date > 0)
                     ? currentMessageObject.messageOwner.edit_date
                     : (currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.date : 0);
-            String currentLabel = "Current Version • " + LocaleController.formatDateTime(curDate, false);
-            messageItems.add(new MessageItem(currentLabel));
-            messageItems.add(new MessageItem(currentMessageObject));
+            String curText = currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.message : "";
+            versionEntries.add(new VersionEntry(history.size(), totalVersions, curDate, prevDate, currentMessageObject, curText));
         } else {
             // No prior edits recorded — show current message as initial
             int date = currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.date : 0;
-            String label = LocaleController.getString("OriginalMessage", R.string.OriginalMessage) + " • " + LocaleController.formatDateTime(date, false);
-            messageItems.add(new MessageItem(label));
-            messageItems.add(new MessageItem(currentMessageObject));
+            String text = currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.message : "";
+            versionEntries.add(new VersionEntry(0, 1, date, 0, currentMessageObject, text));
         }
 
         // 2. Load Reaction History
@@ -251,19 +244,27 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             }
         };
         contentView.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
+
+        // Ambient dark/light scrim over wallpaper for high contrast & luxury feel
+        View scrim = new View(context);
+        int baseBg = Theme.getColor(Theme.key_windowBackgroundGray);
+        int scrimColor = (baseBg & 0x00FFFFFF) | 0xEE000000;
+        scrim.setBackgroundColor(scrimColor);
+        contentView.addView(scrim, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
         fragmentView = contentView;
 
         LinearLayout rootLayout = new LinearLayout(context);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
 
-        // Segmented Tab Switcher (Messages vs Reactions)
+        // Segmented Tab Switcher (Floating pill bar)
         LinearLayout tabBar = new LinearLayout(context);
         tabBar.setOrientation(LinearLayout.HORIZONTAL);
         tabBar.setGravity(Gravity.CENTER);
-        tabBar.setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4));
+        tabBar.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
 
         GradientDrawable tabBarBg = new GradientDrawable();
-        tabBarBg.setCornerRadius(AndroidUtilities.dp(14));
+        tabBarBg.setCornerRadius(AndroidUtilities.dp(16));
         tabBarBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
         tabBar.setBackground(tabBarBg);
 
@@ -276,16 +277,16 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         tabMessagesView.setOnClickListener(v -> selectTab(0));
         tabReactionsView.setOnClickListener(v -> selectTab(1));
 
-        rootLayout.addView(tabBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 14, 10, 14, 8));
+        rootLayout.addView(tabBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 20, 14, 20, 14));
 
         // Content Area
         FrameLayout contentArea = new FrameLayout(context);
 
-        // 1. Messages List (Scheduled Messages Chat Style)
+        // 1. Messages Timeline List
         messagesListView = new RecyclerListView(context);
         messagesListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        messagesListView.setAdapter(new MessagesAdapter());
-        messagesListView.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(16));
+        messagesListView.setAdapter(new VersionsAdapter());
+        messagesListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
         messagesListView.setClipToPadding(false);
         contentArea.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
@@ -294,7 +295,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         RecyclerListView reactionsListView = new RecyclerListView(context);
         reactionsListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         reactionsListView.setAdapter(new ReactionsAdapter());
-        reactionsListView.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(6), AndroidUtilities.dp(14), AndroidUtilities.dp(16));
+        reactionsListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
         reactionsListView.setClipToPadding(false);
         reactionsContainer.addView(reactionsListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
@@ -319,7 +320,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         tv.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         tv.setGravity(Gravity.CENTER);
-        tv.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+        tv.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(8));
         return tv;
     }
 
@@ -337,82 +338,220 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
     private static GradientDrawable createTabPillBg(boolean selected) {
         GradientDrawable d = new GradientDrawable();
-        d.setCornerRadius(AndroidUtilities.dp(10));
+        d.setCornerRadius(AndroidUtilities.dp(12));
         d.setColor(selected ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0x00000000);
         return d;
     }
 
-    // --- Messages Adapter ---
-    private class MessagesAdapter extends RecyclerListView.SelectionAdapter {
+    private static String formatTimeDelta(int prevDate, int curDate) {
+        if (prevDate <= 0 || curDate <= prevDate) return "";
+        int diff = curDate - prevDate;
+        if (diff < 60) return "edited after " + diff + "s";
+        if (diff < 3600) return "edited after " + (diff / 60) + "m";
+        if (diff < 86400) return "edited after " + (diff / 3600) + "h";
+        return "edited after " + (diff / 86400) + "d";
+    }
+
+    // --- Version Cards Adapter ---
+    private class VersionsAdapter extends RecyclerListView.SelectionAdapter {
 
         @Override
         public int getItemCount() {
-            return messageItems.size();
+            return versionEntries.size();
         }
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            return holder.getItemViewType() == 1;
-        }
-
-        @Override
-        public int getItemViewType(int position) {
-            return messageItems.get(position).isAction ? 0 : 1;
+            return false;
         }
 
         @NonNull
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view;
-            if (viewType == 0) {
-                ChatActionCell actionCell = new ChatActionCell(parent.getContext());
-                view = actionCell;
-            } else {
-                ChatMessageCell messageCell = new ChatMessageCell(parent.getContext(), currentAccount);
-                messageCell.isChat = false;
-                messageCell.setFullyDraw(true);
-                messageCell.setDelegate(new ChatMessageCell.ChatMessageCellDelegate() {
-                    @Override
-                    public void didLongPress(ChatMessageCell cell, float x, float y) {
-                        MessageObject obj = cell.getMessageObject();
-                        if (obj != null && !TextUtils.isEmpty(obj.messageText)) {
-                            AndroidUtilities.addToClipboard(obj.messageText.toString());
-                            BulletinFactory.of(VeyraMessageHistoryActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
-                        }
-                    }
+            Context context = parent.getContext();
 
-                    @Override
-                    public void didPressUrl(ChatMessageCell cell, CharacterStyle url, boolean longPress) {
-                        if (url == null) return;
-                        if (url instanceof URLSpanMono) {
-                            ((URLSpanMono) url).copyToClipboard();
-                            if (AndroidUtilities.shouldShowClipboardToast()) {
-                                BulletinFactory.of(VeyraMessageHistoryActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
-                            }
-                        } else if (url instanceof URLSpan) {
-                            Browser.openUrl(getParentActivity(), ((URLSpan) url).getURL());
-                        }
-                    }
-                });
-                view = messageCell;
-            }
-            return new RecyclerListView.Holder(view);
+            LinearLayout wrapper = new LinearLayout(context);
+            wrapper.setOrientation(LinearLayout.VERTICAL);
+            wrapper.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            // Connector arrow / label between cards
+            LinearLayout connector = new LinearLayout(context);
+            connector.setId(10);
+            connector.setOrientation(LinearLayout.HORIZONTAL);
+            connector.setGravity(Gravity.CENTER);
+            connector.setPadding(0, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(8));
+
+            TextView connectorText = new TextView(context);
+            connectorText.setId(11);
+            connectorText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            connectorText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            connectorText.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            connector.addView(connectorText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+            wrapper.addView(connector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            // Main Version Card
+            LinearLayout card = new LinearLayout(context);
+            card.setId(20);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
+
+            GradientDrawable cardBg = new GradientDrawable();
+            cardBg.setCornerRadius(AndroidUtilities.dp(16));
+            cardBg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            card.setBackground(cardBg);
+
+            // 1. Card Header: Status Badge (Left) + Timestamp (Right)
+            LinearLayout header = new LinearLayout(context);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView badge = new TextView(context);
+            badge.setId(21);
+            badge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            badge.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            badge.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(4), AndroidUtilities.dp(10), AndroidUtilities.dp(4));
+            header.addView(badge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            TextView timeView = new TextView(context);
+            timeView.setId(22);
+            timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            timeView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            timeView.setGravity(Gravity.END);
+            header.addView(timeView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            card.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            // Subtle divider under header
+            View divider = new View(context);
+            divider.setBackgroundColor(Theme.getColor(Theme.key_divider));
+            card.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0, 10, 0, 12));
+
+            // 2. Message Text (Rich formatting, RTL/LTR aware)
+            TextView messageView = new TextView(context);
+            messageView.setId(23);
+            messageView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            messageView.setLineSpacing(AndroidUtilities.dp(4), 1.15f);
+            messageView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            messageView.setTextIsSelectable(true);
+            messageView.setMovementMethod(LinkMovementMethod.getInstance());
+            messageView.setTextDirection(View.TEXT_DIRECTION_LOCALE);
+            messageView.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            card.addView(messageView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            // 3. Card Footer: Copy Button
+            LinearLayout footer = new LinearLayout(context);
+            footer.setOrientation(LinearLayout.HORIZONTAL);
+            footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+            footer.setPadding(0, AndroidUtilities.dp(10), 0, 0);
+
+            LinearLayout copyBtn = new LinearLayout(context);
+            copyBtn.setId(24);
+            copyBtn.setOrientation(LinearLayout.HORIZONTAL);
+            copyBtn.setGravity(Gravity.CENTER_VERTICAL);
+            copyBtn.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(6), AndroidUtilities.dp(10), AndroidUtilities.dp(6));
+
+            GradientDrawable copyBg = new GradientDrawable();
+            copyBg.setCornerRadius(AndroidUtilities.dp(8));
+            copyBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
+            copyBtn.setBackground(copyBg);
+
+            ImageView copyIcon = new ImageView(context);
+            copyIcon.setImageResource(R.drawable.msg_copy);
+            copyIcon.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
+            copyBtn.addView(copyIcon, LayoutHelper.createLinear(16, 16, 0, 0, 6, 0));
+
+            TextView copyText = new TextView(context);
+            copyText.setText(LocaleController.getString("Copy", R.string.Copy));
+            copyText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            copyText.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            copyText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
+            copyBtn.addView(copyText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            footer.addView(copyBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+            card.addView(footer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            wrapper.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            return new RecyclerListView.Holder(wrapper);
         }
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            MessageItem item = messageItems.get(position);
-            if (item.isAction) {
-                ChatActionCell actionCell = (ChatActionCell) holder.itemView;
-                actionCell.setCustomText(item.actionLabel);
+            VersionEntry entry = versionEntries.get(position);
+            View root = holder.itemView;
+
+            LinearLayout connector = root.findViewById(10);
+            TextView connectorText = root.findViewById(11);
+            TextView badge = root.findViewById(21);
+            TextView timeView = root.findViewById(22);
+            TextView messageView = root.findViewById(23);
+            LinearLayout copyBtn = root.findViewById(24);
+
+            // Configure connector
+            if (position == 0) {
+                connector.setVisibility(View.GONE);
             } else {
-                ChatMessageCell messageCell = (ChatMessageCell) holder.itemView;
-                messageCell.setMessageObject(item.messageObject, null, false, false, false, false);
+                connector.setVisibility(View.VISIBLE);
+                String delta = formatTimeDelta(entry.prevDate, entry.date);
+                connectorText.setText(TextUtils.isEmpty(delta) ? "↓ Edited" : ("↓ " + delta));
             }
+
+            // Configure Badge & Colors
+            GradientDrawable badgeBg = new GradientDrawable();
+            badgeBg.setCornerRadius(AndroidUtilities.dp(8));
+
+            boolean isOriginal = (entry.versionIndex == 0);
+            boolean isCurrent = (entry.versionIndex == entry.totalVersions - 1);
+
+            if (isOriginal) {
+                badge.setText(LocaleController.getString("OriginalMessage", R.string.OriginalMessage));
+                badge.setTextColor(0xFF3B82F6);
+                badgeBg.setColor(0x223B82F6);
+            } else if (isCurrent) {
+                badge.setText("Current Version");
+                badge.setTextColor(0xFF10B981);
+                badgeBg.setColor(0x2210B981);
+            } else {
+                badge.setText("Edit #" + entry.versionIndex);
+                badge.setTextColor(0xFFF59E0B);
+                badgeBg.setColor(0x22F59E0B);
+            }
+            badge.setBackground(badgeBg);
+
+            // Time
+            if (entry.date > 0) {
+                timeView.setText(LocaleController.formatDateTime(entry.date, false));
+                timeView.setVisibility(View.VISIBLE);
+            } else {
+                timeView.setVisibility(View.GONE);
+            }
+
+            // Message Content (Rich entities preserved)
+            CharSequence textToDisplay = "";
+            if (entry.messageObject != null) {
+                if (!TextUtils.isEmpty(entry.messageObject.messageText)) {
+                    textToDisplay = entry.messageObject.messageText;
+                } else if (!TextUtils.isEmpty(entry.messageObject.caption)) {
+                    textToDisplay = entry.messageObject.caption;
+                } else if (entry.messageObject.messageOwner != null && !TextUtils.isEmpty(entry.messageObject.messageOwner.message)) {
+                    textToDisplay = entry.messageObject.messageOwner.message;
+                }
+            }
+            if (TextUtils.isEmpty(textToDisplay)) {
+                textToDisplay = entry.rawText != null ? entry.rawText : "";
+            }
+            messageView.setText(textToDisplay);
+
+            final String copyContent = textToDisplay.toString();
+            copyBtn.setOnClickListener(v -> {
+                if (!TextUtils.isEmpty(copyContent)) {
+                    AndroidUtilities.addToClipboard(copyContent);
+                    BulletinFactory.of(VeyraMessageHistoryActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+                }
+            });
         }
     }
 
-    // --- Reactions Adapter ---
+    // --- Reactions Cards Adapter ---
     private class ReactionsAdapter extends RecyclerListView.SelectionAdapter {
 
         @Override
@@ -431,11 +570,11 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             Context context = parent.getContext();
             LinearLayout card = new LinearLayout(context);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(10), AndroidUtilities.dp(14), AndroidUtilities.dp(10));
+            card.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
             card.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(AndroidUtilities.dp(12));
+            bg.setCornerRadius(AndroidUtilities.dp(14));
             bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
             card.setBackground(bg);
 
@@ -445,22 +584,22 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             TextView emojiView = new TextView(context);
             emojiView.setId(1);
-            emojiView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
-            row.addView(emojiView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 10, 0));
+            emojiView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24);
+            row.addView(emojiView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 12, 0));
 
             LinearLayout center = new LinearLayout(context);
             center.setOrientation(LinearLayout.VERTICAL);
 
             TextView titleView = new TextView(context);
             titleView.setId(2);
-            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
             titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             center.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
 
             TextView actionView = new TextView(context);
             actionView.setId(3);
-            actionView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            actionView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             center.addView(actionView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
             row.addView(center, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
@@ -474,7 +613,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             card.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            // Set margins between cards
             RecyclerView.LayoutParams lp = (RecyclerView.LayoutParams) card.getLayoutParams();
             lp.topMargin = AndroidUtilities.dp(4);
             lp.bottomMargin = AndroidUtilities.dp(4);
@@ -497,8 +635,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             titleView.setText(item.title);
 
             boolean isRemove = "remove".equals(item.action);
-            actionView.setText(isRemove ? "- removed" : "+ added");
-            actionView.setTextColor(isRemove ? 0xFFFF4444 : 0xFF4CAF50);
+            actionView.setText(isRemove ? "- removed reaction" : "+ added reaction");
+            actionView.setTextColor(isRemove ? 0xFFFF4444 : 0xFF10B981);
 
             if (item.date > 0) {
                 dateView.setText(LocaleController.formatDateTime(item.date, false));
