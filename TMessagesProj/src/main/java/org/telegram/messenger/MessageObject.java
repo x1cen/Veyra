@@ -6470,8 +6470,8 @@ public class MessageObject {
         } else if (media instanceof TLRPC.TL_messageMediaInvoice) {
             return media.description;
         } else if (media instanceof TLRPC.TL_messageMediaUnsupported) {
-            if (message != null && !TextUtils.isEmpty(message.message)) {
-                return message.message;
+            if (messageOwner != null && !TextUtils.isEmpty(messageOwner.message)) {
+                return messageOwner.message;
             }
             return BuildVars.gimmeUpdateMessage();
         } else if (media instanceof TLRPC.TL_messageMediaDocument) {
