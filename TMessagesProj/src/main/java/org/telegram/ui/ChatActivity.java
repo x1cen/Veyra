@@ -3954,11 +3954,11 @@ public class ChatActivity extends BaseFragment implements
                         return;
                     }
                     AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle("Clear Veyra Cache");
-                    builder.setMessage("Are you sure you want to clear Veyra cache for this chat? All deleted messages and edit/reaction history for this chat will be permanently deleted.");
+                    builder.setTitle("Clear Logs");
+                    builder.setMessage("Are you sure you want to clear saved logs (deleted messages, edit and reaction history) for this chat?");
                     builder.setPositiveButton("Clear", (dialogInterface, i) -> {
                         getMessagesController().clearVeyraCacheForDialog(dialog_id);
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Veyra cache cleared for this chat").show();
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Logs cleared for this chat").show();
                     });
                     builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
                     AlertDialog dialog = builder.create();
@@ -4609,7 +4609,7 @@ public class ChatActivity extends BaseFragment implements
 
         if (headerItem != null) {
             headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
-            headerItem.lazilyAddSubItem(veyra_clear_chat_cache, R.drawable.msg_clearcache, "Clear Veyra Cache");
+            headerItem.lazilyAddSubItem(veyra_clear_chat_cache, R.drawable.msg_clearcache, "Clear Logs");
             if (VeyraConfig.copyDialogId) {
                 headerItem.lazilyAddSubItem(veyra_copy_dialog_id, R.drawable.msg_copy, LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
             }
