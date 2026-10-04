@@ -387,7 +387,7 @@ public class ConnectionsManager extends BaseController {
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
         if (org.telegram.messenger.VeyraConfig.isGhostHideRead()) {
             if (object instanceof TLRPC.TL_messages_readHistory) {
-                long peerDialogId = DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
+                long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
                 if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
