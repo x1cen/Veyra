@@ -10041,6 +10041,7 @@ public class TLRPC {
         public boolean single_use;
         public boolean is_persistent;
         public boolean selective;
+        public boolean force_reply;
         public String placeholder;
         public ArrayList<TL_keyboardButtonRow> rows = new ArrayList<>();
 
@@ -18538,6 +18539,7 @@ public class TLRPC {
         public InputUser inputUser;
         public ArrayList<InlineQueryPeerType> peer_types = new ArrayList<>();
         public TL_keyboardButtonStyle style;
+        public String copy_text;
 
         public static KeyboardButton fromConstructor(int constructor) {
             switch (constructor) {
