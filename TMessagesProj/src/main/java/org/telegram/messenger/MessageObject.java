@@ -811,7 +811,7 @@ public class MessageObject {
     }
 
     public boolean isUnsupported() {
-        return getMedia(messageOwner) instanceof TLRPC.TL_messageMediaUnsupported;
+        return getMedia(messageOwner) instanceof TLRPC.TL_messageMediaUnsupported && TextUtils.isEmpty(messageOwner != null ? messageOwner.message : null);
     }
 
     public boolean isExpiredStory() {
@@ -6008,7 +6008,19 @@ public class MessageObject {
                 } else if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaInvoice) {
                     messageText = getMedia(messageOwner).description;
                 } else if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaUnsupported) {
-                    messageText = BuildVars.gimmeUpdateMessage();
+                    if (messageOwner != null && !TextUtils.isEmpty(messageOwner.message)) {
+                        try {
+                            if (messageOwner.message.length() > 200) {
+                                messageText = AndroidUtilities.BAD_CHARS_MESSAGE_LONG_PATTERN.matcher(messageOwner.message).replaceAll("\u200C");
+                            } else {
+                                messageText = AndroidUtilities.BAD_CHARS_MESSAGE_PATTERN.matcher(messageOwner.message).replaceAll("\u200C");
+                            }
+                        } catch (Exception e) {
+                            messageText = messageOwner.message;
+                        }
+                    } else {
+                        messageText = BuildVars.gimmeUpdateMessage();
+                    }
                 } else if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaDocument) {
                     if (isSticker() || isAnimatedStickerDocument(getDocument(), true)) {
                         String sch = getStickerChar();
@@ -6458,6 +6470,9 @@ public class MessageObject {
         } else if (media instanceof TLRPC.TL_messageMediaInvoice) {
             return media.description;
         } else if (media instanceof TLRPC.TL_messageMediaUnsupported) {
+            if (message != null && !TextUtils.isEmpty(message.message)) {
+                return message.message;
+            }
             return BuildVars.gimmeUpdateMessage();
         } else if (media instanceof TLRPC.TL_messageMediaDocument) {
             if (isStickerDocument(media.document) || isAnimatedStickerDocument(media.document, true)) {
@@ -7870,7 +7885,7 @@ public class MessageObject {
         if (text == null) {
             return false;
         }
-        if (isRestrictedMessage || getMedia(messageOwner) instanceof TLRPC.TL_messageMediaUnsupported) {
+        if (isRestrictedMessage || (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaUnsupported && TextUtils.isEmpty(messageOwner != null ? messageOwner.message : null))) {
             ArrayList<TLRPC.MessageEntity> entities = new ArrayList<>();
             TLRPC.TL_messageEntityItalic entityItalic = new TLRPC.TL_messageEntityItalic();
             entityItalic.offset = 0;
