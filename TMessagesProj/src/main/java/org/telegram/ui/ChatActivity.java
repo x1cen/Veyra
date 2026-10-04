@@ -26754,6 +26754,16 @@ public class ChatActivity extends BaseFragment implements
                 String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
                 boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
+                boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+                boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
+
+                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
+                } else if (!textChanged && wasEditedBefore) {
+                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                }
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id) && org.telegram.messenger.VeyraConfig.isChatTypeAllowedForEditHistory(dialog_id)) {

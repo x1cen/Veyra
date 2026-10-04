@@ -50,7 +50,7 @@
     <string name="VeyraAntiDeleteDesc">نگهداری پیام‌های حذف‌شده با برچسب \'حذف شده\'</string>
     <string name="VeyraAntiDeleteEnable">فعال‌سازی ضدحذف پیام‌ها</string>
     <string name="VeyraAntiDeleteEnableDesc">نگهداری پیام‌های حذف‌شده در چت‌های مشخص‌شده</string>
-    <string name="VeyraChatTypes">نوع گفتگوها</string>
+    <string name="VeyraChatTypes">فیلتر گفتگوها</string>
     <string name="VeyraChatTypePrivate">چت‌های خصوصی</string>
     <string name="VeyraChatTypePrivateDesc">فعال بودن در گفتگوهای دونفره خصوصی</string>
     <string name="VeyraChatTypeGroups">گروه‌ها</string>

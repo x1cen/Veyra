@@ -2732,8 +2732,8 @@
     <string name="VeyraAntiDeleteDesc">Keep deleted messages with \'Deleted\' label</string>
     <string name="VeyraAntiDeleteEnable">Enable Anti-Delete</string>
     <string name="VeyraAntiDeleteEnableDesc">Keep deleted messages with \'Deleted\' label across selected chats</string>
-    <string name="VeyraChatTypes">Chat Types (Edit History)</string>
-    <string name="VeyraReactionChatTypes">Chat Types (Reaction History)</string>
+    <string name="VeyraChatTypes">Filter Chats</string>
+    <string name="VeyraReactionChatTypes">Filter Chats</string>
     <string name="VeyraChatTypePrivate">Private Chats</string>
     <string name="VeyraChatTypePrivateDesc">Enable for one-on-one direct messages</string>
     <string name="VeyraChatTypeGroups">Groups</string>

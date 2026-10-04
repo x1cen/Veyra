@@ -15999,6 +15999,15 @@ public class MessagesStorage extends BaseController {
                                         String oldText = oldMessage.message != null ? oldMessage.message : "";
                                         String newText = message.message != null ? message.message : "";
                                         boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
+                                        boolean wasEditedBefore = oldMessage.edit_date != 0 || (oldMessage.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+
+                                        if (!textChanged && !wasEditedBefore) {
+                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                            message.edit_date = 0;
+                                        } else if (!textChanged && wasEditedBefore) {
+                                            message.edit_date = oldMessage.edit_date;
+                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                        }
 
                                         if (textChanged && !oldMessage.out && !message.out) {
                                             long did = MessageObject.getDialogId(message);

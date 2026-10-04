@@ -409,7 +409,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                     .getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
             return pInfo.versionName;
         } catch (Exception e) {
-            return "1.1.17";
+            return "1.2.0";
         }
     }
 }

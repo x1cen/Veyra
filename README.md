@@ -228,7 +228,7 @@ The Veyra-specific code is kept modular so it doesn't entangle with upstream Tel
 
 4. The built package lands at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.1.17.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.2.0.apk
    ```
 
 ---

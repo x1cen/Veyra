@@ -35,7 +35,7 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header("Automatic Storage"));
+        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraChatTypes", R.string.VeyraChatTypes)));
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
