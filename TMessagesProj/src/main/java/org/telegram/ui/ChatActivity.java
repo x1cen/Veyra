@@ -26422,7 +26422,7 @@ public class ChatActivity extends BaseFragment implements
                 }
                 int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
 
-                if (isRemotePeerRevoke && !obj.scheduled) {
+                if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.scheduled) {
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
                         // Developer immunity: always delete developer's messages completely, bypass anti-delete
                         obj.deleted = true;
