@@ -6297,6 +6297,15 @@ public class MessageObject {
             out.append(getString(R.string.AccDescrCollage));
         } else if (block instanceof TL_iv.pageBlockSlideshow) {
             out.append(getString(R.string.AccDescrIVSlideshow));
+        } else if (block instanceof TL_iv.pageBlockButtonRow) {
+            final TL_iv.pageBlockButtonRow row = (TL_iv.pageBlockButtonRow) block;
+            for (int i = 0; i < row.buttons.size(); ++i) {
+                if (i > 0) out.append(" • ");
+                final TL_iv.pageButton btn = row.buttons.get(i);
+                formatRichText(btn.text, isOut, photoViewer, maxLength, out, TextStyleSpan.FLAG_STYLE_BOLD);
+            }
+        } else if (block instanceof TL_iv.pageBlockDocument) {
+            out.append(getString(R.string.AttachDocument));
         } else if (block instanceof TL_iv.pageBlockUnsupported) {
             out.append(getString(R.string.UnsupportedAttachment));
         }
@@ -6354,6 +6363,17 @@ public class MessageObject {
                     out.delete(maxLength, out.length());
                     out.append("…");
                     return out;
+                }
+            }
+        } else if (text instanceof TL_iv.textButton) {
+            final TL_iv.textButton tb = (TL_iv.textButton) text;
+            formatRichText(tb.text, isOut, photoViewer, maxLength, out, flags | TextStyleSpan.FLAG_STYLE_BOLD);
+            if (out.length() > start && tb.type != null) {
+                String url = tb.type.url;
+                if (url != null) {
+                    final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
+                    run.flags = flags;
+                    out.setSpan(new URLSpanBrowser(url, run), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
             }
         }

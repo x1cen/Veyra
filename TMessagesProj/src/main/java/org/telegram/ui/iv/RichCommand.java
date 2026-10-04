@@ -51,6 +51,7 @@ public class RichCommand {
         cmds.add(new RichCommand(R.drawable.iv_media, getString(R.string.ArticleCommandVideo), "/video", "/vid", "/media"));
         cmds.add(new RichCommand(R.drawable.iv_audio, getString(R.string.ArticleCommandAudio), "/audio", "/music", "/media"));
         cmds.add(new RichCommand(R.drawable.iv_location, getString(R.string.ArticleCommandMap), "/map", "/location", "/venue"));
+        cmds.add(new RichCommand(R.drawable.iv_footer, "Button", "<buttons><button url=\"https://\">Button</button></buttons>", "/button", "/buttons", "/btn"));
 
         return cmds;
     }

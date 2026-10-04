@@ -100,6 +100,15 @@ public class RichTextStyle {
             }
             return;
         }
+        if (rt instanceof TL_iv.textButton) {
+            TL_iv.textButton btn = (TL_iv.textButton) rt;
+            int start = sb.length();
+            append(sb, btn.text, flags | TextStyleSpan.FLAG_STYLE_BOLD, block);
+            if (sb.length() > start && btn.type != null && btn.type.url != null) {
+                sb.setSpan(new URLSpanReplacement(btn.type.url), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            return;
+        }
         if (rt instanceof TL_iv.textDate) {
             TL_iv.textDate date = (TL_iv.textDate) rt;
             int start = sb.length();

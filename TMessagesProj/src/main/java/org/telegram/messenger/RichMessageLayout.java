@@ -989,6 +989,32 @@ public class RichMessageLayout {
                 if (child.parentDetails == null) child.parentDetails = header;
             }
             return header;
+        } else if (pageBlock instanceof TL_iv.pageBlockButtonRow) {
+            final TL_iv.pageBlockButtonRow buttonRow = (TL_iv.pageBlockButtonRow) pageBlock;
+            final SpannableStringBuilder rowSb = new SpannableStringBuilder();
+            for (int i = 0; i < buttonRow.buttons.size(); ++i) {
+                if (i > 0) rowSb.append("   ");
+                final TL_iv.pageButton btn = buttonRow.buttons.get(i);
+                int start = rowSb.length();
+                formatText(btn.text, rowSb, TEXT_FLAG_BOLD);
+                String url = null;
+                if (btn.type != null) {
+                    if (btn.type.url != null) {
+                        url = btn.type.url;
+                    } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeUserProfile) {
+                        url = "tg://user?id=" + btn.type.user_id;
+                    }
+                }
+                if (url != null) {
+                    rowSb.setSpan(new URLSpanReplacement(url), start, rowSb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+            }
+            Layout.Alignment align = Layout.Alignment.ALIGN_NORMAL;
+            if (buttonRow.align_center) align = Layout.Alignment.ALIGN_CENTER;
+            else if (buttonRow.align_right) align = Layout.Alignment.ALIGN_OPPOSITE;
+            final RichBlock block = new RichTextBlock(this, new Rect(padding), maxWidth, rowSb, align);
+            blocks.add(block);
+            return block;
         }
 
         if (BuildVars.DEBUG_PRIVATE_VERSION) {
@@ -1867,6 +1893,22 @@ public class RichMessageLayout {
             entity.date = textDate.date;
             flags |= TEXT_FLAG_URL;
             formatTextAndSetSpan(text.text, out, flags, new StyleSpan(this, flags), new FormattedDateSpan(getString(text), null, entity));
+        } else if (text instanceof TL_iv.textButton) {
+            final TL_iv.textButton textButton = (TL_iv.textButton) text;
+            String url = null;
+            if (textButton.type != null) {
+                if (textButton.type.url != null) {
+                    url = textButton.type.url;
+                } else if (textButton.type instanceof TLRPC.TL_inlineButtonTypeUserProfile) {
+                    url = "tg://user?id=" + textButton.type.user_id;
+                }
+            }
+            flags |= TEXT_FLAG_BOLD;
+            if (url != null) {
+                formatTextAndSetSpan(textButton.text, out, flags, new URLSpanReplacement(url));
+            } else {
+                formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags));
+            }
         }
         return out;
     }

@@ -579,6 +579,71 @@ public class RichHtml {
                 case "location":
                     addRow(rows, buildMediaRow(node));
                     break;
+                case "buttons":
+                case "tg-button-row": {
+                    TL_iv.pageBlockButtonRow buttonRow = new TL_iv.pageBlockButtonRow();
+                    String align = firstAttr(node, "align");
+                    if ("center".equalsIgnoreCase(align)) {
+                        buttonRow.align_center = true;
+                    } else if ("right".equalsIgnoreCase(align)) {
+                        buttonRow.align_right = true;
+                    } else {
+                        buttonRow.align_left = true;
+                    }
+                    for (Node child : node.children) {
+                        if ("button".equalsIgnoreCase(child.tag) || "tg-button".equalsIgnoreCase(child.tag)) {
+                            TL_iv.pageButton btn = new TL_iv.pageButton();
+                            TL_iv.textPlain text = new TL_iv.textPlain();
+                            text.text = child.text != null ? child.text : inlineOf(child).toString();
+                            btn.text = text;
+                            String url = firstAttr(child, "url", "href");
+                            if (url != null) {
+                                TLRPC.TL_inlineButtonTypeUrl btnType = new TLRPC.TL_inlineButtonTypeUrl();
+                                btnType.url = url;
+                                btn.type = btnType;
+                            }
+                            String style = firstAttr(child, "style", "class");
+                            if (style != null) {
+                                TL_iv.richButtonStyle btnStyle = new TL_iv.richButtonStyle();
+                                if (style.contains("danger")) btnStyle.bg_danger = true;
+                                if (style.contains("success")) btnStyle.bg_success = true;
+                                if (style.contains("primary")) btnStyle.bg_primary = true;
+                                btn.style = btnStyle;
+                            }
+                            buttonRow.buttons.add(btn);
+                        }
+                    }
+                    if (!buttonRow.buttons.isEmpty()) {
+                        rows.add(new BlockRow(buttonRow, level, 0));
+                    }
+                    break;
+                }
+                case "button":
+                case "tg-button": {
+                    TL_iv.pageBlockButtonRow buttonRow = new TL_iv.pageBlockButtonRow();
+                    buttonRow.align_left = true;
+                    TL_iv.pageButton btn = new TL_iv.pageButton();
+                    TL_iv.textPlain text = new TL_iv.textPlain();
+                    text.text = node.text != null ? node.text : inlineOf(node).toString();
+                    btn.text = text;
+                    String url = firstAttr(node, "url", "href");
+                    if (url != null) {
+                        TLRPC.TL_inlineButtonTypeUrl btnType = new TLRPC.TL_inlineButtonTypeUrl();
+                        btnType.url = url;
+                        btn.type = btnType;
+                    }
+                    String style = firstAttr(node, "style", "class");
+                    if (style != null) {
+                        TL_iv.richButtonStyle btnStyle = new TL_iv.richButtonStyle();
+                        if (style.contains("danger")) btnStyle.bg_danger = true;
+                        if (style.contains("success")) btnStyle.bg_success = true;
+                        if (style.contains("primary")) btnStyle.bg_primary = true;
+                        btn.style = btnStyle;
+                    }
+                    buttonRow.buttons.add(btn);
+                    rows.add(new BlockRow(buttonRow, level, 0));
+                    break;
+                }
                 case "figure":
                     parseFigure(node, rows, level);
                     break;
