@@ -209,14 +209,8 @@ jobs:
                     echo "=== Generated build artifacts ==="
                     ls -la
 
-                    # Handle single APK (dev / single-arch build)
-                    if [ -f "app.apk" ]; then
-                        mv "app.apk" "Veyra.${VERSION_NAME}.apk"
-                    fi
-
                     # Handle multi-arch splits (main / all build)
                     if [ -f "app-universal.apk" ]; then
-                        cp "app-universal.apk" "Veyra.${VERSION_NAME}.apk"
                         mv "app-universal.apk" "Veyra.${VERSION_NAME}-universal.apk"
                     fi
 
@@ -226,6 +220,14 @@ jobs:
                         fi
                     done
 
+                    # Handle single APK (dev / single-arch build)
+                    if [ -f "app.apk" ]; then
+                        mv "app.apk" "Veyra.${VERSION_NAME}-arm64-v8a.apk"
+                    fi
+
+                    # Remove any legacy untagged duplicate package
+                    rm -f "Veyra.${VERSION_NAME}.apk"
+
                     echo "=== Final release packages ==="
                     ls -la Veyra.*.apk
 
@@ -233,7 +235,13 @@ jobs:
                     sha256sum Veyra.*.apk > "${APK_DIR}/SHA256SUMS.txt"
                     cat "${APK_DIR}/SHA256SUMS.txt"
 
-                    PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}.apk"
+                    if [ -f "${APK_DIR}/Veyra.${VERSION_NAME}-arm64-v8a.apk" ]; then
+                        PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}-arm64-v8a.apk"
+                    elif [ -f "${APK_DIR}/Veyra.${VERSION_NAME}-universal.apk" ]; then
+                        PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}-universal.apk"
+                    else
+                        PRIMARY_APK=$(ls ${APK_DIR}/Veyra.*.apk | head -n 1)
+                    fi
                     echo "apk_path=$PRIMARY_APK" >> "$GITHUB_OUTPUT"
                     echo "apk_sha256=$(sha256sum "$PRIMARY_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 

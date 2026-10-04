@@ -10670,7 +10670,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.TL_messages_getMessagesViews req = new TLRPC.TL_messages_getMessagesViews();
                     req.peer = getInputPeer(key);
                     req.id = channelViewsToSend.valueAt(a);
-                    req.increment = a == 0;
+                    req.increment = a == 0 && !VeyraConfig.isGhostHideChannelViews();
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         if (response != null) {
                             TLRPC.TL_messages_messageViews res = (TLRPC.TL_messages_messageViews) response;
@@ -14602,7 +14602,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private final androidx.collection.LongSparseArray<ReadTask> pendingReadOnReply = new androidx.collection.LongSparseArray<>();
 
     public void sendPendingReadOnReply(long dialogId) {
-        if (!VeyraConfig.readOnReply) {
+        if (!VeyraConfig.isGhostReadOnReply()) {
             return;
         }
         Utilities.stageQueue.postRunnable(() -> {
@@ -14625,7 +14625,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private void completeReadTask(ReadTask task) {
-        if (VeyraConfig.readOnReply && DialogObject.isUserDialog(task.dialogId) && !task.fromSendReply) {
+        if (task.fromSendReply) {
+            VeyraConfig.allowSendReadOnce(task.dialogId);
+        } else if (VeyraConfig.isGhostReadOnReply() && DialogObject.isUserDialog(task.dialogId)) {
             pendingReadOnReply.put(task.dialogId, task);
             return;
         }

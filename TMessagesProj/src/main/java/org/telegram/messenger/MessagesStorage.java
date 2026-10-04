@@ -5282,7 +5282,7 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
-                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out) {
+                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
                                     if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
@@ -14728,7 +14728,8 @@ public class MessagesStorage extends BaseController {
                         } catch (Throwable ignore) {}
                     }
 
-                    if (isDevMsg && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                    boolean allowed = VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(did);
+                    if (!allowed || (isDevMsg && !VeyraConfig.isSelfDeveloper(currentAccount))) {
                         ArrayList<Integer> arr = devMessagesByChat.get(did);
                         if (arr == null) {
                             arr = new ArrayList<>();

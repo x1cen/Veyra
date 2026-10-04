@@ -70,10 +70,63 @@ public class VeyraConfig {
     // Ghost Mode (Granular)
     public static boolean ghostHideOnline = true;
     public static boolean ghostHideTyping = true;
+    public static boolean ghostHideUpload = true;
     public static boolean ghostHideRead = true;
     public static boolean ghostHideReadContents = true;
     public static boolean ghostHideStories = true;
     public static boolean ghostReadOnReply = true;
+    public static boolean ghostHideChannelViews = false;
+    public static boolean ghostHideSecretRead = true;
+
+    private static final java.util.Set<Long> allowedReadDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    public static void allowSendReadOnce(long dialogId) {
+        allowedReadDialogs.add(dialogId);
+    }
+
+    public static boolean consumeSendReadAllowed(long dialogId) {
+        return allowedReadDialogs.remove(dialogId);
+    }
+
+    public static boolean isGhostModeActive() {
+        return ghostMode;
+    }
+
+    public static boolean isGhostHideOnline() {
+        return ghostMode && ghostHideOnline;
+    }
+
+    public static boolean isGhostHideTyping() {
+        return ghostMode && ghostHideTyping;
+    }
+
+    public static boolean isGhostHideUpload() {
+        return ghostMode && ghostHideUpload;
+    }
+
+    public static boolean isGhostHideRead() {
+        return ghostMode && ghostHideRead;
+    }
+
+    public static boolean isGhostHideReadContents() {
+        return ghostMode && ghostHideReadContents;
+    }
+
+    public static boolean isGhostHideStories() {
+        return ghostMode && ghostHideStories;
+    }
+
+    public static boolean isGhostReadOnReply() {
+        return ghostMode && ghostReadOnReply;
+    }
+
+    public static boolean isGhostHideChannelViews() {
+        return ghostMode && ghostHideChannelViews;
+    }
+
+    public static boolean isGhostHideSecretRead() {
+        return ghostMode && ghostHideSecretRead;
+    }
 
     // Security & Window
     public static boolean blockScreenCapture = false;
@@ -192,14 +245,17 @@ public class VeyraConfig {
         antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", true);
         antiDeleteBots = preferences.getBoolean("antiDeleteBots", false);
         ghostMode = preferences.getBoolean("ghostMode", true);
-        hideTyping = preferences.getBoolean("hideTyping", true);
-        readOnReply = preferences.getBoolean("readOnReply", true);
         ghostHideOnline = preferences.getBoolean("ghostHideOnline", true);
         ghostHideTyping = preferences.getBoolean("ghostHideTyping", true);
+        ghostHideUpload = preferences.getBoolean("ghostHideUpload", true);
         ghostHideRead = preferences.getBoolean("ghostHideRead", true);
         ghostHideReadContents = preferences.getBoolean("ghostHideReadContents", true);
         ghostHideStories = preferences.getBoolean("ghostHideStories", true);
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
+        readOnReply = ghostReadOnReply;
+        hideTyping = ghostHideTyping;
+        ghostHideChannelViews = preferences.getBoolean("ghostHideChannelViews", false);
+        ghostHideSecretRead = preferences.getBoolean("ghostHideSecretRead", true);
         blockScreenCapture = preferences.getBoolean("blockScreenCapture", false);
         customHeaderTitle = preferences.getString("customHeaderTitle", "");
         // animatedTitleMode intentionally not loaded — removed by design
@@ -516,6 +572,26 @@ public class VeyraConfig {
         save("antiDeleteBots", val);
     }
 
+    public static org.telegram.tgnet.TLRPC.Chat findChat(int currentAccount, long chatId) {
+        org.telegram.tgnet.TLRPC.Chat chat = null;
+        try {
+            chat = MessagesController.getInstance(currentAccount).getChat(chatId);
+        } catch (Throwable ignored) {}
+        if (chat == null) {
+            try {
+                MessagesStorage storage = MessagesStorage.getInstance(currentAccount);
+                if (storage != null) {
+                    if (Thread.currentThread() == storage.getStorageQueue().getHandler().getLooper().getThread()) {
+                        chat = storage.getChat(chatId);
+                    } else {
+                        chat = storage.getChatSync(chatId);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return chat;
+    }
+
     public static boolean isChatTypeAllowedForAntiDelete(long dialogId) {
         if (!antiDelete) return false;
         Boolean exc = getException(CATEGORY_ANTI_DELETE, dialogId);
@@ -530,11 +606,13 @@ public class VeyraConfig {
                 return antiDeletePrivate;
             } else {
                 long chatId = -dialogId;
-                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
-                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
-                boolean isOwner = chat != null && chat.creator;
-                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
+                org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
+                if (chat == null) return false;
+                boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPublic = ChatObject.isPublic(chat);
+                boolean isPrivate = !isPublic;
+                boolean isOwner = chat.creator;
+                boolean isAdmin = ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!antiDeleteChannels) return false;
                     if (antiDeleteChannelsOnlyPrivate && !isPrivate) return false;
@@ -550,7 +628,7 @@ public class VeyraConfig {
                 }
             }
         } catch (Exception e) {
-            return antiDelete;
+            return false;
         }
     }
 
@@ -568,11 +646,13 @@ public class VeyraConfig {
                 return editHistoryPrivate;
             } else {
                 long chatId = -dialogId;
-                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
-                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
-                boolean isOwner = chat != null && chat.creator;
-                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
+                org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
+                if (chat == null) return false;
+                boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPublic = ChatObject.isPublic(chat);
+                boolean isPrivate = !isPublic;
+                boolean isOwner = chat.creator;
+                boolean isAdmin = ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!editHistoryChannels) return false;
                     if (editHistoryChannelsOnlyPrivate && !isPrivate) return false;
@@ -588,7 +668,7 @@ public class VeyraConfig {
                 }
             }
         } catch (Exception e) {
-            return editHistoryEnabled;
+            return false;
         }
     }
 
@@ -606,11 +686,13 @@ public class VeyraConfig {
                 return reactionHistoryPrivate;
             } else {
                 long chatId = -dialogId;
-                org.telegram.tgnet.TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(chatId);
-                boolean isChannel = chat != null && ChatObject.isChannel(chat) && !chat.megagroup;
-                boolean isPrivate = chat == null || (chat.username == null || chat.username.isEmpty());
-                boolean isOwner = chat != null && chat.creator;
-                boolean isAdmin = chat != null && ChatObject.hasAdminRights(chat);
+                org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
+                if (chat == null) return false;
+                boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
+                boolean isPublic = ChatObject.isPublic(chat);
+                boolean isPrivate = !isPublic;
+                boolean isOwner = chat.creator;
+                boolean isAdmin = ChatObject.hasAdminRights(chat);
                 if (isChannel) {
                     if (!reactionHistoryChannels) return false;
                     if (reactionHistoryChannelsOnlyPrivate && !isPrivate) return false;
@@ -639,7 +721,13 @@ public class VeyraConfig {
     }
     public static void setGhostHideTyping(boolean val) {
         ghostHideTyping = val;
+        hideTyping = val;
         save("ghostHideTyping", val);
+        save("hideTyping", val);
+    }
+    public static void setGhostHideUpload(boolean val) {
+        ghostHideUpload = val;
+        save("ghostHideUpload", val);
     }
     public static void setGhostHideRead(boolean val) {
         ghostHideRead = val;
@@ -655,7 +743,17 @@ public class VeyraConfig {
     }
     public static void setGhostReadOnReply(boolean val) {
         ghostReadOnReply = val;
+        readOnReply = val;
         save("ghostReadOnReply", val);
+        save("readOnReply", val);
+    }
+    public static void setGhostHideChannelViews(boolean val) {
+        ghostHideChannelViews = val;
+        save("ghostHideChannelViews", val);
+    }
+    public static void setGhostHideSecretRead(boolean val) {
+        ghostHideSecretRead = val;
+        save("ghostHideSecretRead", val);
     }
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
