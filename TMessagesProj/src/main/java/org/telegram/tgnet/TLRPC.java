@@ -67,7 +67,7 @@ public class TLRPC {
     public static final int MESSAGE_FLAG_HAS_BOT_ID         = 0x00000800;
     public static final int MESSAGE_FLAG_EDITED             = 0x00008000;
 
-    public static final int LAYER = 228;
+    public static final int LAYER = 229;
 
     public static abstract class EmailVerifyPurpose extends TLObject {
 
@@ -18578,6 +18578,8 @@ public class TLRPC {
                     return new TL_keyboardButtonBuy_layer223();
                 case TL_keyboardButton.constructor:
                     return new TL_keyboardButton();
+                case TL_keyboardButton_layer229.constructor:
+                    return new TL_keyboardButton_layer229();
                 case TL_keyboardButton_layer_223.constructor:
                     return new TL_keyboardButton_layer_223();
                 case TL_keyboardButtonCopy.constructor:
@@ -71062,6 +71064,180 @@ public class TLRPC {
             // Serialize as legacy format so we stay compatible
             stream.writeInt32(TL_replyInlineMarkup.constructor);
             Vector.serialize(stream, rows);
+        }
+    }
+
+    // ─── Layer 229: reply keyboard ButtonType ─────────────────────────────────
+
+    public static abstract class ButtonType extends TLObject {
+        public static ButtonType TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            ButtonType result = null;
+            switch (constructor) {
+                case TL_buttonTypeDefault.constructor:
+                    result = new TL_buttonTypeDefault();
+                    break;
+                case TL_buttonTypeRequestPhone.constructor:
+                    result = new TL_buttonTypeRequestPhone();
+                    break;
+                case TL_buttonTypeRequestGeoLocation.constructor:
+                    result = new TL_buttonTypeRequestGeoLocation();
+                    break;
+                case TL_buttonTypeRequestPoll.constructor:
+                    result = new TL_buttonTypeRequestPoll();
+                    break;
+                case TL_buttonTypeRequestPeer.constructor:
+                    result = new TL_buttonTypeRequestPeer();
+                    break;
+                case TL_inputButtonTypeRequestPeer.constructor:
+                    result = new TL_inputButtonTypeRequestPeer();
+                    break;
+                case TL_buttonTypeSimpleWebView.constructor:
+                    result = new TL_buttonTypeSimpleWebView();
+                    break;
+            }
+            return TLdeserialize(ButtonType.class, result, stream, constructor, exception);
+        }
+    }
+
+    public static class TL_buttonTypeDefault extends ButtonType {
+        public static final int constructor = 0xc9dd90e9;
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    public static class TL_buttonTypeRequestPhone extends ButtonType {
+        public static final int constructor = 0xdf3d36f9;
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    public static class TL_buttonTypeRequestGeoLocation extends ButtonType {
+        public static final int constructor = 0x9beee140;
+        public void serializeToStream(OutputSerializedData stream) { stream.writeInt32(constructor); }
+    }
+
+    public static class TL_buttonTypeRequestPoll extends ButtonType {
+        public static final int constructor = 0xaacfff84;
+        public int flags;
+        public boolean quiz;
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            if (hasFlag(flags, FLAG_0)) {
+                quiz = stream.readBool(exception);
+            }
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, quiz);
+            stream.writeInt32(flags);
+            if (hasFlag(flags, FLAG_0)) {
+                stream.writeBool(quiz);
+            }
+        }
+    }
+
+    public static class TL_buttonTypeRequestPeer extends ButtonType {
+        public static final int constructor = 0x4f58a237;
+        public int flags;
+        public int button_id;
+        public RequestPeerType peer_type;
+        public int max_quantity;
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            button_id = stream.readInt32(exception);
+            peer_type = RequestPeerType.TLdeserialize(stream, stream.readInt32(exception), exception);
+            max_quantity = stream.readInt32(exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            stream.writeInt32(flags);
+            stream.writeInt32(button_id);
+            peer_type.serializeToStream(stream);
+            stream.writeInt32(max_quantity);
+        }
+    }
+
+    public static class TL_inputButtonTypeRequestPeer extends ButtonType {
+        public static final int constructor = 0x3fe268fe;
+        public int flags;
+        public boolean name_requested;
+        public boolean username_requested;
+        public boolean photo_requested;
+        public int button_id;
+        public RequestPeerType peer_type;
+        public int max_quantity;
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            name_requested = hasFlag(flags, FLAG_0);
+            username_requested = hasFlag(flags, FLAG_1);
+            photo_requested = hasFlag(flags, FLAG_2);
+            button_id = stream.readInt32(exception);
+            peer_type = RequestPeerType.TLdeserialize(stream, stream.readInt32(exception), exception);
+            max_quantity = stream.readInt32(exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, name_requested);
+            flags = setFlag(flags, FLAG_1, username_requested);
+            flags = setFlag(flags, FLAG_2, photo_requested);
+            stream.writeInt32(flags);
+            stream.writeInt32(button_id);
+            peer_type.serializeToStream(stream);
+            stream.writeInt32(max_quantity);
+        }
+    }
+
+    public static class TL_buttonTypeSimpleWebView extends ButtonType {
+        public static final int constructor = 0xc01a597a;
+        public String url;
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            url = stream.readString(exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            stream.writeString(url);
+        }
+    }
+
+    public static class TL_keyboardButton_layer229 extends KeyboardButton {
+        public static final int constructor = 0x2f67a72f;
+        public ButtonType type;
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            if (hasFlag(flags, FLAG_10)) {
+                style = TL_keyboardButtonStyle.TLdeserialize(stream, stream.readInt32(exception), exception);
+            }
+            text = stream.readString(exception);
+            type = ButtonType.TLdeserialize(stream, stream.readInt32(exception), exception);
+            if (type instanceof TL_buttonTypeSimpleWebView) {
+                url = ((TL_buttonTypeSimpleWebView) type).url;
+            } else if (type instanceof TL_buttonTypeRequestPoll) {
+                quiz = ((TL_buttonTypeRequestPoll) type).quiz;
+            } else if (type instanceof TL_buttonTypeRequestPeer) {
+                button_id = ((TL_buttonTypeRequestPeer) type).button_id;
+            } else if (type instanceof TL_inputButtonTypeRequestPeer) {
+                button_id = ((TL_inputButtonTypeRequestPeer) type).button_id;
+            }
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_10, style != null);
+            stream.writeInt32(flags);
+            if (hasFlag(flags, FLAG_10)) {
+                style.serializeToStream(stream);
+            }
+            stream.writeString(text);
+            if (type != null) {
+                type.serializeToStream(stream);
+            }
         }
     }
 }
