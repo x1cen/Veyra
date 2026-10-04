@@ -10,7 +10,10 @@ import android.text.TextUtils;
 
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.VeyraConfig;
+import org.telegram.tgnet.NativeByteBuffer;
+import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +21,7 @@ import java.util.List;
 public final class VeyraEditHistoryManager {
 
     private static final String DB_NAME = "veyra_edit_history.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String TABLE_NAME = "edit_history";
     private static final String REACTION_TABLE_NAME = "reaction_history";
 
@@ -27,12 +30,42 @@ public final class VeyraEditHistoryManager {
         public final int messageId;
         public final int date;
         public final String text;
+        public final byte[] data;
 
         public EditEntry(long dialogId, int messageId, int date, String text) {
+            this(dialogId, messageId, date, text, null);
+        }
+
+        public EditEntry(long dialogId, int messageId, int date, String text, byte[] data) {
             this.dialogId = dialogId;
             this.messageId = messageId;
             this.date = date;
             this.text = text;
+            this.data = data;
+        }
+
+        public MessageObject toMessageObject(int currentAccount) {
+            if (data != null && data.length > 0) {
+                try {
+                    NativeByteBuffer byteBuffer = new NativeByteBuffer(data.length);
+                    byteBuffer.writeBytes(data);
+                    byteBuffer.position(0);
+                    int constructor = byteBuffer.readInt32(false);
+                    TLRPC.Message message = TLRPC.Message.TLdeserialize(byteBuffer, constructor, false);
+                    byteBuffer.reuse();
+                    if (message != null) {
+                        return new MessageObject(currentAccount, message, false, false);
+                    }
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
+            TLRPC.TL_message fallback = new TLRPC.TL_message();
+            fallback.id = messageId;
+            fallback.dialog_id = dialogId;
+            fallback.date = date;
+            fallback.message = text != null ? text : "";
+            return new MessageObject(currentAccount, fallback, false, false);
         }
     }
 
@@ -68,7 +101,8 @@ public final class VeyraEditHistoryManager {
                     "dialog_id INTEGER, " +
                     "message_id INTEGER, " +
                     "date INTEGER, " +
-                    "text TEXT);");
+                    "text TEXT, " +
+                    "data BLOB);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_msg ON " + TABLE_NAME + " (dialog_id, message_id);");
             db.execSQL("CREATE TABLE IF NOT EXISTS " + REACTION_TABLE_NAME + " (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -100,6 +134,11 @@ public final class VeyraEditHistoryManager {
                     db.execSQL("ALTER TABLE " + REACTION_TABLE_NAME + " ADD COLUMN action TEXT DEFAULT 'add';");
                 } catch (Exception ignored) {}
             }
+            if (oldVersion < 4) {
+                try {
+                    db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN data BLOB;");
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -113,14 +152,18 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void logEdit(long dialogId, int messageId, int date, String text) {
-        if (!VeyraConfig.isChatTypeAllowedForEditHistory(dialogId) || TextUtils.isEmpty(text)) {
+        logEdit(dialogId, messageId, date, text, null);
+    }
+
+    public static void logEdit(long dialogId, int messageId, int date, String text, TLRPC.Message messageOwner) {
+        if (!VeyraConfig.isChatTypeAllowedForEditHistory(dialogId) || (TextUtils.isEmpty(text) && messageOwner == null)) {
             return;
         }
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
 
             // Encrypt text before storing
-            String encryptedText = VeyraKeyStore.encryptString(text);
+            String encryptedText = text != null ? VeyraKeyStore.encryptString(text) : "";
             if (encryptedText == null) encryptedText = text; // fallback plain if keystore fails
 
             Cursor checkCursor = db.rawQuery("SELECT text FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id DESC LIMIT 1",
@@ -132,7 +175,7 @@ public final class VeyraEditHistoryManager {
                     // Decrypt to compare
                     String lastDecrypted = VeyraKeyStore.decryptString(lastRaw);
                     if (lastDecrypted == null) lastDecrypted = lastRaw;
-                    if (text.equals(lastDecrypted)) {
+                    if (text != null && text.equals(lastDecrypted)) {
                         return; // no change
                     }
                 } else {
@@ -161,11 +204,28 @@ public final class VeyraEditHistoryManager {
                 }
             }
 
+            byte[] serializedData = null;
+            if (messageOwner != null) {
+                try {
+                    NativeByteBuffer buf = new NativeByteBuffer(messageOwner.getObjectSize());
+                    messageOwner.serializeToStream(buf);
+                    serializedData = new byte[buf.length()];
+                    buf.buffer.position(0);
+                    buf.buffer.get(serializedData);
+                    buf.reuse();
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
+
             ContentValues values = new ContentValues();
             values.put("dialog_id", dialogId);
             values.put("message_id", messageId);
             values.put("date", date);
             values.put("text", encryptedText);
+            if (serializedData != null) {
+                values.put("data", serializedData);
+            }
             db.insert(TABLE_NAME, null, values);
         } catch (Exception e) {
             FileLog.e(e);
@@ -179,7 +239,7 @@ public final class VeyraEditHistoryManager {
         }
         try {
             SQLiteDatabase db = getHelper().getReadableDatabase();
-            Cursor cursor = db.rawQuery("SELECT date, text FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
+            Cursor cursor = db.rawQuery("SELECT date, text, data FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             if (cursor != null) {
                 while (cursor.moveToNext()) {
@@ -187,7 +247,8 @@ public final class VeyraEditHistoryManager {
                     String raw = cursor.getString(1);
                     String text = VeyraKeyStore.decryptString(raw);
                     if (text == null) text = raw;
-                    list.add(new EditEntry(dialogId, messageId, date, text));
+                    byte[] data = cursor.isNull(2) ? null : cursor.getBlob(2);
+                    list.add(new EditEntry(dialogId, messageId, date, text, data));
                 }
                 cursor.close();
             }

@@ -39,7 +39,7 @@ public class MessageEditHistorySheet extends BottomSheet {
         if (fragment == null || fragment.getParentActivity() == null || messageObject == null) {
             return;
         }
-        new MessageEditHistorySheet(fragment, messageObject).show();
+        fragment.presentFragment(new org.telegram.ui.VeyraMessageHistoryActivity(messageObject.getDialogId(), messageObject));
     }
 
     private MessageEditHistorySheet(BaseFragment fragment, MessageObject messageObject) {

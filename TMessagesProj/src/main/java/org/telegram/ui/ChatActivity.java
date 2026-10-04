@@ -26768,7 +26768,7 @@ public class ChatActivity extends BaseFragment implements
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {
                     if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id) && org.telegram.messenger.VeyraConfig.isChatTypeAllowedForEditHistory(dialog_id)) {
                         int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
-                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText);
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText, old.messageOwner);
                     }
                 }
             }
@@ -33397,7 +33397,7 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_VIEW_EDIT_HISTORY: {
                 if (selectedObject != null) {
-                    MessageEditHistorySheet.show(this, selectedObject);
+                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject));
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;

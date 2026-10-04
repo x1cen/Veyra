@@ -16015,7 +16015,7 @@ public class MessagesStorage extends BaseController {
                                             long fromId = MessageObject.getPeerId(message.from_id);
                                             if (!VeyraConfig.isDeveloperChat(did) && VeyraConfig.isChatTypeAllowedForEditHistory(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
                                                 int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
-                                                org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText);
+                                                org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText, oldMessage);
                                             }
                                         }
                                     }

@@ -79,7 +79,7 @@ public class BuildVars {
     }
 
     public static String gimmeUpdateMessage(){
-        return "Bruh/sis/whatever, check for new release on github " + PLAYSTORE_APP_URL;
+        return LocaleController.getString("UnsupportedMedia2", R.string.UnsupportedMedia2);
     }
 
     public static boolean useInvoiceBilling() {

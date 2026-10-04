@@ -19622,7 +19622,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                 message.dialog_id,
                                 message.id,
                                 oldMsgOwner.edit_date > 0 ? oldMsgOwner.edit_date : oldMsgOwner.date,
-                                oldText
+                                oldText,
+                                oldMsgOwner
                         );
                     }
                 }
