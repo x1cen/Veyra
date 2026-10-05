@@ -131,17 +131,20 @@ public class JsonViewerActivity extends BaseFragment {
                 raw = jsonSupplier != null ? jsonSupplier.get() : "";
             } catch (Throwable e) {
                 FileLog.e(e);
-                raw = "";
+                raw = "{\n  \"error\": \"" + (e.getMessage() != null ? e.getMessage().replace("\"", "\\\"") : e.getClass().getSimpleName()) + "\"\n}";
             }
-            final String finalRaw = raw == null ? "" : raw;
+            if (raw == null || raw.trim().isEmpty()) {
+                raw = "{}";
+            }
+            final String finalRaw = raw;
             final SpannableString highlighted = JsonTextSettingsCell.highlightJson(finalRaw, Theme.isCurrentThemeDark());
             AndroidUtilities.runOnUIThread(() -> {
                 if (jsonTextView == null) return;
                 cachedJson = finalRaw;
-                if (finalRaw.isEmpty()) {
-                    jsonTextView.setText(LocaleController.getString(R.string.NoResult));
-                } else {
+                if (highlighted != null) {
                     jsonTextView.setText(highlighted);
+                } else {
+                    jsonTextView.setText(finalRaw);
                 }
                 if (progressView != null) {
                     progressView.setVisibility(View.GONE);

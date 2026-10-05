@@ -180,10 +180,12 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
     private static class ByteArrayToBase64TypeAdapter implements JsonSerializer<byte[]>, JsonDeserializer<byte[]> {
         public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            if (json == null || json.isJsonNull()) return new byte[0];
             return Base64.decode(json.getAsString(), Base64.NO_WRAP);
         }
 
         public JsonElement serialize(byte[] src, Type typeOfSrc, JsonSerializationContext context) {
+            if (src == null || src.length == 0) return new JsonPrimitive("");
             return new JsonPrimitive(Base64.encodeToString(src, Base64.NO_WRAP));
         }
     }
@@ -192,21 +194,71 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
         @Override
         public boolean shouldSkipField(com.google.gson.FieldAttributes f) {
             String name = f.getName();
-            if ("parentRichText".equals(name) || "mChangingConfigurations".equals(name)) {
+            if ("parentRichText".equals(name) || "mChangingConfigurations".equals(name)
+                    || "replyMessage".equals(name) || "pollMediaAttachPaths".equals(name)
+                    || "replyStory".equals(name) || "translatedPoll".equals(name)
+                    || "groupedMessages".equals(name) || "legacy".equals(name)) {
                 return true;
             }
-            return name.equals("text") && f.getDeclaringClass() != null
-                    && f.getDeclaringClass().getName().equals("org.telegram.tgnet.tl.TL_iv$RichText");
+            if (name.equals("text") && f.getDeclaringClass() != null
+                    && f.getDeclaringClass().getName().equals("org.telegram.tgnet.tl.TL_iv$RichText")) {
+                return true;
+            }
+            Class<?> fieldType = f.getDeclaredClass();
+            if (fieldType != null) {
+                String typeName = fieldType.getName();
+                if (typeName.startsWith("android.") || typeName.startsWith("androidx.")
+                        || typeName.startsWith("java.lang.reflect.")
+                        || typeName.startsWith("java.lang.ClassLoader")
+                        || "android.util.SparseArray".equals(typeName)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
         public boolean shouldSkipClass(Class<?> clazz) {
+            String className = clazz.getName();
+            if (className.startsWith("android.") || className.startsWith("androidx.")
+                    || className.startsWith("java.lang.reflect.")
+                    || className.startsWith("java.lang.ClassLoader")) {
+                return true;
+            }
             return false;
+        }
+    }
+
+    public static String safeToJson(Object object) {
+        if (object == null) return "{}";
+        try {
+            return prettyGson.toJson(object);
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+        try {
+            Gson fallback = new GsonBuilder()
+                    .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+                    .setPrettyPrinting()
+                    .setExclusionStrategies(new CustomExclusionStrategy())
+                    .create();
+            return fallback.toJson(object);
+        } catch (Throwable t2) {
+            FileLog.e(t2);
+        }
+        try {
+            return new GsonBuilder().setPrettyPrinting().create().toJson(object);
+        } catch (Throwable t3) {
+            FileLog.e(t3);
+            return "{\n  \"error\": \"" + (t3.getMessage() != null ? t3.getMessage().replace("\"", "\\\"") : t3.getClass().getSimpleName()) + "\"\n}";
         }
     }
 
     public MessageDetailsActivity(MessageObject messageObject) {
         this.messageObject = messageObject;
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return;
+        }
         if (messageObject.messageOwner.peer_id != null && messageObject.messageOwner.peer_id.channel_id != 0) {
             fromChat = getMessagesController().getChat(messageObject.messageOwner.peer_id.channel_id);
         } else if (messageObject.messageOwner.peer_id != null && messageObject.messageOwner.peer_id.chat_id != 0) {
@@ -330,7 +382,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             switch (item.viewType) {
                 case ItemType.VIEW_TYPE_SHOW_JSON:
                     presentFragment(new JsonViewerActivity(
-                            () -> prettyGson.toJson(messageObject.messageOwner),
+                            () -> safeToJson(messageObject.messageOwner),
                             messageObject != null && messageObject.messageOwner != null ? messageObject.messageOwner.id : 0
                     ));
                     break;
@@ -338,13 +390,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                 case ItemType.VIEW_TYPE_EXPORT:
                     final TLRPC.Message exportMessage = messageObject.messageOwner;
                     org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
-                        String exported;
-                        try {
-                            exported = prettyGson.toJson(exportMessage);
-                        } catch (Throwable e) {
-                            FileLog.e(e);
-                            exported = "";
-                        }
+                        String exported = safeToJson(exportMessage);
                         final String finalExported = exported;
                         AndroidUtilities.runOnUIThread(() -> {
                             try {
@@ -666,11 +712,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
         public String getFullJsonText() {
             if (fullJsonText.isEmpty() && messageObject != null && messageObject.messageOwner != null) {
-                try {
-                    fullJsonText = prettyGson.toJson(messageObject.messageOwner);
-                } catch (Throwable e) {
-                    FileLog.e(e);
-                }
+                fullJsonText = safeToJson(messageObject.messageOwner);
             }
             return fullJsonText;
         }

@@ -6281,7 +6281,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (uInfo != null) {
                     root.add("full_user", MessageDetailsActivity.gson.toJsonTree(uInfo));
                 }
-                return MessageDetailsActivity.prettyGson.toJson(root);
+                return MessageDetailsActivity.safeToJson(root);
             }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         } else if (chatId != 0) {
             final TLRPC.Chat chat = getMessagesController().getChat(chatId);
@@ -6294,13 +6294,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (cInfo != null) {
                     root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
                 }
-                return MessageDetailsActivity.prettyGson.toJson(root);
+                return MessageDetailsActivity.safeToJson(root);
             }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         } else if (currentEncryptedChat != null) {
             presentFragment(new JsonViewerActivity(() -> {
                 com.google.gson.JsonObject root = new com.google.gson.JsonObject();
                 root.add("encrypted_chat", MessageDetailsActivity.gson.toJsonTree(currentEncryptedChat));
-                return MessageDetailsActivity.prettyGson.toJson(root);
+                return MessageDetailsActivity.safeToJson(root);
             }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         }
     }
