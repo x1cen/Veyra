@@ -864,7 +864,7 @@ public class RichMessageLayout {
                 }
                 final RichTextBlockQuote collapsedBlock = new RichTextBlockQuote(this, new Rect(padding.left + dp(12), padding.top + dp(4), padding.right + dp(20), padding.bottom + dp(4)), maxWidth, blockquote, sb);
                 collapsedBlock.quoteAuthorStart = authorStart;
-                collapsedBlock.setContentPadding(dp(8), dp(8));
+                
                 block = collapsedBlock;
             } else {
                 block = new RichQuoteBlock(this, new Rect(padding.left + dp(12), padding.top + dp(12), padding.right + dp(12), padding.bottom + dp(14)), maxWidth, text, author);
@@ -1143,14 +1143,14 @@ public class RichMessageLayout {
 
         canvas.save();
         canvas.clipRect(left, top, right, bottom);
-        pullquoteIcon.setBounds((int) left + dp(8), (int) top + dp(7), (int) left + dp(8) + iw, (int) top + dp(7) + ih);
+        pullquoteIcon.setBounds((int) left + dp(8), (int) (top + dp(7)), (int) left + dp(8) + iw, (int) (top + dp(7) + ih));
         canvas.scale(-1.0f, -1.0f, pullquoteIcon.getBounds().centerX(), pullquoteIcon.getBounds().centerY());
         pullquoteIcon.draw(canvas);
         canvas.restore();
 
         canvas.save();
         canvas.clipRect(left, top, right, bottom);
-        pullquoteIcon.setBounds((int) right - dp(8) - iw, (int) bottom - dp(7) - ih, (int) right - dp(8), bottom - dp(7));
+        pullquoteIcon.setBounds((int) right - dp(8) - iw, (int) (bottom - dp(7) - ih), (int) right - dp(8), (int) (bottom - dp(7)));
         canvas.scale(1.0f, -1.0f, pullquoteIcon.getBounds().centerX(), pullquoteIcon.getBounds().centerY());
         pullquoteIcon.draw(canvas);
         canvas.restore();
@@ -2903,6 +2903,8 @@ public class RichMessageLayout {
     public static class RichTextBlockQuote extends RichTextBlock {
         public final TL_iv.pageBlockBlockquote block;
         private GradientClip clip;
+        private int contentPaddingTop = dp(8);
+        private int contentPaddingBottom = dp(8);
 
         public RichTextBlockQuote(RichMessageLayout root, Rect padding, int maxWidth, TL_iv.pageBlockBlockquote block, CharSequence text) {
             super(root, padding, maxWidth, text);
@@ -3004,12 +3006,12 @@ public class RichMessageLayout {
             canvas.restore();
 
             if (root.quoteLine != null && root.quoteLine.getColor() != quoteArrowColor) {
-                quoteArrow.setColorFilter(new PorterDuffColorFilter(quoteArrowColor = root.quoteLine.getColor(), PorterDuff.Mode.SRC_IN));
+                quoteArrow.setColorFilter(new android.graphics.PorterDuffColorFilter(quoteArrowColor = root.quoteLine.getColor(), PorterDuff.Mode.SRC_IN));
             }
 
             final int arrowX = root.getMinWidth() - dp(24);
             final int arrowY = collapsedH - dp(16) - dp(2) + dp(8);
-            DrawableUtils.setBounds(quoteArrow, arrowX, arrowY, dp(16), dp(16), Gravity.CENTER);
+            final int sz = dp(16); quoteArrow.setBounds(arrowX - sz / 2, arrowY - sz / 2, arrowX + sz / 2, arrowY + sz / 2);
             canvas.save();
             canvas.rotate(currentCollapsed ? 0 : 180, quoteArrow.getBounds().exactCenterX(), quoteArrow.getBounds().exactCenterY());
             quoteArrow.draw(canvas);
@@ -3042,7 +3044,6 @@ public class RichMessageLayout {
             prevCollapsed = currentCollapsed;
         }
 
-        @Override
         public float getBackgroundScale() {
             return bounce != null ? bounce.getScale(0.01f) : 1f;
         }
@@ -3164,12 +3165,6 @@ public class RichMessageLayout {
                     linkUrl = ((TLRPC.TL_inlineButtonTypeUrlAuth) btn.type).url;
                 } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeUserProfile) {
                     linkUrl = "tg://user?id=" + ((TLRPC.TL_inlineButtonTypeUserProfile) btn.type).user_id;
-                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) {
-                    linkUrl = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) btn.type).url;
-                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) {
-                    linkUrl = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) btn.type).url;
-                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUserProfile) {
-                    linkUrl = "tg://user?id=" + ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUserProfile) btn.type).user_id;
                 }
             }
             this.url = linkUrl;
@@ -3221,7 +3216,7 @@ public class RichMessageLayout {
                 if (pressed) {
                     pressed = false;
                     if (url != null && root.view != null) {
-                        Browser.openUrl(root.view.getContext(), url);
+                        org.telegram.messenger.browser.Browser.openUrl(root.view.getContext(), url);
                     }
                     return true;
                 }
