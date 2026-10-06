@@ -1,6 +1,9 @@
 name: Build and Release Veyra APK
 
 on:
+    push:
+        branches:
+            - dev
     workflow_dispatch:
         inputs:
             veyra-version:
@@ -35,7 +38,7 @@ on:
 permissions:
     contents: write
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.2.0' || '1.2.0-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
+run-name: Building Veyra ${{ inputs.veyra-version || '1.2.0' }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
@@ -49,7 +52,7 @@ jobs:
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.2.0' || '1.2.0-dev') }}
+            VERSION_NAME: ${{ inputs.veyra-version || '1.2.0' }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
         steps:
             -   name: Checkout
@@ -262,9 +265,9 @@ jobs:
                         ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v1.2.0 — Stable Release' || 'Veyra v1.2.0 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.2.0' || '1.2.0-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '1.2.0' || '1.2.0-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '1.2.0' || '1.2.0-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || '1.2.0' }}
+                    RNAME: Veyra ${{ inputs.veyra-version || '1.2.0' }}
+                    TNAME: v${{ inputs.veyra-version || '1.2.0' }}
 
             -   name: Telegram announcement - stable release
                 if: ${{ success() && env.IS_STABLE == 'true' }}
