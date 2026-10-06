@@ -295,6 +295,7 @@ public class TL_iv {
         public String url;
         public long webpage_id;
         public String email;
+        @com.google.gson.annotations.SerializedName("inner_text")
         public RichText text;
         public ArrayList<RichText> texts = new ArrayList<>();
         public RichText parentRichText;
@@ -775,7 +776,7 @@ public class TL_iv {
     public static class textDiff extends RichText {
         public static final int constructor = 0x9686cb50;
 
-        public RichText text;
+        // Note: inherits 'text' from RichText
         public RichText old_text;
 
         @Override
@@ -891,6 +892,7 @@ public class TL_iv {
     public static abstract class PageBlock extends TLObject {
 
         public RichText text;
+        @com.google.gson.annotations.SerializedName("block_caption")
         public PageCaption caption;
 
         public boolean first; //custom

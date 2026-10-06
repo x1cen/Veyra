@@ -284,6 +284,32 @@ public final class VeyraEditHistoryManager {
         }
     }
 
+    public static void deleteSingleEdit(long dialogId, int messageId, int date) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            if (date > 0) {
+                db.delete(TABLE_NAME, "dialog_id = ? AND message_id = ? AND date = ?", new String[]{String.valueOf(dialogId), String.valueOf(messageId), String.valueOf(date)});
+            } else {
+                db.delete(TABLE_NAME, "dialog_id = ? AND message_id = ?", new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public static void deleteSingleReaction(long dialogId, int messageId, long userId, String reaction) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            if (userId != 0 && reaction != null) {
+                db.delete(REACTION_TABLE_NAME, "dialog_id = ? AND message_id = ? AND user_id = ? AND reaction = ?", new String[]{String.valueOf(dialogId), String.valueOf(messageId), String.valueOf(userId), reaction});
+            } else {
+                db.delete(REACTION_TABLE_NAME, "dialog_id = ? AND message_id = ?", new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     public static void deleteHistoryBatch(long dialogId, List<Integer> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) return;
         try {

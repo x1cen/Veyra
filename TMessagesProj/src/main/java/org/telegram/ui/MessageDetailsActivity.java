@@ -247,7 +247,11 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             FileLog.e(t2);
         }
         try {
-            return new GsonBuilder().setPrettyPrinting().create().toJson(object);
+            Gson basic = new GsonBuilder()
+                    .setPrettyPrinting()
+                    .setExclusionStrategies(new CustomExclusionStrategy())
+                    .create();
+            return basic.toJson(object);
         } catch (Throwable t3) {
             FileLog.e(t3);
             return "{\n  \"error\": \"" + (t3.getMessage() != null ? t3.getMessage().replace("\"", "\\\"") : t3.getClass().getSimpleName()) + "\"\n}";

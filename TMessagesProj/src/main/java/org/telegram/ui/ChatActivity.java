@@ -26757,16 +26757,17 @@ public class ChatActivity extends BaseFragment implements
                 boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
                 boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
 
-                if (!old.isOut() && !messageObject.isOut()) {
-                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                        messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        messageObject.messageOwner.edit_date = 0;
-                    } else if (!textChanged && wasEditedBefore) {
-                        messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
-                        messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                    }
-                } else if (messageObject.isOut() && messageObject.messageOwner.edit_date != 0) {
+                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
+                } else if (!textChanged && wasEditedBefore) {
+                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
                     messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                } else if (textChanged) {
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    if (messageObject.messageOwner.edit_date == 0) {
+                        messageObject.messageOwner.edit_date = getConnectionsManager().getCurrentTime();
+                    }
                 }
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {
@@ -33404,32 +33405,8 @@ public class ChatActivity extends BaseFragment implements
                     final MessageObject finalSelectedObject = selectedObject;
                     final long finalDialogId = dialog_id;
                     boolean hasMsg = VeyraEditHistoryManager.hasHistory(finalDialogId, finalSelectedObject.getId());
-                    boolean hasReact = VeyraConfig.reactionHistoryEnabled && (finalSelectedObject.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(finalDialogId, finalSelectedObject.getId()));
-
-                    if (hasMsg && hasReact) {
-                        CharSequence[] historyOptions = new CharSequence[]{
-                                LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages),
-                                LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions)
-                        };
-                        int[] historyIcons = new int[]{
-                                R.drawable.msg_edit,
-                                R.drawable.msg_reactions
-                        };
-                        org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
-                        builder.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
-                        builder.setItems(historyOptions, historyIcons, (dialog, which) -> {
-                            if (which == 0) {
-                                presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 0));
-                            } else {
-                                presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 1));
-                            }
-                        });
-                        showDialog(builder.create());
-                    } else if (hasReact) {
-                        presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 1));
-                    } else {
-                        presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 0));
-                    }
+                    int initialTab = hasMsg ? 0 : 1;
+                    presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, initialTab));
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;
@@ -45656,7 +45633,7 @@ public class ChatActivity extends BaseFragment implements
             icons.add(deleteIconRes);
         } else if (type == 1) {
             if (currentChat != null) {
-                if ((allowChatActions || isEphemeralFromBot) && !isInsideContainer) {
+                if ((allowChatActions || isEphemeralFromBot) && !isInsideContainer && !noforwards && selectedObject.canReplyMessage()) {
                     items.add(LocaleController.getString(R.string.Reply));
                     options.add(OPTION_REPLY);
                     icons.add(R.drawable.menu_reply);
@@ -45706,7 +45683,7 @@ public class ChatActivity extends BaseFragment implements
                     icons.add(R.drawable.msg_report);
                 }
             } else {
-                if (selectedObject.getId() > 0 && (allowChatActions || isEphemeralFromBot) && !isInsideContainer) {
+                if (selectedObject.getId() > 0 && (allowChatActions || isEphemeralFromBot) && !isInsideContainer && !noforwards && selectedObject.canReplyMessage()) {
                     items.add(LocaleController.getString(R.string.Reply));
                     options.add(OPTION_REPLY);
                     icons.add(R.drawable.menu_reply);
@@ -46006,19 +45983,9 @@ public class ChatActivity extends BaseFragment implements
                 boolean hasMsgHist = selectedObject != null && VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
                 boolean hasReactHist = selectedObject != null && VeyraConfig.reactionHistoryEnabled && (selectedObject.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId()));
                 if (selectedObject != null && (hasMsgHist || hasReactHist)) {
-                    if (hasMsgHist && hasReactHist) {
-                        items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
-                        options.add(OPTION_VIEW_EDIT_HISTORY);
-                        icons.add(R.drawable.msg_recent);
-                    } else if (hasMsgHist) {
-                        items.add(LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
-                        options.add(OPTION_VIEW_EDIT_HISTORY);
-                        icons.add(R.drawable.msg_edit);
-                    } else {
-                        items.add(LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
-                        options.add(OPTION_VIEW_EDIT_HISTORY);
-                        icons.add(R.drawable.msg_reactions);
-                    }
+                    items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_recent);
                 }
                 if (ChatObject.isMonoForum(currentChat) && selectedObject.getGroupId() == 0 && selectedObjectGroup == null && message != null && message.messageOwner != null && message.messageOwner.suggested_post == null && message.messageOwner.action == null) {
                     items.add(LocaleController.getString(R.string.EditOfferAdd));
@@ -46065,7 +46032,7 @@ public class ChatActivity extends BaseFragment implements
                     icons.add(deleteIconRes);
                 }
             } else {
-                if ((allowChatActions || isEphemeralFromBot) && !isInsideContainer) {
+                if ((allowChatActions || isEphemeralFromBot) && !isInsideContainer && !noforwards && selectedObject.canReplyMessage()) {
                     items.add(LocaleController.getString(R.string.Reply));
                     options.add(OPTION_REPLY);
                     icons.add(R.drawable.menu_reply);
