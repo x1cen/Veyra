@@ -359,35 +359,20 @@ public final class VeyraEditHistoryManager {
      */
     public static void logReaction(long dialogId, int messageId, int date, String reaction,
                                    int newCount, long userId, long selfUserId) {
+        logReactionEvent(dialogId, messageId, date, reaction, userId, "add", selfUserId);
+    }
+
+    public static void logReactionEvent(long dialogId, int messageId, int date, String reaction,
+                                        long userId, String action, long selfUserId) {
         if (!VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
             return;
         }
-        // Ignore own reactions
+        // Strictly ignore own reactions
         if (selfUserId != 0 && userId == selfUserId) {
             return;
         }
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
-
-            // Determine action: compare newCount to last logged count for this reaction
-            String action = "add";
-            Cursor lastCursor = db.rawQuery(
-                    "SELECT count FROM " + REACTION_TABLE_NAME +
-                            " WHERE dialog_id = ? AND message_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
-                    new String[]{String.valueOf(dialogId), String.valueOf(messageId), reaction});
-            if (lastCursor != null) {
-                if (lastCursor.moveToFirst()) {
-                    int lastCount = lastCursor.getInt(0);
-                    if (newCount < lastCount) {
-                        action = "remove";
-                    } else if (newCount == lastCount) {
-                        // No change — skip
-                        lastCursor.close();
-                        return;
-                    }
-                }
-                lastCursor.close();
-            }
 
             // For user-specific reactions: avoid duplicate user+reaction entry for same action
             if (userId != 0) {
@@ -436,9 +421,9 @@ public final class VeyraEditHistoryManager {
             values.put("message_id", messageId);
             values.put("date", date);
             values.put("reaction", reaction);
-            values.put("count", newCount);
+            values.put("count", 1);
             values.put("user_id", userId);
-            values.put("action", action);
+            values.put("action", action != null ? action : "add");
             db.insert(REACTION_TABLE_NAME, null, values);
         } catch (Exception e) {
             FileLog.e(e);

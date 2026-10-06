@@ -31,6 +31,11 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.blockSecretChat, v -> VeyraConfig.setBlockSecretChat(v), true
         ));
         r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraSpoilerPhoneNumber", R.string.VeyraSpoilerPhoneNumber),
+                LocaleController.getString("VeyraSpoilerPhoneNumberDesc", R.string.VeyraSpoilerPhoneNumberDesc),
+                () -> VeyraConfig.spoilerPhoneNumber, v -> VeyraConfig.setSpoilerPhoneNumber(v), true
+        ));
+        r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraHideConnectingToProxy", R.string.VeyraHideConnectingToProxy),
                 LocaleController.getString("VeyraHideConnectingToProxyDesc", R.string.VeyraHideConnectingToProxyDesc),
                 () -> VeyraConfig.hideConnectingToProxy, v -> VeyraConfig.setHideConnectingToProxy(v), false

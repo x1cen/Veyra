@@ -188,6 +188,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private View navigationBar;
 
     private int versionViewPressCount = 0;
+    private boolean phoneRevealed = false;
 
     public SettingsActivity() {
         this(null);
@@ -464,6 +465,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         subtitleView.setGravity(Gravity.CENTER);
         subtitleView.setSingleLine();
         subtitleView.setEllipsize(TextUtils.TruncateAt.END);
+        subtitleView.setOnClickListener(v -> {
+            phoneRevealed = !phoneRevealed;
+            setInfo();
+        });
         topView.addView(subtitleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 168 - 12, 0, 0));
 
         versionView = new TextView(context);
@@ -536,7 +541,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         titleView.setText(UserObject.getUserName(user));
         final StringBuilder sb = new StringBuilder();
         if (user != null) {
-            sb.append(PhoneFormat.getInstance().format("+" + user.phone));
+            String formattedPhone = PhoneFormat.getInstance().format("+" + user.phone);
+            if (org.telegram.messenger.VeyraConfig.spoilerPhoneNumber && !phoneRevealed) {
+                sb.append(org.telegram.messenger.VeyraConfig.maskPhoneNumber(formattedPhone));
+            } else {
+                sb.append(formattedPhone);
+            }
         }
         final String username = UserObject.getPublicUsername(user);
         if (username != null) {

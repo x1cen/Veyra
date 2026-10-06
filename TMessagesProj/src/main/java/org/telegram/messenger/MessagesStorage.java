@@ -5282,38 +5282,89 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
-                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
+                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
+
+                                    java.util.HashMap<String, String> pastPeerMap = new java.util.HashMap<>();
+                                    if (pastReactions != null && pastReactions.recent_reactions != null) {
+                                        for (int r = 0; r < pastReactions.recent_reactions.size(); r++) {
+                                            TLRPC.MessagePeerReaction mpr = pastReactions.recent_reactions.get(r);
+                                            if (mpr != null) {
+                                                long peerId = MessageObject.getPeerId(mpr.peer_id);
+                                                if (peerId != mySelfId && peerId != 0) {
+                                                    String emoji = "";
+                                                    if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                        emoji = "\u2b50\ufe0f";
+                                                    } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                        emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
+                                                    }
+                                                    if (!TextUtils.isEmpty(emoji)) {
+                                                        pastPeerMap.put(peerId + "_" + emoji, emoji);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    java.util.HashMap<String, String> newPeerMap = new java.util.HashMap<>();
                                     if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
                                         for (int r = 0; r < reactions.recent_reactions.size(); r++) {
                                             TLRPC.MessagePeerReaction mpr = reactions.recent_reactions.get(r);
                                             if (mpr != null) {
                                                 long peerId = MessageObject.getPeerId(mpr.peer_id);
-                                                String emoji = "";
-                                                if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "\u2b50\ufe0f";
-                                                } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                    emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
-                                                }
-                                                if (!TextUtils.isEmpty(emoji)) {
-                                                    int rDate = mpr.date > 0 ? mpr.date : nowTime;
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, rDate, emoji, 1, peerId, mySelfId);
+                                                if (peerId != mySelfId && peerId != 0) {
+                                                    String emoji = "";
+                                                    if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                        emoji = "\u2b50\ufe0f";
+                                                    } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                        emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
+                                                    }
+                                                    if (!TextUtils.isEmpty(emoji)) {
+                                                        newPeerMap.put(peerId + "_" + emoji, emoji);
+                                                        int rDate = mpr.date > 0 ? mpr.date : nowTime;
+                                                        if (!pastPeerMap.containsKey(peerId + "_" + emoji)) {
+                                                            org.veyra.client.VeyraEditHistoryManager.logReactionEvent(dialogId, msgId, rDate, emoji, peerId, "add", mySelfId);
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
+
+                                        for (java.util.Map.Entry<String, String> entry : pastPeerMap.entrySet()) {
+                                            if (!newPeerMap.containsKey(entry.getKey())) {
+                                                String[] parts = entry.getKey().split("_");
+                                                long peerId = Long.parseLong(parts[0]);
+                                                String emoji = entry.getValue();
+                                                org.veyra.client.VeyraEditHistoryManager.logReactionEvent(dialogId, msgId, nowTime, emoji, peerId, "remove", mySelfId);
+                                            }
+                                        }
                                     } else if (reactions.results != null) {
+                                        java.util.HashMap<String, Integer> pastCounts = new java.util.HashMap<>();
+                                        if (pastReactions != null && pastReactions.results != null) {
+                                            for (int r = 0; r < pastReactions.results.size(); r++) {
+                                                TLRPC.ReactionCount rc = pastReactions.results.get(r);
+                                                if (rc != null) {
+                                                    String emoji = "";
+                                                    if (rc.reaction instanceof TLRPC.TL_reactionPaid) emoji = "\u2b50\ufe0f";
+                                                    else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
+                                                    if (!TextUtils.isEmpty(emoji)) pastCounts.put(emoji, rc.count);
+                                                }
+                                            }
+                                        }
                                         for (int r = 0; r < reactions.results.size(); r++) {
                                             TLRPC.ReactionCount rc = reactions.results.get(r);
                                             if (rc != null) {
                                                 String emoji = "";
-                                                if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "\u2b50\ufe0f";
-                                                } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                    emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
-                                                }
+                                                if (rc.reaction instanceof TLRPC.TL_reactionPaid) emoji = "\u2b50\ufe0f";
+                                                else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
                                                 if (!TextUtils.isEmpty(emoji)) {
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0, mySelfId);
+                                                    int pastCount = pastCounts.containsKey(emoji) ? pastCounts.get(emoji) : 0;
+                                                    if (rc.count > pastCount) {
+                                                        org.veyra.client.VeyraEditHistoryManager.logReactionEvent(dialogId, msgId, nowTime, emoji, 0, "add", mySelfId);
+                                                    } else if (rc.count < pastCount) {
+                                                        org.veyra.client.VeyraEditHistoryManager.logReactionEvent(dialogId, msgId, nowTime, emoji, 0, "remove", mySelfId);
+                                                    }
                                                 }
                                             }
                                         }

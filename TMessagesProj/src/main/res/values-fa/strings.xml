@@ -211,4 +211,6 @@
     <string name="VeyraReactionHistoryLimitDesc">حداکثر تعداد واکنش های ذخیره شده برای هر پیام (بین ۵ تا ۱۰۰)</string>
     <string name="VeyraNoEditHistory">هیچ ویرایشی برای این پیام ثبت نشده است.</string>
     <string name="VeyraNoReactionHistory">هیچ واکنشی برای این پیام ثبت نشده است.</string>
+    <string name="VeyraSpoilerPhoneNumber">اسپویل شماره تلفن</string>
+    <string name="VeyraSpoilerPhoneNumberDesc">مخفی سازی شماره تلفن شما در تنظیمات و پروفایل به شکل پیش فرض</string>
 </resources>

@@ -11404,6 +11404,8 @@
     <string name="VeyraReactionHistoryLimitDesc">Maximum number of reaction entries saved per message (5 to 100)</string>
     <string name="VeyraNoEditHistory">No edit history recorded for this message.</string>
     <string name="VeyraNoReactionHistory">No reactions recorded for this message.</string>
+    <string name="VeyraSpoilerPhoneNumber">Spoiler Phone Number</string>
+    <string name="VeyraSpoilerPhoneNumberDesc">Mask your phone number in Settings and Profile by default.</string>
 
     <!-- Synced from official Telegram 12.10.x -->
     <string name="EditAdminUserManageWelcomeMessages">Manage Welcome Messages</string>

@@ -64,6 +64,7 @@ public class VeyraConfig {
     public static boolean hideTyping = true;
     public static boolean readOnReply = true;
     public static boolean blockSecretChat = false;
+    public static boolean spoilerPhoneNumber = true;
     // 0 = normal (show online), 1 = hide online, 2 = hide online + offline after sending message, 3 = always appear online
     public static int onlineMode = 1;
 
@@ -311,6 +312,7 @@ public class VeyraConfig {
         disableLinkPreviewByDefault = preferences.getBoolean("disableLinkPreviewByDefault", false);
         ignoreContentRestrictions = preferences.getBoolean("ignoreContentRestrictions", true);
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
+        spoilerPhoneNumber = preferences.getBoolean("spoilerPhoneNumber", true);
         onlineMode = preferences.getInt("onlineMode", 0);
         sortByUnread = preferences.getBoolean("sortByUnread", false);
         sortByUnmuted = preferences.getBoolean("sortByUnmuted", false);
@@ -882,6 +884,35 @@ public class VeyraConfig {
     public static void setBlockSecretChat(boolean val) {
         blockSecretChat = val;
         save("blockSecretChat", val);
+    }
+    public static void setSpoilerPhoneNumber(boolean val) {
+        spoilerPhoneNumber = val;
+        save("spoilerPhoneNumber", val);
+    }
+    public static String maskPhoneNumber(String phone) {
+        if (TextUtils.isEmpty(phone)) return "";
+        StringBuilder sb = new StringBuilder();
+        int digitsCount = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            if (Character.isDigit(phone.charAt(i))) digitsCount++;
+        }
+        int visibleStart = Math.min(2, digitsCount);
+        int visibleEnd = 2;
+        int seenDigits = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            char c = phone.charAt(i);
+            if (Character.isDigit(c)) {
+                seenDigits++;
+                if (seenDigits <= visibleStart || seenDigits > digitsCount - visibleEnd) {
+                    sb.append(c);
+                } else {
+                    sb.append('•');
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
     public static void setOnlineMode(int val) {
         onlineMode = val;

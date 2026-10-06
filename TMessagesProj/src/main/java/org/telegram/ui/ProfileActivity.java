@@ -13660,6 +13660,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             phoneNumber = vcardPhone;
                         } else if (user != null && !TextUtils.isEmpty(user.phone)) {
                             text = PhoneFormat.getInstance().format("+" + user.phone);
+                            if (myProfile && org.telegram.messenger.VeyraConfig.spoilerPhoneNumber) {
+                                text = org.telegram.messenger.VeyraConfig.maskPhoneNumber(text);
+                            }
                             phoneNumber = user.phone;
                         } else {
                             text = LocaleController.getString(R.string.PhoneHidden);

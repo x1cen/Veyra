@@ -33397,7 +33397,26 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_VIEW_EDIT_HISTORY: {
                 if (selectedObject != null) {
-                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject));
+                    final MessageObject finalSelectedObject = selectedObject;
+                    final long finalDialogId = dialog_id;
+                    CharSequence[] historyOptions = new CharSequence[]{
+                            LocaleController.getString("EditHistory", R.string.EditHistory),
+                            LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions)
+                    };
+                    int[] historyIcons = new int[]{
+                            R.drawable.msg_edit,
+                            R.drawable.msg_reactions
+                    };
+                    org.telegram.ui.ActionBar.AlertDialog.Builder builder = new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity());
+                    builder.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
+                    builder.setItems(historyOptions, historyIcons, (dialog, which) -> {
+                        if (which == 0) {
+                            presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 0));
+                        } else {
+                            presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, 1));
+                        }
+                    });
+                    showDialog(builder.create());
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;
