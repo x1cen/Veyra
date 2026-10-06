@@ -127,6 +127,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
             typePrivateRow = rowCount++;
         } else if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) {
             typeChannelsRow = rowCount++;
+        } else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) {
+            typePrivateRow = rowCount++;
         }
         chatTypesInfoRow = rowCount++;
 
@@ -245,6 +247,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         if (category == VeyraConfig.CATEGORY_GHOST_READ) return LocaleController.getString("VeyraGhostHideRead", R.string.VeyraGhostHideRead);
         if (category == VeyraConfig.CATEGORY_GHOST_STORIES) return LocaleController.getString("VeyraGhostHideStories", R.string.VeyraGhostHideStories);
         if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) return "Anonymous Channel Browsing";
+        if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) return "Secret Chat Read Receipts";
         return "Ghost Mode Feature";
     }
 
@@ -255,6 +258,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         if (category == VeyraConfig.CATEGORY_GHOST_READ) return VeyraConfig.ghostHideRead;
         if (category == VeyraConfig.CATEGORY_GHOST_STORIES) return VeyraConfig.ghostHideStories;
         if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) return VeyraConfig.ghostHideChannelViews;
+        if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) return VeyraConfig.ghostHideSecretRead;
         return false;
     }
 
@@ -265,6 +269,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         else if (category == VeyraConfig.CATEGORY_GHOST_READ) VeyraConfig.setGhostHideRead(val);
         else if (category == VeyraConfig.CATEGORY_GHOST_STORIES) VeyraConfig.setGhostHideStories(val);
         else if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) VeyraConfig.setGhostHideChannelViews(val);
+        else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) VeyraConfig.setGhostHideSecretRead(val);
     }
 
     private boolean isTypeEnabled(int peerType) {
@@ -404,7 +409,14 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                     if (position == masterToggleRow) {
                         checkCell.setTextAndCheck("Enable " + getTitleForCategory(), isMasterEnabled(), false);
                     } else if (position == typePrivateRow) {
-                        String label = (category == VeyraConfig.CATEGORY_GHOST_STORIES) ? "Users & Contacts" : LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate);
+                        String label;
+                        if (category == VeyraConfig.CATEGORY_GHOST_STORIES) {
+                            label = "Users & Contacts";
+                        } else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) {
+                            label = "Secret Chats";
+                        } else {
+                            label = LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate);
+                        }
                         checkCell.setTextAndCheck(label, isTypeEnabled(VeyraConfig.PEER_PRIVATE), typeGroupsRow != -1 || typeChannelsRow != -1);
                     } else if (position == typeGroupsRow) {
                         checkCell.setTextAndCheck(LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups), isTypeEnabled(VeyraConfig.PEER_GROUP), typeChannelsRow != -1 || typeBotsRow != -1);

@@ -52,6 +52,7 @@ public class VeyraConfig {
     public static final int CATEGORY_GHOST_READ = 7;
     public static final int CATEGORY_GHOST_STORIES = 8;
     public static final int CATEGORY_GHOST_CHANNEL_VIEWS = 9;
+    public static final int CATEGORY_GHOST_SECRET_READ = 10;
 
     public static final int PEER_PRIVATE = 1;
     public static final int PEER_GROUP = 2;
@@ -370,6 +371,7 @@ public class VeyraConfig {
         loadExceptions(CATEGORY_GHOST_READ, preferences.getString("ghostReadExceptions", ""));
         loadExceptions(CATEGORY_GHOST_STORIES, preferences.getString("ghostStoriesExceptions", ""));
         loadExceptions(CATEGORY_GHOST_CHANNEL_VIEWS, preferences.getString("ghostChannelViewsExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_SECRET_READ, preferences.getString("ghostSecretReadExceptions", ""));
 
         ghostTypingPrivate = preferences.getBoolean("ghostTypingPrivate", true);
         ghostTypingGroups = preferences.getBoolean("ghostTypingGroups", true);
@@ -437,6 +439,7 @@ public class VeyraConfig {
     private static final HashMap<Long, Boolean> ghostReadExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> ghostStoriesExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> ghostChannelViewsExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostSecretReadExceptions = new HashMap<>();
 
     public static HashMap<Long, Boolean> getExceptions(int category) {
         if (category == CATEGORY_ANTI_DELETE) return antiDeleteExceptions;
@@ -448,6 +451,7 @@ public class VeyraConfig {
         if (category == CATEGORY_GHOST_READ) return ghostReadExceptions;
         if (category == CATEGORY_GHOST_STORIES) return ghostStoriesExceptions;
         if (category == CATEGORY_GHOST_CHANNEL_VIEWS) return ghostChannelViewsExceptions;
+        if (category == CATEGORY_GHOST_SECRET_READ) return ghostSecretReadExceptions;
         return antiDeleteExceptions;
     }
 
@@ -523,6 +527,7 @@ public class VeyraConfig {
             case CATEGORY_GHOST_READ: key = "ghostReadExceptions"; break;
             case CATEGORY_GHOST_STORIES: key = "ghostStoriesExceptions"; break;
             case CATEGORY_GHOST_CHANNEL_VIEWS: key = "ghostChannelViewsExceptions"; break;
+            case CATEGORY_GHOST_SECRET_READ: key = "ghostSecretReadExceptions"; break;
             default: return;
         }
         save(key, sb.toString());
