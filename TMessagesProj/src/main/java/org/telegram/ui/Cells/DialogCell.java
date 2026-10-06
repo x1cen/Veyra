@@ -282,6 +282,9 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         }
         currentDialogId = dialog_id;
         lastDialogChangedTime = System.currentTimeMillis();
+        if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+            messageObject = null;
+        }
         message = messageObject;
         isDialogCell = false;
         this.showTopicIconInName = showTopicIconInName;
@@ -874,6 +877,9 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         }
         currentDialogId = dialog_id;
         lastDialogChangedTime = System.currentTimeMillis();
+        if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+            messageObject = null;
+        }
         message = messageObject;
         useMeForMyMessages = useMe;
         isDialogCell = false;
@@ -898,6 +904,9 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         }
         currentDialogId = dialog_id;
         lastDialogChangedTime = System.currentTimeMillis();
+        if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+            messageObject = null;
+        }
         message = messageObject;
         useMeForMyMessages = useMe;
         isDialogCell = false;
@@ -3199,7 +3208,16 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 LongSparseArray<ArrayList<MessageObject>> dialogMessage = MessagesController.getInstance(currentAccount).dialogMessage;
                 if (dialogMessage != null) {
                     ArrayList<MessageObject> groupMessages = dialogMessage.get(dialog.id);
-                    MessageObject object = groupMessages != null && !groupMessages.isEmpty() ? groupMessages.get(0) : null;
+                    MessageObject object = null;
+                    if (groupMessages != null && !groupMessages.isEmpty()) {
+                        for (int i = 0; i < groupMessages.size(); i++) {
+                            MessageObject obj = groupMessages.get(i);
+                            if (obj != null && !obj.deleted && (obj.messageOwner == null || !obj.messageOwner.isDeleted)) {
+                                object = obj;
+                                break;
+                            }
+                        }
+                    }
                     if (object != null && (maxMessage == null || object.messageOwner.date > maxMessage.messageOwner.date)) {
                         maxMessage = object;
                     }
@@ -3265,7 +3283,16 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     if (mask == 0) {
                         clearingDialog = MessagesController.getInstance(currentAccount).isClearingDialog(dialog.id);
                         groupMessages = MessagesController.getInstance(currentAccount).dialogMessage.get(dialog.id);
-                        message = groupMessages != null && groupMessages.size() > 0 ? groupMessages.get(0) : null;
+                        message = null;
+                        if (groupMessages != null && !groupMessages.isEmpty()) {
+                            for (int a = 0; a < groupMessages.size(); a++) {
+                                MessageObject obj = groupMessages.get(a);
+                                if (obj != null && !obj.deleted && (obj.messageOwner == null || !obj.messageOwner.isDeleted)) {
+                                    message = obj;
+                                    break;
+                                }
+                            }
+                        }
                         lastUnreadState = message != null && message.isUnread();
                         TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(-dialog.id);
                         boolean isForumCell = localChat != null && localChat.forum && !isTopic;

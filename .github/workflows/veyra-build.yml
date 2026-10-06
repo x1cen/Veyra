@@ -1,9 +1,6 @@
 name: Build and Release Veyra APK
 
 on:
-    push:
-        branches:
-            - dev
     workflow_dispatch:
         inputs:
             veyra-version:

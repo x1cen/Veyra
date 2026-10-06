@@ -17720,6 +17720,7 @@ public class MessagesController extends BaseController implements NotificationCe
             });
             if (isAntiDeleteAllowed) {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
             } else {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
