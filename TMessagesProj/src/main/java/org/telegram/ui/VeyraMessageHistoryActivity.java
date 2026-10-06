@@ -594,7 +594,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             if (entry.messageObject != null) {
                 cell.isChat = (dialogId < 0);
-                cell.setMessageObject(entry.messageObject, null, false, false);
+                cell.setMessageObject(entry.messageObject, null, false, false, false);
             }
         }
     }

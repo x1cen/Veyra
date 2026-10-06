@@ -151,6 +151,8 @@ public class RichMessageLayout {
     public MultiLayoutTypingAnimator typingAnimator;
 
     public boolean detailsAnimating;
+    public boolean blockquoteAnimating;
+    public void snapshotForBlockquoteAnimation() { snapshotForDetailsAnimation(); }
 
     public boolean invalidateAnimatedEmojiInParent;
 
@@ -528,12 +530,24 @@ public class RichMessageLayout {
         int endBlockIndex;
         int padding;
         int level;
+        int outerTopVpad;
+        int outerBottomVpad;
 
         public QuoteBackground(int startBlockIndex, int endBlockIndex, int padding, int level) {
+            this(startBlockIndex, endBlockIndex, padding, level, 0, 0);
+        }
+
+        public QuoteBackground(int startBlockIndex, int endBlockIndex, int padding, int level, int outerVpad) {
+            this(startBlockIndex, endBlockIndex, padding, level, outerVpad, outerVpad);
+        }
+
+        public QuoteBackground(int startBlockIndex, int endBlockIndex, int padding, int level, int outerTopVpad, int outerBottomVpad) {
             this.startBlockIndex = startBlockIndex;
             this.endBlockIndex = endBlockIndex;
             this.padding = padding;
             this.level = level;
+            this.outerTopVpad = outerTopVpad;
+            this.outerBottomVpad = outerBottomVpad;
         }
     }
 
@@ -835,18 +849,33 @@ public class RichMessageLayout {
             final int startIndex = blocks.size();
             final TL_iv.pageBlockBlockquote blockquote = (TL_iv.pageBlockBlockquote) pageBlock;
             final CharSequence text = formatText(pageBlock.text, setBlockFlags(textFlags, getBlockTextFlag(pageBlock)));
-            final SpannableStringBuilder sb = new SpannableStringBuilder(text);
-            int authorStart = -1;
+            CharSequence author = null;
             if (blockquote.caption != null && !TextUtils.isEmpty(getString(blockquote.caption))) {
-                sb.append("\n");
-                authorStart = sb.length();
-                sb.append(formatText(blockquote.caption, setBlockFlags(textFlags, TEXT_FLAG_BLOCK_QUOTE_CAPTION)));
+                author = formatText(blockquote.caption, setBlockFlags(textFlags, TEXT_FLAG_BLOCK_QUOTE_CAPTION));
             }
-            final RichTextBlock block = new RichTextBlock(this, new Rect(padding.left + dp(12), padding.top + dp(4), padding.right + dp(12), padding.bottom + dp(4)), maxWidth, sb);
+            final RichBlock block;
+            if (blockquote.collapsed) {
+                final SpannableStringBuilder sb = new SpannableStringBuilder(text);
+                int authorStart = -1;
+                if (author != null) {
+                    sb.append('
+');
+                    authorStart = sb.length();
+                    sb.append(author);
+                }
+                final RichTextBlockQuote collapsedBlock = new RichTextBlockQuote(this, new Rect(padding.left + dp(12), padding.top + dp(4), padding.right + dp(20), padding.bottom + dp(4)), maxWidth, blockquote, sb);
+                collapsedBlock.quoteAuthorStart = authorStart;
+                collapsedBlock.setContentPadding(dp(8), dp(8));
+                block = collapsedBlock;
+            } else {
+                block = new RichQuoteBlock(this, new Rect(padding.left + dp(12), padding.top + dp(12), padding.right + dp(12), padding.bottom + dp(14)), maxWidth, text, author);
+            }
             block.accessibilityLabelResId = R.string.ArticleQuote;
-            block.quoteAuthorStart = authorStart;
             blocks.add(block);
-            quotes.add(new QuoteBackground(startIndex, blocks.size() - 1, quotePadding, quoteLevel));
+            quotes.add(new QuoteBackground(
+                startIndex, blocks.size() - 1, quotePadding, quoteLevel,
+                dp(8), blockquote.collapsed ? dp(8) : 0
+            ));
 
             return block;
         } else if (pageBlock instanceof TL_iv.pageBlockBlockquoteBlocks) {
@@ -878,14 +907,12 @@ public class RichMessageLayout {
             final TL_iv.pageBlockPullquote pullquote = (TL_iv.pageBlockPullquote) pageBlock;
 
             final CharSequence text = formatText(pageBlock.text, setBlockFlags(textFlags, getBlockTextFlag(pageBlock)));
-            SpannableStringBuilder sb = new SpannableStringBuilder(text);
+            CharSequence author = null;
             if (pullquote.caption != null && !TextUtils.isEmpty(getString(pullquote.caption))) {
-                sb.append("\n");
-                sb.append(formatText(pullquote.caption, setBlockFlags(textFlags, TEXT_FLAG_BLOCK_QUOTE_CAPTION)));
+                author = formatText(pullquote.caption, setBlockFlags(textFlags, TEXT_FLAG_BLOCK_QUOTE_CAPTION));
             }
-            final RichTextBlock block = new RichTextBlock(this, new Rect(padding.left + dp(30), padding.top + dp(8), padding.right + dp(30), padding.bottom + dp(8)), maxWidth, sb, Layout.Alignment.ALIGN_CENTER);
+            final RichPullquoteBlock block = new RichPullquoteBlock(this, new Rect(padding.left + dp(30), padding.top + dp(16), padding.right + dp(30), padding.bottom + dp(16)), maxWidth, text, author);
             block.accessibilityLabelResId = R.string.ArticlePullquote;
-            block.pullquote = true;
             blocks.add(block);
 
             return block;
@@ -990,29 +1017,8 @@ public class RichMessageLayout {
             }
             return header;
         } else if (pageBlock instanceof TL_iv.pageBlockButtonRow) {
-            final TL_iv.pageBlockButtonRow buttonRow = (TL_iv.pageBlockButtonRow) pageBlock;
-            final SpannableStringBuilder rowSb = new SpannableStringBuilder();
-            for (int i = 0; i < buttonRow.buttons.size(); ++i) {
-                if (i > 0) rowSb.append("   ");
-                final TL_iv.pageButton btn = buttonRow.buttons.get(i);
-                int start = rowSb.length();
-                formatText(btn.text, rowSb, TEXT_FLAG_BOLD);
-                String url = null;
-                if (btn.type != null) {
-                    if (btn.type.url != null) {
-                        url = btn.type.url;
-                    } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeUserProfile) {
-                        url = "tg://user?id=" + btn.type.user_id;
-                    }
-                }
-                if (url != null) {
-                    rowSb.setSpan(new URLSpanReplacement(url), start, rowSb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-            }
-            Layout.Alignment align = Layout.Alignment.ALIGN_NORMAL;
-            if (buttonRow.align_center) align = Layout.Alignment.ALIGN_CENTER;
-            else if (buttonRow.align_right) align = Layout.Alignment.ALIGN_OPPOSITE;
-            final RichBlock block = new RichTextBlock(this, new Rect(padding), maxWidth, rowSb, align);
+            final RichButtonRowBlock block = new RichButtonRowBlock(this, padding, maxWidth, (TL_iv.pageBlockButtonRow) pageBlock);
+            block.accessibilityLabelResId = R.string.AccDescrIVButtons;
             blocks.add(block);
             return block;
         }
@@ -1089,10 +1095,12 @@ public class RichMessageLayout {
             for (QuoteBackground q : quotes) {
                 int quoteTop = getBlockTop(q.startBlockIndex);
                 int quoteBottom = getBlockBottom(q.endBlockIndex);
-                final int vinset = q.level * dp(QUOTE_NEST_VPAD);
-                if (quoteBottom - quoteTop > 2 * vinset) {
-                    quoteTop += vinset;
-                    quoteBottom -= vinset;
+                final int nestedInset = q.level * dp(QUOTE_NEST_VPAD);
+                final int topInset = nestedInset + q.outerTopVpad;
+                final int bottomInset = nestedInset + q.outerBottomVpad;
+                if (quoteBottom - quoteTop > topInset + bottomInset) {
+                    quoteTop += topInset;
+                    quoteBottom -= bottomInset;
                 }
                 AndroidUtilities.rectTmp.set(q.padding, quoteTop, getMinWidth() - dp(12 * q.level), quoteBottom);
 //                if (q.level == 0) {
@@ -1104,21 +1112,24 @@ public class RichMessageLayout {
         }
         for (int i = 0; i < blocks.size(); ++i) {
             final RichBlock block = blocks.get(i);
-            if (!(block instanceof RichTextBlock) || !((RichTextBlock) block).pullquote || !block.isVisible()) continue;
-            drawPullquoteBackground(canvas, (RichTextBlock) block, i);
+            if (!(block instanceof RichPullquoteBlock) || !block.isVisible()) continue;
+            drawPullquoteBackground(canvas, (RichPullquoteBlock) block, i);
         }
     }
 
-    private void drawPullquoteBackground(Canvas canvas, RichTextBlock block, int index) {
-        final int textWidth = block.text.getMinWidth();
+    private void drawPullquoteBackground(Canvas canvas, RichPullquoteBlock block, int index) {
+        final int textWidth = block.getTextWidth();
         if (textWidth <= 0) return;
 
         final float center = (getMinWidth() + padRight - padLeft) / 2f;
         final float left = center - textWidth / 2f - dp(30);
         final float right = center + textWidth / 2f + dp(30);
 
-        final int top = getBlockTop(index);
-        final int bottom = top + block.getHeight();
+        final int blockTop = getBlockTop(index);
+        final int blockHeight = block.getHeight();
+        final float top = blockTop + dp(8);
+        final float bottom = blockTop + blockHeight - dp(8);
+        if (bottom <= top) return;
 
         AndroidUtilities.rectTmp.set(left, top, right, bottom);
         final float rad = (float) Math.floor(SharedConfig.bubbleRadius / 2f);
@@ -1132,13 +1143,15 @@ public class RichMessageLayout {
         final int ih = pullquoteIcon.getIntrinsicHeight();
 
         canvas.save();
-        pullquoteIcon.setBounds((int) left + dp(8), top + dp(7), (int) left + dp(8) + iw, top + dp(7) + ih);
+        canvas.clipRect(left, top, right, bottom);
+        pullquoteIcon.setBounds((int) left + dp(8), (int) top + dp(7), (int) left + dp(8) + iw, (int) top + dp(7) + ih);
         canvas.scale(-1.0f, -1.0f, pullquoteIcon.getBounds().centerX(), pullquoteIcon.getBounds().centerY());
         pullquoteIcon.draw(canvas);
         canvas.restore();
 
         canvas.save();
-        pullquoteIcon.setBounds((int) right - dp(8) - iw, bottom - dp(7) - ih, (int) right - dp(8), bottom - dp(7));
+        canvas.clipRect(left, top, right, bottom);
+        pullquoteIcon.setBounds((int) right - dp(8) - iw, (int) bottom - dp(7) - ih, (int) right - dp(8), bottom - dp(7));
         canvas.scale(1.0f, -1.0f, pullquoteIcon.getBounds().centerX(), pullquoteIcon.getBounds().centerY());
         pullquoteIcon.draw(canvas);
         canvas.restore();
@@ -2722,6 +2735,504 @@ public class RichMessageLayout {
         @Override
         protected void onDetachedFromWindow() {
             text.detach(view);
+        }
+    }
+
+    public static class RichTextWithAuthorBlock extends RichBlock {
+
+        public final Text text;
+        public final Text author;
+        private final Text[] texts;
+        private final boolean centered;
+
+        public RichTextWithAuthorBlock(
+            RichMessageLayout root,
+            Rect padding, int maxWidth,
+            CharSequence text,
+            CharSequence author,
+            Layout.Alignment alignment
+        ) {
+            super(root, padding, maxWidth);
+            this.centered = alignment == Layout.Alignment.ALIGN_CENTER;
+            this.text = new Text(root, text, this.maxWidth, alignment);
+            this.author = !TextUtils.isEmpty(author) ? new Text(root, author, this.maxWidth, alignment) : null;
+            this.texts = this.author == null ? new Text[] { this.text } : new Text[] { this.text, this.author };
+        }
+
+        private int gap() {
+            return author != null ? dp(6) : 0;
+        }
+
+        private int offset(Text value) {
+            if (centered) {
+                return (root.getMinWidth() + root.padRight - root.padLeft - value.getMinWidth()) / 2 - padding.left;
+            }
+            if (!root.isRtl()) return 0;
+            return root.getMinWidth() + root.padRight - dp(14) - padding.right - padding.left - value.getMinWidth();
+        }
+
+        public int getTextWidth() {
+            return Math.max(text.getMinWidth(), author != null ? author.getMinWidth() : 0);
+        }
+
+        @Override
+        public void appendAccessibilityText(SpannableStringBuilder sb) {
+            appendText(sb, null, texts);
+        }
+
+        @Override
+        public int getHeight() {
+            return padding.top + text.getHeight() + gap() + (author != null ? author.getHeight() : 0) + padding.bottom;
+        }
+
+        @Override
+        public int getMinWidth() {
+            return padding.left + getTextWidth() + padding.right;
+        }
+
+        @Override
+        public int getLastLineWidth() {
+            final Text last = author != null ? author : text;
+            return padding.left + last.getLastLineWidth() + padding.right;
+        }
+
+        @Override
+        public boolean forcesTimeToNewLine() {
+            return centered;
+        }
+
+        @Override
+        public Layout getLayout() {
+            return text.layout;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            canvas.save();
+            canvas.translate(offset(text), 0);
+            text.draw(canvas);
+            canvas.restore();
+            if (author != null) {
+                canvas.save();
+                canvas.translate(offset(author), text.getHeight() + gap());
+                author.draw(canvas);
+                canvas.restore();
+            }
+        }
+
+        @Override
+        protected boolean onTouchEvent(MotionEvent event) {
+            final int textHeight = text.getHeight();
+            final float y = event.getY();
+            final Text target;
+            final int dx;
+            final int dy;
+            if (y >= 0 && y < textHeight) {
+                target = text;
+                dx = offset(text);
+                dy = 0;
+            } else if (author != null && y >= textHeight + gap()) {
+                target = author;
+                dx = offset(author);
+                dy = textHeight + gap();
+            } else {
+                return false;
+            }
+            event.offsetLocation(-dx, -dy);
+            final boolean handled = target.onTouchEvent(event);
+            event.offsetLocation(dx, dy);
+            return handled;
+        }
+
+        @Override
+        public boolean findLink(CharacterStyle link, int blockY, FoundLink out) {
+            if (text.fillFoundLink(link, out)) {
+                out.x = padding.left + offset(text) - text.left;
+                out.y = blockY + padding.top;
+                return true;
+            }
+            if (author != null && author.fillFoundLink(link, out)) {
+                out.x = padding.left + offset(author) - author.left;
+                out.y = blockY + padding.top + text.getHeight() + gap();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        protected TextSelectionHelper.TextLayoutBlock[] getText() {
+            return texts;
+        }
+
+        @Override
+        protected void placeTexts(int blockX, int blockY, int row) {
+            text.setX(blockX + offset(text) - text.left);
+            text.setY(blockY);
+            text.setRow(row);
+            if (author != null) {
+                author.setX(blockX + offset(author) - author.left);
+                author.setY(blockY + text.getHeight() + gap());
+                author.setRow(row);
+            }
+        }
+
+        @Override
+        protected void onAttachedToWindow() {
+            text.attach(view);
+            if (author != null) author.attach(view);
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            text.detach(view);
+            if (author != null) author.detach(view);
+        }
+    }
+
+    public static class RichQuoteBlock extends RichTextWithAuthorBlock {
+        public RichQuoteBlock(RichMessageLayout root, Rect padding, int maxWidth, CharSequence text, CharSequence author) {
+            super(root, padding, maxWidth, text, author, Layout.Alignment.ALIGN_NORMAL);
+        }
+    }
+
+    public static class RichPullquoteBlock extends RichTextWithAuthorBlock {
+        public RichPullquoteBlock(RichMessageLayout root, Rect padding, int maxWidth, CharSequence text, CharSequence author) {
+            super(root, padding, maxWidth, text, author, Layout.Alignment.ALIGN_CENTER);
+        }
+    }
+
+    public static class RichTextBlockQuote extends RichTextBlock {
+        public final TL_iv.pageBlockBlockquote block;
+        private GradientClip clip;
+
+        public RichTextBlockQuote(RichMessageLayout root, Rect padding, int maxWidth, TL_iv.pageBlockBlockquote block, CharSequence text) {
+            super(root, padding, maxWidth, text);
+            this.block = block;
+            quoteArrow = ApplicationLoader.applicationContext.getResources().getDrawable(R.drawable.arrow_more).mutate();
+            prevCollapsed = currentCollapsed = block.collapsed;
+        }
+
+        private ButtonBounce bounce;
+        private boolean pressed;
+        private boolean capturedByParent;
+
+        private boolean currentCollapsed;
+        private boolean prevCollapsed;
+        public float collapsedProgress;
+        public int collapsedHeightToDraw;
+
+        public final Drawable quoteArrow;
+        private int quoteArrowColor;
+
+        @Override
+        public int getHeight() {
+            return currentCollapsed ? getCollapsedHeight() : super.getHeight();
+        }
+
+        public int getCollapsedHeight() {
+            return (int) Math.min(padding.top + contentPaddingTop + text.layout.getPaint().getTextSize() * 1.4f * 3 + padding.bottom, super.getHeight());
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            final int act = event.getActionMasked();
+            if (capturedByParent) {
+                if (act == MotionEvent.ACTION_UP || act == MotionEvent.ACTION_CANCEL) {
+                    capturedByParent = false;
+                }
+                return super.onTouchEvent(event);
+            }
+
+            if (act == MotionEvent.ACTION_DOWN) {
+                capturedByParent = super.onTouchEvent(event);
+                if (capturedByParent) {
+                    return true;
+                }
+
+                pressed = true;
+                ensureBounce();
+                if (bounce != null) bounce.setPressed(true);
+                return true;
+            }
+            if (act == MotionEvent.ACTION_UP) {
+                if (pressed) {
+                    pressed = false;
+                    if (bounce != null) bounce.setPressed(false);
+                    if (root.view != null) root.view.playSoundEffect(SoundEffectConstants.CLICK);
+                    toggle();
+                    return true;
+                }
+                return false;
+            }
+            if (act == MotionEvent.ACTION_CANCEL) {
+                pressed = false;
+                if (bounce != null) bounce.setPressed(false);
+            }
+            return pressed;
+        }
+
+        private void ensureBounce() {
+            if (bounce == null && root.view != null) {
+                bounce = new ButtonBounce(root.view);
+            }
+        }
+
+        @Override
+        public void onDraw(Canvas canvas) {
+            final float scale = bounce != null ? bounce.getScale(0.01f) : 1f;
+            if (scale != 1f) {
+                canvas.save();
+                canvas.scale(scale, scale, maxWidth / 2f, getHeight() / 2f);
+            }
+
+            final boolean needCollapse = currentCollapsed;
+            final int collapsedH = (int) (currentCollapsed ? getCollapsedHeight() : getHeight()) - padding.bottom - contentPaddingBottom;
+            canvas.save();
+            canvas.clipRect(0, 0, maxWidth, collapsedH);
+
+            if (needCollapse) {
+                canvas.saveLayer(0, 0, maxWidth, collapsedH, null);
+            }
+            super.onDraw(canvas);
+            if (needCollapse) {
+                if (clip == null) {
+                    clip = new GradientClip();
+                }
+                AndroidUtilities.rectTmp.set(0, collapsedH - dp(24), maxWidth, collapsedH + 1);
+                clip.draw(canvas, AndroidUtilities.rectTmp, GradientClip.BOTTOM, 1.0f);
+                canvas.restore();
+            }
+            canvas.restore();
+
+            if (root.quoteLine != null && root.quoteLine.getColor() != quoteArrowColor) {
+                quoteArrow.setColorFilter(new PorterDuffColorFilter(quoteArrowColor = root.quoteLine.getColor(), PorterDuff.Mode.SRC_IN));
+            }
+
+            final int arrowX = root.getMinWidth() - dp(24);
+            final int arrowY = collapsedH - dp(16) - dp(2) + dp(8);
+            DrawableUtils.setBounds(quoteArrow, arrowX, arrowY, dp(16), dp(16), Gravity.CENTER);
+            canvas.save();
+            canvas.rotate(currentCollapsed ? 0 : 180, quoteArrow.getBounds().exactCenterX(), quoteArrow.getBounds().exactCenterY());
+            quoteArrow.draw(canvas);
+            canvas.restore();
+
+            if (scale != 1f) {
+                canvas.restore();
+            }
+        }
+
+        private void toggle() {
+            root.snapshotForBlockquoteAnimation();
+            currentCollapsed = !currentCollapsed;
+            root.blockquoteAnimating = true;
+            root.reposition();
+            if (root.view != null) {
+                root.view.invalidate();
+            }
+
+            final ChatMessageCell cell = root.getCell();
+            final ChatMessageCell.ChatMessageCellDelegate delegate = root.getDelegate();
+            if (cell != null && delegate != null) {
+                delegate.forceUpdate(cell, true, true);
+            }
+        }
+
+        @Override
+        public void snapshot() {
+            super.snapshot();
+            prevCollapsed = currentCollapsed;
+        }
+
+        @Override
+        public float getBackgroundScale() {
+            return bounce != null ? bounce.getScale(0.01f) : 1f;
+        }
+    }
+
+    public static class RichButtonRowBlock extends RichBlock {
+        private final ArrayList<RichButton> buttons = new ArrayList<>();
+        private final int align;
+
+        public RichButtonRowBlock(RichMessageLayout root, Rect padding, int maxWidth, TL_iv.pageBlockButtonRow pageBlockButtonRow) {
+            super(root, padding, maxWidth);
+            if (pageBlockButtonRow.align_left) {
+                align = 1;
+            } else if (pageBlockButtonRow.align_center) {
+                align = 2;
+            } else if (pageBlockButtonRow.align_right) {
+                align = 3;
+            } else {
+                align = 0;
+            }
+            if (pageBlockButtonRow.buttons != null) {
+                for (TL_iv.pageButton btn : pageBlockButtonRow.buttons) {
+                    buttons.add(new RichButton(root, maxWidth, btn));
+                }
+            }
+            layoutButtons();
+        }
+
+        private void layoutButtons() {
+            if (buttons.isEmpty()) return;
+            final int gap = dp(8);
+            final int count = buttons.size();
+            final int totalGaps = gap * (count - 1);
+            int availableWidth = Math.max(0, maxWidth - padding.left - padding.right - totalGaps);
+
+            int totalPref = 0;
+            for (RichButton btn : buttons) {
+                totalPref += btn.prefWidth;
+            }
+
+            int curX = padding.left;
+            if (align == 2 && totalPref + totalGaps < maxWidth - padding.left - padding.right) {
+                curX = padding.left + (maxWidth - padding.left - padding.right - (totalPref + totalGaps)) / 2;
+            } else if (align == 3 && totalPref + totalGaps < maxWidth - padding.left - padding.right) {
+                curX = maxWidth - padding.right - (totalPref + totalGaps);
+            }
+
+            for (int i = 0; i < count; i++) {
+                RichButton btn = buttons.get(i);
+                int btnW;
+                if (align == 0) {
+                    btnW = availableWidth / count;
+                } else {
+                    btnW = Math.min(availableWidth, btn.prefWidth);
+                }
+                btn.x = curX;
+                btn.y = padding.top;
+                btn.width = btnW;
+                btn.height = dp(36);
+                curX += btnW + gap;
+            }
+        }
+
+        @Override
+        public int getHeight() {
+            return padding.top + dp(36) + padding.bottom;
+        }
+
+        @Override
+        public int getMinWidth() {
+            int w = padding.left + padding.right;
+            for (int i = 0; i < buttons.size(); i++) {
+                if (i > 0) w += dp(8);
+                w += buttons.get(i).prefWidth;
+            }
+            return Math.min(maxWidth, w);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            for (RichButton btn : buttons) {
+                btn.draw(canvas);
+            }
+        }
+
+        @Override
+        protected boolean onTouchEvent(MotionEvent event) {
+            for (RichButton btn : buttons) {
+                if (btn.onTouchEvent(event)) {
+                    if (root.view != null) root.view.invalidate();
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    public static class RichButton {
+        final RichMessageLayout root;
+        final String text;
+        final String url;
+        final int prefWidth;
+        int x, y, width, height;
+        boolean pressed;
+        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        private StaticLayout textLayout;
+
+        public RichButton(RichMessageLayout root, int maxWidth, TL_iv.pageButton btn) {
+            this.root = root;
+            CharSequence title = btn.text != null ? root.formatText(btn.text, TEXT_FLAG_BOLD) : "";
+            this.text = title != null ? title.toString() : "";
+
+            String linkUrl = null;
+            if (btn.type != null) {
+                if (btn.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                    linkUrl = ((TLRPC.TL_inlineButtonTypeUrl) btn.type).url;
+                } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeUrlAuth) {
+                    linkUrl = ((TLRPC.TL_inlineButtonTypeUrlAuth) btn.type).url;
+                } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeUserProfile) {
+                    linkUrl = "tg://user?id=" + ((TLRPC.TL_inlineButtonTypeUserProfile) btn.type).user_id;
+                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) {
+                    linkUrl = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) btn.type).url;
+                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) {
+                    linkUrl = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) btn.type).url;
+                } else if (btn.type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUserProfile) {
+                    linkUrl = "tg://user?id=" + ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUserProfile) btn.type).user_id;
+                }
+            }
+            this.url = linkUrl;
+
+            textPaint.setTextSize(dp(14));
+            textPaint.setTypeface(AndroidUtilities.bold());
+
+            int textW = (int) Math.ceil(textPaint.measureText(this.text));
+            this.prefWidth = Math.min(maxWidth, textW + dp(28));
+        }
+
+        public void draw(Canvas canvas) {
+            final int color = root.quoteLine != null ? root.quoteLine.getColor() : Theme.getColor(Theme.key_chat_messageLinkIn, root.resourcesProvider);
+            final int bgColor = pressed ? Theme.multAlpha(color, 0.28f) : Theme.multAlpha(color, 0.14f);
+            bgPaint.setColor(bgColor);
+
+            AndroidUtilities.rectTmp.set(x, y, x + width, y + height);
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(10), dp(10), bgPaint);
+
+            textPaint.setColor(color);
+            if (textLayout == null || textLayout.getWidth() != width - dp(16)) {
+                int avail = Math.max(dp(10), width - dp(16));
+                textLayout = new StaticLayout(TextUtils.ellipsize(text, textPaint, avail, TextUtils.TruncateAt.END), textPaint, avail, Layout.Alignment.ALIGN_CENTER, 1.0f, 0, false);
+            }
+
+            canvas.save();
+            canvas.translate(x + dp(8), y + (height - textLayout.getHeight()) / 2f);
+            textLayout.draw(canvas);
+            canvas.restore();
+        }
+
+        public boolean onTouchEvent(MotionEvent event) {
+            float ex = event.getX();
+            float ey = event.getY();
+            boolean inside = ex >= x && ex <= x + width && ey >= y && ey <= y + height;
+            int act = event.getActionMasked();
+
+            if (act == MotionEvent.ACTION_DOWN) {
+                if (inside) {
+                    pressed = true;
+                    return true;
+                }
+            } else if (act == MotionEvent.ACTION_MOVE) {
+                if (pressed && !inside) {
+                    pressed = false;
+                    return true;
+                }
+            } else if (act == MotionEvent.ACTION_UP) {
+                if (pressed) {
+                    pressed = false;
+                    if (url != null && root.view != null) {
+                        Browser.openUrl(root.view.getContext(), url);
+                    }
+                    return true;
+                }
+            } else if (act == MotionEvent.ACTION_CANCEL) {
+                if (pressed) {
+                    pressed = false;
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
