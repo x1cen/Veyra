@@ -858,8 +858,7 @@ public class RichMessageLayout {
                 final SpannableStringBuilder sb = new SpannableStringBuilder(text);
                 int authorStart = -1;
                 if (author != null) {
-                    sb.append('
-');
+                    sb.append("\n");
                     authorStart = sb.length();
                     sb.append(author);
                 }
