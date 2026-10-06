@@ -306,21 +306,18 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             }
         });
 
+        Theme.createChatResources(context, false);
+
         SizeNotifierFrameLayout contentView = new SizeNotifierFrameLayout(context) {
             @Override
             protected Drawable getNewDrawable() {
-                Drawable d = Theme.getCachedWallpaperNonBlocking();
-                if (d == null) {
-                    d = Theme.getThemedDrawable(context, R.drawable.background_hd, Theme.key_chat_serviceBackground);
-                }
-                return d;
+                return Theme.getCachedWallpaperNonBlocking();
             }
         };
         Drawable wp = Theme.getCachedWallpaper();
-        if (wp == null) {
-            wp = Theme.getThemedDrawable(context, R.drawable.background_hd, Theme.key_chat_serviceBackground);
+        if (wp != null) {
+            contentView.setBackground(wp);
         }
-        contentView.setBackground(wp);
         contentView.setBackgroundImage(wp, Theme.isWallpaperMotion());
         fragmentView = contentView;
 
