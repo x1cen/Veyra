@@ -46,6 +46,12 @@ public class VeyraConfig {
     public static final int CATEGORY_ANTI_DELETE = 1;
     public static final int CATEGORY_EDIT_HISTORY = 2;
     public static final int CATEGORY_REACTION_HISTORY = 3;
+    public static final int CATEGORY_GHOST_ONLINE = 4;
+    public static final int CATEGORY_GHOST_TYPING = 5;
+    public static final int CATEGORY_GHOST_UPLOAD = 6;
+    public static final int CATEGORY_GHOST_READ = 7;
+    public static final int CATEGORY_GHOST_STORIES = 8;
+    public static final int CATEGORY_GHOST_CHANNEL_VIEWS = 9;
 
     public static final int PEER_PRIVATE = 1;
     public static final int PEER_GROUP = 2;
@@ -79,6 +85,20 @@ public class VeyraConfig {
     public static boolean ghostHideChannelViews = false;
     public static boolean ghostHideSecretRead = true;
 
+    // Ghost Mode Peer Type Filters
+    public static boolean ghostTypingPrivate = true;
+    public static boolean ghostTypingGroups = true;
+    public static boolean ghostUploadPrivate = true;
+    public static boolean ghostUploadGroups = true;
+    public static boolean ghostReadPrivate = true;
+    public static boolean ghostReadGroups = true;
+    public static boolean ghostReadChannels = true;
+    public static boolean ghostReadBots = true;
+    public static boolean ghostStoriesPrivate = true;
+    public static boolean ghostStoriesChannels = true;
+    public static boolean ghostOnlinePrivate = true;
+    public static boolean ghostChannelViewsChannels = true;
+
     private static final java.util.Set<Long> allowedReadDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     public static void allowSendReadOnce(long dialogId) {
@@ -101,12 +121,46 @@ public class VeyraConfig {
         return ghostMode && ghostHideTyping;
     }
 
+    public static boolean isGhostHideTyping(long dialogId) {
+        if (!ghostMode || !ghostHideTyping) return false;
+        Boolean exc = getException(CATEGORY_GHOST_TYPING, dialogId);
+        if (exc != null) return !exc;
+        if (dialogId > 0) return ghostTypingPrivate;
+        return ghostTypingGroups;
+    }
+
     public static boolean isGhostHideUpload() {
         return ghostMode && ghostHideUpload;
     }
 
+    public static boolean isGhostHideUpload(long dialogId) {
+        if (!ghostMode || !ghostHideUpload) return false;
+        Boolean exc = getException(CATEGORY_GHOST_UPLOAD, dialogId);
+        if (exc != null) return !exc;
+        if (dialogId > 0) return ghostUploadPrivate;
+        return ghostUploadGroups;
+    }
+
     public static boolean isGhostHideRead() {
         return ghostMode && ghostHideRead;
+    }
+
+    public static boolean isGhostHideRead(long dialogId) {
+        if (!ghostMode || !ghostHideRead) return false;
+        Boolean exc = getException(CATEGORY_GHOST_READ, dialogId);
+        if (exc != null) return !exc;
+        if (dialogId > 0) {
+            org.telegram.tgnet.TLRPC.User u = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
+            if (u != null && u.bot) return ghostReadBots;
+            return ghostReadPrivate;
+        } else {
+            long chatId = -dialogId;
+            org.telegram.tgnet.TLRPC.Chat chat = findChat(UserConfig.selectedAccount, chatId);
+            if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                return ghostReadChannels;
+            }
+            return ghostReadGroups;
+        }
     }
 
     public static boolean isGhostHideReadContents() {
@@ -115,6 +169,14 @@ public class VeyraConfig {
 
     public static boolean isGhostHideStories() {
         return ghostMode && ghostHideStories;
+    }
+
+    public static boolean isGhostHideStories(long dialogId) {
+        if (!ghostMode || !ghostHideStories) return false;
+        Boolean exc = getException(CATEGORY_GHOST_STORIES, dialogId);
+        if (exc != null) return !exc;
+        if (dialogId > 0) return ghostStoriesPrivate;
+        return ghostStoriesChannels;
     }
 
     public static boolean isGhostReadOnReply() {
@@ -302,6 +364,25 @@ public class VeyraConfig {
         loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
         loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
         loadExceptions(CATEGORY_REACTION_HISTORY, preferences.getString("reactionHistoryExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_ONLINE, preferences.getString("ghostOnlineExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_TYPING, preferences.getString("ghostTypingExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_UPLOAD, preferences.getString("ghostUploadExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_READ, preferences.getString("ghostReadExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_STORIES, preferences.getString("ghostStoriesExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_CHANNEL_VIEWS, preferences.getString("ghostChannelViewsExceptions", ""));
+
+        ghostTypingPrivate = preferences.getBoolean("ghostTypingPrivate", true);
+        ghostTypingGroups = preferences.getBoolean("ghostTypingGroups", true);
+        ghostUploadPrivate = preferences.getBoolean("ghostUploadPrivate", true);
+        ghostUploadGroups = preferences.getBoolean("ghostUploadGroups", true);
+        ghostReadPrivate = preferences.getBoolean("ghostReadPrivate", true);
+        ghostReadGroups = preferences.getBoolean("ghostReadGroups", true);
+        ghostReadChannels = preferences.getBoolean("ghostReadChannels", true);
+        ghostReadBots = preferences.getBoolean("ghostReadBots", true);
+        ghostStoriesPrivate = preferences.getBoolean("ghostStoriesPrivate", true);
+        ghostStoriesChannels = preferences.getBoolean("ghostStoriesChannels", true);
+        ghostOnlinePrivate = preferences.getBoolean("ghostOnlinePrivate", true);
+        ghostChannelViewsChannels = preferences.getBoolean("ghostChannelViewsChannels", true);
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
         cleanUrls = preferences.getBoolean("cleanUrls", true);
@@ -350,11 +431,28 @@ public class VeyraConfig {
     private static final HashMap<Long, Boolean> antiDeleteExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> editHistoryExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> reactionHistoryExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostOnlineExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostTypingExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostUploadExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostReadExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostStoriesExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostChannelViewsExceptions = new HashMap<>();
 
     public static HashMap<Long, Boolean> getExceptions(int category) {
         if (category == CATEGORY_ANTI_DELETE) return antiDeleteExceptions;
         if (category == CATEGORY_EDIT_HISTORY) return editHistoryExceptions;
-        return reactionHistoryExceptions;
+        if (category == CATEGORY_REACTION_HISTORY) return reactionHistoryExceptions;
+        if (category == CATEGORY_GHOST_ONLINE) return ghostOnlineExceptions;
+        if (category == CATEGORY_GHOST_TYPING) return ghostTypingExceptions;
+        if (category == CATEGORY_GHOST_UPLOAD) return ghostUploadExceptions;
+        if (category == CATEGORY_GHOST_READ) return ghostReadExceptions;
+        if (category == CATEGORY_GHOST_STORIES) return ghostStoriesExceptions;
+        if (category == CATEGORY_GHOST_CHANNEL_VIEWS) return ghostChannelViewsExceptions;
+        return antiDeleteExceptions;
+    }
+
+    public static void saveExceptionsExplicit(int category) {
+        saveExceptions(category);
     }
 
     public static Boolean getException(int category, long dialogId) {
@@ -414,7 +512,19 @@ public class VeyraConfig {
             if (sb.length() > 0) sb.append(";");
             sb.append(entry.getKey()).append(":").append(entry.getValue());
         }
-        String key = category == CATEGORY_ANTI_DELETE ? "antiDeleteExceptions" : (category == CATEGORY_EDIT_HISTORY ? "editHistoryExceptions" : "reactionHistoryExceptions");
+        String key;
+        switch (category) {
+            case CATEGORY_ANTI_DELETE: key = "antiDeleteExceptions"; break;
+            case CATEGORY_EDIT_HISTORY: key = "editHistoryExceptions"; break;
+            case CATEGORY_REACTION_HISTORY: key = "reactionHistoryExceptions"; break;
+            case CATEGORY_GHOST_ONLINE: key = "ghostOnlineExceptions"; break;
+            case CATEGORY_GHOST_TYPING: key = "ghostTypingExceptions"; break;
+            case CATEGORY_GHOST_UPLOAD: key = "ghostUploadExceptions"; break;
+            case CATEGORY_GHOST_READ: key = "ghostReadExceptions"; break;
+            case CATEGORY_GHOST_STORIES: key = "ghostStoriesExceptions"; break;
+            case CATEGORY_GHOST_CHANNEL_VIEWS: key = "ghostChannelViewsExceptions"; break;
+            default: return;
+        }
         save(key, sb.toString());
     }
 
@@ -449,6 +559,24 @@ public class VeyraConfig {
             if (peerType == PEER_GROUP) return reactionHistoryGroups;
             if (peerType == PEER_CHANNEL) return reactionHistoryChannels;
             if (peerType == PEER_BOT) return reactionHistoryBots;
+        } else if (category == CATEGORY_GHOST_TYPING) {
+            if (peerType == PEER_PRIVATE) return ghostTypingPrivate;
+            if (peerType == PEER_GROUP) return ghostTypingGroups;
+        } else if (category == CATEGORY_GHOST_UPLOAD) {
+            if (peerType == PEER_PRIVATE) return ghostUploadPrivate;
+            if (peerType == PEER_GROUP) return ghostUploadGroups;
+        } else if (category == CATEGORY_GHOST_READ) {
+            if (peerType == PEER_PRIVATE) return ghostReadPrivate;
+            if (peerType == PEER_GROUP) return ghostReadGroups;
+            if (peerType == PEER_CHANNEL) return ghostReadChannels;
+            if (peerType == PEER_BOT) return ghostReadBots;
+        } else if (category == CATEGORY_GHOST_STORIES) {
+            if (peerType == PEER_PRIVATE) return ghostStoriesPrivate;
+            if (peerType == PEER_CHANNEL) return ghostStoriesChannels;
+        } else if (category == CATEGORY_GHOST_ONLINE) {
+            if (peerType == PEER_PRIVATE) return ghostOnlinePrivate;
+        } else if (category == CATEGORY_GHOST_CHANNEL_VIEWS) {
+            if (peerType == PEER_CHANNEL) return ghostChannelViewsChannels;
         }
         return false;
     }
@@ -469,6 +597,24 @@ public class VeyraConfig {
             else if (peerType == PEER_GROUP) { reactionHistoryGroups = val; save("reactionHistoryGroups", val); }
             else if (peerType == PEER_CHANNEL) { reactionHistoryChannels = val; save("reactionHistoryChannels", val); }
             else if (peerType == PEER_BOT) { reactionHistoryBots = val; save("reactionHistoryBots", val); }
+        } else if (category == CATEGORY_GHOST_TYPING) {
+            if (peerType == PEER_PRIVATE) { ghostTypingPrivate = val; save("ghostTypingPrivate", val); }
+            else if (peerType == PEER_GROUP) { ghostTypingGroups = val; save("ghostTypingGroups", val); }
+        } else if (category == CATEGORY_GHOST_UPLOAD) {
+            if (peerType == PEER_PRIVATE) { ghostUploadPrivate = val; save("ghostUploadPrivate", val); }
+            else if (peerType == PEER_GROUP) { ghostUploadGroups = val; save("ghostUploadGroups", val); }
+        } else if (category == CATEGORY_GHOST_READ) {
+            if (peerType == PEER_PRIVATE) { ghostReadPrivate = val; save("ghostReadPrivate", val); }
+            else if (peerType == PEER_GROUP) { ghostReadGroups = val; save("ghostReadGroups", val); }
+            else if (peerType == PEER_CHANNEL) { ghostReadChannels = val; save("ghostReadChannels", val); }
+            else if (peerType == PEER_BOT) { ghostReadBots = val; save("ghostReadBots", val); }
+        } else if (category == CATEGORY_GHOST_STORIES) {
+            if (peerType == PEER_PRIVATE) { ghostStoriesPrivate = val; save("ghostStoriesPrivate", val); }
+            else if (peerType == PEER_CHANNEL) { ghostStoriesChannels = val; save("ghostStoriesChannels", val); }
+        } else if (category == CATEGORY_GHOST_ONLINE) {
+            if (peerType == PEER_PRIVATE) { ghostOnlinePrivate = val; save("ghostOnlinePrivate", val); }
+        } else if (category == CATEGORY_GHOST_CHANNEL_VIEWS) {
+            if (peerType == PEER_CHANNEL) { ghostChannelViewsChannels = val; save("ghostChannelViewsChannels", val); }
         }
     }
 

@@ -31,37 +31,41 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
 
         // Section 2: Online & Activity Status
         r.add(VeyraSettingsRow.header("Online & Activity"));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideOnline", R.string.VeyraGhostHideOnline),
-                LocaleController.getString("VeyraGhostHideOnlineDesc", R.string.VeyraGhostHideOnlineDesc),
+                "Tap to configure chat types and exceptions",
                 () -> VeyraConfig.ghostHideOnline,
                 v -> VeyraConfig.setGhostHideOnline(v),
-                true
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_ONLINE))
         ));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideTyping", R.string.VeyraGhostHideTyping),
-                LocaleController.getString("VeyraGhostHideTypingDesc", R.string.VeyraGhostHideTypingDesc),
+                "Tap to configure chat types and exceptions",
                 () -> VeyraConfig.ghostHideTyping,
                 v -> VeyraConfig.setGhostHideTyping(v),
-                true
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_TYPING))
         ));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 "Hide Media Uploading",
-                "Hide voice recording, video note recording, and file uploading indicators",
+                "Tap to configure chat types and exceptions",
                 () -> VeyraConfig.ghostHideUpload,
                 v -> VeyraConfig.setGhostHideUpload(v),
-                false
+                false,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_UPLOAD))
         ));
         r.add(VeyraSettingsRow.shadow());
 
         // Section 3: Read Receipts
         r.add(VeyraSettingsRow.header("Read Receipts"));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideRead", R.string.VeyraGhostHideRead),
-                LocaleController.getString("VeyraGhostHideReadDesc", R.string.VeyraGhostHideReadDesc),
+                "Tap to configure chat types, reply reads and exceptions",
                 () -> VeyraConfig.ghostHideRead,
                 v -> VeyraConfig.setGhostHideRead(v),
-                true
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ))
         ));
         r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraReadOnReply", R.string.VeyraReadOnReply),
@@ -88,19 +92,21 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
 
         // Section 4: Stories & Channels
         r.add(VeyraSettingsRow.header("Stories & Channels"));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideStories", R.string.VeyraGhostHideStories),
-                LocaleController.getString("VeyraGhostHideStoriesDesc", R.string.VeyraGhostHideStoriesDesc),
+                "Tap to configure chat types and exceptions",
                 () -> VeyraConfig.ghostHideStories,
                 v -> VeyraConfig.setGhostHideStories(v),
-                true
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_STORIES))
         ));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 "Anonymous Channel Browsing",
-                "Browse public and private channels without incrementing post view counters",
+                "Tap to configure chat types and exceptions",
                 () -> VeyraConfig.ghostHideChannelViews,
                 v -> VeyraConfig.setGhostHideChannelViews(v),
-                false
+                false,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS))
         ));
         r.add(VeyraSettingsRow.shadow());
 

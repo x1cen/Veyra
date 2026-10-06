@@ -324,20 +324,20 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         LinearLayout rootLayout = new LinearLayout(context);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
 
-        // Top Pinned Tabs Bar (Styled identically to TopicsTabsView top menu)
+        // Top Pinned Tabs Bar (Matches TopicsTabsView top menu exactly)
         FrameLayout topTabsBar = new FrameLayout(context);
-        topTabsBar.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefault));
+        topTabsBar.setBackgroundColor(Theme.getColor(Theme.key_chat_topPanelBackground));
 
         LinearLayout tabBar = new LinearLayout(context);
         tabBar.setOrientation(LinearLayout.HORIZONTAL);
         tabBar.setGravity(Gravity.CENTER);
-        tabBar.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+        tabBar.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(4), AndroidUtilities.dp(12), AndroidUtilities.dp(4));
 
         tabMessagesBtn = createTopicTabPill(context, R.drawable.msg_edit, LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
         tabReactionsBtn = createTopicTabPill(context, R.drawable.msg_reactions, LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
 
-        tabBar.addView(tabMessagesBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(34), 1.0f, 0, 0, 6, 0));
-        tabBar.addView(tabReactionsBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(34), 1.0f, 6, 0, 0, 0));
+        tabBar.addView(tabMessagesBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 0, 0, 6, 0));
+        tabBar.addView(tabReactionsBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 6, 0, 0, 0));
 
         tabMessagesBtn.setOnClickListener(v -> selectTab(0));
         tabReactionsBtn.setOnClickListener(v -> selectTab(1));
@@ -345,10 +345,10 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         topTabsBar.addView(tabBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
         View bottomLine = new View(context);
-        bottomLine.setBackgroundColor(Theme.getColor(Theme.key_divider));
+        bottomLine.setBackgroundColor(Theme.getColor(Theme.key_chat_topPanelLine));
         topTabsBar.addView(bottomLine, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 1, Gravity.BOTTOM));
 
-        rootLayout.addView(topTabsBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(46)));
+        rootLayout.addView(topTabsBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(44)));
 
         // Content Area
         FrameLayout contentArea = new FrameLayout(context);
@@ -400,7 +400,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         text.setId(11);
         text.setText(title);
         text.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        text.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        text.setTypeface(AndroidUtilities.bold());
         text.setGravity(Gravity.CENTER_VERTICAL);
         pill.addView(text, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
@@ -423,22 +423,22 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private void updateTabPill(LinearLayout pill, boolean selected) {
         if (pill == null) return;
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(AndroidUtilities.dp(17));
-        int activeBg = Theme.getColor(Theme.key_chat_inBubble);
-        int inactiveBg = 0x22FFFFFF;
+        bg.setCornerRadius(AndroidUtilities.dp(14));
+        int activeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        int activeBg = androidx.core.graphics.ColorUtils.setAlphaComponent(activeColor, 35);
+        int inactiveBg = 0x00000000;
         bg.setColor(selected ? activeBg : inactiveBg);
         pill.setBackground(bg);
 
         ImageView icon = pill.findViewById(10);
         TextView text = pill.findViewById(11);
-        int activeText = Theme.getColor(Theme.key_chat_messageLinkIn);
-        int inactiveText = 0xCCFFFFFF;
+        int inactiveColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2);
 
         if (icon != null) {
-            icon.setColorFilter(new android.graphics.PorterDuffColorFilter(selected ? activeText : inactiveText, android.graphics.PorterDuff.Mode.SRC_IN));
+            icon.setColorFilter(new android.graphics.PorterDuffColorFilter(selected ? activeColor : inactiveColor, android.graphics.PorterDuff.Mode.SRC_IN));
         }
         if (text != null) {
-            text.setTextColor(selected ? activeText : inactiveText);
+            text.setTextColor(selected ? activeColor : inactiveColor);
         }
     }
 
