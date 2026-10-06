@@ -436,16 +436,12 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                     if (index >= 0 && index < exceptionsList.size()) {
                         long did = exceptionsList.get(index);
                         TLObject object;
-                        if (did > 0) {
+                        if (DialogObject.isUserDialog(did)) {
                             object = MessagesController.getInstance(currentAccount).getUser(did);
                         } else {
                             object = MessagesController.getInstance(currentAccount).getChat(-did);
                         }
-                        if (object != null) {
-                            userCell.setData(object, null, null, 0);
-                        } else {
-                            userCell.setName(did > 0 ? "User " + did : "Chat " + did);
-                        }
+                        userCell.setData(object, object == null ? (did > 0 ? "User " + did : "Chat " + did) : null, null, 0);
                     }
                     break;
                 }
