@@ -495,31 +495,34 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     }
 
     private void copyLatestMessageText() {
-        if (currentMessage != null && !TextUtils.isEmpty(currentMessage.messageText)) {
-            AndroidUtilities.addToClipboard(currentMessage.messageText.toString());
+        if (currentMessageObject != null && !TextUtils.isEmpty(currentMessageObject.messageText)) {
+            AndroidUtilities.addToClipboard(currentMessageObject.messageText.toString());
             BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
-        } else if (!editHistory.isEmpty()) {
-            VeyraEditHistoryManager.EditEntry entry = editHistory.get(0);
-            AndroidUtilities.addToClipboard(entry.text);
-            BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+        } else if (!versionEntries.isEmpty()) {
+            VersionEntry entry = versionEntries.get(0);
+            if (!TextUtils.isEmpty(entry.rawText)) {
+                AndroidUtilities.addToClipboard(entry.rawText);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+            }
         }
     }
 
     private void openLatestMessageDetails() {
-        if (currentMessage != null) {
-            presentFragment(new MessageDetailsActivity(currentMessage));
+        if (currentMessageObject != null) {
+            presentFragment(new MessageDetailsActivity(currentMessageObject));
         }
     }
 
     private void confirmClearHistory() {
-        if (getParentActivity() == null) return;
+        if (getParentActivity() == null || currentMessageObject == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(LocaleController.getString("Delete", R.string.Delete));
         builder.setMessage("Are you sure you want to clear all history for this message?");
         builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
-            VeyraEditHistoryManager.deleteHistory(dialogId, messageId);
-            editHistory.clear();
-            reactionsList.clear();
+            int msgId = currentMessageObject.getId();
+            VeyraEditHistoryManager.deleteHistory(dialogId, msgId);
+            versionEntries.clear();
+            reactionItems.clear();
             if (messagesListView != null && messagesListView.getAdapter() != null) {
                 messagesListView.getAdapter().notifyDataSetChanged();
             }
