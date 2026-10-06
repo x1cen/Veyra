@@ -16053,11 +16053,15 @@ public class MessagesStorage extends BaseController {
                                         boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
                                         boolean wasEditedBefore = oldMessage.edit_date != 0 || (oldMessage.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
 
-                                        if (!textChanged && !wasEditedBefore) {
-                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                            message.edit_date = 0;
-                                        } else if (!textChanged && wasEditedBefore) {
-                                            message.edit_date = oldMessage.edit_date;
+                                        if (!oldMessage.out && !message.out) {
+                                            if (!textChanged && !wasEditedBefore) {
+                                                message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                                message.edit_date = 0;
+                                            } else if (!textChanged && wasEditedBefore) {
+                                                message.edit_date = oldMessage.edit_date;
+                                                message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                            }
+                                        } else if (message.out && message.edit_date != 0) {
                                             message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                                         }
 

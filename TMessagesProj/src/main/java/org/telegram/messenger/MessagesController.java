@@ -19604,11 +19604,15 @@ public class MessagesController extends BaseController implements NotificationCe
                     boolean wasEditedBefore = oldMsgOwner.edit_date != 0 || (oldMsgOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
                     boolean isCurrentlyEditing = (oldMsg != null && oldMsg.isEditing()) || message.send_state == MessageObject.MESSAGE_SEND_STATE_EDITING;
 
-                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        message.edit_date = 0;
-                    } else if (!textChanged && wasEditedBefore) {
-                        message.edit_date = oldMsgOwner.edit_date;
+                    if (!oldMsgOwner.out && !message.out) {
+                        if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                            message.edit_date = 0;
+                        } else if (!textChanged && wasEditedBefore) {
+                            message.edit_date = oldMsgOwner.edit_date;
+                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                        }
+                    } else if (message.out && message.edit_date != 0) {
                         message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                     }
 
