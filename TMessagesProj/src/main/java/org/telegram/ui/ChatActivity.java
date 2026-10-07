@@ -30698,18 +30698,32 @@ public class ChatActivity extends BaseFragment implements
         if (msg == null || getParentActivity() == null) return;
         final long msgDialogId = msg.getDialogId();
         final int msgId = msg.getId();
-        final boolean hasEditHist = VeyraEditHistoryManager.hasHistory(msgDialogId, msgId);
-        final boolean hasReactHist = VeyraConfig.reactionHistoryEnabled && VeyraEditHistoryManager.hasReactionHistory(msgDialogId, msgId);
-        final boolean hasAntiDelete = org.veyra.client.VeyraAntiDelete.hasDeletedMessage(msgDialogId, msgId);
-        final boolean hasTelegramHistory = msg.messageOwner != null && (msg.messageOwner.edit_date != 0 || (msg.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
-        builder.setTitle("Clean");
 
-        String[] menuItems;
-        int[] menuActions;
         java.util.List<String> itemList = new java.util.ArrayList<>();
         java.util.List<Integer> actionList = new java.util.ArrayList<>();
+
+        // --- View section ---
+        boolean hasEditHist = VeyraEditHistoryManager.hasHistory(msgDialogId, msgId);
+        boolean hasReactHist = VeyraEditHistoryManager.hasReactionHistory(msgDialogId, msgId);
+        if (hasEditHist || hasReactHist) {
+            int initialTab = hasEditHist ? 0 : 1;
+            final int tab = initialTab;
+            itemList.add("View history");
+            actionList.add(10 + tab);
+        }
+
+        // --- Telegram defaults ---
+        boolean canDeleteForAll = msg.isOutOwner() || (currentChat != null && (currentChat.creator || ChatObject.hasAdminRights(currentChat)));
+        itemList.add("Delete for me");
+        actionList.add(20);
+        if (canDeleteForAll) {
+            itemList.add("Delete for everyone");
+            actionList.add(21);
+        }
+
+        // --- Clean section ---
         if (hasEditHist) {
             itemList.add("Clear edit history");
             actionList.add(1);
@@ -30718,28 +30732,39 @@ public class ChatActivity extends BaseFragment implements
             itemList.add("Clear reaction history");
             actionList.add(2);
         }
+        boolean hasAntiDelete = org.veyra.client.VeyraAntiDelete.hasDeletedMessage(msgDialogId, msgId);
         if (hasAntiDelete) {
             itemList.add("Clear deleted message cache");
             actionList.add(3);
         }
-        if (hasTelegramHistory) {
-            itemList.add("Clear Telegram edit label");
+        boolean hasTgEditLabel = msg.messageOwner != null && msg.messageOwner.edit_date != 0 && (msg.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+        if (hasTgEditLabel) {
+            itemList.add("Clear edited label");
             actionList.add(4);
         }
         if (hasEditHist || hasReactHist || hasAntiDelete) {
-            itemList.add("Clear all Veyra data for this message");
+            itemList.add("Clear all");
             actionList.add(5);
         }
-        if (itemList.isEmpty()) {
-            itemList.add("Nothing to clean for this message");
-            actionList.add(0);
-        }
-        menuItems = itemList.toArray(new String[0]);
-        menuActions = new int[actionList.size()];
+
+        final int[] menuActions = new int[actionList.size()];
         for (int i = 0; i < actionList.size(); i++) menuActions[i] = actionList.get(i);
 
-        builder.setItems(menuItems, (di, which) -> {
+        builder.setItems(itemList.toArray(new String[0]), (di, which) -> {
             int action = which < menuActions.length ? menuActions[which] : 0;
+            if (action == 20 || action == 21) {
+                boolean forAll = (action == 21);
+                selectedObject = msg;
+                selectedObjectGroup = null;
+                selectedObjectToEditCaption = null;
+                createDeleteMessagesAlert(msg, null);
+                return;
+            }
+            if (action >= 10) {
+                int tab = action - 10;
+                presentFragment(new VeyraMessageHistoryActivity(msgDialogId, msg, tab));
+                return;
+            }
             switch (action) {
                 case 1:
                     VeyraEditHistoryManager.deleteHistory(msgDialogId, msgId);
@@ -30761,8 +30786,6 @@ public class ChatActivity extends BaseFragment implements
                     VeyraEditHistoryManager.deleteHistory(msgDialogId, msgId);
                     VeyraEditHistoryManager.deleteReactionHistory(msgDialogId, msgId);
                     org.veyra.client.VeyraAntiDelete.clearMessage(msgDialogId, msgId);
-                    break;
-                default:
                     break;
             }
         });
@@ -33479,11 +33502,7 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_VIEW_EDIT_HISTORY: {
                 if (selectedObject != null) {
-                    final MessageObject finalSelectedObject = selectedObject;
-                    final long finalDialogId = dialog_id;
-                    boolean hasMsg = VeyraEditHistoryManager.hasHistory(finalDialogId, finalSelectedObject.getId());
-                    int initialTab = hasMsg ? 0 : 1;
-                    presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalSelectedObject, initialTab));
+                    showVeyraCleanMenu(selectedObject);
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;
@@ -46072,11 +46091,6 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
                     options.add(OPTION_VIEW_EDIT_HISTORY);
                     icons.add(R.drawable.msg_recent);
-                }
-                if (selectedObject != null) {
-                    items.add("Clean");
-                    options.add(OPTION_VEYRA_CLEAN);
-                    icons.add(R.drawable.msg_delete);
                 }
                 if (ChatObject.isMonoForum(currentChat) && selectedObject.getGroupId() == 0 && selectedObjectGroup == null && message != null && message.messageOwner != null && message.messageOwner.suggested_post == null && message.messageOwner.action == null) {
                     items.add(LocaleController.getString(R.string.EditOfferAdd));
