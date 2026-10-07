@@ -31956,49 +31956,48 @@ public class ChatActivity extends BaseFragment implements
                         }
                         processSelectedOption(options.get(i));
                     });
-                    // History item: replace direct open with animated SwipeBack submenu
+                    // History item: replace direct open with animated SwipeBack submenu when BOTH message and reaction histories exist
                     if (option == OPTION_VIEW_EDIT_HISTORY && popupLayout.getSwipeBack() != null) {
                         final MessageObject histMsg = selectedObject;
                         boolean hasMsgHistSub = histMsg != null && VeyraEditHistoryManager.hasHistory(histMsg.getDialogId(), histMsg.getId());
                         boolean hasReactHistSub = histMsg != null && VeyraConfig.reactionHistoryEnabled
                                 && (histMsg.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(histMsg.getDialogId(), histMsg.getId()));
 
-                        LinearLayout subLayout = new LinearLayout(getParentActivity());
-                        subLayout.setOrientation(LinearLayout.VERTICAL);
-                        subLayout.setLayoutParams(new FrameLayout.LayoutParams(AndroidUtilities.dp(200), LayoutHelper.WRAP_CONTENT));
+                        if (hasMsgHistSub && hasReactHistSub) {
+                            LinearLayout subLayout = new LinearLayout(getParentActivity());
+                            subLayout.setOrientation(LinearLayout.VERTICAL);
+                            subLayout.setLayoutParams(new FrameLayout.LayoutParams(AndroidUtilities.dp(200), LayoutHelper.WRAP_CONTENT));
 
-                        ActionBarMenuSubItem backItem = new ActionBarMenuSubItem(getParentActivity(), true, false, themeDelegate);
-                        backItem.setItemHeight(44);
-                        backItem.setTextAndIcon(LocaleController.getString(R.string.Back), R.drawable.msg_arrow_back);
-                        backItem.getTextView().setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(40), 0, LocaleController.isRTL ? AndroidUtilities.dp(40) : 0, 0);
-                        backItem.setOnClickListener(v2 -> popupLayout.getSwipeBack().closeForeground());
-                        subLayout.addView(backItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                            ActionBarMenuSubItem backItem = new ActionBarMenuSubItem(getParentActivity(), true, false, themeDelegate);
+                            backItem.setItemHeight(44);
+                            backItem.setTextAndIcon(LocaleController.getString(R.string.Back), R.drawable.msg_arrow_back);
+                            backItem.getTextView().setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(40), 0, LocaleController.isRTL ? AndroidUtilities.dp(40) : 0, 0);
+                            backItem.setOnClickListener(v2 -> popupLayout.getSwipeBack().closeForeground());
+                            subLayout.addView(backItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-                        if (hasMsgHistSub) {
-                            ActionBarMenuSubItem msgHistItem = new ActionBarMenuSubItem(getParentActivity(), false, !hasReactHistSub, themeDelegate);
+                            ActionBarMenuSubItem msgHistItem = new ActionBarMenuSubItem(getParentActivity(), false, false, themeDelegate);
                             msgHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages), R.drawable.msg_edit);
                             subLayout.addView(msgHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
                             msgHistItem.setOnClickListener(v2 -> {
                                 closeMenu();
                                 if (histMsg != null) {
-                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, 0));
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, VeyraMessageHistoryActivity.MODE_MESSAGES));
                                 }
                             });
-                        }
-                        if (hasReactHistSub) {
-                            ActionBarMenuSubItem reactHistItem = new ActionBarMenuSubItem(getParentActivity(), !hasMsgHistSub, true, themeDelegate);
+
+                            ActionBarMenuSubItem reactHistItem = new ActionBarMenuSubItem(getParentActivity(), false, true, themeDelegate);
                             reactHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions), R.drawable.msg_reactions);
                             subLayout.addView(reactHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
                             reactHistItem.setOnClickListener(v2 -> {
                                 closeMenu();
                                 if (histMsg != null) {
-                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, 1));
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, VeyraMessageHistoryActivity.MODE_REACTIONS));
                                 }
                             });
-                        }
 
-                        final int histForegroundIndex = popupLayout.addViewToSwipeBack(subLayout);
-                        cell.setOnClickListener(v2 -> popupLayout.getSwipeBack().openForeground(histForegroundIndex));
+                            final int histForegroundIndex = popupLayout.addViewToSwipeBack(subLayout);
+                            cell.setOnClickListener(v2 -> popupLayout.getSwipeBack().openForeground(histForegroundIndex));
+                        }
                     }
                     if (option == OPTION_TRANSLATE) {
                         final boolean translateEnabled = getMessagesController().getTranslateController().isContextTranslateEnabled();
@@ -33441,7 +33440,16 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_VIEW_EDIT_HISTORY: {
                 if (selectedObject != null) {
-                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject));
+                    boolean hasMsgHist = VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
+                    boolean hasReactHist = VeyraConfig.reactionHistoryEnabled
+                            && (selectedObject.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId()));
+                    int histMode = VeyraMessageHistoryActivity.MODE_ALL;
+                    if (hasMsgHist && !hasReactHist) {
+                        histMode = VeyraMessageHistoryActivity.MODE_MESSAGES;
+                    } else if (hasReactHist && !hasMsgHist) {
+                        histMode = VeyraMessageHistoryActivity.MODE_REACTIONS;
+                    }
+                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject, histMode));
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;
@@ -46017,10 +46025,20 @@ public class ChatActivity extends BaseFragment implements
                 }
                 boolean hasMsgHist = selectedObject != null && VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
                 boolean hasReactHist = selectedObject != null && VeyraConfig.reactionHistoryEnabled && (selectedObject.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId()));
-                if (selectedObject != null && (hasMsgHist || hasReactHist)) {
-                    items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
-                    options.add(OPTION_VIEW_EDIT_HISTORY);
-                    icons.add(R.drawable.msg_recent);
+                if (selectedObject != null) {
+                    if (hasMsgHist && hasReactHist) {
+                        items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_recent);
+                    } else if (hasMsgHist) {
+                        items.add(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_edit);
+                    } else if (hasReactHist) {
+                        items.add(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_reactions);
+                    }
                 }
                 if (ChatObject.isMonoForum(currentChat) && selectedObject.getGroupId() == 0 && selectedObjectGroup == null && message != null && message.messageOwner != null && message.messageOwner.suggested_post == null && message.messageOwner.action == null) {
                     items.add(LocaleController.getString(R.string.EditOfferAdd));

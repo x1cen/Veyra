@@ -46,6 +46,9 @@ public class VeyraConfig {
     public static final int CATEGORY_ANTI_DELETE = 1;
     public static final int CATEGORY_EDIT_HISTORY = 2;
     public static final int CATEGORY_REACTION_HISTORY = 3;
+    public static final int CATEGORY_GHOST_READ = 4;
+    public static final int CATEGORY_GHOST_TYPING = 5;
+    public static final int CATEGORY_GHOST_CHANNEL_VIEWS = 6;
 
     public static final int PEER_PRIVATE = 1;
     public static final int PEER_GROUP = 2;
@@ -152,12 +155,36 @@ public class VeyraConfig {
         return ghostMode && ghostHideTyping;
     }
 
+    public static boolean isGhostHideTyping(long dialogId) {
+        if (!ghostMode) return false;
+        if (dialogId != 0) {
+            Boolean exc = getException(CATEGORY_GHOST_TYPING, dialogId);
+            if (exc != null) return exc;
+            if (isGhostExceptionDialog(dialogId)) return false;
+        }
+        return ghostHideTyping || hideTyping;
+    }
+
     public static boolean isGhostHideUpload() {
         return ghostMode && ghostHideUpload;
     }
 
+    public static boolean isGhostHideUpload(long dialogId) {
+        return isGhostHideTyping(dialogId);
+    }
+
     public static boolean isGhostHideRead() {
         return ghostMode && ghostHideRead;
+    }
+
+    public static boolean isGhostHideRead(long dialogId) {
+        if (!ghostMode) return false;
+        if (dialogId != 0) {
+            Boolean exc = getException(CATEGORY_GHOST_READ, dialogId);
+            if (exc != null) return exc;
+            if (isGhostExceptionDialog(dialogId)) return false;
+        }
+        return ghostHideRead;
     }
 
     public static boolean isGhostHideReadContents() {
@@ -174,6 +201,16 @@ public class VeyraConfig {
 
     public static boolean isGhostHideChannelViews() {
         return ghostMode && ghostHideChannelViews;
+    }
+
+    public static boolean isGhostHideChannelViews(long dialogId) {
+        if (!ghostMode) return false;
+        if (dialogId != 0) {
+            Boolean exc = getException(CATEGORY_GHOST_CHANNEL_VIEWS, dialogId);
+            if (exc != null) return exc;
+            if (isGhostExceptionDialog(dialogId)) return false;
+        }
+        return ghostHideChannelViews;
     }
 
     public static boolean isGhostHideSecretRead() {
@@ -353,6 +390,9 @@ public class VeyraConfig {
         loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
         loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
         loadExceptions(CATEGORY_REACTION_HISTORY, preferences.getString("reactionHistoryExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_READ, preferences.getString("ghostReadExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_TYPING, preferences.getString("ghostTypingExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_CHANNEL_VIEWS, preferences.getString("ghostChannelViewsExceptions", ""));
         loadGhostExceptions();
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
@@ -401,11 +441,18 @@ public class VeyraConfig {
     private static final HashMap<Long, Boolean> antiDeleteExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> editHistoryExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> reactionHistoryExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostReadExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostTypingExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostChannelViewsExceptions = new HashMap<>();
 
     public static HashMap<Long, Boolean> getExceptions(int category) {
         if (category == CATEGORY_ANTI_DELETE) return antiDeleteExceptions;
         if (category == CATEGORY_EDIT_HISTORY) return editHistoryExceptions;
-        return reactionHistoryExceptions;
+        if (category == CATEGORY_REACTION_HISTORY) return reactionHistoryExceptions;
+        if (category == CATEGORY_GHOST_READ) return ghostReadExceptions;
+        if (category == CATEGORY_GHOST_TYPING) return ghostTypingExceptions;
+        if (category == CATEGORY_GHOST_CHANNEL_VIEWS) return ghostChannelViewsExceptions;
+        return ghostReadExceptions;
     }
 
     public static Boolean getException(int category, long dialogId) {
@@ -465,7 +512,14 @@ public class VeyraConfig {
             if (sb.length() > 0) sb.append(";");
             sb.append(entry.getKey()).append(":").append(entry.getValue());
         }
-        String key = category == CATEGORY_ANTI_DELETE ? "antiDeleteExceptions" : (category == CATEGORY_EDIT_HISTORY ? "editHistoryExceptions" : "reactionHistoryExceptions");
+        String key;
+        if (category == CATEGORY_ANTI_DELETE) key = "antiDeleteExceptions";
+        else if (category == CATEGORY_EDIT_HISTORY) key = "editHistoryExceptions";
+        else if (category == CATEGORY_REACTION_HISTORY) key = "reactionHistoryExceptions";
+        else if (category == CATEGORY_GHOST_READ) key = "ghostReadExceptions";
+        else if (category == CATEGORY_GHOST_TYPING) key = "ghostTypingExceptions";
+        else if (category == CATEGORY_GHOST_CHANNEL_VIEWS) key = "ghostChannelViewsExceptions";
+        else key = "ghostReadExceptions";
         save(key, sb.toString());
     }
 

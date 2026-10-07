@@ -50,7 +50,16 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
                 "Hide voice recording, video note recording, and file uploading indicators",
                 () -> VeyraConfig.ghostHideUpload,
                 v -> VeyraConfig.setGhostHideUpload(v),
-                false
+                true
+        ));
+        r.add(VeyraSettingsRow.detail(
+                "Chat Action Exceptions",
+                () -> {
+                    int c = VeyraConfig.getExceptions(VeyraConfig.CATEGORY_GHOST_TYPING).size();
+                    return c == 0 ? "No exceptions added" : (c + " chats configured");
+                },
+                false,
+                () -> presentFragment(new VeyraGhostExceptionsActivity(VeyraConfig.CATEGORY_GHOST_TYPING))
         ));
         r.add(VeyraSettingsRow.shadow());
 
@@ -82,7 +91,16 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
                 "Prevent read confirmations and self-destruct timers in secret chats",
                 () -> VeyraConfig.ghostHideSecretRead,
                 v -> VeyraConfig.setGhostHideSecretRead(v),
-                false
+                true
+        ));
+        r.add(VeyraSettingsRow.detail(
+                "Read Receipts Exceptions",
+                () -> {
+                    int c = VeyraConfig.getExceptions(VeyraConfig.CATEGORY_GHOST_READ).size();
+                    return c == 0 ? "No exceptions added" : (c + " chats configured");
+                },
+                false,
+                () -> presentFragment(new VeyraGhostExceptionsActivity(VeyraConfig.CATEGORY_GHOST_READ))
         ));
         r.add(VeyraSettingsRow.shadow());
 
@@ -100,17 +118,16 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
                 "Browse public and private channels without incrementing post view counters",
                 () -> VeyraConfig.ghostHideChannelViews,
                 v -> VeyraConfig.setGhostHideChannelViews(v),
-                false
+                true
         ));
-        r.add(VeyraSettingsRow.shadow());
-
-        // Section 5: Exceptions
-        r.add(VeyraSettingsRow.header("Exceptions"));
         r.add(VeyraSettingsRow.detail(
-                "Excluded Chats",
-                () -> VeyraConfig.getGhostExceptionCount() == 0 ? "No exceptions added" : (VeyraConfig.getGhostExceptionCount() + " chats excluded"),
+                "Channel Browsing Exceptions",
+                () -> {
+                    int c = VeyraConfig.getExceptions(VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS).size();
+                    return c == 0 ? "No exceptions added" : (c + " channels configured");
+                },
                 false,
-                () -> presentFragment(new VeyraGhostExceptionsActivity())
+                () -> presentFragment(new VeyraGhostExceptionsActivity(VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS))
         ));
         r.add(VeyraSettingsRow.shadow());
 

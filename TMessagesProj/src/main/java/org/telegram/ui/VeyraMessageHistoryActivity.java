@@ -6,8 +6,10 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
+import android.text.style.BackgroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -22,17 +24,25 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.Emoji;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserObject;
+import org.telegram.messenger.browser.Browser;
+import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.AvatarDrawable;
+import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EmptyTextProgressView;
+import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
@@ -44,8 +54,13 @@ import java.util.List;
 
 public class VeyraMessageHistoryActivity extends BaseFragment {
 
+    public static final int MODE_MESSAGES = 0;
+    public static final int MODE_REACTIONS = 1;
+    public static final int MODE_ALL = 2;
+
     private final long dialogId;
-    private final MessageObject currentMessageObject;
+    private MessageObject currentMessageObject;
+    private final int mode;
 
     private TextView tabMessagesView;
     private TextView tabReactionsView;
@@ -59,6 +74,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         public final int prevDate;
         public final MessageObject messageObject;
         public final String rawText;
+        public boolean isExpanded;
 
         public VersionEntry(int versionIndex, int totalVersions, int date, int prevDate, MessageObject messageObject, String rawText) {
             this.versionIndex = versionIndex;
@@ -67,6 +83,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             this.prevDate = prevDate;
             this.messageObject = messageObject;
             this.rawText = rawText;
+            this.isExpanded = false;
         }
     }
 
@@ -75,7 +92,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         public final String title;
         public final int date;
         public final int count;
-        public final String action; // "add" or "remove"
+        public final String action;
 
         public ReactionItem(String emoji, String title, int date, int count, String action) {
             this.emoji = emoji;
@@ -89,12 +106,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
     private final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
 
-    public static final int MODE_MESSAGES = 0;
-    public static final int MODE_REACTIONS = 1;
-    public static final int MODE_ALL = 2;
-
-    private final int mode;
-
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject) {
         this(dialogId, messageObject, MODE_ALL);
     }
@@ -102,8 +113,40 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject, int mode) {
         super();
         this.dialogId = dialogId;
-        this.currentMessageObject = messageObject;
         this.mode = mode;
+        this.currentMessageObject = deepCopyMessageObject(messageObject);
+    }
+
+    private MessageObject deepCopyMessageObject(MessageObject src) {
+        if (src == null) return null;
+        if (src.messageOwner != null) {
+            try {
+                int size = src.messageOwner.getObjectSize();
+                NativeByteBuffer buf = new NativeByteBuffer(size);
+                src.messageOwner.serializeToStream(buf);
+                buf.position(0);
+                int constructor = buf.readInt32(false);
+                TLRPC.Message copy = TLRPC.Message.TLdeserialize(buf, constructor, false);
+                buf.reuse();
+                if (copy != null) return new MessageObject(currentAccount, copy, true, false);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+        }
+        TLRPC.TL_message fallback = new TLRPC.TL_message();
+        if (src.messageOwner != null) {
+            fallback.id = src.messageOwner.id;
+            fallback.dialog_id = src.messageOwner.dialog_id;
+            fallback.date = src.messageOwner.date;
+            fallback.edit_date = src.messageOwner.edit_date;
+            fallback.message = src.messageOwner.message;
+            fallback.flags = src.messageOwner.flags;
+            fallback.from_id = src.messageOwner.from_id;
+            fallback.peer_id = src.messageOwner.peer_id;
+            fallback.entities = src.messageOwner.entities;
+            fallback.reply_markup = src.messageOwner.reply_markup;
+        }
+        return new MessageObject(currentAccount, fallback, true, false);
     }
 
     @Override
@@ -128,7 +171,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         if (history != null && !history.isEmpty()) {
             for (int i = 0; i < history.size(); i++) {
                 VeyraEditHistoryManager.EditEntry entry = history.get(i);
-                MessageObject msgObj = entry.toMessageObject(currentAccount);
+                MessageObject msgObj = deepCopyMessageObject(entry.toMessageObject(currentAccount));
                 versionEntries.add(new VersionEntry(i, totalVersions, entry.date, prevDate, msgObj, entry.text));
                 prevDate = entry.date;
             }
@@ -262,7 +305,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         };
         contentView.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
 
-        // Ambient dark/light scrim over wallpaper for high contrast & luxury feel
         View scrim = new View(context);
         int baseBg = Theme.getColor(Theme.key_windowBackgroundGray);
         int scrimColor = (baseBg & 0x00FFFFFF) | 0xEE000000;
@@ -300,7 +342,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         reactionsListView.setEmptyView(emptyView);
 
         if (mode == MODE_ALL) {
-            // Segmented Tab Switcher (Floating pill bar) only shown in combined mode
             LinearLayout tabBar = new LinearLayout(context);
             tabBar.setOrientation(LinearLayout.HORIZONTAL);
             tabBar.setGravity(Gravity.CENTER);
@@ -327,10 +368,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
             selectTab(0);
         } else if (mode == MODE_MESSAGES) {
-            // Dedicated Message History layout — clean timeline without tab headers
             rootLayout.addView(messagesListView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         } else if (mode == MODE_REACTIONS) {
-            // Dedicated Reaction History layout — clean reaction cards without tab headers
             rootLayout.addView(reactionsContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         }
 
@@ -360,15 +399,20 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         tabReactionsView.setTextColor(Theme.getColor(!isMessages ? Theme.key_featuredStickers_buttonText : Theme.key_dialogTextGray2));
     }
 
-    private static GradientDrawable createTabPillBg(boolean selected) {
+    private Drawable createTabPillBg(boolean selected) {
         GradientDrawable d = new GradientDrawable();
-        d.setCornerRadius(AndroidUtilities.dp(12));
-        d.setColor(selected ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0x00000000);
+        d.setCornerRadius(AndroidUtilities.dp(14));
+        if (selected) {
+            d.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+            d.setStroke(AndroidUtilities.dp(1), 0x44FFFFFF);
+        } else {
+            d.setColor(Color.TRANSPARENT);
+        }
         return d;
     }
 
     private static String formatTimeDelta(int prevDate, int curDate) {
-        if (prevDate <= 0 || curDate <= prevDate) return "";
+        if (prevDate <= 0 || curDate <= 0 || curDate <= prevDate) return "";
         int diff = curDate - prevDate;
         if (diff < 60) return "edited after " + diff + "s";
         if (diff < 3600) return "edited after " + (diff / 60) + "m";
@@ -376,7 +420,42 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         return "edited after " + (diff / 86400) + "d";
     }
 
-    // --- Version Cards Adapter ---
+    private static void highlightDifferences(SpannableStringBuilder ssb, String prev, String cur) {
+        if (TextUtils.isEmpty(prev) || TextUtils.isEmpty(cur) || prev.equals(cur)) return;
+        int minLen = Math.min(prev.length(), cur.length());
+        int start = 0;
+        while (start < minLen && prev.charAt(start) == cur.charAt(start)) {
+            start++;
+        }
+        int endPrev = prev.length() - 1;
+        int endCur = cur.length() - 1;
+        while (endCur >= start && endPrev >= start && prev.charAt(endPrev) == cur.charAt(endCur)) {
+            endPrev--;
+            endCur--;
+        }
+        int highlightEnd = Math.min(endCur + 1, ssb.length());
+        if (start < highlightEnd) {
+            ssb.setSpan(new BackgroundColorSpan(0x4510B981), start, highlightEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    private void showMessageOptions(MessageObject msg) {
+        if (getParentActivity() == null || msg == null) return;
+        ItemOptions options = ItemOptions.makeOptions(this, messagesListView);
+        options.add(R.drawable.msg_copy, LocaleController.getString("Copy", R.string.Copy), () -> {
+            CharSequence text = msg.messageText;
+            if (TextUtils.isEmpty(text) && msg.messageOwner != null) {
+                text = msg.messageOwner.message;
+            }
+            if (!TextUtils.isEmpty(text)) {
+                AndroidUtilities.addToClipboard(text.toString());
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+            }
+        });
+        options.show();
+    }
+
+    // --- Message Versions Adapter ---
     private class VersionsAdapter extends RecyclerListView.SelectionAdapter {
 
         @Override
@@ -448,12 +527,30 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             // Subtle divider under header
             View divider = new View(context);
             divider.setBackgroundColor(Theme.getColor(Theme.key_divider));
-            card.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0, 10, 0, 12));
+            card.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0, 10, 0, 10));
 
-            // 2. Message Text (Rich formatting, RTL/LTR aware)
+            // 2. Sender Avatar + Name Row
+            LinearLayout senderRow = new LinearLayout(context);
+            senderRow.setOrientation(LinearLayout.HORIZONTAL);
+            senderRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            BackupImageView avatarView = new BackupImageView(context);
+            avatarView.setId(25);
+            avatarView.setRoundRadius(AndroidUtilities.dp(18));
+            senderRow.addView(avatarView, LayoutHelper.createLinear(36, 36, 0, 0, 10, 0));
+
+            TextView nameView = new TextView(context);
+            nameView.setId(26);
+            nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            nameView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            senderRow.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            card.addView(senderRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+            // 3. Message Text (Rich formatting, RTL/LTR aware)
             TextView messageView = new TextView(context);
             messageView.setId(23);
-            messageView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            messageView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
             messageView.setLineSpacing(AndroidUtilities.dp(4), 1.15f);
             messageView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             messageView.setTextIsSelectable(true);
@@ -462,7 +559,22 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             messageView.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
             card.addView(messageView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            // 3. Card Footer: Copy Button
+            // 4. "Show more / Show less" button for long messages
+            TextView showMoreBtn = new TextView(context);
+            showMoreBtn.setId(27);
+            showMoreBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            showMoreBtn.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            showMoreBtn.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
+            showMoreBtn.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4));
+            card.addView(showMoreBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
+
+            // 5. Inline buttons container
+            LinearLayout inlineContainer = new LinearLayout(context);
+            inlineContainer.setId(28);
+            inlineContainer.setOrientation(LinearLayout.VERTICAL);
+            card.addView(inlineContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 8, 0, 0));
+
+            // 6. Card Footer: Copy Button
             LinearLayout footer = new LinearLayout(context);
             footer.setOrientation(LinearLayout.HORIZONTAL);
             footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -507,7 +619,11 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             TextView connectorText = root.findViewById(11);
             TextView badge = root.findViewById(21);
             TextView timeView = root.findViewById(22);
+            BackupImageView avatarView = root.findViewById(25);
+            TextView nameView = root.findViewById(26);
             TextView messageView = root.findViewById(23);
+            TextView showMoreBtn = root.findViewById(27);
+            LinearLayout inlineContainer = root.findViewById(28);
             LinearLayout copyBtn = root.findViewById(24);
 
             // Configure connector
@@ -549,28 +665,153 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 timeView.setVisibility(View.GONE);
             }
 
-            // Message Content (Rich entities preserved)
-            CharSequence textToDisplay = "";
+            // Sender Avatar & Name
+            TLRPC.User user = null;
+            TLRPC.Chat chat = null;
             if (entry.messageObject != null) {
-                if (!TextUtils.isEmpty(entry.messageObject.messageText)) {
-                    textToDisplay = entry.messageObject.messageText;
-                } else if (!TextUtils.isEmpty(entry.messageObject.caption)) {
-                    textToDisplay = entry.messageObject.caption;
-                } else if (entry.messageObject.messageOwner != null && !TextUtils.isEmpty(entry.messageObject.messageOwner.message)) {
-                    textToDisplay = entry.messageObject.messageOwner.message;
+                long fromId = entry.messageObject.getFromId();
+                if (fromId > 0) {
+                    user = MessagesController.getInstance(currentAccount).getUser(fromId);
+                } else if (fromId < 0) {
+                    chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
                 }
             }
-            if (TextUtils.isEmpty(textToDisplay)) {
-                textToDisplay = entry.rawText != null ? entry.rawText : "";
+            if (user == null && chat == null) {
+                if (dialogId > 0) {
+                    user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                } else {
+                    chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
+                }
             }
-            messageView.setText(textToDisplay);
+            AvatarDrawable avatarDrawable = new AvatarDrawable();
+            if (user != null) {
+                avatarDrawable.setInfo(currentAccount, user);
+                avatarView.setForUserOrChat(user, avatarDrawable);
+                nameView.setText(UserObject.getUserName(user));
+                nameView.setTextColor(AvatarDrawable.getColorForId(user.id));
+            } else if (chat != null) {
+                avatarDrawable.setInfo(currentAccount, chat);
+                avatarView.setForUserOrChat(chat, avatarDrawable);
+                nameView.setText(chat.title);
+                nameView.setTextColor(AvatarDrawable.getColorForId(chat.id));
+            } else {
+                avatarDrawable.setInfo(dialogId, "User", null);
+                avatarView.setImageDrawable(avatarDrawable);
+                nameView.setText("Sender");
+                nameView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            }
 
-            final String copyContent = textToDisplay.toString();
+            // Message Content with Rich Entities & Diff Highlight
+            CharSequence textSource = "";
+            if (entry.messageObject != null) {
+                if (!TextUtils.isEmpty(entry.messageObject.messageText)) {
+                    textSource = entry.messageObject.messageText;
+                } else if (!TextUtils.isEmpty(entry.messageObject.caption)) {
+                    textSource = entry.messageObject.caption;
+                } else if (entry.messageObject.messageOwner != null && !TextUtils.isEmpty(entry.messageObject.messageOwner.message)) {
+                    textSource = entry.messageObject.messageOwner.message;
+                }
+            }
+            if (TextUtils.isEmpty(textSource)) {
+                textSource = entry.rawText != null ? entry.rawText : "";
+            }
+
+            SpannableStringBuilder ssb = new SpannableStringBuilder(textSource);
+            if (entry.messageObject != null && entry.messageObject.messageOwner != null && entry.messageObject.messageOwner.entities != null && !entry.messageObject.messageOwner.entities.isEmpty()) {
+                MessageObject.addEntitiesToText(ssb, entry.messageObject.messageOwner.entities, false, true, false, false);
+            }
+
+            // Highlight differences if not original
+            if (position > 0) {
+                VersionEntry prevEntry = versionEntries.get(position - 1);
+                String prevStr = prevEntry.rawText != null ? prevEntry.rawText : "";
+                String curStr = ssb.toString();
+                highlightDifferences(ssb, prevStr, curStr);
+            }
+
+            CharSequence formatted = Emoji.replaceEmoji(ssb, messageView.getPaint().getFontMetricsInt(), false);
+            messageView.setText(formatted);
+
+            // Long message Show More / Show Less
+            String plainStr = ssb.toString();
+            boolean isLong = plainStr.length() > 250 || (plainStr.contains("\n") && plainStr.split("\n").length > 5);
+            if (isLong) {
+                showMoreBtn.setVisibility(View.VISIBLE);
+                if (entry.isExpanded) {
+                    messageView.setMaxLines(Integer.MAX_VALUE);
+                    messageView.setEllipsize(null);
+                    showMoreBtn.setText("Show less ▲");
+                } else {
+                    messageView.setMaxLines(5);
+                    messageView.setEllipsize(TextUtils.TruncateAt.END);
+                    showMoreBtn.setText("Show more ▼");
+                }
+                showMoreBtn.setOnClickListener(v -> {
+                    entry.isExpanded = !entry.isExpanded;
+                    notifyItemChanged(position);
+                });
+            } else {
+                showMoreBtn.setVisibility(View.GONE);
+                messageView.setMaxLines(Integer.MAX_VALUE);
+                messageView.setEllipsize(null);
+            }
+
+            // Inline buttons rendering
+            inlineContainer.removeAllViews();
+            if (entry.messageObject != null && entry.messageObject.messageOwner != null && entry.messageObject.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
+                TLRPC.TL_replyInlineMarkup markup = (TLRPC.TL_replyInlineMarkup) entry.messageObject.messageOwner.reply_markup;
+                if (markup.rows != null && !markup.rows.isEmpty()) {
+                    inlineContainer.setVisibility(View.VISIBLE);
+                    Context ctx = root.getContext();
+                    for (int r = 0; r < markup.rows.size(); r++) {
+                        TLRPC.TL_keyboardButtonRow row = markup.rows.get(r);
+                        if (row == null || row.buttons == null || row.buttons.isEmpty()) continue;
+                        LinearLayout rowLayout = new LinearLayout(ctx);
+                        rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+                        for (int b = 0; b < row.buttons.size(); b++) {
+                            TLRPC.KeyboardButton btn = row.buttons.get(b);
+                            if (btn == null) continue;
+                            TextView btnView = new TextView(ctx);
+                            btnView.setText(btn.text);
+                            btnView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                            btnView.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+                            btnView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+                            btnView.setGravity(Gravity.CENTER);
+                            btnView.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(6), AndroidUtilities.dp(8), AndroidUtilities.dp(6));
+                            GradientDrawable btnBg = new GradientDrawable();
+                            btnBg.setCornerRadius(AndroidUtilities.dp(8));
+                            btnBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
+                            btnBg.setStroke(AndroidUtilities.dp(1), 0x22000000);
+                            btnView.setBackground(btnBg);
+                            if (btn instanceof TLRPC.TL_keyboardButtonUrl) {
+                                String url = ((TLRPC.TL_keyboardButtonUrl) btn).url;
+                                btnView.setOnClickListener(v -> Browser.openUrl(ctx, url));
+                            }
+                            rowLayout.addView(btnView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 2, 2, 2, 2));
+                        }
+                        inlineContainer.addView(rowLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
+                    }
+                } else {
+                    inlineContainer.setVisibility(View.GONE);
+                }
+            } else {
+                inlineContainer.setVisibility(View.GONE);
+            }
+
+            final String copyContent = ssb.toString();
             copyBtn.setOnClickListener(v -> {
                 if (!TextUtils.isEmpty(copyContent)) {
                     AndroidUtilities.addToClipboard(copyContent);
                     BulletinFactory.of(VeyraMessageHistoryActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
                 }
+            });
+
+            root.findViewById(20).setOnLongClickListener(v -> {
+                if (entry.messageObject != null) {
+                    showMessageOptions(entry.messageObject);
+                    return true;
+                }
+                return false;
             });
         }
     }
