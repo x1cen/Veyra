@@ -81,6 +81,13 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         return true;
     }
 
+    private boolean hasChatTypes() {
+        return category == VeyraConfig.CATEGORY_GHOST_READ ||
+               category == VeyraConfig.CATEGORY_GHOST_TYPING ||
+               category == VeyraConfig.CATEGORY_GHOST_UPLOAD ||
+               category == VeyraConfig.CATEGORY_GHOST_STORIES;
+    }
+
     private void updateRows() {
         rowCount = 0;
         masterHeaderRow = -1;
@@ -108,33 +115,25 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         masterToggleRow = rowCount++;
         masterInfoRow = rowCount++;
 
-        // Section 2: Chat Types
-        chatTypesHeaderRow = rowCount++;
-        if (category == VeyraConfig.CATEGORY_GHOST_TYPING || category == VeyraConfig.CATEGORY_GHOST_UPLOAD) {
-            typePrivateRow = rowCount++;
-            typeGroupsRow = rowCount++;
-        } else if (category == VeyraConfig.CATEGORY_GHOST_READ) {
-            typePrivateRow = rowCount++;
-            typeGroupsRow = rowCount++;
-            typeChannelsRow = rowCount++;
-            typeBotsRow = rowCount++;
-            typeExtra1Row = rowCount++; // Read on Reply
-            typeExtra2Row = rowCount++; // Hide Voice / Video Read Receipts
-        } else if (category == VeyraConfig.CATEGORY_GHOST_STORIES) {
-            typePrivateRow = rowCount++; // Users & Contacts
-            typeChannelsRow = rowCount++; // Channels
-        } else if (category == VeyraConfig.CATEGORY_GHOST_ONLINE) {
-            typePrivateRow = rowCount++;
-        } else if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) {
-            typeChannelsRow = rowCount++;
-        } else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) {
-            typePrivateRow = rowCount++;
-        } else if (category == VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY || category == VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS) {
-            typePrivateRow = rowCount++;
-            typeGroupsRow = rowCount++;
-            typeChannelsRow = rowCount++;
+        // Section 2: Chat Types (Only for features that filter by chat types)
+        if (hasChatTypes()) {
+            chatTypesHeaderRow = rowCount++;
+            if (category == VeyraConfig.CATEGORY_GHOST_TYPING || category == VeyraConfig.CATEGORY_GHOST_UPLOAD) {
+                typePrivateRow = rowCount++;
+                typeGroupsRow = rowCount++;
+            } else if (category == VeyraConfig.CATEGORY_GHOST_READ) {
+                typePrivateRow = rowCount++;
+                typeGroupsRow = rowCount++;
+                typeChannelsRow = rowCount++;
+                typeBotsRow = rowCount++;
+                typeExtra1Row = rowCount++; // Read on Reply
+                typeExtra2Row = rowCount++; // Hide Voice / Video Read Receipts
+            } else if (category == VeyraConfig.CATEGORY_GHOST_STORIES) {
+                typePrivateRow = rowCount++; // Users & Contacts
+                typeChannelsRow = rowCount++; // Channels
+            }
+            chatTypesInfoRow = rowCount++;
         }
-        chatTypesInfoRow = rowCount++;
 
         // Section 3: Exceptions
         exceptionsHeaderRow = rowCount++;

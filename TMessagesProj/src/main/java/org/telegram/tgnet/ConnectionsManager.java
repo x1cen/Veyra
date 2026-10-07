@@ -385,9 +385,9 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
-        if (org.telegram.messenger.VeyraConfig.isGhostHideRead()) {
-            if (object instanceof TLRPC.TL_messages_readHistory) {
-                long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
+        if (object instanceof TLRPC.TL_messages_readHistory) {
+            long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
+            if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)) {
                 if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
@@ -397,15 +397,20 @@ public class ConnectionsManager extends BaseController {
                     }
                     return;
                 }
-            } else if (object instanceof TLRPC.TL_channels_readHistory) {
-                long peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
+            }
+        } else if (object instanceof TLRPC.TL_channels_readHistory) {
+            long peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
+            if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)) {
                 if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                     }
                     return;
                 }
-            } else if (org.telegram.messenger.VeyraConfig.isGhostHideSecretRead() && object instanceof TLRPC.TL_messages_readEncryptedHistory) {
+            }
+        } else if (object instanceof TLRPC.TL_messages_readEncryptedHistory) {
+            long peerDialogId = ((TLRPC.TL_messages_readEncryptedHistory) object).peer != null ? (((long) ((TLRPC.TL_messages_readEncryptedHistory) object).peer.chat_id) << 32) : 0;
+            if (org.telegram.messenger.VeyraConfig.isGhostHideSecretRead(peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }
@@ -429,22 +434,34 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
-        if (org.telegram.messenger.VeyraConfig.isGhostHideStories() && object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
-            if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+        if (object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
+            org.telegram.tgnet.tl.TL_stories.TL_stories_readStories rs = (org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) object;
+            long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(rs.peer);
+            if (org.telegram.messenger.VeyraConfig.isGhostHideStories(peerDialogId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
             }
-            return;
         }
         if (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping) {
+            long peerDialogId = 0;
             TLRPC.SendMessageAction action = null;
             if (object instanceof TLRPC.TL_messages_setTyping) {
-                action = ((TLRPC.TL_messages_setTyping) object).action;
+                TLRPC.TL_messages_setTyping st = (TLRPC.TL_messages_setTyping) object;
+                action = st.action;
+                peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(st.peer);
+            } else if (object instanceof TLRPC.TL_messages_setEncryptedTyping) {
+                TLRPC.TL_messages_setEncryptedTyping est = (TLRPC.TL_messages_setEncryptedTyping) object;
+                if (est.peer != null) {
+                    peerDialogId = ((long) est.peer.chat_id) << 32;
+                }
             }
             boolean isTypingAction = action == null || action instanceof TLRPC.TL_sendMessageTypingAction || action instanceof TLRPC.TL_sendMessageCancelAction;
             boolean drop = false;
-            if (isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideTyping() || org.telegram.messenger.VeyraConfig.hideTyping)) {
+            if (isTypingAction && org.telegram.messenger.VeyraConfig.isGhostHideTyping(peerDialogId)) {
                 drop = true;
-            } else if (!isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideUpload() || org.telegram.messenger.VeyraConfig.isGhostHideTyping())) {
+            } else if (!isTypingAction && org.telegram.messenger.VeyraConfig.isGhostHideUpload(peerDialogId)) {
                 drop = true;
             }
             if (drop) {

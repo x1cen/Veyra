@@ -286,14 +286,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
         TLRPC.User user = getMessagesController().getUser(dialogId);
-        String subtitle = "";
-        if (user != null) {
-            subtitle = UserObject.getUserName(user);
-        } else if (chat != null) {
-            subtitle = chat.title;
-        }
 
-        // Custom Header: Avatar with History Icon + Title "History" + Subtitle
+        // Header: Profile Avatar (same as Scheduled Messages) + Title "History"
         int topOffset = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
         int barHeight = ActionBar.getCurrentActionBarHeight();
 
@@ -301,38 +295,28 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         headerLayout.setOrientation(LinearLayout.HORIZONTAL);
         headerLayout.setGravity(Gravity.CENTER_VERTICAL);
 
-        FrameLayout avatarCircle = new FrameLayout(context);
-        GradientDrawable avatarBg = new GradientDrawable();
-        avatarBg.setShape(GradientDrawable.OVAL);
-        avatarBg.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-        avatarCircle.setBackground(avatarBg);
-
-        ImageView avatarIcon = new ImageView(context);
-        avatarIcon.setImageResource(R.drawable.msg_recent);
-        avatarIcon.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_IN));
-        avatarCircle.addView(avatarIcon, LayoutHelper.createFrame(20, 20, Gravity.CENTER));
-
-        headerLayout.addView(avatarCircle, LayoutHelper.createLinear(38, 38, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
-
-        LinearLayout titleLayout = new LinearLayout(context);
-        titleLayout.setOrientation(LinearLayout.VERTICAL);
+        BackupImageView avatarView = new BackupImageView(context);
+        avatarView.setRoundRadius(AndroidUtilities.dp(19));
+        AvatarDrawable avatarDrawable = new AvatarDrawable();
+        if (user != null) {
+            avatarDrawable.setInfo(user);
+            avatarView.setForUserOrChat(user, avatarDrawable);
+        } else if (chat != null) {
+            avatarDrawable.setInfo(chat);
+            avatarView.setForUserOrChat(chat, avatarDrawable);
+        } else {
+            avatarDrawable.setInfo(dialogId, "History", null);
+            avatarView.setImageDrawable(avatarDrawable);
+        }
+        headerLayout.addView(avatarView, LayoutHelper.createLinear(38, 38, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
 
         TextView titleView = new TextView(context);
         titleView.setText("History");
         titleView.setTextColor(Theme.getColor(Theme.key_actionBarDefaultTitle));
-        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         titleView.setTypeface(AndroidUtilities.bold());
-        titleLayout.addView(titleView);
+        headerLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
-        if (!TextUtils.isEmpty(subtitle)) {
-            TextView subtitleView = new TextView(context);
-            subtitleView.setText(subtitle);
-            subtitleView.setTextColor(Theme.getColor(Theme.key_actionBarDefaultSubtitle));
-            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            titleLayout.addView(subtitleView);
-        }
-
-        headerLayout.addView(titleLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
         actionBar.addView(headerLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, barHeight, Gravity.TOP | Gravity.LEFT, 56, topOffset, 56, 0));
 
         // 3-dots Menu on the right
@@ -375,31 +359,24 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         LinearLayout rootLayout = new LinearLayout(context);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
 
-        // Top Pinned Liquid Glass Tabs Bar
-        FrameLayout topTabsBar = new FrameLayout(context);
-        topTabsBar.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefault));
-
-        LinearLayout tabBar = new LinearLayout(context);
-        tabBar.setOrientation(LinearLayout.HORIZONTAL);
-        tabBar.setGravity(Gravity.CENTER);
-        tabBar.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(5), AndroidUtilities.dp(12), AndroidUtilities.dp(5));
+        // Floating independent liquid-glass tab pills — no shared container background,
+        // wallpaper shows through the gap and behind each pill (same glass style as group topics / bot tabs).
+        LinearLayout pillsRow = new LinearLayout(context);
+        pillsRow.setOrientation(LinearLayout.HORIZONTAL);
+        pillsRow.setGravity(Gravity.CENTER);
+        pillsRow.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(8));
 
         tabMessagesBtn = createTopicTabPill(context, R.drawable.msg_edit, LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
         tabReactionsBtn = createTopicTabPill(context, R.drawable.msg_reactions, LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
 
-        tabBar.addView(tabMessagesBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 0, 0, 4, 0));
-        tabBar.addView(tabReactionsBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 4, 0, 0, 0));
+        // 6dp right-margin on Messages + 6dp left-margin on Reactions = 12dp margin between the two independent glass pills
+        pillsRow.addView(tabMessagesBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 0, 0, 6, 0));
+        pillsRow.addView(tabReactionsBtn, LayoutHelper.createLinear(0, AndroidUtilities.dp(36), 1.0f, 6, 0, 0, 0));
 
         tabMessagesBtn.setOnClickListener(v -> selectTab(0));
         tabReactionsBtn.setOnClickListener(v -> selectTab(1));
 
-        topTabsBar.addView(tabBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
-
-        View bottomLine = new View(context);
-        bottomLine.setBackgroundColor(Theme.getColor(Theme.key_divider));
-        topTabsBar.addView(bottomLine, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 1, Gravity.BOTTOM));
-
-        rootLayout.addView(topTabsBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(46)));
+        rootLayout.addView(pillsRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(52)));
 
         // Content Area
         FrameLayout contentArea = new FrameLayout(context);
@@ -408,7 +385,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         messagesListView = new RecyclerListView(context);
         messagesListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         messagesListView.setAdapter(new VersionsAdapter());
-        messagesListView.setPadding(0, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(24));
+        messagesListView.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(24));
         messagesListView.setClipToPadding(false);
         contentArea.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
@@ -417,7 +394,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         reactionsListView = new RecyclerListView(context);
         reactionsListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         reactionsListView.setAdapter(new ReactionsAdapter());
-        reactionsListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
+        reactionsListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
         reactionsListView.setClipToPadding(false);
         reactionsContainer.addView(reactionsListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
@@ -481,8 +458,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         TextView text = pill.findViewById(11);
 
         if (selected) {
-            bg.setColor(accent);
-            bg.setStroke(AndroidUtilities.dp(1f), 0x44FFFFFF);
+            bg.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(accent, 235));
+            bg.setStroke(AndroidUtilities.dp(1.2f), 0x66FFFFFF);
             pill.setBackground(bg);
             if (icon != null) {
                 icon.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_IN));
@@ -492,10 +469,10 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 text.setTypeface(AndroidUtilities.bold());
             }
         } else {
-            bg.setColor(Theme.isCurrentThemeDark() ? 0x22FFFFFF : 0x14000000);
-            bg.setStroke(AndroidUtilities.dp(1f), Theme.isCurrentThemeDark() ? 0x33FFFFFF : 0x20000000);
+            bg.setColor(Theme.isCurrentThemeDark() ? 0x2AFFFFFF : 0x18000000);
+            bg.setStroke(AndroidUtilities.dp(1f), Theme.isCurrentThemeDark() ? 0x3DFFFFFF : 0x22000000);
             pill.setBackground(bg);
-            int inactiveColor = Theme.isCurrentThemeDark() ? 0xBBFFFFFF : 0x88000000;
+            int inactiveColor = Theme.isCurrentThemeDark() ? 0xDDFFFFFF : 0x88000000;
             if (icon != null) {
                 icon.setColorFilter(new android.graphics.PorterDuffColorFilter(inactiveColor, android.graphics.PorterDuff.Mode.SRC_IN));
             }

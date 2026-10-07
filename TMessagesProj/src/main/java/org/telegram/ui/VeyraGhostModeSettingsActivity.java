@@ -29,21 +29,21 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        // Section 2: Configurable Stealth Rules (With Exceptions & Scopes)
-        r.add(VeyraSettingsRow.header("Stealth Rules & Exceptions"));
+        // Section 2: Chat-Specific Stealth Rules & Exceptions
+        r.add(VeyraSettingsRow.header("Chat Stealth Rules & Exceptions"));
 
         r.add(VeyraSettingsRow.toggleWithAction(
-                LocaleController.getString("VeyraGhostHideOnline", R.string.VeyraGhostHideOnline),
-                "Tap to configure chat types and exceptions",
-                () -> VeyraConfig.ghostHideOnline,
-                v -> VeyraConfig.setGhostHideOnline(v),
+                LocaleController.getString("VeyraGhostHideRead", R.string.VeyraGhostHideRead),
+                "Configure chat types (Private, Groups, Channels) and exceptions",
+                () -> VeyraConfig.ghostHideRead,
+                v -> VeyraConfig.setGhostHideRead(v),
                 true,
-                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_ONLINE))
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ))
         ));
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideTyping", R.string.VeyraGhostHideTyping),
-                "Tap to configure chat types and exceptions",
+                "Configure chat types (Private, Groups) and exceptions",
                 () -> VeyraConfig.ghostHideTyping,
                 v -> VeyraConfig.setGhostHideTyping(v),
                 true,
@@ -52,7 +52,7 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 "Hide Media Uploading",
-                "Tap to configure chat types and exceptions",
+                "Configure chat types (Private, Groups) and exceptions",
                 () -> VeyraConfig.ghostHideUpload,
                 v -> VeyraConfig.setGhostHideUpload(v),
                 true,
@@ -60,44 +60,8 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
         ));
 
         r.add(VeyraSettingsRow.toggleWithAction(
-                LocaleController.getString("VeyraGhostHideRead", R.string.VeyraGhostHideRead),
-                "Tap to configure chat types and exceptions",
-                () -> VeyraConfig.ghostHideRead,
-                v -> VeyraConfig.setGhostHideRead(v),
-                true,
-                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ))
-        ));
-
-        r.add(VeyraSettingsRow.toggleWithAction(
-                LocaleController.getString("VeyraReadOnReply", R.string.VeyraReadOnReply),
-                "Tap to configure chat types and exceptions",
-                () -> VeyraConfig.ghostReadOnReply,
-                v -> VeyraConfig.setGhostReadOnReply(v),
-                true,
-                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY))
-        ));
-
-        r.add(VeyraSettingsRow.toggleWithAction(
-                LocaleController.getString("VeyraGhostHideReadContents", R.string.VeyraGhostHideReadContents),
-                "Tap to configure chat types and exceptions",
-                () -> VeyraConfig.ghostHideReadContents,
-                v -> VeyraConfig.setGhostHideReadContents(v),
-                true,
-                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS))
-        ));
-
-        r.add(VeyraSettingsRow.toggleWithAction(
-                "Secret Chat Read Receipts",
-                "Tap to configure chat types and exceptions",
-                () -> VeyraConfig.ghostHideSecretRead,
-                v -> VeyraConfig.setGhostHideSecretRead(v),
-                true,
-                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_SECRET_READ))
-        ));
-
-        r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraGhostHideStories", R.string.VeyraGhostHideStories),
-                "Tap to configure users, channels and exceptions",
+                "Configure users, channels and exceptions",
                 () -> VeyraConfig.ghostHideStories,
                 v -> VeyraConfig.setGhostHideStories(v),
                 true,
@@ -106,11 +70,52 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 "Anonymous Channel Browsing",
-                "Tap to configure channel view counters and exceptions",
+                "Prevent channel view counter increments; manage channel exceptions",
                 () -> VeyraConfig.ghostHideChannelViews,
                 v -> VeyraConfig.setGhostHideChannelViews(v),
-                false,
+                true,
                 () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS))
+        ));
+
+        r.add(VeyraSettingsRow.toggleWithAction(
+                "Secret Chat Read Receipts",
+                "Prevent read confirmations in secret chats; manage exceptions",
+                () -> VeyraConfig.ghostHideSecretRead,
+                v -> VeyraConfig.setGhostHideSecretRead(v),
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_SECRET_READ))
+        ));
+
+        r.add(VeyraSettingsRow.toggleWithAction(
+                LocaleController.getString("VeyraGhostHideReadContents", R.string.VeyraGhostHideReadContents),
+                "Hide voice message and video note read confirmations; manage exceptions",
+                () -> VeyraConfig.ghostHideReadContents,
+                v -> VeyraConfig.setGhostHideReadContents(v),
+                false,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS))
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
+        // Section 3: Global Account Stealth Rules
+        r.add(VeyraSettingsRow.header("Global Account Stealth"));
+
+        r.add(VeyraSettingsRow.toggleWithAction(
+                LocaleController.getString("VeyraGhostHideOnline", R.string.VeyraGhostHideOnline),
+                "Prevent sending online presence status to Telegram servers",
+                () -> VeyraConfig.ghostHideOnline,
+                v -> VeyraConfig.setGhostHideOnline(v),
+                true,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_ONLINE))
+        ));
+
+        r.add(VeyraSettingsRow.toggleWithAction(
+                LocaleController.getString("VeyraReadOnReply", R.string.VeyraReadOnReply),
+                LocaleController.getString("VeyraReadOnReplyDesc", R.string.VeyraReadOnReplyDesc),
+                () -> VeyraConfig.ghostReadOnReply,
+                v -> VeyraConfig.setGhostReadOnReply(v),
+                false,
+                () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY))
         ));
 
         r.add(VeyraSettingsRow.shadow());

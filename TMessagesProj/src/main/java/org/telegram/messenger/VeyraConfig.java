@@ -170,6 +170,13 @@ public class VeyraConfig {
         return ghostMode && ghostHideReadContents;
     }
 
+    public static boolean isGhostHideReadContents(long dialogId) {
+        if (!ghostMode || !ghostHideReadContents) return false;
+        Boolean exc = getException(CATEGORY_GHOST_HIDE_CONTENTS, dialogId);
+        if (exc != null) return !exc;
+        return true;
+    }
+
     public static boolean isGhostHideStories() {
         return ghostMode && ghostHideStories;
     }
@@ -186,12 +193,33 @@ public class VeyraConfig {
         return ghostMode && ghostReadOnReply;
     }
 
+    public static boolean isGhostReadOnReply(long dialogId) {
+        if (!ghostMode || !ghostReadOnReply) return false;
+        Boolean exc = getException(CATEGORY_GHOST_READ_ON_REPLY, dialogId);
+        if (exc != null) return !exc;
+        return true;
+    }
+
     public static boolean isGhostHideChannelViews() {
         return ghostMode && ghostHideChannelViews;
     }
 
+    public static boolean isGhostHideChannelViews(long channelId) {
+        if (!ghostMode || !ghostHideChannelViews) return false;
+        Boolean exc = getException(CATEGORY_GHOST_CHANNEL_VIEWS, -channelId);
+        if (exc != null) return !exc;
+        return true;
+    }
+
     public static boolean isGhostHideSecretRead() {
         return ghostMode && ghostHideSecretRead;
+    }
+
+    public static boolean isGhostHideSecretRead(long dialogId) {
+        if (!ghostMode || !ghostHideSecretRead) return false;
+        Boolean exc = getException(CATEGORY_GHOST_SECRET_READ, dialogId);
+        if (exc != null) return !exc;
+        return true;
     }
 
     // Security & Window
