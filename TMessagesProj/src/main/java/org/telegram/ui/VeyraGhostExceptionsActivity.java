@@ -108,7 +108,7 @@ public class VeyraGhostExceptionsActivity extends BaseFragment {
                 Bundle args = new Bundle();
                 args.putBoolean("onlySelect", true);
                 args.putBoolean("checkCanWrite", false);
-                args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_ALL);
+                args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_DEFAULT);
 
                 DialogsActivity activity = new DialogsActivity(args);
                 activity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {

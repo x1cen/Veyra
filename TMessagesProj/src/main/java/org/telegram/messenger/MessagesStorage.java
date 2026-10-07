@@ -16011,7 +16011,7 @@ public class MessagesStorage extends BaseController {
                                         } else if (textChanged) {
                                             message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                                             if (message.edit_date == 0) {
-                                                message.edit_date = oldMessage.edit_date > 0 ? oldMessage.edit_date : ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                                                message.edit_date = oldMessage.edit_date > 0 ? oldMessage.edit_date : org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
                                             }
                                         }
 
