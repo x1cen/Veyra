@@ -721,7 +721,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         return tokens;
     }
 
-    // --- Version Messages Adapter (Native ChatMessageCell) ---
+    // --- Version Messages Adapter (Custom lightweight bubble row) ---
     private class VersionsAdapter extends RecyclerListView.SelectionAdapter {
 
         @Override
@@ -759,29 +759,67 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             wrapper.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 10, 0, 6));
 
-            // Native ChatMessageCell (renders chat bubble, formatted text with diff, media)
-            ChatMessageCell cell = new ChatMessageCell(context, currentAccount);
-            cell.setId(101);
-            cell.setDelegate(new ChatMessageCell.ChatMessageCellDelegate() {
-                @Override
-                public boolean canPerformActions() {
-                    return true;
-                }
+            // Bubble row: [avatar 40dp] [bubble column: sender name + text + time]
+            LinearLayout bubbleRow = new LinearLayout(context);
+            bubbleRow.setOrientation(LinearLayout.HORIZONTAL);
+            bubbleRow.setGravity(Gravity.BOTTOM);
+            bubbleRow.setId(102);
+            bubbleRow.setPadding(AndroidUtilities.dp(8), 0, AndroidUtilities.dp(8), AndroidUtilities.dp(4));
 
-                @Override
-                public void didPressUrl(ChatMessageCell cell, CharacterStyle url, boolean longPress) {
-                    if (url instanceof URLSpan) {
-                        Browser.openUrl(getParentActivity(), ((URLSpan) url).getURL());
-                    }
-                }
+            // Avatar
+            BackupImageView avatarView = new BackupImageView(context);
+            avatarView.setId(103);
+            avatarView.setRoundRadius(AndroidUtilities.dp(20));
+            LinearLayout.LayoutParams avLp = new LinearLayout.LayoutParams(AndroidUtilities.dp(40), AndroidUtilities.dp(40));
+            avLp.bottomMargin = AndroidUtilities.dp(2);
+            avLp.rightMargin = AndroidUtilities.dp(8);
+            avatarView.setLayoutParams(avLp);
 
-                @Override
-                public void didLongPress(ChatMessageCell cell, float x, float y) {
-                    showMessageOptions(cell);
-                }
+            // Bubble container
+            LinearLayout bubbleCol = new LinearLayout(context);
+            bubbleCol.setOrientation(LinearLayout.VERTICAL);
+            bubbleCol.setId(104);
+
+            GradientDrawable bubbleBg = new GradientDrawable();
+            bubbleBg.setCornerRadii(new float[]{
+                AndroidUtilities.dp(2), AndroidUtilities.dp(2),
+                AndroidUtilities.dp(18), AndroidUtilities.dp(18),
+                AndroidUtilities.dp(18), AndroidUtilities.dp(18),
+                AndroidUtilities.dp(18), AndroidUtilities.dp(18)
             });
-            cell.setOnClickListener(v -> showMessageOptions(cell));
-            wrapper.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            bubbleBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
+            bubbleCol.setBackground(bubbleBg);
+            bubbleCol.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+
+            // Sender name
+            TextView senderName = new TextView(context);
+            senderName.setId(105);
+            senderName.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            senderName.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            senderName.setMaxLines(1);
+            senderName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            bubbleCol.addView(senderName, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 3));
+
+            // Message text
+            TextView msgText = new TextView(context);
+            msgText.setId(106);
+            msgText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            msgText.setTextColor(Theme.getColor(Theme.key_chat_messageTextIn));
+            msgText.setMaxLines(30);
+            bubbleCol.addView(msgText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            // Time + edited badge
+            TextView timeView = new TextView(context);
+            timeView.setId(107);
+            timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            timeView.setTextColor(Theme.getColor(Theme.key_chat_inTimeText));
+            timeView.setGravity(Gravity.END);
+            bubbleCol.addView(timeView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
+
+            bubbleRow.addView(avatarView);
+            bubbleRow.addView(bubbleCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            wrapper.addView(bubbleRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             return new RecyclerListView.Holder(wrapper);
         }
@@ -792,8 +830,12 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             View root = holder.itemView;
 
             TextView chip = root.findViewById(100);
-            ChatMessageCell cell = root.findViewById(101);
+            BackupImageView avatarView = root.findViewById(103);
+            TextView senderName = root.findViewById(105);
+            TextView msgText = root.findViewById(106);
+            TextView timeView = root.findViewById(107);
 
+            // Header chip label
             String headerText;
             if (entry.versionIndex == 0) {
                 headerText = LocaleController.getString("OriginalMessage", R.string.OriginalMessage);
@@ -807,50 +849,54 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             }
             chip.setText(headerText);
 
-            if (entry.messageObject != null) {
-                // Always show as incoming group chat message so avatar renders next to bubble
-                cell.isChat = true;
-                MessageObject mo = entry.messageObject;
-                mo.forceAvatar = true;
-                if (mo.messageOwner != null) {
-                    mo.messageOwner.flags &= ~0x00000002; // clear OUT flag so cell treats it as incoming
-                    if (!(mo.messageOwner.from_id instanceof TLRPC.TL_peerUser)) {
-                        TLRPC.TL_peerUser peer = new TLRPC.TL_peerUser();
-                        peer.user_id = mo.getSenderId() != 0 ? mo.getSenderId() : Math.abs(dialogId);
-                        mo.messageOwner.from_id = peer;
-                    }
-                }
-                // Build a local AvatarDrawable so the avatar renders even when the user
-                // is not cached in MessagesController (avoids null currentUser in cell).
-                long senderId = mo.getSenderId();
-                if (senderId == 0 && mo.messageOwner != null && mo.messageOwner.from_id instanceof TLRPC.TL_peerUser) {
-                    senderId = mo.messageOwner.from_id.user_id;
-                }
-                TLRPC.User cachedUser = senderId != 0
-                    ? MessagesController.getInstance(currentAccount).getUser(senderId) : null;
-                if (cachedUser != null) {
-                    // User is in cache: let ChatMessageCell resolve it naturally via updateCurrentUserAndChat()
-                    mo.customAvatarDrawable = null;
-                } else {
-                    // User not in cache: supply a letter avatar directly so the bubble still shows one
-                    AvatarDrawable ad = new AvatarDrawable();
-                    String firstName = "#";
-                    String lastName = "";
-                    if (mo.messageOwner != null && !android.text.TextUtils.isEmpty(mo.messageOwner.post_author)) {
-                        firstName = mo.messageOwner.post_author;
-                    } else if (currentMessageObject != null
-                               && mo.getSenderId() == currentMessageObject.getSenderId()) {
-                        TLRPC.User liveUser = MessagesController.getInstance(currentAccount).getUser(currentMessageObject.getSenderId());
-                        if (liveUser != null) {
-                            firstName = liveUser.first_name != null ? liveUser.first_name : "#";
-                            lastName = liveUser.last_name != null ? liveUser.last_name : "";
-                        }
-                    }
-                    ad.setInfo(senderId, firstName, lastName);
-                    mo.customAvatarDrawable = ad;
-                }
-                cell.setMessageObject(mo, null, false, false, false);
+            MessageObject mo = entry.messageObject;
+
+            // Sender info
+            long senderId = mo != null ? mo.getSenderId() : 0;
+            TLRPC.User user = senderId != 0 ? MessagesController.getInstance(currentAccount).getUser(senderId) : null;
+            if (user == null && currentMessageObject != null) {
+                user = MessagesController.getInstance(currentAccount).getUser(currentMessageObject.getSenderId());
             }
+
+            String firstName = "#";
+            String lastName = "";
+            if (user != null) {
+                firstName = user.first_name != null ? user.first_name : "#";
+                lastName = user.last_name != null ? user.last_name : "";
+            } else if (mo != null && mo.messageOwner != null && !android.text.TextUtils.isEmpty(mo.messageOwner.post_author)) {
+                firstName = mo.messageOwner.post_author;
+            }
+            String fullName = (firstName + " " + lastName).trim();
+
+            // Avatar
+            AvatarDrawable ad = new AvatarDrawable();
+            if (user != null) {
+                ad.setInfo(currentAccount, user);
+                avatarView.setForUserOrChat(user, ad);
+            } else {
+                ad.setInfo(senderId, firstName, lastName);
+                avatarView.setImageDrawable(ad);
+            }
+
+            // Sender name color (use same name color scheme as chat)
+            int nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText);
+            if (user != null) {
+                nameColor = AvatarDrawable.getColorForId(user.id);
+            }
+            senderName.setTextColor(nameColor);
+            senderName.setText(fullName);
+
+            // Message text with optional diff highlight
+            CharSequence displayText = entry.messageObject != null ? entry.messageObject.messageText : null;
+            if (android.text.TextUtils.isEmpty(displayText)) {
+                displayText = entry.rawText != null ? entry.rawText : "";
+            }
+            msgText.setText(displayText);
+
+            // Timestamp + edited badge
+            String timeStr = entry.date > 0 ? LocaleController.getInstance().formatterDay.format(new java.util.Date((long) entry.date * 1000)) : "";
+            boolean isEdited = mo != null && mo.messageOwner != null && mo.messageOwner.edit_date != 0;
+            timeView.setText(isEdited ? timeStr + "  edited" : timeStr);
         }
     }
 
