@@ -104,6 +104,15 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
+        // Section 5: Exceptions
+        r.add(VeyraSettingsRow.header("Exceptions"));
+        r.add(VeyraSettingsRow.action(
+                "Excluded Chats",
+                VeyraConfig.getGhostExceptionCount() == 0 ? "No exceptions added" : (VeyraConfig.getGhostExceptionCount() + " chats excluded"),
+                () -> presentFragment(new VeyraGhostExceptionsActivity())
+        ));
+        r.add(VeyraSettingsRow.shadow());
+
         return r;
     }
 }

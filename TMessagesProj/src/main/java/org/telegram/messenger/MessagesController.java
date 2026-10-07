@@ -767,6 +767,8 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public final AppGlobalConfig config = new AppGlobalConfig();
 
+    private static final long UPDATE_HOLE_TIMEOUT = 500L;
+
     public boolean enableGiftsInProfile;
 
     public int checkResetLangpack;
@@ -8191,7 +8193,7 @@ public class MessagesController extends BaseController implements NotificationCe
         } else if (channelPts != pts) {
             long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
             boolean gettingDifferenceChannel = gettingDifferenceChannels.get(channelId, false);
-            if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500) {
+            if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= UPDATE_HOLE_TIMEOUT) {
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("ADD CHANNEL UPDATE TO QUEUE pts = " + pts + " pts_count = " + pts_count);
                 }
@@ -8226,7 +8228,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().setLastPtsValue(pts);
                 getMessagesStorage().saveDiffParams(getMessagesStorage().getLastSeqValue(), getMessagesStorage().getLastPtsValue(), getMessagesStorage().getLastDateValue(), getMessagesStorage().getLastQtsValue());
             } else if (getMessagesStorage().getLastPtsValue() != pts) {
-                if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= UPDATE_HOLE_TIMEOUT) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("ADD UPDATE TO QUEUE pts = " + pts + " pts_count = " + pts_count);
                     }
@@ -8253,7 +8255,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 getMessagesStorage().saveDiffParams(getMessagesStorage().getLastSeqValue(), getMessagesStorage().getLastPtsValue(), getMessagesStorage().getLastDateValue(), getMessagesStorage().getLastQtsValue());
             } else if (getMessagesStorage().getLastSeqValue() != seq) {
-                if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= 1500) {
+                if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= UPDATE_HOLE_TIMEOUT) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("ADD UPDATE TO QUEUE seq = " + seq);
                     }
@@ -16426,7 +16428,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 a--;
             } else if (updateState == 1) {
                 long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
-                if (updatesStartWaitTime != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500)) {
+                if (updatesStartWaitTime != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= UPDATE_HOLE_TIMEOUT)) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("HOLE IN CHANNEL " + channelId + " UPDATES QUEUE - will wait more time");
                     }
@@ -16488,7 +16490,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     updatesQueue.remove(a);
                     a--;
                 } else if (updateState == 1) {
-                    if (getUpdatesStartTime(type) != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - getUpdatesStartTime(type)) <= 1500)) {
+                    if (getUpdatesStartTime(type) != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - getUpdatesStartTime(type)) <= UPDATE_HOLE_TIMEOUT)) {
                         if (BuildVars.LOGS_ENABLED) {
                             FileLog.d("HOLE IN UPDATES QUEUE - will wait more time");
                         }
@@ -18143,7 +18145,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("need get diff short message, pts: " + getMessagesStorage().getLastPtsValue() + " " + updates.pts + " count = " + updates.pts_count);
                     }
-                    if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                    if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= UPDATE_HOLE_TIMEOUT) {
                         if (updatesStartWaitTimePts == 0) {
                             updatesStartWaitTimePts = System.currentTimeMillis();
                         }
@@ -18240,7 +18242,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (BuildVars.LOGS_ENABLED) {
                                 FileLog.d(update + " need get diff, pts: " + getMessagesStorage().getLastPtsValue() + " " + updatesNew.pts + " count = " + updatesNew.pts_count);
                             }
-                            if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                            if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= UPDATE_HOLE_TIMEOUT) {
                                 if (updatesStartWaitTimePts == 0) {
                                     updatesStartWaitTimePts = System.currentTimeMillis();
                                 }
@@ -18276,7 +18278,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (BuildVars.LOGS_ENABLED) {
                                 FileLog.d(update + " need get diff, qts: " + getMessagesStorage().getLastQtsValue() + " " + updatesNew.pts);
                             }
-                            if (gettingDifference || updatesStartWaitTimeQts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeQts) <= 1500) {
+                            if (gettingDifference || updatesStartWaitTimeQts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeQts) <= UPDATE_HOLE_TIMEOUT) {
                                 if (updatesStartWaitTimeQts == 0) {
                                     updatesStartWaitTimeQts = System.currentTimeMillis();
                                 }
@@ -18346,7 +18348,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 }
                                 long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
                                 boolean gettingDifferenceChannel = gettingDifferenceChannels.get(channelId, false);
-                                if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500) {
+                                if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= UPDATE_HOLE_TIMEOUT) {
                                     if (updatesStartWaitTime == 0) {
                                         updatesStartWaitTimeChannels.put(channelId, System.currentTimeMillis());
                                     }
@@ -18405,7 +18407,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     }
 
-                    if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= 1500) {
+                    if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= UPDATE_HOLE_TIMEOUT) {
                         if (updatesStartWaitTimeSeq == 0) {
                             updatesStartWaitTimeSeq = System.currentTimeMillis();
                         }
@@ -19620,6 +19622,11 @@ public class MessagesController extends BaseController implements NotificationCe
                     } else if (!textChanged && wasEditedBefore) {
                         message.edit_date = oldMsgOwner.edit_date;
                         message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    } else if (textChanged) {
+                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                        if (message.edit_date == 0) {
+                            message.edit_date = getConnectionsManager().getCurrentTime();
+                        }
                     }
 
                     if (textChanged

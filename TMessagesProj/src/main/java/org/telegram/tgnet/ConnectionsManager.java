@@ -1011,7 +1011,7 @@ public class ConnectionsManager extends BaseController {
     public static void getHostByName(String hostName, long address) {
         AndroidUtilities.runOnUIThread(() -> {
             ResolvedDomain resolvedDomain = dnsCache.get(hostName);
-            if (resolvedDomain != null && SystemClock.elapsedRealtime() - resolvedDomain.ttl < 5 * 60 * 1000) {
+            if (resolvedDomain != null && SystemClock.elapsedRealtime() - resolvedDomain.ttl < 24 * 60 * 60 * 1000L) {
                 native_onHostNameResolved(hostName, address, resolvedDomain.getAddress());
             } else {
                 ResolveHostByNameTask task = resolvingHostnameTasks.get(hostName);
@@ -1275,73 +1275,82 @@ public class ConnectionsManager extends BaseController {
         }
 
         protected ResolvedDomain doInBackground(Void... voids) {
-            ByteArrayOutputStream outbuf = null;
-            InputStream httpConnectionStream = null;
-            boolean done = false;
-            try {
-                URL downloadUrl = new URL("https://www.google.com/resolve?name=" + currentHostName + "&type=A");
-                URLConnection httpConnection = downloadUrl.openConnection();
-                httpConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 10_0 like Mac OS X) AppleWebKit/602.1.38 (KHTML, like Gecko) Version/10.0 Mobile/14A5297c Safari/602.1");
-                httpConnection.addRequestProperty("Host", "dns.google.com");
-                httpConnection.setConnectTimeout(1000);
-                httpConnection.setReadTimeout(2000);
-                httpConnection.connect();
-                httpConnectionStream = httpConnection.getInputStream();
+            if (currentHostName != null && currentHostName.matches("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$")) {
+                ArrayList<String> addresses = new ArrayList<>(1);
+                addresses.add(currentHostName);
+                return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
+            }
 
-                outbuf = new ByteArrayOutputStream();
+            // Multi-provider DoH via direct IPs to bypass censored local DNS and SNI filtering
+            String[] dohEndpoints = new String[] {
+                "https://1.1.1.1/dns-query?name=" + currentHostName + "&type=A",
+                "https://8.8.8.8/resolve?name=" + currentHostName + "&type=A",
+                "https://1.0.0.1/dns-query?name=" + currentHostName + "&type=A"
+            };
 
-                byte[] data = new byte[1024 * 32];
-                while (true) {
-                    int read = httpConnectionStream.read(data);
-                    if (read > 0) {
-                        outbuf.write(data, 0, read);
-                    } else if (read == -1) {
-                        break;
-                    } else {
-                        break;
-                    }
-                }
+            for (String endpointUrl : dohEndpoints) {
+                ByteArrayOutputStream outbuf = null;
+                InputStream httpConnectionStream = null;
+                try {
+                    URL downloadUrl = new URL(endpointUrl);
+                    URLConnection httpConnection = downloadUrl.openConnection();
+                    httpConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) Veyra");
+                    httpConnection.addRequestProperty("Accept", "application/dns-json");
+                    httpConnection.setConnectTimeout(2500);
+                    httpConnection.setReadTimeout(3000);
+                    httpConnection.connect();
+                    httpConnectionStream = httpConnection.getInputStream();
 
-                JSONObject jsonObject = new JSONObject(new String(outbuf.toByteArray()));
-                if (jsonObject.has("Answer")) {
-                    JSONArray array = jsonObject.getJSONArray("Answer");
-                    int len = array.length();
-                    if (len > 0) {
-                        ArrayList<String> addresses = new ArrayList<>(len);
-                        for (int a = 0; a < len; a++) {
-                            addresses.add(array.getJSONObject(a).getString("data"));
+                    outbuf = new ByteArrayOutputStream();
+                    byte[] data = new byte[1024 * 32];
+                    while (true) {
+                        int read = httpConnectionStream.read(data);
+                        if (read > 0) {
+                            outbuf.write(data, 0, read);
+                        } else {
+                            break;
                         }
-                        return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
                     }
-                }
-                done = true;
-            } catch (Throwable e) {
-                FileLog.e(e, false);
-            } finally {
-                try {
-                    if (httpConnectionStream != null) {
-                        httpConnectionStream.close();
-                    }
-                } catch (Throwable e) {
-                    FileLog.e(e, false);
-                }
-                try {
-                    if (outbuf != null) {
-                        outbuf.close();
-                    }
-                } catch (Exception ignore) {
 
+                    JSONObject jsonObject = new JSONObject(new String(outbuf.toByteArray()));
+                    if (jsonObject.has("Answer")) {
+                        JSONArray array = jsonObject.getJSONArray("Answer");
+                        int len = array.length();
+                        if (len > 0) {
+                            ArrayList<String> addresses = new ArrayList<>(len);
+                            for (int a = 0; a < len; a++) {
+                                JSONObject ans = array.getJSONObject(a);
+                                if (ans.has("data")) {
+                                    String ip = ans.getString("data");
+                                    if (ip.matches("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$")) {
+                                        addresses.add(ip);
+                                    }
+                                }
+                            }
+                            if (!addresses.isEmpty()) {
+                                return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
+                            }
+                        }
+                    }
+                } catch (Throwable ignored) {
+                } finally {
+                    try { if (httpConnectionStream != null) httpConnectionStream.close(); } catch (Throwable ignored) {}
+                    try { if (outbuf != null) outbuf.close(); } catch (Throwable ignored) {}
                 }
             }
-            if (!done) {
-                try {
-                    InetAddress address = InetAddress.getByName(currentHostName);
-                    ArrayList<String> addresses = new ArrayList<>(1);
-                    addresses.add(address.getHostAddress());
-                    return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
-                } catch (Exception e) {
-                    FileLog.e(e, false);
+
+            // Fallback to system DNS
+            try {
+                InetAddress[] addresses = InetAddress.getAllByName(currentHostName);
+                if (addresses != null && addresses.length > 0) {
+                    ArrayList<String> result = new ArrayList<>(addresses.length);
+                    for (InetAddress addr : addresses) {
+                        result.add(addr.getHostAddress());
+                    }
+                    return new ResolvedDomain(result, SystemClock.elapsedRealtime());
                 }
+            } catch (Exception e) {
+                FileLog.e(e, false);
             }
             return null;
         }

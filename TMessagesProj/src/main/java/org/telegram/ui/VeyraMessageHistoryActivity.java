@@ -89,17 +89,21 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
     private final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
 
-    private final int initialTab;
+    public static final int MODE_MESSAGES = 0;
+    public static final int MODE_REACTIONS = 1;
+    public static final int MODE_ALL = 2;
+
+    private final int mode;
 
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject) {
-        this(dialogId, messageObject, 0);
+        this(dialogId, messageObject, MODE_ALL);
     }
 
-    public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject, int initialTab) {
+    public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject, int mode) {
         super();
         this.dialogId = dialogId;
         this.currentMessageObject = messageObject;
-        this.initialTab = initialTab;
+        this.mode = mode;
     }
 
     @Override
@@ -221,7 +225,13 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
+        if (mode == MODE_MESSAGES) {
+            actionBar.setTitle(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages));
+        } else if (mode == MODE_REACTIONS) {
+            actionBar.setTitle(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions));
+        } else {
+            actionBar.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
+        }
 
         TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
         TLRPC.User user = getMessagesController().getUser(dialogId);
@@ -264,28 +274,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         LinearLayout rootLayout = new LinearLayout(context);
         rootLayout.setOrientation(LinearLayout.VERTICAL);
 
-        // Segmented Tab Switcher (Floating pill bar)
-        LinearLayout tabBar = new LinearLayout(context);
-        tabBar.setOrientation(LinearLayout.HORIZONTAL);
-        tabBar.setGravity(Gravity.CENTER);
-        tabBar.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
-
-        GradientDrawable tabBarBg = new GradientDrawable();
-        tabBarBg.setCornerRadius(AndroidUtilities.dp(16));
-        tabBarBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
-        tabBar.setBackground(tabBarBg);
-
-        tabMessagesView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
-        tabReactionsView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
-
-        tabBar.addView(tabMessagesView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 0, 0, 4, 0));
-        tabBar.addView(tabReactionsView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 4, 0, 0, 0));
-
-        tabMessagesView.setOnClickListener(v -> selectTab(0));
-        tabReactionsView.setOnClickListener(v -> selectTab(1));
-
-        rootLayout.addView(tabBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 20, 14, 20, 14));
-
         // Content Area
         FrameLayout contentArea = new FrameLayout(context);
 
@@ -295,7 +283,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         messagesListView.setAdapter(new VersionsAdapter());
         messagesListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
         messagesListView.setClipToPadding(false);
-        contentArea.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         // 2. Reactions List
         reactionsContainer = new FrameLayout(context);
@@ -312,12 +299,42 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         reactionsContainer.addView(emptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         reactionsListView.setEmptyView(emptyView);
 
-        contentArea.addView(reactionsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        if (mode == MODE_ALL) {
+            // Segmented Tab Switcher (Floating pill bar) only shown in combined mode
+            LinearLayout tabBar = new LinearLayout(context);
+            tabBar.setOrientation(LinearLayout.HORIZONTAL);
+            tabBar.setGravity(Gravity.CENTER);
+            tabBar.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
 
-        rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            GradientDrawable tabBarBg = new GradientDrawable();
+            tabBarBg.setCornerRadius(AndroidUtilities.dp(16));
+            tabBarBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
+            tabBar.setBackground(tabBarBg);
+
+            tabMessagesView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
+            tabReactionsView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
+
+            tabBar.addView(tabMessagesView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 0, 0, 4, 0));
+            tabBar.addView(tabReactionsView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 4, 0, 0, 0));
+
+            tabMessagesView.setOnClickListener(v -> selectTab(0));
+            tabReactionsView.setOnClickListener(v -> selectTab(1));
+
+            rootLayout.addView(tabBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 20, 14, 20, 14));
+
+            contentArea.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            contentArea.addView(reactionsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            selectTab(0);
+        } else if (mode == MODE_MESSAGES) {
+            // Dedicated Message History layout — clean timeline without tab headers
+            rootLayout.addView(messagesListView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        } else if (mode == MODE_REACTIONS) {
+            // Dedicated Reaction History layout — clean reaction cards without tab headers
+            rootLayout.addView(reactionsContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        }
+
         contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        selectTab(initialTab);
         return fragmentView;
     }
 

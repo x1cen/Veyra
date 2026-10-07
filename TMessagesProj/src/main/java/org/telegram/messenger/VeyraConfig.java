@@ -105,12 +105,27 @@ public class VeyraConfig {
         }
         // Persist
         if (preferences != null) {
-            java.util.StringBuilder sb = new java.util.StringBuilder();
-            for (long id : ghostExceptionDialogs) {
+            StringBuilder sb = new StringBuilder();
+            for (Long id : ghostExceptionDialogs) {
                 if (sb.length() > 0) sb.append(',');
                 sb.append(id);
             }
             preferences.edit().putString("ghostExceptionDialogs", sb.toString()).apply();
+        }
+    }
+
+    public static int getGhostExceptionCount() {
+        return ghostExceptionDialogs.size();
+    }
+
+    public static java.util.Set<Long> getGhostExceptionDialogs() {
+        return new java.util.HashSet<>(ghostExceptionDialogs);
+    }
+
+    public static void clearGhostExceptions() {
+        ghostExceptionDialogs.clear();
+        if (preferences != null) {
+            preferences.edit().remove("ghostExceptionDialogs").apply();
         }
     }
 

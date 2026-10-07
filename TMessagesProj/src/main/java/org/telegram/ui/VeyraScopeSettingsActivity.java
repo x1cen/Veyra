@@ -240,7 +240,8 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         activity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
             if (dids != null && !dids.isEmpty()) {
                 long did = dids.get(0).dialogId;
-                VeyraConfig.addException(category, did, true);
+                boolean currentDefault = VeyraConfig.isPeerEnabled(category, peerType);
+                VeyraConfig.addException(category, did, !currentDefault);
                 updateRows();
             }
             return true;
@@ -430,7 +431,9 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                         } else {
                             object = MessagesController.getInstance(currentAccount).getChat(-did);
                         }
-                        userCell.setData(object, null, null, 0);
+                        Boolean excVal = VeyraConfig.getException(category, did);
+                        String statusStr = (excVal != null && excVal) ? "Always Enabled" : "Always Disabled";
+                        userCell.setData(object, null, statusStr, 0);
                     }
                     break;
                 }

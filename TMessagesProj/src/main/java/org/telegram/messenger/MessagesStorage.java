@@ -16008,6 +16008,11 @@ public class MessagesStorage extends BaseController {
                                         } else if (!textChanged && wasEditedBefore) {
                                             message.edit_date = oldMessage.edit_date;
                                             message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                        } else if (textChanged) {
+                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                            if (message.edit_date == 0) {
+                                                message.edit_date = oldMessage.edit_date > 0 ? oldMessage.edit_date : ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                                            }
                                         }
 
                                         if (textChanged && !oldMessage.out && !message.out) {
