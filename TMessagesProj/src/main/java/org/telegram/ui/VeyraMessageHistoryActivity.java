@@ -769,17 +769,46 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             chip.setText(headerText);
 
             if (entry.messageObject != null) {
-                // Always show as group chat message so avatar renders next to bubble
+                // Always show as incoming group chat message so avatar renders next to bubble
                 cell.isChat = true;
                 MessageObject mo = entry.messageObject;
                 mo.forceAvatar = true;
                 if (mo.messageOwner != null) {
-                    mo.messageOwner.flags &= ~0x00000002; // clear out flag so avatar draws
-                    if (mo.messageOwner.from_id == null) {
+                    mo.messageOwner.flags &= ~0x00000002; // clear OUT flag so cell treats it as incoming
+                    if (!(mo.messageOwner.from_id instanceof TLRPC.TL_peerUser)) {
                         TLRPC.TL_peerUser peer = new TLRPC.TL_peerUser();
-                        peer.user_id = mo.getSenderId() != 0 ? mo.getSenderId() : dialogId;
+                        peer.user_id = mo.getSenderId() != 0 ? mo.getSenderId() : Math.abs(dialogId);
                         mo.messageOwner.from_id = peer;
                     }
+                }
+                // Build a local AvatarDrawable so the avatar renders even when the user
+                // is not cached in MessagesController (avoids null currentUser in cell).
+                long senderId = mo.getSenderId();
+                if (senderId == 0 && mo.messageOwner != null && mo.messageOwner.from_id instanceof TLRPC.TL_peerUser) {
+                    senderId = mo.messageOwner.from_id.user_id;
+                }
+                TLRPC.User cachedUser = senderId != 0
+                    ? MessagesController.getInstance(currentAccount).getUser(senderId) : null;
+                if (cachedUser != null) {
+                    // User is in cache: let ChatMessageCell resolve it naturally via updateCurrentUserAndChat()
+                    mo.customAvatarDrawable = null;
+                } else {
+                    // User not in cache: supply a letter avatar directly so the bubble still shows one
+                    AvatarDrawable ad = new AvatarDrawable();
+                    String firstName = "#";
+                    String lastName = "";
+                    if (mo.messageOwner != null && !android.text.TextUtils.isEmpty(mo.messageOwner.post_author)) {
+                        firstName = mo.messageOwner.post_author;
+                    } else if (currentMessageObject != null
+                               && mo.getSenderId() == currentMessageObject.getSenderId()) {
+                        TLRPC.User liveUser = MessagesController.getInstance(currentAccount).getUser(currentMessageObject.getSenderId());
+                        if (liveUser != null) {
+                            firstName = liveUser.first_name != null ? liveUser.first_name : "#";
+                            lastName = liveUser.last_name != null ? liveUser.last_name : "";
+                        }
+                    }
+                    ad.setInfo(senderId, firstName, lastName);
+                    mo.customAvatarDrawable = ad;
                 }
                 cell.setMessageObject(mo, null, false, false, false);
             }
