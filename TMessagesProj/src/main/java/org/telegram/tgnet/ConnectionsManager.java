@@ -391,7 +391,7 @@ public class ConnectionsManager extends BaseController {
                 if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                        aff.pts = -1;
+                        aff.pts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
                         aff.pts_count = 0;
                         AndroidUtilities.runOnUIThread(() -> onComplete.run(aff, null));
                     }
@@ -424,7 +424,7 @@ public class ConnectionsManager extends BaseController {
                 TLObject dummy;
                 if (object instanceof TLRPC.TL_messages_readMessageContents) {
                     TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                    aff.pts = -1;
+                    aff.pts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
                     aff.pts_count = 0;
                     dummy = aff;
                 } else {

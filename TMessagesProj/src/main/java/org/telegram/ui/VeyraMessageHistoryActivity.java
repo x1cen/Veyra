@@ -349,23 +349,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             protected Drawable getNewDrawable() {
                 return Theme.getCachedWallpaperNonBlocking();
             }
-
-            @Override
-            protected void onLayout(boolean changed, int l, int t, int r, int b) {
-                super.onLayout(changed, l, t, r, b);
-                // Keep rootLayout pushed below the actionBar — recalc every layout pass.
-                View root = findViewWithTag("veyra_root");
-                if (root != null) {
-                    int abH = actionBar != null ? actionBar.getMeasuredHeight() : 0;
-                    if (abH <= 0) {
-                        abH = ActionBar.getCurrentActionBarHeight()
-                            + (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-                    }
-                    if (root.getPaddingTop() != abH) {
-                        root.setPadding(0, abH, 0, 0);
-                    }
-                }
-            }
         };
         Drawable wp = Theme.getCachedWallpaper();
         if (wp != null) {
@@ -378,8 +361,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         rootLayout.setOrientation(LinearLayout.VERTICAL);
         rootLayout.setTag("veyra_root");
 
-        // Floating independent liquid-glass tab pills — no shared container background,
-        // wallpaper shows through the gap and behind each pill (same glass style as group topics / bot tabs).
+        // Floating independent liquid-glass tab pills — docked right below action bar,
+        // wallpaper shows through the gap and behind each pill.
         LinearLayout pillsRow = new LinearLayout(context);
         pillsRow.setOrientation(LinearLayout.HORIZONTAL);
         pillsRow.setGravity(Gravity.CENTER);
@@ -427,59 +410,12 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        // contentView is MATCH_PARENT — actionBar floats on top of it.
-        // rootLayout starts at y=0; we push it down via paddingTop equal to the real
-        // actionBar height, updated in onFragmentViewCreated so the actionBar is already laid out.
+        // ActionBarLayout already positions fragmentView below the action bar automatically.
+        // No extra top margin or top padding needed!
         contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        // Fix paddingTop immediately after first global layout pass.
-        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                rootLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                int abH = actionBar != null ? actionBar.getMeasuredHeight() : 0;
-                if (abH <= 0) {
-                    abH = ActionBar.getCurrentActionBarHeight()
-                        + (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-                }
-                if (rootLayout.getPaddingTop() != abH) {
-                    rootLayout.setPadding(0, abH, 0, 0);
-                }
-            }
-        });
 
         selectTab(initialTab);
         return fragmentView;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (fragmentView == null) return;
-        View root = fragmentView.findViewWithTag("veyra_root");
-        if (root instanceof LinearLayout) {
-            int abH = actionBar != null ? actionBar.getMeasuredHeight() : 0;
-            if (abH <= 0) {
-                abH = ActionBar.getCurrentActionBarHeight()
-                    + (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-            }
-            root.setPadding(0, abH, 0, 0);
-        }
-    }
-
-    @Override
-    public void onTransitionAnimationEnd(boolean isOpen, boolean backward) {
-        super.onTransitionAnimationEnd(isOpen, backward);
-        if (!isOpen || fragmentView == null) return;
-        View root = fragmentView.findViewWithTag("veyra_root");
-        if (root instanceof LinearLayout) {
-            int abH = actionBar != null ? actionBar.getMeasuredHeight() : 0;
-            if (abH <= 0) {
-                abH = ActionBar.getCurrentActionBarHeight()
-                    + (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-            }
-            root.setPadding(0, abH, 0, 0);
-        }
     }
 
     private LinearLayout createTopicTabPill(Context context, int iconRes, String title) {
@@ -836,7 +772,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 // Always show as group chat message so avatar renders next to bubble
                 cell.isChat = true;
                 MessageObject mo = entry.messageObject;
-                // Make needDrawAvatar() return true: set the flag on messageOwner
+                mo.forceAvatar = true;
                 if (mo.messageOwner != null) {
                     mo.messageOwner.flags &= ~0x00000002; // clear out flag so avatar draws
                     if (mo.messageOwner.from_id == null) {
