@@ -89,10 +89,17 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
     private final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
 
+    private final int initialTab;
+
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject) {
+        this(dialogId, messageObject, 0);
+    }
+
+    public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject, int initialTab) {
         super();
         this.dialogId = dialogId;
         this.currentMessageObject = messageObject;
+        this.initialTab = initialTab;
     }
 
     @Override
@@ -310,7 +317,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        selectTab(0);
+        selectTab(initialTab);
         return fragmentView;
     }
 

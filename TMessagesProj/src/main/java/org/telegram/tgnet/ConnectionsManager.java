@@ -388,10 +388,14 @@ public class ConnectionsManager extends BaseController {
         if (org.telegram.messenger.VeyraConfig.isGhostHideRead()) {
             if (object instanceof TLRPC.TL_messages_readHistory) {
                 long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
-                if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
+                // Skip ghost for per-chat exceptions
+                if (!org.telegram.messenger.VeyraConfig.isGhostExceptionDialog(peerDialogId)
+                        && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                        aff.pts = -1;
+                        // Use actual stored pts so MessagesController does NOT see a hole and trigger getDifference loop
+                        int currentPts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
+                        aff.pts = currentPts > 0 ? currentPts : 0;
                         aff.pts_count = 0;
                         AndroidUtilities.runOnUIThread(() -> onComplete.run(aff, null));
                     }
@@ -399,7 +403,9 @@ public class ConnectionsManager extends BaseController {
                 }
             } else if (object instanceof TLRPC.TL_channels_readHistory) {
                 long peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
-                if (!org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
+                // Skip ghost for per-chat exceptions
+                if (!org.telegram.messenger.VeyraConfig.isGhostExceptionDialog(peerDialogId)
+                        && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                     if (onComplete != null) {
                         AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                     }
@@ -419,7 +425,9 @@ public class ConnectionsManager extends BaseController {
                 TLObject dummy;
                 if (object instanceof TLRPC.TL_messages_readMessageContents) {
                     TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                    aff.pts = -1;
+                    // Use actual stored pts to avoid getDifference loop
+                    int currentPts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
+                    aff.pts = currentPts > 0 ? currentPts : 0;
                     aff.pts_count = 0;
                     dummy = aff;
                 } else {
@@ -437,15 +445,20 @@ public class ConnectionsManager extends BaseController {
         }
         if (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping) {
             TLRPC.SendMessageAction action = null;
+            long typingDialogId = 0;
             if (object instanceof TLRPC.TL_messages_setTyping) {
                 action = ((TLRPC.TL_messages_setTyping) object).action;
+                typingDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_setTyping) object).peer);
             }
             boolean isTypingAction = action == null || action instanceof TLRPC.TL_sendMessageTypingAction || action instanceof TLRPC.TL_sendMessageCancelAction;
             boolean drop = false;
-            if (isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideTyping() || org.telegram.messenger.VeyraConfig.hideTyping)) {
-                drop = true;
-            } else if (!isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideUpload() || org.telegram.messenger.VeyraConfig.isGhostHideTyping())) {
-                drop = true;
+            boolean ghostException = typingDialogId != 0 && org.telegram.messenger.VeyraConfig.isGhostExceptionDialog(typingDialogId);
+            if (!ghostException) {
+                if (isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideTyping() || org.telegram.messenger.VeyraConfig.hideTyping)) {
+                    drop = true;
+                } else if (!isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideUpload() || org.telegram.messenger.VeyraConfig.isGhostHideTyping())) {
+                    drop = true;
+                }
             }
             if (drop) {
                 if (onComplete != null) {

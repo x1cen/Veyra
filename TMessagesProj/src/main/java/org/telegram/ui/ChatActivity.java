@@ -31956,6 +31956,50 @@ public class ChatActivity extends BaseFragment implements
                         }
                         processSelectedOption(options.get(i));
                     });
+                    // History item: replace direct open with animated SwipeBack submenu
+                    if (option == OPTION_VIEW_EDIT_HISTORY && popupLayout.getSwipeBack() != null) {
+                        final MessageObject histMsg = selectedObject;
+                        boolean hasMsgHistSub = histMsg != null && VeyraEditHistoryManager.hasHistory(histMsg.getDialogId(), histMsg.getId());
+                        boolean hasReactHistSub = histMsg != null && VeyraConfig.reactionHistoryEnabled
+                                && (histMsg.hasReactions() || VeyraEditHistoryManager.hasReactionHistory(histMsg.getDialogId(), histMsg.getId()));
+
+                        LinearLayout subLayout = new LinearLayout(getParentActivity());
+                        subLayout.setOrientation(LinearLayout.VERTICAL);
+                        subLayout.setLayoutParams(new FrameLayout.LayoutParams(AndroidUtilities.dp(200), LayoutHelper.WRAP_CONTENT));
+
+                        ActionBarMenuSubItem backItem = new ActionBarMenuSubItem(getParentActivity(), true, false, themeDelegate);
+                        backItem.setItemHeight(44);
+                        backItem.setTextAndIcon(LocaleController.getString(R.string.Back), R.drawable.msg_arrow_back);
+                        backItem.getTextView().setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(40), 0, LocaleController.isRTL ? AndroidUtilities.dp(40) : 0, 0);
+                        backItem.setOnClickListener(v2 -> popupLayout.getSwipeBack().closeForeground());
+                        subLayout.addView(backItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                        if (hasMsgHistSub) {
+                            ActionBarMenuSubItem msgHistItem = new ActionBarMenuSubItem(getParentActivity(), false, !hasReactHistSub, themeDelegate);
+                            msgHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages), R.drawable.msg_edit);
+                            subLayout.addView(msgHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                            msgHistItem.setOnClickListener(v2 -> {
+                                closeMenu();
+                                if (histMsg != null) {
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, 0));
+                                }
+                            });
+                        }
+                        if (hasReactHistSub) {
+                            ActionBarMenuSubItem reactHistItem = new ActionBarMenuSubItem(getParentActivity(), !hasMsgHistSub, true, themeDelegate);
+                            reactHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions), R.drawable.msg_reactions);
+                            subLayout.addView(reactHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                            reactHistItem.setOnClickListener(v2 -> {
+                                closeMenu();
+                                if (histMsg != null) {
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, 1));
+                                }
+                            });
+                        }
+
+                        final int histForegroundIndex = popupLayout.addViewToSwipeBack(subLayout);
+                        cell.setOnClickListener(v2 -> popupLayout.getSwipeBack().openForeground(histForegroundIndex));
+                    }
                     if (option == OPTION_TRANSLATE) {
                         final boolean translateEnabled = getMessagesController().getTranslateController().isContextTranslateEnabled();
                         String toLangDefault = LocaleController.getInstance().getCurrentLocale().getLanguage();

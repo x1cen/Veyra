@@ -19604,9 +19604,19 @@ public class MessagesController extends BaseController implements NotificationCe
                     boolean wasEditedBefore = oldMsgOwner.edit_date != 0 || (oldMsgOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
                     boolean isCurrentlyEditing = (oldMsg != null && oldMsg.isEditing()) || message.send_state == MessageObject.MESSAGE_SEND_STATE_EDITING;
 
+                    // A reaction update sets edit_date but does NOT change text/media/entities/reply_markup.
+                    // We must NOT show "edited" label for pure reaction updates.
+                    boolean isOnlyReactionUpdate = !textChanged && !isCurrentlyEditing
+                            && message.edit_date != oldMsgOwner.edit_date
+                            && TextUtils.equals(oldText, newText);
+
                     if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
                         message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         message.edit_date = 0;
+                    } else if (isOnlyReactionUpdate && wasEditedBefore) {
+                        // Preserve previous edited state but don't advance edit_date to reaction timestamp
+                        message.edit_date = oldMsgOwner.edit_date;
+                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                     } else if (!textChanged && wasEditedBefore) {
                         message.edit_date = oldMsgOwner.edit_date;
                         message.flags |= TLRPC.MESSAGE_FLAG_EDITED;

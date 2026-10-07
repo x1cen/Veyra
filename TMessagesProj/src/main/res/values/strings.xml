@@ -11398,6 +11398,8 @@
     <string name="VeyraDuressFallbackDetail">If Full Wipe is selected but there is no internet connection, switch to Local Wipe automatically to clear local data.</string>
     <string name="VeyraEditHistoryTabMessages">Messages</string>
     <string name="VeyraEditHistoryTabReactions">Reactions</string>
+    <string name="VeyraHistoryMessages">Message Edits</string>
+    <string name="VeyraHistoryReactions">Reactions</string>
     <string name="VeyraReactionHistoryEnable">Message Reaction History</string>
     <string name="VeyraReactionHistoryEnableDesc">Track and display reactions tab in edit history panel</string>
     <string name="VeyraReactionHistoryLimit">Reaction History Limit</string>

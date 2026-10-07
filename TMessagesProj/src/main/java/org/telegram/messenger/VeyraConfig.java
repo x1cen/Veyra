@@ -80,12 +80,49 @@ public class VeyraConfig {
 
     private static final java.util.Set<Long> allowedReadDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
+    // Per-chat ghost exceptions: dialogs in this set are EXCLUDED from ghost mode (ghost disabled for them)
+    private static final java.util.Set<Long> ghostExceptionDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
     public static void allowSendReadOnce(long dialogId) {
         allowedReadDialogs.add(dialogId);
     }
 
     public static boolean consumeSendReadAllowed(long dialogId) {
+        // If this dialog is a ghost exception, always allow reads
+        if (ghostExceptionDialogs.contains(dialogId)) return true;
         return allowedReadDialogs.remove(dialogId);
+    }
+
+    public static boolean isGhostExceptionDialog(long dialogId) {
+        return ghostExceptionDialogs.contains(dialogId);
+    }
+
+    public static void setGhostException(long dialogId, boolean excluded) {
+        if (excluded) {
+            ghostExceptionDialogs.add(dialogId);
+        } else {
+            ghostExceptionDialogs.remove(dialogId);
+        }
+        // Persist
+        if (preferences != null) {
+            java.util.StringBuilder sb = new java.util.StringBuilder();
+            for (long id : ghostExceptionDialogs) {
+                if (sb.length() > 0) sb.append(',');
+                sb.append(id);
+            }
+            preferences.edit().putString("ghostExceptionDialogs", sb.toString()).apply();
+        }
+    }
+
+    private static void loadGhostExceptions() {
+        if (preferences == null) return;
+        String raw = preferences.getString("ghostExceptionDialogs", "");
+        ghostExceptionDialogs.clear();
+        if (!TextUtils.isEmpty(raw)) {
+            for (String s : raw.split(",")) {
+                try { ghostExceptionDialogs.add(Long.parseLong(s.trim())); } catch (NumberFormatException ignored) {}
+            }
+        }
     }
 
     public static boolean isGhostModeActive() {
@@ -301,6 +338,7 @@ public class VeyraConfig {
         loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
         loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
         loadExceptions(CATEGORY_REACTION_HISTORY, preferences.getString("reactionHistoryExceptions", ""));
+        loadGhostExceptions();
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
         cleanUrls = preferences.getBoolean("cleanUrls", true);
