@@ -893,7 +893,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             msgText.setText(displayText);
 
             // Timestamp + edited badge
-            String timeStr = entry.date > 0 ? LocaleController.getInstance().formatterDay.format(new java.util.Date((long) entry.date * 1000)) : "";
+            String timeStr = entry.date > 0 ? LocaleController.getInstance().getFormatterDayVeyra().format(new java.util.Date((long) entry.date * 1000)) : "";
             boolean isEdited = mo != null && mo.messageOwner != null && mo.messageOwner.edit_date != 0;
             timeView.setText(isEdited ? timeStr + "  edited" : timeStr);
 
