@@ -668,13 +668,14 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             // Sender Avatar & Name
             TLRPC.User user = null;
             TLRPC.Chat chat = null;
-            if (entry.messageObject != null) {
-                long fromId = entry.messageObject.getFromId();
-                if (fromId > 0) {
-                    user = MessagesController.getInstance(currentAccount).getUser(fromId);
-                } else if (fromId < 0) {
-                    chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
-                }
+            long fromId = 0;
+            if (entry.messageObject != null && entry.messageObject.messageOwner != null && entry.messageObject.messageOwner.from_id != null) {
+                fromId = MessageObject.getPeerId(entry.messageObject.messageOwner.from_id);
+            }
+            if (fromId > 0) {
+                user = MessagesController.getInstance(currentAccount).getUser(fromId);
+            } else if (fromId < 0) {
+                chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
             }
             if (user == null && chat == null) {
                 if (dialogId > 0) {
