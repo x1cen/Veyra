@@ -33502,16 +33502,11 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_VIEW_EDIT_HISTORY: {
                 if (selectedObject != null) {
-                    showVeyraCleanMenu(selectedObject);
-                }
-                selectedObject = null;
-                selectedObjectToEditCaption = null;
-                selectedObjectGroup = null;
-                break;
-            }
-            case OPTION_VEYRA_CLEAN: {
-                if (selectedObject != null) {
-                    showVeyraCleanMenu(selectedObject);
+                    final MessageObject finalObj = selectedObject;
+                    final long finalDialogId = dialog_id;
+                    boolean hasMsg = VeyraEditHistoryManager.hasHistory(finalDialogId, finalObj.getId());
+                    int initialTab = hasMsg ? 0 : 1;
+                    presentFragment(new VeyraMessageHistoryActivity(finalDialogId, finalObj, initialTab));
                 }
                 selectedObject = null;
                 selectedObjectToEditCaption = null;

@@ -325,7 +325,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         org.telegram.ui.ActionBar.ActionBarMenuItem otherItem = menu.addItem(1, R.drawable.ic_ab_other);
         otherItem.addSubItem(101, R.drawable.msg_copy, LocaleController.getString("Copy", R.string.Copy));
         otherItem.addSubItem(102, R.drawable.msg_info, "Message Details");
-        otherItem.addSubItem(103, R.drawable.msg_delete, LocaleController.getString("Delete", R.string.Delete));
+        otherItem.addSubItem(103, R.drawable.msg_delete, "Clean");
 
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
@@ -337,7 +337,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 } else if (id == 102) {
                     openLatestMessageDetails();
                 } else if (id == 103) {
-                    confirmClearHistory();
+                    showCleanDialog();
                 }
             }
         });
@@ -409,8 +409,17 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        int totalActionBarHeight = barHeightPx + topOffset;
-        contentView.addView(rootLayout, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, totalActionBarHeight, 0, 0));
+        // rootLayout fills the whole contentView; actionBar floats on top.
+        // We apply paddingTop via onMeasure so it tracks the real measured actionBar height.
+        contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+        // Defer padding update until actionBar is measured (avoids hard-coded px math).
+        actionBar.addOnLayoutChangeListener((v, left, top, right, bottom, ol, ot, or2, ob) -> {
+            int abH = actionBar.getMeasuredHeight();
+            if (abH > 0 && rootLayout.getPaddingTop() != abH) {
+                rootLayout.setPadding(0, abH, 0, 0);
+            }
+        });
 
         selectTab(initialTab);
         return fragmentView;
@@ -501,6 +510,56 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         if (currentMessageObject != null) {
             presentFragment(new MessageDetailsActivity(currentMessageObject));
         }
+    }
+
+    private void showCleanDialog() {
+        if (getParentActivity() == null) return;
+        final boolean hasEdit = currentMessageObject != null && VeyraEditHistoryManager.hasHistory(dialogId, currentMessageObject.getId());
+        final boolean hasReact = currentMessageObject != null && VeyraEditHistoryManager.hasReactionHistory(dialogId, currentMessageObject.getId());
+        final boolean hasAntiDel = currentMessageObject != null && org.veyra.client.VeyraAntiDelete.hasDeletedMessage(dialogId, currentMessageObject.getId());
+
+        java.util.List<String> items = new java.util.ArrayList<>();
+        java.util.List<Runnable> actions = new java.util.ArrayList<>();
+
+        if (hasEdit) {
+            items.add("Clear edit history for this message");
+            actions.add(() -> { VeyraEditHistoryManager.deleteHistory(dialogId, currentMessageObject.getId()); loadData(); });
+        }
+        if (hasReact) {
+            items.add("Clear reaction history for this message");
+            actions.add(() -> { VeyraEditHistoryManager.deleteReactionHistory(dialogId, currentMessageObject.getId()); loadData(); });
+        }
+        if (hasAntiDel) {
+            items.add("Clear deleted message cache");
+            actions.add(() -> { org.veyra.client.VeyraAntiDelete.clearMessage(dialogId, currentMessageObject.getId()); loadData(); });
+        }
+        if (hasEdit || hasReact || hasAntiDel) {
+            items.add("Clear all Veyra data for this message");
+            actions.add(() -> {
+                VeyraEditHistoryManager.deleteHistory(dialogId, currentMessageObject.getId());
+                VeyraEditHistoryManager.deleteReactionHistory(dialogId, currentMessageObject.getId());
+                org.veyra.client.VeyraAntiDelete.clearMessage(dialogId, currentMessageObject.getId());
+                loadData();
+            });
+        }
+        items.add("Clear all history in this chat");
+        actions.add(() -> {
+            VeyraEditHistoryManager.clearDialog(dialogId);
+            org.veyra.client.VeyraAntiDelete.clearDialog(dialogId);
+            loadData();
+        });
+        items.add("Delete message");
+        actions.add(this::confirmClearHistory);
+
+        String[] itemArr = items.toArray(new String[0]);
+        Runnable[] actionArr = actions.toArray(new Runnable[0]);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setItems(itemArr, (di, which) -> {
+            if (which < actionArr.length) actionArr[which].run();
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
     }
 
     private void confirmClearHistory() {
