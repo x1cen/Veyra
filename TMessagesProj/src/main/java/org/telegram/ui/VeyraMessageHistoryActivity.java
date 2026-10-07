@@ -37,7 +37,6 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
@@ -897,6 +896,16 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             String timeStr = entry.date > 0 ? LocaleController.getInstance().formatterDay.format(new java.util.Date((long) entry.date * 1000)) : "";
             boolean isEdited = mo != null && mo.messageOwner != null && mo.messageOwner.edit_date != 0;
             timeView.setText(isEdited ? timeStr + "  edited" : timeStr);
+
+            // Long-press on the bubble row shows copy / details / delete options
+            final MessageObject finalMo = mo;
+            View bubbleRow = root.findViewById(102);
+            if (bubbleRow != null) {
+                bubbleRow.setOnLongClickListener(v -> {
+                    showMessageOptions(finalMo);
+                    return true;
+                });
+            }
         }
     }
 
@@ -1037,12 +1046,10 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         }
     }
 
-    private void showMessageOptions(ChatMessageCell cell) {
-        if (cell == null) return;
-        MessageObject msg = cell.getMessageObject();
+    private void showMessageOptions(MessageObject msg) {
         if (msg == null) return;
         final String textToCopy = msg.messageText != null ? msg.messageText.toString() : (msg.messageOwner != null && msg.messageOwner.message != null ? msg.messageOwner.message : "");
-        ItemOptions options = ItemOptions.makeOptions(this, cell);
+        ItemOptions options = ItemOptions.makeOptions(this, messagesListView);
         if (!TextUtils.isEmpty(textToCopy)) {
             options.add(R.drawable.msg_copy, LocaleController.getString("Copy", R.string.Copy), () -> {
                 AndroidUtilities.addToClipboard(textToCopy);
