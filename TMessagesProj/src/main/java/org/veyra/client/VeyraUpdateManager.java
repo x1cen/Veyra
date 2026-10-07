@@ -54,11 +54,8 @@ public class VeyraUpdateManager {
     private static final VeyraUpdateManager[] instances = new VeyraUpdateManager[UserConfig.MAX_ACCOUNT_COUNT];
 
     private final int account;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "VeyraUpdateManager-" + account);
-        t.setDaemon(true);
-        return t;
-    });
+    private final ScheduledExecutorService scheduler;
+
 
     private final AtomicLong lastUpdateReceivedAt   = new AtomicLong(SystemClock.elapsedRealtime());
     private final AtomicBoolean watchdogActive      = new AtomicBoolean(false);
@@ -86,6 +83,11 @@ public class VeyraUpdateManager {
 
     private VeyraUpdateManager(int account) {
         this.account = account;
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "VeyraUpdateManager-" + account);
+            t.setDaemon(true);
+            return t;
+        });
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

@@ -722,7 +722,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 MessageObject mo = entry.messageObject;
                 // Make needDrawAvatar() return true: set the flag on messageOwner
                 if (mo.messageOwner != null) {
-                    mo.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_OUT; // ensure incoming
+                    mo.messageOwner.flags &= ~0x00000002; // clear out flag so avatar draws
                     if (mo.messageOwner.from_id == null) {
                         TLRPC.TL_peerUser peer = new TLRPC.TL_peerUser();
                         peer.user_id = mo.getSenderId() != 0 ? mo.getSenderId() : dialogId;
