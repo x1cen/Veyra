@@ -129,6 +129,10 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
             typeChannelsRow = rowCount++;
         } else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) {
             typePrivateRow = rowCount++;
+        } else if (category == VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY || category == VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS) {
+            typePrivateRow = rowCount++;
+            typeGroupsRow = rowCount++;
+            typeChannelsRow = rowCount++;
         }
         chatTypesInfoRow = rowCount++;
 
@@ -248,6 +252,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         if (category == VeyraConfig.CATEGORY_GHOST_STORIES) return LocaleController.getString("VeyraGhostHideStories", R.string.VeyraGhostHideStories);
         if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) return "Anonymous Channel Browsing";
         if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) return "Secret Chat Read Receipts";
+        if (category == VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY) return "Mark Read on Reply";
+        if (category == VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS) return "Hide Voice / Video Read Receipts";
         return "Ghost Mode Feature";
     }
 
@@ -259,6 +265,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         if (category == VeyraConfig.CATEGORY_GHOST_STORIES) return VeyraConfig.ghostHideStories;
         if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) return VeyraConfig.ghostHideChannelViews;
         if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) return VeyraConfig.ghostHideSecretRead;
+        if (category == VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY) return VeyraConfig.ghostReadOnReply;
+        if (category == VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS) return VeyraConfig.ghostHideReadContents;
         return false;
     }
 
@@ -270,6 +278,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         else if (category == VeyraConfig.CATEGORY_GHOST_STORIES) VeyraConfig.setGhostHideStories(val);
         else if (category == VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS) VeyraConfig.setGhostHideChannelViews(val);
         else if (category == VeyraConfig.CATEGORY_GHOST_SECRET_READ) VeyraConfig.setGhostHideSecretRead(val);
+        else if (category == VeyraConfig.CATEGORY_GHOST_READ_ON_REPLY) VeyraConfig.setGhostReadOnReply(val);
+        else if (category == VeyraConfig.CATEGORY_GHOST_HIDE_CONTENTS) VeyraConfig.setGhostHideReadContents(val);
     }
 
     private boolean isTypeEnabled(int peerType) {
