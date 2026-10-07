@@ -171,6 +171,35 @@ public class VeyraAntiDelete {
             });
     }
 
+    public static boolean hasDeletedMessage(long dialogId, int messageId) {
+        org.telegram.messenger.MessagesStorage ms = org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount);
+        if (ms == null) return false;
+        final boolean[] result = {false};
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        ms.getStorageQueue().postRunnable(() -> {
+            try {
+                org.telegram.SQLite.SQLiteDatabase db = ms.getDatabase();
+                org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT COUNT(*) FROM veyra_message_deletions WHERE uid = " + dialogId + " AND mid = " + messageId);
+                if (cursor.next()) result[0] = cursor.intValue(0) > 0;
+                cursor.dispose();
+            } catch (Exception ignored) {}
+            latch.countDown();
+        });
+        try { latch.await(500, java.util.concurrent.TimeUnit.MILLISECONDS); } catch (InterruptedException ignored) {}
+        return result[0];
+    }
+
+    public static void clearMessage(long dialogId, int messageId) {
+        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
+            .getStorageQueue().postRunnable(() -> {
+                try {
+                    org.telegram.SQLite.SQLiteDatabase db =
+                        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
+                    db.executeFast("DELETE FROM veyra_message_deletions WHERE uid = " + dialogId + " AND mid = " + messageId).stepThis().dispose();
+                } catch (Exception ignored) {}
+            });
+    }
+
     public static String toJsonNestedMaps(Map<Integer, Map<String, String>> map) {
         final Gson gson = new Gson();
         final JsonObject jsonObject = new JsonObject();

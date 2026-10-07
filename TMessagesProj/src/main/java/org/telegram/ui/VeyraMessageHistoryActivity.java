@@ -287,9 +287,9 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
         TLRPC.User user = getMessagesController().getUser(dialogId);
 
-        // Header: Profile Avatar (same as Scheduled Messages) + Title "History"
+        // Header: Profile Avatar + Title "History"
         int topOffset = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-        int barHeight = ActionBar.getCurrentActionBarHeight();
+        int barHeightPx = ActionBar.getCurrentActionBarHeight(); // already in px (dp() result)
 
         LinearLayout headerLayout = new LinearLayout(context);
         headerLayout.setOrientation(LinearLayout.HORIZONTAL);
@@ -317,7 +317,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         titleView.setTypeface(AndroidUtilities.bold());
         headerLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
-        actionBar.addView(headerLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, barHeight, Gravity.TOP | Gravity.LEFT, 56, topOffset, 56, 0));
+        // addView with dp-based margin: LayoutHelper.createFrame uses dp internally
+        actionBar.addView(headerLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 56, 0, 56, 0));
 
         // 3-dots Menu on the right
         org.telegram.ui.ActionBar.ActionBarMenu menu = actionBar.createMenu();
@@ -408,8 +409,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        int totalActionBarHeight = barHeight + topOffset;
-        contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, totalActionBarHeight, 0, 0));
+        int totalActionBarHeight = barHeightPx + topOffset;
+        contentView.addView(rootLayout, LayoutHelper.createFrameMarginPx(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, totalActionBarHeight, 0, 0));
 
         selectTab(initialTab);
         return fragmentView;
@@ -716,8 +717,19 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             chip.setText(headerText);
 
             if (entry.messageObject != null) {
-                cell.isChat = (dialogId < 0);
-                cell.setMessageObject(entry.messageObject, null, false, false, false);
+                // Always show as group chat message so avatar renders next to bubble
+                cell.isChat = true;
+                MessageObject mo = entry.messageObject;
+                // Make needDrawAvatar() return true: set the flag on messageOwner
+                if (mo.messageOwner != null) {
+                    mo.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_OUT; // ensure incoming
+                    if (mo.messageOwner.from_id == null) {
+                        TLRPC.TL_peerUser peer = new TLRPC.TL_peerUser();
+                        peer.user_id = mo.getSenderId() != 0 ? mo.getSenderId() : dialogId;
+                        mo.messageOwner.from_id = peer;
+                    }
+                }
+                cell.setMessageObject(mo, null, false, false, false);
             }
         }
     }

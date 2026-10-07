@@ -284,6 +284,15 @@ public final class VeyraEditHistoryManager {
         }
     }
 
+    public static void deleteReactionHistory(long dialogId, int messageId) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(REACTION_TABLE_NAME, "dialog_id = ? AND message_id = ?", new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     public static void deleteSingleEdit(long dialogId, int messageId, int date) {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
