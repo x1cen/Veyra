@@ -1561,6 +1561,7 @@ public class MessagesController extends BaseController implements NotificationCe
         ImageLoader.getInstance();
         getMessagesStorage();
         getLocationController();
+        org.veyra.client.VeyraUpdateManager.getInstance(num).startWatchdog();
         AndroidUtilities.runOnUIThread(() -> {
             MessagesController messagesController = getMessagesController();
             getNotificationCenter().addObserver(messagesController, NotificationCenter.fileUploaded);
@@ -6463,6 +6464,8 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void cleanup() {
+        org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).stopWatchdog();
+        org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).reset();
         getContactsController().cleanup();
         MediaController.getInstance().cleanup();
         getNotificationsController().cleanup();
@@ -8191,7 +8194,7 @@ public class MessagesController extends BaseController implements NotificationCe
         } else if (channelPts != pts) {
             long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
             boolean gettingDifferenceChannel = gettingDifferenceChannels.get(channelId, false);
-            if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500) {
+            if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= veyraHoleTimeout()) {
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("ADD CHANNEL UPDATE TO QUEUE pts = " + pts + " pts_count = " + pts_count);
                 }
@@ -8226,7 +8229,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().setLastPtsValue(pts);
                 getMessagesStorage().saveDiffParams(getMessagesStorage().getLastSeqValue(), getMessagesStorage().getLastPtsValue(), getMessagesStorage().getLastDateValue(), getMessagesStorage().getLastQtsValue());
             } else if (getMessagesStorage().getLastPtsValue() != pts) {
-                if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= veyraHoleTimeout()) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("ADD UPDATE TO QUEUE pts = " + pts + " pts_count = " + pts_count);
                     }
@@ -8253,7 +8256,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 getMessagesStorage().saveDiffParams(getMessagesStorage().getLastSeqValue(), getMessagesStorage().getLastPtsValue(), getMessagesStorage().getLastDateValue(), getMessagesStorage().getLastQtsValue());
             } else if (getMessagesStorage().getLastSeqValue() != seq) {
-                if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= 1500) {
+                if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= veyraHoleTimeout()) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("ADD UPDATE TO QUEUE seq = " + seq);
                     }
@@ -10643,7 +10646,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int a = 0; a < updatesQueueChannels.size(); a++) {
                     long key = updatesQueueChannels.keyAt(a);
                     long updatesStartWaitTime = updatesStartWaitTimeChannels.valueAt(a);
-                    if (Math.abs(currentTime - updatesStartWaitTime) >= 1500) {
+                    if (Math.abs(currentTime - updatesStartWaitTime) >= veyraHoleTimeout()) {
                         if (BuildVars.LOGS_ENABLED) {
                             FileLog.d("QUEUE CHANNEL " + key + " UPDATES WAIT TIMEOUT - CHECK QUEUE");
                         }
@@ -10653,7 +10656,7 @@ public class MessagesController extends BaseController implements NotificationCe
             }
 
             for (int a = 0; a < 3; a++) {
-                if (getUpdatesStartTime(a) != 0 && Math.abs(currentTime - getUpdatesStartTime(a)) >= 1500) {
+                if (getUpdatesStartTime(a) != 0 && Math.abs(currentTime - getUpdatesStartTime(a)) >= veyraHoleTimeout()) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d(a + " QUEUE UPDATES WAIT TIMEOUT - CHECK QUEUE");
                     }
@@ -16352,6 +16355,11 @@ public class MessagesController extends BaseController implements NotificationCe
         }
     }
 
+    /** Veyra: adaptive hole-wait timeout — replaces hardcoded 1500ms. */
+    private long veyraHoleTimeout() {
+        return org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).getAdaptiveHoleTimeout();
+    }
+
     public long getUpdatesStartTime(int type) {
         if (type == 0) {
             return updatesStartWaitTimeSeq;
@@ -16426,7 +16434,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 a--;
             } else if (updateState == 1) {
                 long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
-                if (updatesStartWaitTime != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500)) {
+                if (updatesStartWaitTime != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= veyraHoleTimeout())) {
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("HOLE IN CHANNEL " + channelId + " UPDATES QUEUE - will wait more time");
                     }
@@ -16488,7 +16496,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     updatesQueue.remove(a);
                     a--;
                 } else if (updateState == 1) {
-                    if (getUpdatesStartTime(type) != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - getUpdatesStartTime(type)) <= 1500)) {
+                    if (getUpdatesStartTime(type) != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - getUpdatesStartTime(type)) <= veyraHoleTimeout())) {
                         if (BuildVars.LOGS_ENABLED) {
                             FileLog.d("HOLE IN UPDATES QUEUE - will wait more time");
                         }
@@ -17162,6 +17170,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                 getMessagesStorage().setLastQtsValue(res.state.qts);
                                 FileLog.d("received difference: isUpdating = false");
                                 getConnectionsManager().setIsUpdating(false);
+                                org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onGetDifferenceSuccess();
+                                org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onUpdateReceived();
                                 for (int a = 0; a < 3; a++) {
                                     processUpdatesQueue(a, 1);
                                 }
@@ -17175,6 +17185,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                 getMessagesStorage().setLastDateValue(res.date);
                                 getConnectionsManager().setIsUpdating(false);
                                 FileLog.d("received differenceEmpty: isUpdating = false");
+                                org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onGetDifferenceSuccess();
+                                org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onUpdateReceived();
                                 for (int a = 0; a < 3; a++) {
                                     processUpdatesQueue(a, 1);
                                 }
@@ -17190,6 +17202,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 gettingDifference = false;
                 getConnectionsManager().setIsUpdating(false);
                 FileLog.d("received: isUpdating = false");
+                org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onGetDifferenceError();
             }
         });
     }
@@ -17954,6 +17967,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     // must be run from Utilities.stageQueue
     public void processUpdates(final TLRPC.Updates updates, boolean fromQueue) {
+        org.veyra.client.VeyraUpdateManager.getInstance(currentAccount).onUpdateReceived();
         ArrayList<Long> needGetChannelsDiff = null;
         boolean needGetDiff = false;
         boolean needReceivedQueue = false;
@@ -18144,7 +18158,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (BuildVars.LOGS_ENABLED) {
                         FileLog.d("need get diff short message, pts: " + getMessagesStorage().getLastPtsValue() + " " + updates.pts + " count = " + updates.pts_count);
                     }
-                    if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                    if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= veyraHoleTimeout()) {
                         if (updatesStartWaitTimePts == 0) {
                             updatesStartWaitTimePts = System.currentTimeMillis();
                         }
@@ -18241,7 +18255,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (BuildVars.LOGS_ENABLED) {
                                 FileLog.d(update + " need get diff, pts: " + getMessagesStorage().getLastPtsValue() + " " + updatesNew.pts + " count = " + updatesNew.pts_count);
                             }
-                            if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= 1500) {
+                            if (gettingDifference || updatesStartWaitTimePts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimePts) <= veyraHoleTimeout()) {
                                 if (updatesStartWaitTimePts == 0) {
                                     updatesStartWaitTimePts = System.currentTimeMillis();
                                 }
@@ -18277,7 +18291,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (BuildVars.LOGS_ENABLED) {
                                 FileLog.d(update + " need get diff, qts: " + getMessagesStorage().getLastQtsValue() + " " + updatesNew.pts);
                             }
-                            if (gettingDifference || updatesStartWaitTimeQts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeQts) <= 1500) {
+                            if (gettingDifference || updatesStartWaitTimeQts == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeQts) <= veyraHoleTimeout()) {
                                 if (updatesStartWaitTimeQts == 0) {
                                     updatesStartWaitTimeQts = System.currentTimeMillis();
                                 }
@@ -18347,7 +18361,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 }
                                 long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
                                 boolean gettingDifferenceChannel = gettingDifferenceChannels.get(channelId, false);
-                                if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500) {
+                                if (gettingDifferenceChannel || updatesStartWaitTime == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= veyraHoleTimeout()) {
                                     if (updatesStartWaitTime == 0) {
                                         updatesStartWaitTimeChannels.put(channelId, System.currentTimeMillis());
                                     }
@@ -18406,7 +18420,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     }
 
-                    if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= 1500) {
+                    if (gettingDifference || updatesStartWaitTimeSeq == 0 || Math.abs(System.currentTimeMillis() - updatesStartWaitTimeSeq) <= veyraHoleTimeout()) {
                         if (updatesStartWaitTimeSeq == 0) {
                             updatesStartWaitTimeSeq = System.currentTimeMillis();
                         }
