@@ -154,19 +154,21 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 prevDate = entry.date;
             }
 
-            // Current Version
+            // Current Version — deep-copy so we never mutate the live MessageObject
+            MessageObject curCopy = deepCopyMessageObject(currentMessageObject);
             int curDate = (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.edit_date > 0)
                     ? currentMessageObject.messageOwner.edit_date
                     : (currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.date : 0);
             String curText = currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.message != null
                     ? currentMessageObject.messageOwner.message : "";
-            versionEntries.add(new VersionEntry(history.size(), totalVersions, curDate, prevDate, currentMessageObject, curText));
+            versionEntries.add(new VersionEntry(history.size(), totalVersions, curDate, prevDate, curCopy, curText));
         } else {
-            // No prior edits recorded — show current message as initial
+            // No prior edits recorded — deep-copy so we never mutate the live MessageObject
+            MessageObject initCopy = deepCopyMessageObject(currentMessageObject);
             int date = currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.date : 0;
             String text = currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.message != null
                     ? currentMessageObject.messageOwner.message : "";
-            versionEntries.add(new VersionEntry(0, 1, date, 0, currentMessageObject, text));
+            versionEntries.add(new VersionEntry(0, 1, date, 0, initCopy, text));
         }
 
         // Apply diff highlighting: compare each version to previous version
@@ -416,6 +418,43 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         selectTab(initialTab);
         return fragmentView;
+    }
+
+    /**
+     * Returns a deep copy of a MessageObject by serializing/deserializing its TLRPC.Message.
+     * Falls back to a shallow wrapper if serialization fails.
+     * Used to prevent mutations in the History screen from corrupting the live chat state.
+     */
+    private MessageObject deepCopyMessageObject(MessageObject src) {
+        if (src == null) return null;
+        if (src.messageOwner != null) {
+            try {
+                int size = src.messageOwner.getObjectSize();
+                org.telegram.tgnet.NativeByteBuffer buf = new org.telegram.tgnet.NativeByteBuffer(size);
+                src.messageOwner.serializeToStream(buf);
+                buf.position(0);
+                int constructor = buf.readInt32(false);
+                TLRPC.Message copy = TLRPC.Message.TLdeserialize(buf, constructor, false);
+                buf.reuse();
+                if (copy != null) {
+                    return new MessageObject(currentAccount, copy, false, false);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        // Fallback: rebuild from text only (no mutations to original possible since we use a fresh TL_message)
+        TLRPC.TL_message fallback = new TLRPC.TL_message();
+        if (src.messageOwner != null) {
+            fallback.id = src.messageOwner.id;
+            fallback.dialog_id = src.messageOwner.dialog_id;
+            fallback.date = src.messageOwner.date;
+            fallback.edit_date = src.messageOwner.edit_date;
+            fallback.message = src.messageOwner.message;
+            fallback.flags = src.messageOwner.flags;
+            fallback.from_id = src.messageOwner.from_id;
+            fallback.peer_id = src.messageOwner.peer_id;
+        }
+        return new MessageObject(currentAccount, fallback, false, false);
     }
 
     private LinearLayout createTopicTabPill(Context context, int iconRes, String title) {
