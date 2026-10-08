@@ -88,13 +88,55 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
     public static final Gson gson = new GsonBuilder()
             .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+            .registerTypeAdapterFactory(new CycleDetectingTypeAdapterFactory())
             .registerTypeAdapterFactory(new ClassNameTypeAdapterFactory())
             .setExclusionStrategies(new CustomExclusionStrategy()).create();
     public static final Gson prettyGson = new GsonBuilder()
             .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+            .registerTypeAdapterFactory(new CycleDetectingTypeAdapterFactory())
             .registerTypeAdapterFactory(new ClassNameTypeAdapterFactory())
             .setPrettyPrinting()
             .setExclusionStrategies(new CustomExclusionStrategy()).create();
+
+    private static class CycleDetectingTypeAdapterFactory implements TypeAdapterFactory {
+        private final java.util.Set<Object> currentObjects = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+        @Override
+        public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
+            Class<? super T> rawType = type.getRawType();
+            if (rawType.isPrimitive() || rawType.isArray() || rawType.isEnum()
+                    || CharSequence.class.isAssignableFrom(rawType)
+                    || Number.class.isAssignableFrom(rawType)
+                    || Boolean.class.isAssignableFrom(rawType)
+                    || Character.class.isAssignableFrom(rawType)) {
+                return null;
+            }
+            final TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
+            return new TypeAdapter<T>() {
+                @Override
+                public void write(JsonWriter out, T value) throws IOException {
+                    if (value == null) {
+                        out.nullValue();
+                        return;
+                    }
+                    if (!currentObjects.add(value)) {
+                        out.value("[Circular Reference]");
+                        return;
+                    }
+                    try {
+                        delegate.write(out, value);
+                    } finally {
+                        currentObjects.remove(value);
+                    }
+                }
+
+                @Override
+                public T read(JsonReader in) throws IOException {
+                    return delegate.read(in);
+                }
+            };
+        }
+    }
 
     private static class ClassNameTypeAdapterFactory implements TypeAdapterFactory {
 
@@ -192,16 +234,45 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
         @Override
         public boolean shouldSkipField(com.google.gson.FieldAttributes f) {
             String name = f.getName();
-            if ("parentRichText".equals(name) || "mChangingConfigurations".equals(name)) {
+            if ("parentRichText".equals(name) || "mChangingConfigurations".equals(name)
+                    || "replyMessage".equals(name) || "replyStory".equals(name)
+                    || "pollMediaAttachPaths".equals(name) || "translatedPoll".equals(name)) {
                 return true;
             }
-            return name.equals("text") && f.getDeclaringClass() != null
-                    && f.getDeclaringClass().getName().equals("org.telegram.tgnet.tl.TL_iv$RichText");
+            Class<?> declaring = f.getDeclaringClass();
+            if (declaring != null) {
+                String dName = declaring.getName();
+                if (dName.startsWith("android.")) {
+                    return true;
+                }
+                if (name.equals("text") && (dName.equals("org.telegram.tgnet.tl.TL_iv$RichText") || dName.equals("org.telegram.tgnet.tl.TL_iv$textDiff"))) {
+                    return true;
+                }
+                if (name.equals("caption") && dName.equals("org.telegram.tgnet.tl.TL_iv$PageBlock")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
         public boolean shouldSkipClass(Class<?> clazz) {
-            return false;
+            return clazz != null && clazz.getName().startsWith("android.view.");
+        }
+    }
+
+    public static String safeToJson(Object object) {
+        if (object == null) return "";
+        try {
+            return prettyGson.toJson(object);
+        } catch (Throwable e) {
+            org.telegram.messenger.FileLog.e(e);
+            try {
+                return gson.toJson(object);
+            } catch (Throwable e2) {
+                org.telegram.messenger.FileLog.e(e2);
+                return "";
+            }
         }
     }
 
@@ -330,7 +401,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
             switch (item.viewType) {
                 case ItemType.VIEW_TYPE_SHOW_JSON:
                     presentFragment(new JsonViewerActivity(
-                            () -> prettyGson.toJson(messageObject.messageOwner),
+                            () -> safeToJson(messageObject.messageOwner),
                             messageObject != null && messageObject.messageOwner != null ? messageObject.messageOwner.id : 0
                     ));
                     break;
@@ -338,14 +409,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
                 case ItemType.VIEW_TYPE_EXPORT:
                     final TLRPC.Message exportMessage = messageObject.messageOwner;
                     org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
-                        String exported;
-                        try {
-                            exported = prettyGson.toJson(exportMessage);
-                        } catch (Throwable e) {
-                            FileLog.e(e);
-                            exported = "";
-                        }
-                        final String finalExported = exported;
+                        final String finalExported = safeToJson(exportMessage);
                         AndroidUtilities.runOnUIThread(() -> {
                             try {
                                 AndroidUtilities.addToClipboard(finalExported);
@@ -590,12 +654,61 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
             items.add(new MessageDetailItem("ID", String.valueOf(messageObject.messageOwner.id), true, ActionType.NONE));
 
+            String typeStr = "Text";
+            if (messageObject.type == MessageObject.TYPE_ARTICLE || (messageObject.messageOwner != null && messageObject.messageOwner.rich_message != null)) {
+                typeStr = "Rich Message (Article)";
+            } else if (messageObject.isPoll()) {
+                typeStr = "Poll";
+            } else if (messageObject.isVideo()) {
+                typeStr = "Video";
+            } else if (messageObject.isVoice()) {
+                typeStr = "Voice Message";
+            } else if (messageObject.isRoundVideo()) {
+                typeStr = "Video Message";
+            } else if (messageObject.isPhoto()) {
+                typeStr = "Photo";
+            } else if (messageObject.isSticker()) {
+                typeStr = "Sticker";
+            } else if (messageObject.isMusic()) {
+                typeStr = "Audio / Music";
+            } else if (messageObject.isDocument()) {
+                typeStr = "Document";
+            }
+            items.add(new MessageDetailItem("Type", typeStr, true, ActionType.NONE));
+
             if (messageObject.scheduled) {
                 items.add(new MessageDetailItem("Scheduled", "Yes", true, ActionType.NONE));
             }
 
+            CharSequence msgText = null;
             if (!TextUtils.isEmpty(messageObject.messageOwner.message)) {
-                items.add(new MessageDetailItem("Message", messageObject.messageOwner.message, true, ActionType.NONE));
+                msgText = messageObject.messageOwner.message;
+            } else if (!TextUtils.isEmpty(messageObject.messageText)) {
+                msgText = messageObject.messageText;
+            } else if (messageObject.messageOwner.rich_message != null) {
+                msgText = MessageObject.formatRichMessage(messageObject.messageOwner.rich_message, false, false, 2000);
+            }
+            if (!TextUtils.isEmpty(msgText)) {
+                items.add(new MessageDetailItem("Message", msgText.toString(), true, ActionType.NONE));
+            }
+
+            if (messageObject.messageOwner.rich_message != null) {
+                org.telegram.tgnet.tl.TL_iv.RichMessage rm = messageObject.messageOwner.rich_message;
+                if (rm.title != null) {
+                    CharSequence titleStr = org.telegram.ui.iv.RichTextStyle.toSpannable(rm.title);
+                    if (!TextUtils.isEmpty(titleStr)) {
+                        items.add(new MessageDetailItem("Rich Title", titleStr.toString(), true, ActionType.NONE));
+                    }
+                }
+                if (rm.blocks != null) {
+                    items.add(new MessageDetailItem("Rich Blocks", String.valueOf(rm.blocks.size()), true, ActionType.NONE));
+                }
+                if (rm.photos != null && !rm.photos.isEmpty()) {
+                    items.add(new MessageDetailItem("Rich Photos", String.valueOf(rm.photos.size()), true, ActionType.NONE));
+                }
+                if (rm.documents != null && !rm.documents.isEmpty()) {
+                    items.add(new MessageDetailItem("Rich Documents", String.valueOf(rm.documents.size()), true, ActionType.NONE));
+                }
             }
 
             if (fromChat != null) {
@@ -666,11 +779,7 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
         public String getFullJsonText() {
             if (fullJsonText.isEmpty() && messageObject != null && messageObject.messageOwner != null) {
-                try {
-                    fullJsonText = prettyGson.toJson(messageObject.messageOwner);
-                } catch (Throwable e) {
-                    FileLog.e(e);
-                }
+                fullJsonText = safeToJson(messageObject.messageOwner);
             }
             return fullJsonText;
         }

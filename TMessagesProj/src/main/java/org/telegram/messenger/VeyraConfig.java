@@ -49,6 +49,7 @@ public class VeyraConfig {
     public static final int CATEGORY_GHOST_READ = 4;
     public static final int CATEGORY_GHOST_TYPING = 5;
     public static final int CATEGORY_GHOST_CHANNEL_VIEWS = 6;
+    public static final int CATEGORY_GHOST_STORIES = 7;
 
     public static final int PEER_PRIVATE = 1;
     public static final int PEER_GROUP = 2;
@@ -80,6 +81,22 @@ public class VeyraConfig {
     public static boolean ghostReadOnReply = true;
     public static boolean ghostHideChannelViews = false;
     public static boolean ghostHideSecretRead = true;
+
+    // Granular Ghost scopes
+    public static boolean ghostTypingPrivate = true;
+    public static boolean ghostTypingGroups = true;
+    public static boolean ghostTypingBots = true;
+    public static boolean ghostTypingText = true;
+    public static boolean ghostTypingVoice = true;
+    public static boolean ghostTypingVideo = true;
+    public static boolean ghostTypingFiles = true;
+
+    public static boolean ghostReadPrivate = true;
+    public static boolean ghostReadGroups = true;
+    public static boolean ghostReadBots = true;
+
+    public static boolean ghostChannelPublic = true;
+    public static boolean ghostChannelPrivate = true;
 
     private static final java.util.Set<Long> allowedReadDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
@@ -156,13 +173,28 @@ public class VeyraConfig {
     }
 
     public static boolean isGhostHideTyping(long dialogId) {
-        if (!ghostMode) return false;
+        if (!ghostMode || (!ghostHideTyping && !hideTyping)) return false;
         if (dialogId != 0) {
             Boolean exc = getException(CATEGORY_GHOST_TYPING, dialogId);
             if (exc != null) return exc;
             if (isGhostExceptionDialog(dialogId)) return false;
+            if (dialogId > 0) {
+                TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
+                if (user != null && user.bot) {
+                    if (!ghostTypingBots) return false;
+                } else {
+                    if (!ghostTypingPrivate) return false;
+                }
+            } else if (dialogId < 0) {
+                TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
+                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                    return false;
+                } else {
+                    if (!ghostTypingGroups) return false;
+                }
+            }
         }
-        return ghostHideTyping || hideTyping;
+        return true;
     }
 
     public static boolean isGhostHideUpload() {
@@ -178,13 +210,28 @@ public class VeyraConfig {
     }
 
     public static boolean isGhostHideRead(long dialogId) {
-        if (!ghostMode) return false;
+        if (!ghostMode || !ghostHideRead) return false;
         if (dialogId != 0) {
             Boolean exc = getException(CATEGORY_GHOST_READ, dialogId);
             if (exc != null) return exc;
             if (isGhostExceptionDialog(dialogId)) return false;
+            if (dialogId > 0) {
+                TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
+                if (user != null && user.bot) {
+                    if (!ghostReadBots) return false;
+                } else {
+                    if (!ghostReadPrivate) return false;
+                }
+            } else if (dialogId < 0) {
+                TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
+                if (chat != null && ChatObject.isChannel(chat) && !chat.megagroup) {
+                    return false;
+                } else {
+                    if (!ghostReadGroups) return false;
+                }
+            }
         }
-        return ghostHideRead;
+        return true;
     }
 
     public static boolean isGhostHideReadContents() {
@@ -193,6 +240,16 @@ public class VeyraConfig {
 
     public static boolean isGhostHideStories() {
         return ghostMode && ghostHideStories;
+    }
+
+    public static boolean isGhostHideStories(long dialogId) {
+        if (!ghostMode || !ghostHideStories) return false;
+        if (dialogId != 0) {
+            Boolean exc = getException(CATEGORY_GHOST_STORIES, dialogId);
+            if (exc != null) return exc;
+            if (isGhostExceptionDialog(dialogId)) return false;
+        }
+        return true;
     }
 
     public static boolean isGhostReadOnReply() {
@@ -204,13 +261,19 @@ public class VeyraConfig {
     }
 
     public static boolean isGhostHideChannelViews(long dialogId) {
-        if (!ghostMode) return false;
+        if (!ghostMode || !ghostHideChannelViews) return false;
         if (dialogId != 0) {
             Boolean exc = getException(CATEGORY_GHOST_CHANNEL_VIEWS, dialogId);
             if (exc != null) return exc;
             if (isGhostExceptionDialog(dialogId)) return false;
+            TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
+            if (chat != null) {
+                boolean isPublic = !android.text.TextUtils.isEmpty(chat.username);
+                if (isPublic && !ghostChannelPublic) return false;
+                if (!isPublic && !ghostChannelPrivate) return false;
+            }
         }
-        return ghostHideChannelViews;
+        return true;
     }
 
     public static boolean isGhostHideSecretRead() {
@@ -387,12 +450,28 @@ public class VeyraConfig {
         reactionHistoryChannelsIgnoreOwner = preferences.getBoolean("reactionHistoryChannelsIgnoreOwner", true);
         reactionHistoryChannelsIgnoreAdmin = preferences.getBoolean("reactionHistoryChannelsIgnoreAdmin", false);
 
+        ghostTypingPrivate = preferences.getBoolean("ghostTypingPrivate", true);
+        ghostTypingGroups = preferences.getBoolean("ghostTypingGroups", true);
+        ghostTypingBots = preferences.getBoolean("ghostTypingBots", true);
+        ghostTypingText = preferences.getBoolean("ghostTypingText", true);
+        ghostTypingVoice = preferences.getBoolean("ghostTypingVoice", true);
+        ghostTypingVideo = preferences.getBoolean("ghostTypingVideo", true);
+        ghostTypingFiles = preferences.getBoolean("ghostTypingFiles", true);
+
+        ghostReadPrivate = preferences.getBoolean("ghostReadPrivate", true);
+        ghostReadGroups = preferences.getBoolean("ghostReadGroups", true);
+        ghostReadBots = preferences.getBoolean("ghostReadBots", true);
+
+        ghostChannelPublic = preferences.getBoolean("ghostChannelPublic", true);
+        ghostChannelPrivate = preferences.getBoolean("ghostChannelPrivate", true);
+
         loadExceptions(CATEGORY_ANTI_DELETE, preferences.getString("antiDeleteExceptions", ""));
         loadExceptions(CATEGORY_EDIT_HISTORY, preferences.getString("editHistoryExceptions", ""));
         loadExceptions(CATEGORY_REACTION_HISTORY, preferences.getString("reactionHistoryExceptions", ""));
         loadExceptions(CATEGORY_GHOST_READ, preferences.getString("ghostReadExceptions", ""));
         loadExceptions(CATEGORY_GHOST_TYPING, preferences.getString("ghostTypingExceptions", ""));
         loadExceptions(CATEGORY_GHOST_CHANNEL_VIEWS, preferences.getString("ghostChannelViewsExceptions", ""));
+        loadExceptions(CATEGORY_GHOST_STORIES, preferences.getString("ghostStoriesExceptions", ""));
         loadGhostExceptions();
         confirmCall = preferences.getBoolean("confirmCall", true);
         confirmLink = preferences.getBoolean("confirmLink", true);
@@ -444,6 +523,7 @@ public class VeyraConfig {
     private static final HashMap<Long, Boolean> ghostReadExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> ghostTypingExceptions = new HashMap<>();
     private static final HashMap<Long, Boolean> ghostChannelViewsExceptions = new HashMap<>();
+    private static final HashMap<Long, Boolean> ghostStoriesExceptions = new HashMap<>();
 
     public static HashMap<Long, Boolean> getExceptions(int category) {
         if (category == CATEGORY_ANTI_DELETE) return antiDeleteExceptions;
@@ -452,6 +532,7 @@ public class VeyraConfig {
         if (category == CATEGORY_GHOST_READ) return ghostReadExceptions;
         if (category == CATEGORY_GHOST_TYPING) return ghostTypingExceptions;
         if (category == CATEGORY_GHOST_CHANNEL_VIEWS) return ghostChannelViewsExceptions;
+        if (category == CATEGORY_GHOST_STORIES) return ghostStoriesExceptions;
         return ghostReadExceptions;
     }
 
@@ -519,6 +600,7 @@ public class VeyraConfig {
         else if (category == CATEGORY_GHOST_READ) key = "ghostReadExceptions";
         else if (category == CATEGORY_GHOST_TYPING) key = "ghostTypingExceptions";
         else if (category == CATEGORY_GHOST_CHANNEL_VIEWS) key = "ghostChannelViewsExceptions";
+        else if (category == CATEGORY_GHOST_STORIES) key = "ghostStoriesExceptions";
         else key = "ghostReadExceptions";
         save(key, sb.toString());
     }
@@ -862,6 +944,20 @@ public class VeyraConfig {
         ghostHideSecretRead = val;
         save("ghostHideSecretRead", val);
     }
+    public static void setGhostTypingPrivate(boolean val) { ghostTypingPrivate = val; save("ghostTypingPrivate", val); }
+    public static void setGhostTypingGroups(boolean val) { ghostTypingGroups = val; save("ghostTypingGroups", val); }
+    public static void setGhostTypingBots(boolean val) { ghostTypingBots = val; save("ghostTypingBots", val); }
+    public static void setGhostTypingText(boolean val) { ghostTypingText = val; save("ghostTypingText", val); }
+    public static void setGhostTypingVoice(boolean val) { ghostTypingVoice = val; save("ghostTypingVoice", val); }
+    public static void setGhostTypingVideo(boolean val) { ghostTypingVideo = val; save("ghostTypingVideo", val); }
+    public static void setGhostTypingFiles(boolean val) { ghostTypingFiles = val; save("ghostTypingFiles", val); }
+
+    public static void setGhostReadPrivate(boolean val) { ghostReadPrivate = val; save("ghostReadPrivate", val); }
+    public static void setGhostReadGroups(boolean val) { ghostReadGroups = val; save("ghostReadGroups", val); }
+    public static void setGhostReadBots(boolean val) { ghostReadBots = val; save("ghostReadBots", val); }
+
+    public static void setGhostChannelPublic(boolean val) { ghostChannelPublic = val; save("ghostChannelPublic", val); }
+    public static void setGhostChannelPrivate(boolean val) { ghostChannelPrivate = val; save("ghostChannelPrivate", val); }
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
         save("blockScreenCapture", val);

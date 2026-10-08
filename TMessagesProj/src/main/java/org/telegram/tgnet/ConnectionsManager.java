@@ -432,11 +432,17 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
-        if (org.telegram.messenger.VeyraConfig.isGhostHideStories() && object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
-            if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+        if (object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
+            long storiesPeerId = 0;
+            try {
+                storiesPeerId = org.telegram.messenger.DialogObject.getPeerDialogId(((org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) object).peer);
+            } catch (Throwable ignore) {}
+            if (org.telegram.messenger.VeyraConfig.isGhostHideStories(storiesPeerId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
             }
-            return;
         }
         if (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping) {
             TLRPC.SendMessageAction action = null;
@@ -446,11 +452,24 @@ public class ConnectionsManager extends BaseController {
                 typingDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_setTyping) object).peer);
             }
             boolean isTypingAction = action == null || action instanceof TLRPC.TL_sendMessageTypingAction || action instanceof TLRPC.TL_sendMessageCancelAction;
+            boolean isVoiceAction = action instanceof TLRPC.TL_sendMessageRecordAudioAction || action instanceof TLRPC.TL_sendMessageUploadAudioAction;
+            boolean isVideoAction = action instanceof TLRPC.TL_sendMessageRecordVideoAction || action instanceof TLRPC.TL_sendMessageUploadVideoAction
+                    || action instanceof TLRPC.TL_sendMessageRecordRoundAction || action instanceof TLRPC.TL_sendMessageUploadRoundAction;
+            boolean isFileAction = action instanceof TLRPC.TL_sendMessageUploadDocumentAction || action instanceof TLRPC.TL_sendMessageUploadPhotoAction;
+
             boolean drop = false;
-            if (isTypingAction && org.telegram.messenger.VeyraConfig.isGhostHideTyping(typingDialogId)) {
-                drop = true;
-            } else if (!isTypingAction && (org.telegram.messenger.VeyraConfig.isGhostHideUpload(typingDialogId) || org.telegram.messenger.VeyraConfig.isGhostHideTyping(typingDialogId))) {
-                drop = true;
+            if (org.telegram.messenger.VeyraConfig.isGhostHideTyping(typingDialogId)) {
+                if (isTypingAction && org.telegram.messenger.VeyraConfig.ghostTypingText) {
+                    drop = true;
+                } else if (isVoiceAction && org.telegram.messenger.VeyraConfig.ghostTypingVoice) {
+                    drop = true;
+                } else if (isVideoAction && org.telegram.messenger.VeyraConfig.ghostTypingVideo) {
+                    drop = true;
+                } else if (isFileAction && org.telegram.messenger.VeyraConfig.ghostTypingFiles) {
+                    drop = true;
+                } else if (!isTypingAction && org.telegram.messenger.VeyraConfig.isGhostHideUpload(typingDialogId)) {
+                    drop = true;
+                }
             }
             if (drop) {
                 if (onComplete != null) {
