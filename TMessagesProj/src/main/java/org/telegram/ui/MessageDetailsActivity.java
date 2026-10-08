@@ -694,12 +694,6 @@ public class MessageDetailsActivity extends BaseFragment implements Notification
 
             if (messageObject.messageOwner.rich_message != null) {
                 org.telegram.tgnet.tl.TL_iv.RichMessage rm = messageObject.messageOwner.rich_message;
-                if (rm.title != null) {
-                    CharSequence titleStr = org.telegram.ui.iv.RichTextStyle.toSpannable(rm.title);
-                    if (!TextUtils.isEmpty(titleStr)) {
-                        items.add(new MessageDetailItem("Rich Title", titleStr.toString(), true, ActionType.NONE));
-                    }
-                }
                 if (rm.blocks != null) {
                     items.add(new MessageDetailItem("Rich Blocks", String.valueOf(rm.blocks.size()), true, ActionType.NONE));
                 }
