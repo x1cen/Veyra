@@ -767,7 +767,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public final AppGlobalConfig config = new AppGlobalConfig();
 
-    private static final long UPDATE_HOLE_TIMEOUT = 500L;
+    private static final long UPDATE_HOLE_TIMEOUT = 1500L;
 
     public boolean enableGiftsInProfile;
 

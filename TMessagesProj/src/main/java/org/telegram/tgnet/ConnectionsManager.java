@@ -399,8 +399,13 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         } else if (object instanceof TLRPC.TL_channels_readHistory) {
-            long peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
-            if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
+            long peerDialogId = 0;
+            try {
+                if (((TLRPC.TL_channels_readHistory) object).channel != null) {
+                    peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
+                }
+            } catch (Throwable ignore) {}
+            if (peerDialogId != 0 && org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
                     && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
@@ -1299,7 +1304,20 @@ public class ConnectionsManager extends BaseController {
                 return new ResolvedDomain(addresses, SystemClock.elapsedRealtime());
             }
 
-            // Multi-provider DoH via direct IPs to bypass censored local DNS and SNI filtering
+            // 1. Fast system DNS resolution first (resolves via system DNS / VPN tunnel in <20ms)
+            try {
+                InetAddress[] addresses = InetAddress.getAllByName(currentHostName);
+                if (addresses != null && addresses.length > 0) {
+                    ArrayList<String> result = new ArrayList<>(addresses.length);
+                    for (InetAddress addr : addresses) {
+                        result.add(addr.getHostAddress());
+                    }
+                    return new ResolvedDomain(result, SystemClock.elapsedRealtime());
+                }
+            } catch (Throwable ignored) {
+            }
+
+            // 2. Fallback to DoH if system DNS failed (fast 1000ms timeout per endpoint)
             String[] dohEndpoints = new String[] {
                 "https://1.1.1.1/dns-query?name=" + currentHostName + "&type=A",
                 "https://8.8.8.8/resolve?name=" + currentHostName + "&type=A",
@@ -1314,8 +1332,8 @@ public class ConnectionsManager extends BaseController {
                     URLConnection httpConnection = downloadUrl.openConnection();
                     httpConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) Veyra");
                     httpConnection.addRequestProperty("Accept", "application/dns-json");
-                    httpConnection.setConnectTimeout(2500);
-                    httpConnection.setReadTimeout(3000);
+                    httpConnection.setConnectTimeout(1000);
+                    httpConnection.setReadTimeout(1200);
                     httpConnection.connect();
                     httpConnectionStream = httpConnection.getInputStream();
 
@@ -1357,19 +1375,6 @@ public class ConnectionsManager extends BaseController {
                 }
             }
 
-            // Fallback to system DNS
-            try {
-                InetAddress[] addresses = InetAddress.getAllByName(currentHostName);
-                if (addresses != null && addresses.length > 0) {
-                    ArrayList<String> result = new ArrayList<>(addresses.length);
-                    for (InetAddress addr : addresses) {
-                        result.add(addr.getHostAddress());
-                    }
-                    return new ResolvedDomain(result, SystemClock.elapsedRealtime());
-                }
-            } catch (Exception e) {
-                FileLog.e(e, false);
-            }
             return null;
         }
 
