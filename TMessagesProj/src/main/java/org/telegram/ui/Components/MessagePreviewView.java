@@ -1003,13 +1003,16 @@ public class MessagePreviewView extends FrameLayout {
                 boolean _canHideSenderName = true;
                 if (!UserConfig.getInstance(currentAccount).isPremium()) {
                     for (int i = 0; i < messagePreviewParams.forwardMessages.messages.size(); ++i) {
-                        if (messagePreviewParams.forwardMessages.messages.get(i).type == MessageObject.TYPE_ARTICLE) {
+                        if (MessagePreviewParams.isPremiumOnlyMessage(messagePreviewParams.forwardMessages.messages.get(i))) {
                             _canHideSenderName = false;
                             break;
                         }
                     }
                 }
                 final boolean canHideSenderName = _canHideSenderName;
+                if (!canHideSenderName) {
+                    messagePreviewParams.hideForwardSendersName = false;
+                }
 
                 ToggleButton sendersNameButton = new ToggleButton(
                     context,
@@ -1017,6 +1020,10 @@ public class MessagePreviewView extends FrameLayout {
                     R.raw.name_show, messagePreviewParams.multipleUsers ? LocaleController.getString(R.string.HideSenderNames) : LocaleController.getString(R.string.HideSendersName),
                     resourcesProvider
                 );
+                if (!canHideSenderName) {
+                    sendersNameButton.setEnabled(false);
+                    sendersNameButton.setAlpha(0.5f);
+                }
                 menu.addView(sendersNameButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
 
                 final ToggleButton captionButton;

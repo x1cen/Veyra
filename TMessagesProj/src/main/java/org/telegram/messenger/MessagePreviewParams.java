@@ -427,9 +427,42 @@ public class MessagePreviewParams {
             if (uids.size() + hiddenSendersName.size() > 1) {
                 multipleUsers = true;
             }
+            int currentAccount = forwardMessages.isEmpty() ? UserConfig.selectedAccount : forwardMessages.get(0).currentAccount;
+            if (!UserConfig.getInstance(currentAccount).isPremium()) {
+                for (int i = 0; i < forwardMessages.size(); ++i) {
+                    if (isPremiumOnlyMessage(forwardMessages.get(i))) {
+                        hideForwardSendersName = false;
+                        break;
+                    }
+                }
+            }
         } else {
             this.forwardMessages = null;
         }
+    }
+
+    public static boolean isPremiumOnlyMessage(MessageObject msg) {
+        if (msg == null) return false;
+        if (msg.type == MessageObject.TYPE_ARTICLE) return true;
+        if (msg.isPremiumSticker()) return true;
+        if (msg.messageOwner != null) {
+            if (msg.messageOwner.effect != 0) return true;
+            if (msg.messageOwner.entities != null) {
+                for (int e = 0; e < msg.messageOwner.entities.size(); e++) {
+                    if (msg.messageOwner.entities.get(e) instanceof TLRPC.TL_messageEntityCustomEmoji) {
+                        return true;
+                    }
+                }
+            }
+        }
+        if (msg.captionEntities != null) {
+            for (int e = 0; e < msg.captionEntities.size(); e++) {
+                if (msg.captionEntities.get(e) instanceof TLRPC.TL_messageEntityCustomEmoji) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public int getForwardedMessagesCount() {

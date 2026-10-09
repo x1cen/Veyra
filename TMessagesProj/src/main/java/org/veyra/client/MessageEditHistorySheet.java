@@ -210,51 +210,9 @@ public class MessageEditHistorySheet extends BottomSheet {
                 } else {
                     userName = LocaleController.getString("Reactions", R.string.Reactions);
                 }
-                String action = entry.action != null ? entry.action : "add";
+                String action = entry.action != null ? entry.action : "remove";
                 container.addView(createReactionCard(context, entry.reaction, userName, entry.date, entry.count, action));
                 found = true;
-            }
-        }
-
-        // If no DB history, fall back to live reactions on the message
-        if (!found && messageObject.messageOwner != null && messageObject.messageOwner.reactions != null) {
-            TLRPC.TL_messageReactions reactions = messageObject.messageOwner.reactions;
-            java.util.HashSet<String> seen = new java.util.HashSet<>();
-            if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
-                for (int i = 0; i < reactions.recent_reactions.size(); i++) {
-                    TLRPC.MessagePeerReaction pr = reactions.recent_reactions.get(i);
-                    if (pr != null) {
-                        String emoji = getReactionEmoji(pr.reaction);
-                        long peerId = MessageObject.getPeerId(pr.peer_id);
-                        String key = emoji + "_" + peerId;
-                        if (seen.add(key)) {
-                            TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(peerId);
-                            String userName;
-                            if (user != null) {
-                                if (!android.text.TextUtils.isEmpty(user.username)) {
-                                    userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
-                                } else {
-                                    userName = UserObject.getUserName(user);
-                                }
-                            } else {
-                                userName = peerId != 0 ? ("User " + peerId) : LocaleController.getString("Reactions", R.string.Reactions);
-                            }
-                            container.addView(createReactionCard(context, emoji, userName, pr.date, 1, "add"));
-                            found = true;
-                        }
-                    }
-                }
-            }
-            if (reactions.results != null && !reactions.results.isEmpty()) {
-                for (int i = 0; i < reactions.results.size(); i++) {
-                    TLRPC.ReactionCount rc = reactions.results.get(i);
-                    if (rc != null) {
-                        String emoji = getReactionEmoji(rc.reaction);
-                        String detail = (rc.chosen ? " (You)" : "");
-                        container.addView(createReactionCountBadge(context, emoji, rc.count, detail));
-                        found = true;
-                    }
-                }
             }
         }
 

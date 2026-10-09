@@ -1979,8 +1979,10 @@ public class RichMessageLayout {
                 case TEXT_FLAG_BLOCK_FOOTER:   return dp(baseSize - 2);
                 case TEXT_FLAG_BLOCK_CODE:     return dp(Math.max(8, baseSize - 2));
                 case TEXT_FLAG_BLOCK_QUOTE:
+                case TEXT_FLAG_BLOCK_PULLQUOTE:
+                                               return dp(baseSize - 2.5f);
                 case TEXT_FLAG_BLOCK_QUOTE_CAPTION:
-                                               return dp(baseSize - 2);
+                                               return dp(baseSize - 3);
                 case TEXT_FLAG_BLOCK_CAPTION:  return dp(baseSize - 2);
             }
             return dp(baseSize);

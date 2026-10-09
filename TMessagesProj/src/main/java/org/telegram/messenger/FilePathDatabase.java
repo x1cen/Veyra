@@ -472,6 +472,54 @@ public class FilePathDatabase {
         });
     }
 
+    public void clearDialogFiles(long dialogId, int mediaType, Utilities.Callback<Long> onComplete) {
+        postRunnable(() -> {
+            long deletedBytes = 0;
+            try {
+                ensureDatabaseCreated();
+                SQLiteCursor cursor;
+                if (mediaType == 1) {
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_PHOTO));
+                } else if (mediaType == 2) {
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_VIDEO));
+                } else if (mediaType == 3) {
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_DOCUMENT));
+                } else if (mediaType == 4) {
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND (message_type = %d OR message_type = %d)", dialogId, MessageObject.TYPE_VOICE, MessageObject.TYPE_MUSIC));
+                } else {
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d", dialogId));
+                }
+                ArrayList<String> pathsToDelete = new ArrayList<>();
+                if (cursor != null) {
+                    while (cursor.next()) {
+                        String p = cursor.stringValue(0);
+                        if (p != null) {
+                            pathsToDelete.add(p);
+                            File f = new File(p);
+                            if (f.exists()) {
+                                deletedBytes += f.length();
+                                f.delete();
+                            }
+                        }
+                    }
+                    cursor.dispose();
+                }
+
+                database.beginTransaction();
+                for (int i = 0; i < pathsToDelete.size(); i++) {
+                    database.executeFast("DELETE FROM paths_by_dialog_id WHERE path = '" + shield(pathsToDelete.get(i)) + "'").stepThis().dispose();
+                }
+                database.commitTransaction();
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+            final long finalDeletedBytes = deletedBytes;
+            if (onComplete != null) {
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(finalDeletedBytes));
+            }
+        });
+    }
+
     public LongSparseArray<ArrayList<CacheByChatsController.KeepMediaFile>> lookupFiles(ArrayList<? extends CacheByChatsController.KeepMediaFile> keepMediaFiles) {
         CountDownLatch syncLatch = new CountDownLatch(1);
         LongSparseArray<ArrayList<CacheByChatsController.KeepMediaFile>> filesByDialogId = new LongSparseArray<>();

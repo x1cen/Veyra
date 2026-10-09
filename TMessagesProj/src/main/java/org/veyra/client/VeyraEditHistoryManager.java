@@ -345,6 +345,24 @@ public final class VeyraEditHistoryManager {
         }
     }
 
+    public static void clearDialogEdits(long dialogId) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public static void clearDialogReactions(long dialogId) {
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            db.delete(REACTION_TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     /**
      * Log a reaction change event. Only logs reactions from OTHER users (not self).
      * Determines if this is an "add" or "remove" by comparing to previous state.
@@ -386,13 +404,14 @@ public final class VeyraEditHistoryManager {
                     int lastCount = lastCursor.getInt(0);
                     if (newCount < lastCount) {
                         action = "remove";
-                    } else if (newCount == lastCount && userId == 0) {
-                        // No count change and no user info — skip
-                        lastCursor.close();
-                        return;
                     }
                 }
                 lastCursor.close();
+            }
+
+            // Only log reactions when removed (user requirement)
+            if (!"remove".equals(action)) {
+                return;
             }
 
             // For user-specific reactions: avoid duplicate user+reaction entry for same action
@@ -445,6 +464,57 @@ public final class VeyraEditHistoryManager {
             values.put("count", newCount);
             values.put("user_id", userId);
             values.put("action", action);
+            db.insert(REACTION_TABLE_NAME, null, values);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public static void logReactionRemoved(long dialogId, int messageId, int date, String reaction,
+                                          long userId, long selfUserId) {
+        if (!VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
+            return;
+        }
+        long currentSelfId = org.telegram.messenger.UserConfig.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getClientUserId();
+        if (!VeyraConfig.reactionHistoryIncludeSelf) {
+            if (selfUserId != 0 && userId == selfUserId) {
+                return;
+            }
+            if (currentSelfId != 0 && userId == currentSelfId) {
+                return;
+            }
+        }
+        try {
+            SQLiteDatabase db = getHelper().getWritableDatabase();
+            Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + REACTION_TABLE_NAME +
+                    " WHERE dialog_id = ? AND message_id = ?",
+                    new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
+            int total = 0;
+            if (countCursor != null) {
+                if (countCursor.moveToFirst()) total = countCursor.getInt(0);
+                countCursor.close();
+            }
+            int limit = Math.max(5, Math.min(100, VeyraConfig.reactionHistoryLimit));
+            boolean dropOldest = VeyraConfig.reactionHistoryDropOldest;
+            if (total >= limit) {
+                if (dropOldest) {
+                    db.execSQL("DELETE FROM " + REACTION_TABLE_NAME +
+                            " WHERE id IN (SELECT id FROM " + REACTION_TABLE_NAME +
+                            " WHERE dialog_id = ? AND message_id = ? ORDER BY id ASC LIMIT ?)",
+                            new Object[]{dialogId, messageId, total - limit + 1});
+                } else {
+                    return;
+                }
+            }
+
+            ContentValues values = new ContentValues();
+            values.put("dialog_id", dialogId);
+            values.put("message_id", messageId);
+            values.put("date", date);
+            values.put("reaction", reaction);
+            values.put("count", 0);
+            values.put("user_id", userId);
+            values.put("action", "remove");
             db.insert(REACTION_TABLE_NAME, null, values);
         } catch (Exception e) {
             FileLog.e(e);

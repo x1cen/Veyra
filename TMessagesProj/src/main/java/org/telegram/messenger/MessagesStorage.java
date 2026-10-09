@@ -5282,39 +5282,76 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
-                                if (i == 0 && reactions != null && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
+                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
-                                    if (reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty()) {
-                                        for (int r = 0; r < reactions.recent_reactions.size(); r++) {
-                                            TLRPC.MessagePeerReaction mpr = reactions.recent_reactions.get(r);
-                                            if (mpr != null) {
-                                                long peerId = MessageObject.getPeerId(mpr.peer_id);
-                                                String emoji = "";
-                                                if (mpr.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "\u2b50\ufe0f";
-                                                } else if (mpr.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                    emoji = ((TLRPC.TL_reactionEmoji) mpr.reaction).emoticon;
-                                                }
-                                                if (!TextUtils.isEmpty(emoji)) {
-                                                    int rDate = mpr.date > 0 ? mpr.date : nowTime;
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, rDate, emoji, 1, peerId, mySelfId);
+                                    if (pastReactions != null && pastReactions.recent_reactions != null && !pastReactions.recent_reactions.isEmpty()) {
+                                        for (int p = 0; p < pastReactions.recent_reactions.size(); p++) {
+                                            TLRPC.MessagePeerReaction oldMpr = pastReactions.recent_reactions.get(p);
+                                            if (oldMpr == null) continue;
+                                            long oldPeerId = MessageObject.getPeerId(oldMpr.peer_id);
+                                            String oldEmoji = "";
+                                            if (oldMpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                oldEmoji = "\u2b50\ufe0f";
+                                            } else if (oldMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldMpr.reaction).emoticon;
+                                            }
+                                            if (TextUtils.isEmpty(oldEmoji)) continue;
+
+                                            boolean stillExists = false;
+                                            if (reactions != null && reactions.recent_reactions != null) {
+                                                for (int r = 0; r < reactions.recent_reactions.size(); r++) {
+                                                    TLRPC.MessagePeerReaction newMpr = reactions.recent_reactions.get(r);
+                                                    if (newMpr != null && MessageObject.getPeerId(newMpr.peer_id) == oldPeerId) {
+                                                        String newEmoji = "";
+                                                        if (newMpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                            newEmoji = "\u2b50\ufe0f";
+                                                        } else if (newMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newMpr.reaction).emoticon;
+                                                        }
+                                                        if (oldEmoji.equals(newEmoji)) {
+                                                            stillExists = true;
+                                                            break;
+                                                        }
+                                                    }
                                                 }
                                             }
+                                            if (!stillExists) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, oldPeerId, mySelfId);
+                                            }
                                         }
-                                    } else if (reactions.results != null) {
-                                        for (int r = 0; r < reactions.results.size(); r++) {
-                                            TLRPC.ReactionCount rc = reactions.results.get(r);
-                                            if (rc != null) {
-                                                String emoji = "";
-                                                if (rc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                    emoji = "\u2b50\ufe0f";
-                                                } else if (rc.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                    emoji = ((TLRPC.TL_reactionEmoji) rc.reaction).emoticon;
+                                    } else if (pastReactions != null && pastReactions.results != null && !pastReactions.results.isEmpty()) {
+                                        for (int p = 0; p < pastReactions.results.size(); p++) {
+                                            TLRPC.ReactionCount oldRc = pastReactions.results.get(p);
+                                            if (oldRc == null) continue;
+                                            String oldEmoji = "";
+                                            if (oldRc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                oldEmoji = "\u2b50\ufe0f";
+                                            } else if (oldRc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldRc.reaction).emoticon;
+                                            }
+                                            if (TextUtils.isEmpty(oldEmoji)) continue;
+
+                                            int newCount = 0;
+                                            if (reactions != null && reactions.results != null) {
+                                                for (int r = 0; r < reactions.results.size(); r++) {
+                                                    TLRPC.ReactionCount newRc = reactions.results.get(r);
+                                                    if (newRc != null) {
+                                                        String newEmoji = "";
+                                                        if (newRc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                            newEmoji = "\u2b50\ufe0f";
+                                                        } else if (newRc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newRc.reaction).emoticon;
+                                                        }
+                                                        if (oldEmoji.equals(newEmoji)) {
+                                                            newCount = newRc.count;
+                                                            break;
+                                                        }
+                                                    }
                                                 }
-                                                if (!TextUtils.isEmpty(emoji)) {
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, emoji, rc.count, 0, mySelfId);
-                                                }
+                                            }
+                                            if (newCount < oldRc.count) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, 0, mySelfId);
                                             }
                                         }
                                     }
@@ -14796,6 +14833,32 @@ public class MessagesStorage extends BaseController {
                 AndroidUtilities.runOnUIThread(() -> {
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.needReloadRecentDialogsSearch);
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    public void clearDeletedMessagesForDialog(long dialogId) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_message_deletions WHERE uid = %d", dialogId));
+                ArrayList<Integer> mids = new ArrayList<>();
+                while (cursor.next()) {
+                    mids.add(cursor.intValue(0));
+                }
+                cursor.dispose();
+
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
+                if (!mids.isEmpty()) {
+                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (!mids.isEmpty()) {
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    }
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 });
             } catch (Exception e) {

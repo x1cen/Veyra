@@ -1681,6 +1681,8 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_copy_dialog_id = 84;
     private final static int veyra_jump_to_first = 85;
     private final static int veyra_clear_chat_cache = 86;
+    private final static int veyra_clear_actions = 87;
+    private final static int veyra_advanced = 88;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3956,26 +3958,14 @@ public class ChatActivity extends BaseFragment implements
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
+                } else if (id == veyra_clear_actions) {
+                    showClearActionsMenu();
+                } else if (id == veyra_advanced) {
+                    showAdvancedMenu();
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
                 } else if (id == veyra_clear_chat_cache) {
-                    if (getParentActivity() == null) {
-                        return;
-                    }
-                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle("Clear Logs");
-                    builder.setMessage("Are you sure you want to clear saved logs (deleted messages, edit and reaction history) for this chat?");
-                    builder.setPositiveButton("Clear", (dialogInterface, i) -> {
-                        getMessagesController().clearVeyraCacheForDialog(dialog_id);
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Logs cleared for this chat").show();
-                    });
-                    builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-                    AlertDialog dialog = builder.create();
-                    showDialog(dialog);
-                    TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-                    if (button != null) {
-                        button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
-                    }
+                    showClearActionsMenu();
                 } else if (id == veyra_copy_dialog_id) {
                     AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
                     BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
@@ -4513,8 +4503,7 @@ public class ChatActivity extends BaseFragment implements
                 headerItem.lazilyAddSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
             }
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
-                clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
-                    LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
+                clearHistoryItem = headerItem.lazilyAddSubItem(veyra_clear_actions, R.drawable.msg_clearcache, "Clear Actions");
             }
             if (!isTopic && (currentUser != null && !currentUser.bot && !currentUser.self || (currentChat != null && (!ChatObject.isChannel(currentChat) || (chatInfo != null && chatInfo.can_delete_channel))))) {
                 headerItem.lazilyAddSubItem(auto_delete_timer, R.drawable.msg_autodelete, LocaleController.getString(R.string.AutoDeletePopupTitle));
@@ -4617,14 +4606,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         if (headerItem != null) {
-            headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
-            headerItem.lazilyAddSubItem(veyra_clear_chat_cache, R.drawable.msg_clearcache, "Clear Logs");
-            if (VeyraConfig.copyDialogId) {
-                headerItem.lazilyAddSubItem(veyra_copy_dialog_id, R.drawable.msg_copy, LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
-            }
-            if (VeyraConfig.jumpToFirstMessage && !isSecretChat()) {
-                headerItem.lazilyAddSubItem(veyra_jump_to_first, R.drawable.msg_go_up, LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
-            }
+            headerItem.lazilyAddSubItem(veyra_advanced, R.drawable.msg_settings_old, "Advanced");
         }
 
         actionModeViews.clear();
@@ -12316,6 +12298,172 @@ public class ChatActivity extends BaseFragment implements
                 return MessageDetailsActivity.prettyGson.toJson(root);
             }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
         }
+    }
+
+    private void showAdvancedMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Advanced", true);
+
+        ArrayList<CharSequence> items = new ArrayList<>();
+        ArrayList<Integer> icons = new ArrayList<>();
+        ArrayList<Runnable> actions = new ArrayList<>();
+
+        if (!isSecretChat()) {
+            items.add(LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
+            icons.add(R.drawable.msg_go_up);
+            actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
+        }
+
+        items.add(LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
+        icons.add(R.drawable.msg_copy);
+        actions.add(() -> {
+            AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
+            BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
+        });
+
+        items.add(LocaleController.getString("ViewDetails", R.string.ViewDetails));
+        icons.add(R.drawable.msg_info);
+        actions.add(this::showDetailsJson);
+
+        int[] iconsArray = new int[icons.size()];
+        for (int i = 0; i < icons.size(); i++) {
+            iconsArray[i] = icons.get(i);
+        }
+
+        builder.setItems(items.toArray(new CharSequence[0]), iconsArray, (dialog, which) -> {
+            if (which >= 0 && which < actions.size()) {
+                actions.get(which).run();
+            }
+        });
+        showDialog(builder.create());
+    }
+
+    private void showClearActionsMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Clear Actions", true);
+
+        CharSequence[] items = new CharSequence[]{
+            "Deleted Messages",
+            "Edited Messages",
+            "Reaction History",
+            "Chat History",
+            "Media"
+        };
+        int[] icons = new int[]{
+            R.drawable.msg_delete,
+            R.drawable.msg_edit,
+            R.drawable.msg_reactions,
+            R.drawable.msg_clear,
+            R.drawable.msg_media
+        };
+
+        builder.setItems(items, icons, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    showClearConfirmation("Clear Deleted Messages", "Are you sure you want to clear saved deleted messages for this chat?", () -> {
+                        getMessagesStorage().clearDeletedMessagesForDialog(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Deleted messages cleared").show();
+                    });
+                    break;
+                case 1:
+                    showClearConfirmation("Clear Edit History", "Are you sure you want to clear edit history for this chat?", () -> {
+                        org.veyra.client.VeyraEditHistoryManager.clearDialogEdits(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Edit history cleared").show();
+                    });
+                    break;
+                case 2:
+                    showClearConfirmation("Clear Reaction History", "Are you sure you want to clear reaction history for this chat?", () -> {
+                        org.veyra.client.VeyraEditHistoryManager.clearDialogReactions(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Reaction history cleared").show();
+                    });
+                    break;
+                case 3:
+                    showTelegramClearHistory();
+                    break;
+                case 4:
+                    showClearMediaSubMenu();
+                    break;
+            }
+        });
+        showDialog(builder.create());
+    }
+
+    private void showTelegramClearHistory() {
+        final boolean canDeleteHistory = (currentUser != null && (currentUser.bot || UserObject.isUserSelf(currentUser))) || (chatInfo != null && chatInfo.can_delete_channel);
+        AlertsCreator.createClearOrDeleteDialogAlert(ChatActivity.this, true, currentChat, currentUser, currentEncryptedChat != null, true, false, canDeleteHistory, (param) -> {
+            if (ChatObject.isChannel(currentChat) && (!currentChat.megagroup || ChatObject.isPublic(currentChat))) {
+                ChannelBoostsController.canApplyBoost(currentAccount, -currentChat.id, canApplyBoost -> {
+                    if (canApplyBoost != null && canApplyBoost.can_apply && canApplyBoost.empty) {
+                        BoostDialogs.showBulletin(ChatActivity.this, currentChat, canApplyBoost);
+                    }
+                });
+            }
+        });
+    }
+
+    private void showClearMediaSubMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Clear Media Cache", true);
+
+        CharSequence[] items = new CharSequence[]{
+            "Photos",
+            "Videos",
+            "Documents",
+            "Voice & Audio",
+            "All Media"
+        };
+        int[] icons = new int[]{
+            R.drawable.msg_photos,
+            R.drawable.msg_video,
+            R.drawable.msg_sendfile,
+            R.drawable.msg_voicechat2,
+            R.drawable.msg_delete
+        };
+
+        builder.setItems(items, icons, (dialog, which) -> {
+            final String typeName;
+            final int mediaType;
+            switch (which) {
+                case 0: typeName = "photos"; mediaType = 1; break;
+                case 1: typeName = "videos"; mediaType = 2; break;
+                case 2: typeName = "documents"; mediaType = 3; break;
+                case 3: typeName = "voice and audio"; mediaType = 4; break;
+                default: typeName = "all media"; mediaType = 0; break;
+            }
+            showClearConfirmation("Clear Media Cache", "Are you sure you want to clear cached " + typeName + " for this chat?", () -> {
+                clearMediaCacheForDialog(dialog_id, mediaType);
+            });
+        });
+        showDialog(builder.create());
+    }
+
+    private void showClearConfirmation(String title, String message, Runnable onConfirm) {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(title);
+        builder.setMessage(message);
+        builder.setPositiveButton("Clear", (dialogInterface, i) -> {
+            if (onConfirm != null) {
+                onConfirm.run();
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        AlertDialog dialog = builder.create();
+        showDialog(dialog);
+        TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (button != null) {
+            button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
+    }
+
+    private void clearMediaCacheForDialog(long dialogId, int mediaType) {
+        FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
+            String sizeStr = AndroidUtilities.formatFileSize(bytes);
+            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Media cache cleared (" + sizeStr + ")").show();
+        });
     }
 
     private void openForward(boolean fromActionBar) {
