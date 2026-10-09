@@ -3700,10 +3700,10 @@ public class RichMessageLayout {
             final int totalGaps = gap * (count - 1);
             final int available = Math.max(dp(40), width - totalGaps);
             final int btnWidth = Math.max(dp(40), available / count);
-            final int btnHeight = dp(38);
+            final int btnHeight = dp(40);
 
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-            textPaint.setTextSize(dp(14));
+            textPaint.setTextSize(dp(14.5f));
             textPaint.setTypeface(AndroidUtilities.bold());
 
             int curX = 0;
@@ -3714,7 +3714,7 @@ public class RichMessageLayout {
                 btn.width = (i == count - 1) ? (width - curX) : btnWidth;
                 btn.height = btnHeight;
 
-                int textMaxW = Math.max(dp(20), btn.width - dp(btn.icon != null ? 36 : 16));
+                int textMaxW = Math.max(dp(20), btn.width - dp(16));
                 try {
                     btn.textLayout = new StaticLayout(btn.text, textPaint, textMaxW, Layout.Alignment.ALIGN_CENTER, 1.0f, 0, false);
                 } catch (Exception ignore) {
@@ -3735,39 +3735,44 @@ public class RichMessageLayout {
 
             Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-            textPaint.setTextSize(dp(14));
+            textPaint.setTextSize(dp(14.5f));
             textPaint.setTypeface(AndroidUtilities.bold());
-
-            final int defaultColor = root.getThemedColor(root.isOut() ? Theme.key_chat_messageLinkOut : Theme.key_chat_messageLinkIn);
 
             for (int i = 0; i < count; i++) {
                 Button btn = buttons.get(i);
-                int color = defaultColor;
-                if (btn.style != null) {
-                    if (btn.style.bg_danger) {
-                        color = root.getThemedColor(Theme.key_text_RedBold);
-                    } else if (btn.style.bg_success) {
-                        color = root.getThemedColor(Theme.key_windowBackgroundWhiteGreenText);
+                int bgColor;
+                int textColor;
+                boolean isLink = btn.style != null && btn.style.link;
+                if (btn.style != null && btn.style.bg_danger) {
+                    bgColor = root.getThemedColor(Theme.key_text_RedBold);
+                    textColor = 0xFFFFFFFF;
+                } else if (btn.style != null && btn.style.bg_success) {
+                    bgColor = root.getThemedColor(Theme.key_windowBackgroundWhiteGreenText);
+                    textColor = 0xFFFFFFFF;
+                } else if (isLink) {
+                    int linkColor = root.getThemedColor(root.isOut() ? Theme.key_chat_messageLinkOut : Theme.key_chat_messageLinkIn);
+                    bgColor = Theme.multAlpha(linkColor, btn.pressed ? 0.28f : 0.14f);
+                    textColor = linkColor;
+                } else {
+                    int accent = root.getThemedColor(Theme.key_featuredStickers_addButton);
+                    if (accent == 0) {
+                        accent = root.getThemedColor(Theme.key_chat_messageLinkIn);
                     }
+                    if (accent == 0) {
+                        accent = 0xFF2EA5E8;
+                    }
+                    bgColor = btn.pressed ? Theme.multAlpha(accent, 0.82f) : accent;
+                    textColor = 0xFFFFFFFF;
                 }
 
-                bgPaint.setColor(btn.pressed ? Theme.multAlpha(color, 0.28f) : Theme.multAlpha(color, 0.14f));
+                bgPaint.setColor(bgColor);
                 AndroidUtilities.rectTmp.set(btn.x, btn.y, btn.x + btn.width, btn.y + btn.height);
                 canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(8), dp(8), bgPaint);
 
-                if (btn.icon != null) {
-                    btn.icon.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
-                    int iconSize = dp(16);
-                    int iconX = btn.x + btn.width - dp(12) - iconSize;
-                    int iconY = btn.y + (btn.height - iconSize) / 2;
-                    btn.icon.setBounds(iconX, iconY, iconX + iconSize, iconY + iconSize);
-                    btn.icon.draw(canvas);
-                }
-
                 if (btn.textLayout != null) {
-                    textPaint.setColor(color);
+                    textPaint.setColor(textColor);
                     canvas.save();
-                    float textX = btn.x + (btn.width - (btn.icon != null ? dp(14) : 0) - btn.textLayout.getWidth()) / 2f;
+                    float textX = btn.x + (btn.width - btn.textLayout.getWidth()) / 2f;
                     float textY = btn.y + (btn.height - btn.textLayout.getHeight()) / 2f;
                     canvas.translate(textX, textY);
                     btn.textLayout.draw(canvas);
@@ -3778,7 +3783,7 @@ public class RichMessageLayout {
 
         @Override
         public int getHeight() {
-            return padding.top + dp(38 + 4) + padding.bottom;
+            return padding.top + dp(40 + 4) + padding.bottom;
         }
 
         @Override
