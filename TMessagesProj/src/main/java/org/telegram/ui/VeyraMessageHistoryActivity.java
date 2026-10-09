@@ -493,7 +493,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             servicePill.setPadding(AndroidUtilities.dp(11), AndroidUtilities.dp(3), AndroidUtilities.dp(11), AndroidUtilities.dp(3));
             servicePill.setGravity(Gravity.CENTER);
             Drawable pillBg = Theme.createServiceDrawable(AndroidUtilities.dp(11), servicePill, null);
-            servicePill.setBackground(pillBg != null ? pillBg : Theme.getRoundRectSelector(Theme.getColor(Theme.key_chat_serviceBackground)));
+            servicePill.setBackground(pillBg != null ? pillBg : Theme.getRoundRectSelectorDrawable(AndroidUtilities.dp(11), Theme.getColor(Theme.key_chat_serviceBackground)));
 
             LinearLayout.LayoutParams pillLp = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT);
             pillLp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -572,7 +572,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             ImageView checkmarks = new ImageView(context);
             checkmarks.setId(29);
-            checkmarks.setImageResource(R.drawable.msg_check_w);
+            checkmarks.setImageResource(R.drawable.msg_check_s);
             infoRow.addView(checkmarks, LayoutHelper.createLinear(14, 14, 4, 0, 0, 0));
 
             LinearLayout.LayoutParams infoLp = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT);
@@ -638,9 +638,9 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             bubble.setBackground(bubbleBg);
 
             // Colors
-            int textColor = Theme.getColor(isOut ? Theme.key_chat_outText : Theme.key_chat_inText);
+            int textColor = Theme.getColor(isOut ? Theme.key_chat_messageTextOut : Theme.key_chat_messageTextIn);
             int timeColor = Theme.getColor(isOut ? Theme.key_chat_outTimeText : Theme.key_chat_inTimeText);
-            int linkColor = Theme.getColor(isOut ? Theme.key_chat_outLinks : Theme.key_chat_inLinks);
+            int linkColor = Theme.getColor(isOut ? Theme.key_chat_messageLinkOut : Theme.key_chat_messageLinkIn);
 
             messageView.setTextColor(textColor);
             timeView.setTextColor(timeColor);
@@ -696,7 +696,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                     avatarDrawable.setInfo(dialogId, "User", null);
                     avatarView.setImageDrawable(avatarDrawable);
                     nameView.setText("Sender");
-                    nameView.setTextColor(Theme.getColor(Theme.key_chat_inName));
+                    nameView.setTextColor(Theme.getColor(Theme.key_chat_inReplyNameText));
                 }
             } else {
                 nameView.setVisibility(View.GONE);

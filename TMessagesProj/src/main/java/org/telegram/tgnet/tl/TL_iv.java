@@ -794,20 +794,31 @@ public class TL_iv {
     public static class textButton extends RichText {
         public static final int constructor = 0xafc79cd6;
 
+        public int flags;
         public RichText text;
         public TLRPC.InlineButtonType type;
+        public richButtonStyle style;
 
         @Override
         public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
             text = RichText.TLdeserialize(stream, stream.readInt32(exception), exception);
             type = TLRPC.InlineButtonType.TLdeserialize(stream, stream.readInt32(exception), exception);
+            if (hasFlag(flags, FLAG_0)) {
+                style = richButtonStyle.TLdeserialize(stream, stream.readInt32(exception), exception);
+            }
         }
 
         @Override
         public void serializeToStream(OutputSerializedData stream) {
             stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, style != null);
+            stream.writeInt32(flags);
             text.serializeToStream(stream);
             type.serializeToStream(stream);
+            if (style != null) {
+                style.serializeToStream(stream);
+            }
         }
     }
 
