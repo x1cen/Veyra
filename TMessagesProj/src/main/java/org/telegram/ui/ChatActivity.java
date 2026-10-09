@@ -12398,7 +12398,7 @@ public class ChatActivity extends BaseFragment implements
             } else {
                 performHistoryClear(param, canDeleteHistory);
             }
-        }, getResourceProvider());
+        });
     }
 
     private void showClearMediaSubMenu() {
