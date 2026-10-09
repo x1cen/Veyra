@@ -968,6 +968,29 @@ public class RichMessageLayout {
         } else if (pageBlock instanceof TL_iv.pageBlockCover) {
             final TL_iv.pageBlockCover cover = (TL_iv.pageBlockCover) pageBlock;
             return emitBlock(cover.cover, level, padding, textFlags);
+        } else if (pageBlock instanceof TL_iv.pageBlockButtonRow) {
+            final TL_iv.pageBlockButtonRow buttonRow = (TL_iv.pageBlockButtonRow) pageBlock;
+            final SpannableStringBuilder rowText = new SpannableStringBuilder();
+            for (int i = 0; i < buttonRow.buttons.size(); ++i) {
+                if (i > 0) rowText.append("  •  ");
+                final TL_iv.pageButton btn = buttonRow.buttons.get(i);
+                if (btn != null && btn.text != null) {
+                    int bStart = rowText.length();
+                    formatText(btn.text, rowText, textFlags | TEXT_FLAG_BOLD);
+                    String btnUrl = null;
+                    if (btn.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                        btnUrl = ((TLRPC.TL_inlineButtonTypeUrl) btn.type).url;
+                    } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                        btnUrl = ((TLRPC.TL_inlineButtonTypeWebView) btn.type).url;
+                    }
+                    if (!TextUtils.isEmpty(btnUrl) && rowText.length() > bStart) {
+                        rowText.setSpan(new URLSpanReplacement(btnUrl), bStart, rowText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+            }
+            final RichTextBlock block = new RichTextBlock(this, padding, maxWidth, rowText);
+            blocks.add(block);
+            return block;
         } else if (pageBlock instanceof TL_iv.pageBlockAnchor) {
             final TL_iv.pageBlockAnchor anchor = (TL_iv.pageBlockAnchor) pageBlock;
             if (anchor.name != null) {
@@ -1867,6 +1890,21 @@ public class RichMessageLayout {
             entity.date = textDate.date;
             flags |= TEXT_FLAG_URL;
             formatTextAndSetSpan(text.text, out, flags, new StyleSpan(this, flags), new FormattedDateSpan(getString(text), null, entity));
+        } else if (text instanceof TL_iv.textButton) {
+            final TL_iv.textButton textButton = (TL_iv.textButton) text;
+            final boolean isLink = textButton.style != null && textButton.style.link;
+            flags |= isLink ? TEXT_FLAG_URL : (TEXT_FLAG_BOLD | TEXT_FLAG_URL);
+            String url = null;
+            if (textButton.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                url = ((TLRPC.TL_inlineButtonTypeUrl) textButton.type).url;
+            } else if (textButton.type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                url = ((TLRPC.TL_inlineButtonTypeWebView) textButton.type).url;
+            }
+            if (!TextUtils.isEmpty(url)) {
+                formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags), new URLSpanReplacement(url));
+            } else {
+                formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags));
+            }
         }
         return out;
     }

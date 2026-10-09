@@ -26763,6 +26763,11 @@ public class ChatActivity extends BaseFragment implements
                 } else if (!textChanged && wasEditedBefore) {
                     messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
                     messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                } else if (textChanged) {
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    if (messageObject.messageOwner.edit_date == 0) {
+                        messageObject.messageOwner.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                    }
                 }
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {

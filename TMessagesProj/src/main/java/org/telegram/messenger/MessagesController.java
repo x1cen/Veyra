@@ -9341,19 +9341,26 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void markDialogMessageAsDeleted(long dialogId, ArrayList<Integer> messages) {
+        if (messages == null || messages.isEmpty()) return;
         ArrayList<MessageObject> objs = dialogMessage.get(dialogId);
         if (objs != null) {
-            for (int i = 0; i < objs.size(); ++i) {
+            for (int i = objs.size() - 1; i >= 0; --i) {
                 MessageObject obj = objs.get(i);
-                if (obj != null) {
-                    for (int a = 0; a < messages.size(); a++) {
-                        Integer id = messages.get(a);
-                        if (obj.getId() == id) {
-                            obj.deleted = true;
-                            break;
-                        }
+                if (obj != null && messages.contains(obj.getId())) {
+                    obj.deleted = true;
+                    if (obj.messageOwner != null) {
+                        obj.messageOwner.isDeleted = true;
                     }
+                    objs.remove(i);
                 }
+            }
+        }
+        TLRPC.Dialog dialog = dialogs_dict.get(dialogId);
+        if (dialog != null && messages.contains(dialog.top_message)) {
+            if (objs != null && !objs.isEmpty()) {
+                dialog.top_message = objs.get(0).getId();
+            } else {
+                dialog.top_message = 0;
             }
         }
     }
@@ -9394,10 +9401,6 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int a = 0, N = messages.size(); a < N; a++) {
                     Integer mid = messages.get(a);
                     if (mid > 0) {
-                        MessageObject obj = dialogMessagesByIds.get(mid);
-                        if (obj != null && obj.messageOwner != null && obj.messageOwner.isDeleted) {
-                            continue;
-                        }
                         toSend.add(mid);
                     }
                 }
@@ -9410,19 +9413,14 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_QUICK_REPLIES, topicId);
             } else {
-                if (channelId == 0) {
-                    for (int a = 0; a < messages.size(); a++) {
-                        Integer id = messages.get(a);
-                        MessageObject obj = dialogMessagesByIds.get(id);
-                        if (obj != null) {
-                            obj.deleted = true;
-                        }
-                    }
-                } else {
-                    markDialogMessageAsDeleted(dialogId, messages);
+                for (int a = 0; a < messages.size(); a++) {
+                    Integer id = messages.get(a);
+                    dialogMessagesByIds.remove(id);
                 }
+                markDialogMessageAsDeleted(dialogId, messages);
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId); // TODO: 8/11/26 rework for agram mark
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
+                getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
             }
             getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId, null, false);
             org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(dialogId, messages);
@@ -10672,7 +10670,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.TL_messages_getMessagesViews req = new TLRPC.TL_messages_getMessagesViews();
                     req.peer = getInputPeer(key);
                     req.id = channelViewsToSend.valueAt(a);
-                    req.increment = a == 0 && !VeyraConfig.isGhostHideChannelViews();
+                    req.increment = a == 0 && !VeyraConfig.isGhostHideChannelViews(key);
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         if (response != null) {
                             TLRPC.TL_messages_messageViews res = (TLRPC.TL_messages_messageViews) response;
@@ -17696,6 +17694,21 @@ public class MessagesController extends BaseController implements NotificationCe
                 boolean isRemotePeerRevoke = true;
                 getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, isAntiDeleteAllowed ? isRemotePeerRevoke : false);
                 if (isAntiDeleteAllowed) {
+                    ArrayList<MessageObject> dialogObjs = dialogMessage.get(dialogId);
+                    if (dialogObjs != null) {
+                        for (int i = 0; i < dialogObjs.size(); ++i) {
+                            MessageObject obj = dialogObjs.get(i);
+                            for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                                if (obj != null && obj.getId() == ids.get(b)) {
+                                    if (obj.messageOwner != null) {
+                                        obj.messageOwner.isDeleted = true;
+                                    }
+                                    obj.deleted = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     if (channelId == 0) {
                         for (int b = 0, size2 = ids.size(); b < size2; b++) {
                             Integer id = ids.get(b);
@@ -17712,6 +17725,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 for (int b = 0, size2 = ids.size(); b < size2; b++) {
                                     if (obj.getId() == ids.get(b)) {
                                         obj.messageOwner.isDeleted = true;
+                                        obj.deleted = true;
                                         break;
                                     }
                                 }
@@ -17722,6 +17736,7 @@ public class MessagesController extends BaseController implements NotificationCe
             });
             if (isAntiDeleteAllowed) {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
             } else {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);

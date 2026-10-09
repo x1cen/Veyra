@@ -6289,6 +6289,27 @@ public class MessageObject {
             }
         } else if (block instanceof TL_iv.pageBlockCover) {
             formatRichBlock(((TL_iv.pageBlockCover) block).cover, isOut, photoViewer, maxLength, out, richMessage);
+        } else if (block instanceof TL_iv.pageBlockButtonRow) {
+            final TL_iv.pageBlockButtonRow row = (TL_iv.pageBlockButtonRow) block;
+            for (int i = 0; i < row.buttons.size(); ++i) {
+                if (i > 0) out.append(" • ");
+                final TL_iv.pageButton btn = row.buttons.get(i);
+                if (btn != null && btn.text != null) {
+                    int bStart = out.length();
+                    formatRichText(btn.text, isOut, photoViewer, maxLength, out, TextStyleSpan.FLAG_STYLE_BOLD);
+                    String url = null;
+                    if (btn.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                        url = ((TLRPC.TL_inlineButtonTypeUrl) btn.type).url;
+                    } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                        url = ((TLRPC.TL_inlineButtonTypeWebView) btn.type).url;
+                    }
+                    if (!TextUtils.isEmpty(url) && out.length() > bStart) {
+                        final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
+                        run.flags = TextStyleSpan.FLAG_STYLE_BOLD;
+                        out.setSpan(new URLSpanBrowser(url, run), bStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+            }
         } else if (block instanceof TL_iv.pageBlockPhoto) {
             out.append(getString(R.string.AttachPhoto));
         } else if (block instanceof TL_iv.pageBlockVideo) {
@@ -6355,6 +6376,21 @@ public class MessageObject {
                     out.append("…");
                     return out;
                 }
+            }
+        } else if (text instanceof TL_iv.textButton) {
+            final TL_iv.textButton tb = (TL_iv.textButton) text;
+            int btnStart = out.length();
+            formatRichText(tb.text, isOut, photoViewer, maxLength, out, flags | TextStyleSpan.FLAG_STYLE_BOLD);
+            String url = null;
+            if (tb.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                url = ((TLRPC.TL_inlineButtonTypeUrl) tb.type).url;
+            } else if (tb.type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                url = ((TLRPC.TL_inlineButtonTypeWebView) tb.type).url;
+            }
+            if (!TextUtils.isEmpty(url) && out.length() > btnStart) {
+                final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
+                run.flags = flags | TextStyleSpan.FLAG_STYLE_BOLD;
+                out.setSpan(new URLSpanBrowser(url, run), btnStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         if (out.length() > start && flags != 0) {

@@ -14850,7 +14850,7 @@ public class MessagesStorage extends BaseController {
             if (!messages.isEmpty()) {
                 if (channelId != 0) {
                     dialogsToUpdate.add(-channelId);
-                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ?)) WHERE did = ?");
+                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?) AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ? AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?))) WHERE did = ?");
                 } else {
                     if (originalDialogId == 0) {
                         String ids = TextUtils.join(",", messages);
@@ -14863,7 +14863,7 @@ public class MessagesStorage extends BaseController {
                     } else {
                         dialogsToUpdate.add(originalDialogId);
                     }
-                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ? AND date != 0)) WHERE did = ?");
+                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?) AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ? AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?) AND date != 0)) WHERE did = ?");
                 }
                 database.beginTransaction();
                 for (int a = 0; a < dialogsToUpdate.size(); a++) {
@@ -14872,6 +14872,8 @@ public class MessagesStorage extends BaseController {
                     state.bindLong(1, did);
                     state.bindLong(2, did);
                     state.bindLong(3, did);
+                    state.bindLong(4, did);
+                    state.bindLong(5, did);
                     state.step();
                 }
                 state.dispose();

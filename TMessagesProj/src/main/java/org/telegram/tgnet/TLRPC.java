@@ -67,7 +67,7 @@ public class TLRPC {
     public static final int MESSAGE_FLAG_HAS_BOT_ID         = 0x00000800;
     public static final int MESSAGE_FLAG_EDITED             = 0x00008000;
 
-    public static final int LAYER = 228;
+    public static final int LAYER = 229;
 
     public static abstract class EmailVerifyPurpose extends TLObject {
 
@@ -10063,6 +10063,7 @@ public class TLRPC {
                 case TL_replyInlineMarkup.constructor:
                     return new TL_replyInlineMarkup();
                 case TL_replyInlineMarkup_layer229.constructor:
+                case 0x58f7fcb6:
                     return new TL_replyInlineMarkup_layer229();
                 default:
                     return null;
@@ -70939,7 +70940,10 @@ public class TLRPC {
         public InlineButtonType type;
 
         public static TL_keyboardInlineButton TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
-            final TL_keyboardInlineButton r = constructor != TL_keyboardInlineButton.constructor ? null : new TL_keyboardInlineButton();
+            final TL_keyboardInlineButton r = (constructor != TL_keyboardInlineButton.constructor
+                    && constructor != 0xd80c25ec
+                    && constructor != 0x258aff05
+                    && constructor != 0x35bbdb6b) ? null : new TL_keyboardInlineButton();
             return TLdeserialize(TL_keyboardInlineButton.class, r, stream, constructor, exception);
         }
 
@@ -70961,65 +70965,70 @@ public class TLRPC {
 
         /** Bridge: expose as a KeyboardButton so ChatActivity / BotButton can handle it uniformly */
         public KeyboardButton toKeyboardButton() {
+            KeyboardButton btn;
             if (type instanceof TL_inlineButtonTypeUrl || type instanceof TL_inlineButtonTypeWebView) {
-                TL_keyboardButtonUrl btn = new TL_keyboardButtonUrl();
-                btn.text = text;
-                btn.url = type.url;
-                return btn;
+                TL_keyboardButtonUrl b = new TL_keyboardButtonUrl();
+                b.text = text;
+                b.url = type.url;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeCallback) {
-                TL_keyboardButtonCallback btn = new TL_keyboardButtonCallback();
-                btn.text = text;
-                btn.data = ((TL_inlineButtonTypeCallback) type).data;
-                btn.requires_password = ((TL_inlineButtonTypeCallback) type).requires_password;
-                return btn;
+                TL_keyboardButtonCallback b = new TL_keyboardButtonCallback();
+                b.text = text;
+                b.data = ((TL_inlineButtonTypeCallback) type).data;
+                b.requires_password = ((TL_inlineButtonTypeCallback) type).requires_password;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeUrlAuth) {
-                TL_keyboardButtonUrlAuth btn = new TL_keyboardButtonUrlAuth();
-                btn.text = text;
-                btn.url = type.url;
-                btn.fwd_text = type.fwd_text;
-                btn.button_id = type.button_id;
-                return btn;
+                TL_keyboardButtonUrlAuth b = new TL_keyboardButtonUrlAuth();
+                b.text = text;
+                b.url = type.url;
+                b.fwd_text = type.fwd_text;
+                b.button_id = type.button_id;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeSwitchInline) {
-                TL_keyboardButtonSwitchInline btn = new TL_keyboardButtonSwitchInline();
-                btn.text = text;
-                btn.query = type.query;
-                btn.same_peer = type.same_peer;
-                btn.peer_types = type.peer_types;
-                return btn;
+                TL_keyboardButtonSwitchInline b = new TL_keyboardButtonSwitchInline();
+                b.text = text;
+                b.query = type.query;
+                b.same_peer = type.same_peer;
+                b.peer_types = type.peer_types;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeBuy) {
-                TL_keyboardButtonBuy btn = new TL_keyboardButtonBuy();
-                btn.text = text;
-                return btn;
+                TL_keyboardButtonBuy b = new TL_keyboardButtonBuy();
+                b.text = text;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeGame) {
-                TL_keyboardButtonGame btn = new TL_keyboardButtonGame();
-                btn.text = text;
-                return btn;
+                TL_keyboardButtonGame b = new TL_keyboardButtonGame();
+                b.text = text;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeUserProfile) {
-                TL_keyboardButtonUserProfile btn = new TL_keyboardButtonUserProfile();
-                btn.text = text;
-                btn.user_id = type.user_id;
-                return btn;
+                TL_keyboardButtonUserProfile b = new TL_keyboardButtonUserProfile();
+                b.text = text;
+                b.user_id = type.user_id;
+                btn = b;
             } else if (type instanceof TL_inlineButtonTypeCopy) {
-                TL_keyboardButtonCopy btn = new TL_keyboardButtonCopy();
-                btn.text = text;
-                btn.copy_text = ((TL_inlineButtonTypeCopy) type).copy_text;
-                return btn;
+                TL_keyboardButtonCopy b = new TL_keyboardButtonCopy();
+                b.text = text;
+                b.copy_text = ((TL_inlineButtonTypeCopy) type).copy_text;
+                btn = b;
             } else {
                 // Disabled or unknown: plain button with no action
-                TL_keyboardButton btn = new TL_keyboardButton();
-                btn.text = text;
-                return btn;
+                TL_keyboardButton b = new TL_keyboardButton();
+                b.text = text;
+                btn = b;
             }
+            btn.style = style;
+            btn.flags = flags;
+            return btn;
         }
     }
 
     /** keyboardInlineButtonRow#19420af6 — bridges into TL_keyboardButtonRow */
     public static class TL_keyboardInlineButtonRow extends TLObject {
         public static final int constructor = 0x19420af6;
+        public static final int constructor_layer228 = 0x77608b83;
         public ArrayList<TL_keyboardInlineButton> buttons = new ArrayList<>();
 
         public static TL_keyboardInlineButtonRow TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
-            final TL_keyboardInlineButtonRow r = constructor != TL_keyboardInlineButtonRow.constructor ? null : new TL_keyboardInlineButtonRow();
+            final TL_keyboardInlineButtonRow r = (constructor != TL_keyboardInlineButtonRow.constructor && constructor != TL_keyboardInlineButtonRow.constructor_layer228) ? null : new TL_keyboardInlineButtonRow();
             return TLdeserialize(TL_keyboardInlineButtonRow.class, r, stream, constructor, exception);
         }
 
