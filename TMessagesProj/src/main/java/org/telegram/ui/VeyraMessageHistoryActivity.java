@@ -299,12 +299,29 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             }
         });
 
+        hasOwnBackground = true;
         SizeNotifierFrameLayout contentView = new SizeNotifierFrameLayout(context) {
             @Override
             protected Drawable getNewDrawable() {
                 return Theme.getCachedWallpaperNonBlocking();
             }
+
+            @Override
+            protected boolean isActionBarVisible() {
+                return false;
+            }
+
+            @Override
+            protected boolean isStatusBarVisible() {
+                return false;
+            }
+
+            @Override
+            protected boolean useRootView() {
+                return false;
+            }
         };
+        contentView.setOccupyStatusBar(false);
         contentView.setBackgroundImage(Theme.getCachedWallpaper(), Theme.isWallpaperMotion());
 
         fragmentView = contentView;
