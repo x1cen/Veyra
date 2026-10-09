@@ -14602,7 +14602,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private final androidx.collection.LongSparseArray<ReadTask> pendingReadOnReply = new androidx.collection.LongSparseArray<>();
 
     public void sendPendingReadOnReply(long dialogId) {
-        if (!VeyraConfig.isGhostReadOnReply()) {
+        if (!VeyraConfig.isGhostReadOnReply(dialogId)) {
             return;
         }
         Utilities.stageQueue.postRunnable(() -> {
@@ -14627,7 +14627,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private void completeReadTask(ReadTask task) {
         if (task.fromSendReply) {
             VeyraConfig.allowSendReadOnce(task.dialogId);
-        } else if (VeyraConfig.isGhostReadOnReply() && DialogObject.isUserDialog(task.dialogId)) {
+        } else if (VeyraConfig.isGhostReadOnReply(task.dialogId) && DialogObject.isUserDialog(task.dialogId)) {
             pendingReadOnReply.put(task.dialogId, task);
             return;
         }
@@ -19627,7 +19627,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             && message.edit_date != oldMsgOwner.edit_date
                             && TextUtils.equals(oldText, newText);
 
-                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                    if (!message.out && !textChanged && !wasEditedBefore && !isCurrentlyEditing) {
                         message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         message.edit_date = 0;
                     } else if (isOnlyReactionUpdate && wasEditedBefore) {

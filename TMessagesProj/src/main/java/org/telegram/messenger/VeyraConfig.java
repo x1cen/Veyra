@@ -100,19 +100,27 @@ public class VeyraConfig {
     public static boolean ghostChannelPublic = true;
     public static boolean ghostChannelPrivate = true;
 
-    private static final java.util.Set<Long> allowedReadDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+    private static final java.util.concurrent.ConcurrentHashMap<Long, Long> allowedReadDialogs = new java.util.concurrent.ConcurrentHashMap<>();
 
     // Per-chat ghost exceptions: dialogs in this set are EXCLUDED from ghost mode (ghost disabled for them)
     private static final java.util.Set<Long> ghostExceptionDialogs = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     public static void allowSendReadOnce(long dialogId) {
-        allowedReadDialogs.add(dialogId);
+        allowedReadDialogs.put(dialogId, System.currentTimeMillis() + 5000L);
     }
 
     public static boolean consumeSendReadAllowed(long dialogId) {
         // If this dialog is a ghost exception, always allow reads
         if (ghostExceptionDialogs.contains(dialogId)) return true;
-        return allowedReadDialogs.remove(dialogId);
+        Long expire = allowedReadDialogs.get(dialogId);
+        if (expire != null) {
+            if (System.currentTimeMillis() <= expire) {
+                return true;
+            } else {
+                allowedReadDialogs.remove(dialogId);
+            }
+        }
+        return false;
     }
 
     public static boolean isGhostExceptionDialog(long dialogId) {
@@ -255,7 +263,11 @@ public class VeyraConfig {
     }
 
     public static boolean isGhostReadOnReply() {
-        return ghostMode && ghostReadOnReply;
+        return ghostMode && ghostHideRead && ghostReadOnReply;
+    }
+
+    public static boolean isGhostReadOnReply(long dialogId) {
+        return ghostMode && isGhostHideRead(dialogId) && ghostReadOnReply;
     }
 
     public static boolean isGhostHideChannelViews() {
