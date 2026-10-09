@@ -12394,13 +12394,11 @@ public class ChatActivity extends BaseFragment implements
         final boolean canDeleteHistory = (currentUser != null && (currentUser.bot || UserObject.isUserSelf(currentUser))) || (chatInfo != null && chatInfo.can_delete_channel);
         AlertsCreator.createClearOrDeleteDialogAlert(ChatActivity.this, true, currentChat, currentUser, currentEncryptedChat != null, true, false, canDeleteHistory, (param) -> {
             if (ChatObject.isChannel(currentChat) && (!currentChat.megagroup || ChatObject.isPublic(currentChat))) {
-                ChannelBoostsController.canApplyBoost(currentAccount, -currentChat.id, canApplyBoost -> {
-                    if (canApplyBoost != null && canApplyBoost.can_apply && canApplyBoost.empty) {
-                        BoostDialogs.showBulletin(ChatActivity.this, currentChat, canApplyBoost);
-                    }
-                });
+                getMessagesController().deleteDialog(dialog_id, 2, param);
+            } else {
+                performHistoryClear(param, canDeleteHistory);
             }
-        });
+        }, getResourceProvider());
     }
 
     private void showClearMediaSubMenu() {

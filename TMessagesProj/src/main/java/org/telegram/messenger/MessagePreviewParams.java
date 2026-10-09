@@ -455,13 +455,6 @@ public class MessagePreviewParams {
                 }
             }
         }
-        if (msg.captionEntities != null) {
-            for (int e = 0; e < msg.captionEntities.size(); e++) {
-                if (msg.captionEntities.get(e) instanceof TLRPC.TL_messageEntityCustomEmoji) {
-                    return true;
-                }
-            }
-        }
         return false;
     }
 

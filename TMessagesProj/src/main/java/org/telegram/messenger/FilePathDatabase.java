@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -481,9 +482,9 @@ public class FilePathDatabase {
                 if (mediaType == 1) {
                     cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_PHOTO));
                 } else if (mediaType == 2) {
-                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_VIDEO));
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND (message_type = %d OR message_type = %d OR message_type = %d)", dialogId, MessageObject.TYPE_VIDEO, MessageObject.TYPE_ROUND_VIDEO, MessageObject.TYPE_GIF));
                 } else if (mediaType == 3) {
-                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_DOCUMENT));
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND message_type = %d", dialogId, MessageObject.TYPE_FILE));
                 } else if (mediaType == 4) {
                     cursor = database.queryFinalized(String.format(Locale.US, "SELECT path FROM paths_by_dialog_id WHERE dialog_id = %d AND (message_type = %d OR message_type = %d)", dialogId, MessageObject.TYPE_VOICE, MessageObject.TYPE_MUSIC));
                 } else {
