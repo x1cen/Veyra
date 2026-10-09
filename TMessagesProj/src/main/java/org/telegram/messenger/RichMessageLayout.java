@@ -3668,11 +3668,15 @@ public class RichMessageLayout {
                 }
                 this.url = u;
                 CharSequence title = pageButton != null && pageButton.text != null ? RichMessageLayout.getString(pageButton.text) : "";
-                if (!TextUtils.isEmpty(title) && !TextUtils.isEmpty(url)) {
-                    title = title + " ↗";
-                }
                 this.text = title != null ? title : "";
-                this.icon = null;
+                if (!TextUtils.isEmpty(url)) {
+                    try {
+                        Context context = root.view != null ? root.view.getContext() : (root.getCell() != null ? root.getCell().getContext() : ApplicationLoader.applicationContext);
+                        this.icon = context.getResources().getDrawable(R.drawable.mini_external_link).mutate();
+                    } catch (Exception ignore) {}
+                } else {
+                    this.icon = null;
+                }
             }
 
             public boolean contains(float px, float py) {
@@ -3702,21 +3706,21 @@ public class RichMessageLayout {
             final int totalGaps = gap * (count - 1);
             final int available = Math.max(dp(40), width - totalGaps);
             final int btnWidth = Math.max(dp(40), available / count);
-            final int btnHeight = dp(40);
+            final int btnHeight = dp(42);
 
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             textPaint.setTextSize(dp(14.5f));
-            textPaint.setTypeface(AndroidUtilities.bold());
+            textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
             int curX = 0;
             for (int i = 0; i < count; i++) {
                 Button btn = buttons.get(i);
                 btn.x = curX;
-                btn.y = dp(2);
+                btn.y = dp(4);
                 btn.width = (i == count - 1) ? (width - curX) : btnWidth;
                 btn.height = btnHeight;
 
-                int textMaxW = Math.max(dp(20), btn.width - dp(16));
+                int textMaxW = Math.max(dp(20), btn.width - dp(48));
                 try {
                     btn.textLayout = new StaticLayout(btn.text, textPaint, textMaxW, Layout.Alignment.ALIGN_CENTER, 1.0f, 0, false);
                 } catch (Exception ignore) {
@@ -3738,7 +3742,7 @@ public class RichMessageLayout {
             Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             textPaint.setTextSize(dp(14.5f));
-            textPaint.setTypeface(AndroidUtilities.bold());
+            textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
             for (int i = 0; i < count; i++) {
                 Button btn = buttons.get(i);
@@ -3761,7 +3765,7 @@ public class RichMessageLayout {
                         accent = root.getThemedColor(Theme.key_chat_messageLinkIn);
                     }
                     if (accent == 0) {
-                        accent = 0xFF2EA5E8;
+                        accent = 0xFF249DE6;
                     }
                     bgColor = btn.pressed ? Theme.multAlpha(accent, 0.82f) : accent;
                     textColor = 0xFFFFFFFF;
@@ -3769,7 +3773,8 @@ public class RichMessageLayout {
 
                 bgPaint.setColor(bgColor);
                 AndroidUtilities.rectTmp.set(btn.x, btn.y, btn.x + btn.width, btn.y + btn.height);
-                canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(8), dp(8), bgPaint);
+                float radius = btn.height / 2f;
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, radius, radius, bgPaint);
 
                 if (btn.textLayout != null) {
                     textPaint.setColor(textColor);
@@ -3780,12 +3785,21 @@ public class RichMessageLayout {
                     btn.textLayout.draw(canvas);
                     canvas.restore();
                 }
+
+                if (btn.icon != null) {
+                    int iconSize = dp(14);
+                    int iconX = btn.x + btn.width - dp(22) - iconSize / 2;
+                    int iconY = btn.y + (btn.height - iconSize) / 2;
+                    btn.icon.setBounds(iconX, iconY, iconX + iconSize, iconY + iconSize);
+                    btn.icon.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
+                    btn.icon.draw(canvas);
+                }
             }
         }
 
         @Override
         public int getHeight() {
-            return padding.top + dp(40 + 4) + padding.bottom;
+            return padding.top + dp(42 + 8) + padding.bottom;
         }
 
         @Override
