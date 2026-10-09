@@ -1133,16 +1133,28 @@ public class TL_iv {
     public static class pageBlockButtonRow extends PageBlock {
         public static final int constructor = 0x6d640318;
 
+        public int flags;
+        public boolean align_left;
+        public boolean align_center;
+        public boolean align_right;
         public ArrayList<pageButton> buttons = new ArrayList<>();
 
         @Override
         public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            align_left = hasFlag(flags, FLAG_0);
+            align_center = hasFlag(flags, FLAG_1);
+            align_right = hasFlag(flags, FLAG_2);
             buttons = Vector.deserialize(stream, pageButton::TLdeserialize, exception);
         }
 
         @Override
         public void serializeToStream(OutputSerializedData stream) {
             stream.writeInt32(constructor);
+            flags = setFlag(flags, FLAG_0, align_left);
+            flags = setFlag(flags, FLAG_1, align_center);
+            flags = setFlag(flags, FLAG_2, align_right);
+            stream.writeInt32(flags);
             Vector.serialize(stream, buttons);
         }
     }

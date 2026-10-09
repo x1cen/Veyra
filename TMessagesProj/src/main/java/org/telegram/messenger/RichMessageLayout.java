@@ -3666,19 +3666,11 @@ public class RichMessageLayout {
                 }
                 this.url = u;
                 CharSequence title = pageButton != null && pageButton.text != null ? RichMessageLayout.getString(pageButton.text) : "";
+                if (!TextUtils.isEmpty(title) && !TextUtils.isEmpty(url)) {
+                    title = title + " ↗";
+                }
                 this.text = title != null ? title : "";
-
-                int iconRes = 0;
-                if (type instanceof TLRPC.TL_inlineButtonTypeWebView) {
-                    iconRes = R.drawable.bot_webview;
-                } else if (!TextUtils.isEmpty(url)) {
-                    iconRes = R.drawable.mini_external_link;
-                }
-                if (iconRes != 0) {
-                    try {
-                        this.icon = ApplicationLoader.applicationContext.getResources().getDrawable(iconRes).mutate();
-                    } catch (Exception ignore) {}
-                }
+                this.icon = null;
             }
 
             public boolean contains(float px, float py) {
