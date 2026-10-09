@@ -54,6 +54,8 @@ public class URLSpanReplacement extends URLSpan {
         if (style != null) {
             style.applyStyle(p);
             p.setUnderlineText(p.linkColor == color);
+        } else {
+            p.setUnderlineText(false);
         }
     }
 }

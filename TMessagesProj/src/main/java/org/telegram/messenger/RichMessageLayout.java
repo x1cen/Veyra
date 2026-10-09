@@ -970,25 +970,7 @@ public class RichMessageLayout {
             return emitBlock(cover.cover, level, padding, textFlags);
         } else if (pageBlock instanceof TL_iv.pageBlockButtonRow) {
             final TL_iv.pageBlockButtonRow buttonRow = (TL_iv.pageBlockButtonRow) pageBlock;
-            final SpannableStringBuilder rowText = new SpannableStringBuilder();
-            for (int i = 0; i < buttonRow.buttons.size(); ++i) {
-                if (i > 0) rowText.append("  •  ");
-                final TL_iv.pageButton btn = buttonRow.buttons.get(i);
-                if (btn != null && btn.text != null) {
-                    int bStart = rowText.length();
-                    formatText(btn.text, rowText, textFlags | TEXT_FLAG_BOLD);
-                    String btnUrl = null;
-                    if (btn.type instanceof TLRPC.TL_inlineButtonTypeUrl) {
-                        btnUrl = ((TLRPC.TL_inlineButtonTypeUrl) btn.type).url;
-                    } else if (btn.type instanceof TLRPC.TL_inlineButtonTypeWebView) {
-                        btnUrl = ((TLRPC.TL_inlineButtonTypeWebView) btn.type).url;
-                    }
-                    if (!TextUtils.isEmpty(btnUrl) && rowText.length() > bStart) {
-                        rowText.setSpan(new URLSpanReplacement(btnUrl), bStart, rowText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                }
-            }
-            final RichTextBlock block = new RichTextBlock(this, padding, maxWidth, rowText);
+            final RichButtonRowBlock block = new RichButtonRowBlock(this, padding, maxWidth, buttonRow);
             blocks.add(block);
             return block;
         } else if (pageBlock instanceof TL_iv.pageBlockAnchor) {
@@ -1757,10 +1739,10 @@ public class RichMessageLayout {
             formatTextAndSetSpan(text.text, out, flags, new StyleSpan(this, flags));
         } else if (text instanceof TL_iv.textUrl) {
             final TL_iv.textUrl textUrl = (TL_iv.textUrl) text;
-            formatTextAndSetSpan(text.text, out, flags, new URLSpanReplacement(textUrl.url));
+            formatTextAndSetSpan(text.text, out, flags, new URLSpanReplacement(textUrl.url, getTextStyleRun(TextStyleSpan.FLAG_STYLE_TEXT_URL)));
         } else if (text instanceof TL_iv.textEmail) {
             final TL_iv.textEmail textEmail = (TL_iv.textEmail) text;
-            formatTextAndSetSpan(text.text, out, flags, new URLSpanReplacement("mailto:" + textEmail.email));
+            formatTextAndSetSpan(text.text, out, flags, new URLSpanReplacement("mailto:" + textEmail.email, getTextStyleRun(TextStyleSpan.FLAG_STYLE_TEXT_URL)));
         } else if (text instanceof TL_iv.textConcat) {
             for (int i = 0; i < text.texts.size(); ++i) {
                 formatText(text.texts.get(i), out, flags);
@@ -1901,7 +1883,7 @@ public class RichMessageLayout {
                 url = ((TLRPC.TL_inlineButtonTypeWebView) textButton.type).url;
             }
             if (!TextUtils.isEmpty(url)) {
-                formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags), new URLSpanReplacement(url));
+                formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags), new URLSpanReplacement(url, getTextStyleRun(TextStyleSpan.FLAG_STYLE_TEXT_URL)));
             } else {
                 formatTextAndSetSpan(textButton.text, out, flags, new StyleSpan(this, flags));
             }
@@ -3648,6 +3630,230 @@ public class RichMessageLayout {
         @Override
         public int getHeight() {
             return padding.top + dp(2 + 16) + padding.bottom;
+        }
+    }
+
+    public static class RichButtonRowBlock extends RichBlock {
+        private static final int GAP = 7;
+        private final ArrayList<Button> buttons = new ArrayList<>();
+        private Button touchButton;
+        private int lastCalculatedWidth = -1;
+
+        public static class Button {
+            public final TL_iv.pageButton pageButton;
+            public final TLRPC.InlineButtonType type;
+            public final TL_iv.richButtonStyle style;
+            public final String url;
+            public final CharSequence text;
+            public Drawable icon;
+            public int x;
+            public int y;
+            public int width;
+            public int height;
+            public boolean pressed;
+            public StaticLayout textLayout;
+
+            public Button(RichMessageLayout root, TL_iv.pageButton pageButton) {
+                this.pageButton = pageButton;
+                this.type = pageButton != null ? pageButton.type : null;
+                this.style = pageButton != null ? pageButton.style : null;
+                String u = null;
+                if (type instanceof TLRPC.TL_inlineButtonTypeUrl) {
+                    u = ((TLRPC.TL_inlineButtonTypeUrl) type).url;
+                } else if (type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                    u = ((TLRPC.TL_inlineButtonTypeWebView) type).url;
+                }
+                this.url = u;
+                CharSequence title = pageButton != null && pageButton.text != null ? RichMessageLayout.getString(pageButton.text) : "";
+                this.text = title != null ? title : "";
+
+                int iconRes = 0;
+                if (type instanceof TLRPC.TL_inlineButtonTypeWebView) {
+                    iconRes = R.drawable.bot_webview;
+                } else if (!TextUtils.isEmpty(url)) {
+                    iconRes = R.drawable.mini_external_link;
+                }
+                if (iconRes != 0) {
+                    try {
+                        this.icon = ApplicationLoader.applicationContext.getResources().getDrawable(iconRes).mutate();
+                    } catch (Exception ignore) {}
+                }
+            }
+
+            public boolean contains(float px, float py) {
+                return px >= x && px <= x + width && py >= y && py <= y + height;
+            }
+        }
+
+        public RichButtonRowBlock(RichMessageLayout root, Rect padding, int maxWidth, TL_iv.pageBlockButtonRow pageBlockButtonRow) {
+            super(root, padding, maxWidth);
+            accessibilityLabelResId = R.string.AccDescrIVButtons;
+            if (pageBlockButtonRow != null && pageBlockButtonRow.buttons != null) {
+                for (int i = 0; i < pageBlockButtonRow.buttons.size(); i++) {
+                    TL_iv.pageButton pb = pageBlockButtonRow.buttons.get(i);
+                    if (pb != null) {
+                        buttons.add(new Button(root, pb));
+                    }
+                }
+            }
+            layoutButtons(this.maxWidth);
+        }
+
+        private void layoutButtons(int width) {
+            lastCalculatedWidth = width;
+            final int count = buttons.size();
+            if (count == 0) return;
+            final int gap = dp(GAP);
+            final int totalGaps = gap * (count - 1);
+            final int available = Math.max(dp(40), width - totalGaps);
+            final int btnWidth = Math.max(dp(40), available / count);
+            final int btnHeight = dp(38);
+
+            TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            textPaint.setTextSize(dp(14));
+            textPaint.setTypeface(AndroidUtilities.bold());
+
+            int curX = 0;
+            for (int i = 0; i < count; i++) {
+                Button btn = buttons.get(i);
+                btn.x = curX;
+                btn.y = dp(2);
+                btn.width = (i == count - 1) ? (width - curX) : btnWidth;
+                btn.height = btnHeight;
+
+                int textMaxW = Math.max(dp(20), btn.width - dp(btn.icon != null ? 36 : 16));
+                try {
+                    btn.textLayout = new StaticLayout(btn.text, textPaint, textMaxW, Layout.Alignment.ALIGN_CENTER, 1.0f, 0, false);
+                } catch (Exception ignore) {
+                    btn.textLayout = null;
+                }
+                curX += btn.width + gap;
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            if (buttons.isEmpty()) return;
+            final int width = Math.max(dp(40), this.maxWidth);
+            if (lastCalculatedWidth != width) {
+                layoutButtons(width);
+            }
+            final int count = buttons.size();
+
+            Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            textPaint.setTextSize(dp(14));
+            textPaint.setTypeface(AndroidUtilities.bold());
+
+            final int defaultColor = root.getThemedColor(root.isOut() ? Theme.key_chat_messageLinkOut : Theme.key_chat_messageLinkIn);
+
+            for (int i = 0; i < count; i++) {
+                Button btn = buttons.get(i);
+                int color = defaultColor;
+                if (btn.style != null) {
+                    if (btn.style.bg_danger) {
+                        color = root.getThemedColor(Theme.key_text_RedBold);
+                    } else if (btn.style.bg_success) {
+                        color = root.getThemedColor(Theme.key_windowBackgroundWhiteGreenText);
+                    }
+                }
+
+                bgPaint.setColor(btn.pressed ? Theme.multAlpha(color, 0.28f) : Theme.multAlpha(color, 0.14f));
+                AndroidUtilities.rectTmp.set(btn.x, btn.y, btn.x + btn.width, btn.y + btn.height);
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(8), dp(8), bgPaint);
+
+                if (btn.icon != null) {
+                    btn.icon.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                    int iconSize = dp(16);
+                    int iconX = btn.x + btn.width - dp(12) - iconSize;
+                    int iconY = btn.y + (btn.height - iconSize) / 2;
+                    btn.icon.setBounds(iconX, iconY, iconX + iconSize, iconY + iconSize);
+                    btn.icon.draw(canvas);
+                }
+
+                if (btn.textLayout != null) {
+                    textPaint.setColor(color);
+                    canvas.save();
+                    float textX = btn.x + (btn.width - (btn.icon != null ? dp(14) : 0) - btn.textLayout.getWidth()) / 2f;
+                    float textY = btn.y + (btn.height - btn.textLayout.getHeight()) / 2f;
+                    canvas.translate(textX, textY);
+                    btn.textLayout.draw(canvas);
+                    canvas.restore();
+                }
+            }
+        }
+
+        @Override
+        public int getHeight() {
+            return padding.top + dp(38 + 4) + padding.bottom;
+        }
+
+        @Override
+        public int getMinWidth() {
+            return padding.left + dp(60) + padding.right;
+        }
+
+        @Override
+        protected boolean onTouchEvent(MotionEvent event) {
+            final int act = event.getActionMasked();
+            final float x = event.getX();
+            final float y = event.getY();
+
+            if (act == MotionEvent.ACTION_DOWN) {
+                touchButton = findButtonAt(x, y);
+                if (touchButton != null) {
+                    touchButton.pressed = true;
+                    invalidateCell();
+                    return true;
+                }
+            } else if (act == MotionEvent.ACTION_MOVE) {
+                if (touchButton != null) {
+                    boolean inside = touchButton.contains(x, y);
+                    if (touchButton.pressed != inside) {
+                        touchButton.pressed = inside;
+                        invalidateCell();
+                    }
+                    return true;
+                }
+            } else if (act == MotionEvent.ACTION_UP || act == MotionEvent.ACTION_CANCEL) {
+                if (touchButton != null) {
+                    boolean inside = act == MotionEvent.ACTION_UP && touchButton.contains(x, y);
+                    touchButton.pressed = false;
+                    invalidateCell();
+                    if (inside) {
+                        onButtonClick(touchButton);
+                    }
+                    touchButton = null;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private Button findButtonAt(float x, float y) {
+            for (int i = 0; i < buttons.size(); i++) {
+                Button btn = buttons.get(i);
+                if (btn.contains(x, y)) {
+                    return btn;
+                }
+            }
+            return null;
+        }
+
+        private void onButtonClick(Button btn) {
+            if (btn == null) return;
+            Context context = root.view != null ? root.view.getContext() : (root.getCell() != null ? root.getCell().getContext() : ApplicationLoader.applicationContext);
+            if (!TextUtils.isEmpty(btn.url)) {
+                org.telegram.messenger.browser.Browser.openUrl(context, btn.url);
+            }
+        }
+
+        private void invalidateCell() {
+            if (root.view != null) {
+                root.view.invalidate();
+            } else if (root.getCell() != null) {
+                root.getCell().invalidate();
+            }
         }
     }
 

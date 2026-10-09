@@ -6305,8 +6305,8 @@ public class MessageObject {
                     }
                     if (!TextUtils.isEmpty(url) && out.length() > bStart) {
                         final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
-                        run.flags = TextStyleSpan.FLAG_STYLE_BOLD;
-                        out.setSpan(new URLSpanBrowser(url, run), bStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        run.flags = TextStyleSpan.FLAG_STYLE_BOLD | TextStyleSpan.FLAG_STYLE_TEXT_URL;
+                        out.setSpan(new URLSpanReplacement(url, run), bStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
                 }
             }
@@ -6344,8 +6344,8 @@ public class MessageObject {
             formatRichText(text.text, isOut, photoViewer, maxLength, out, flags);
             if (out.length() > start) {
                 final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
-                run.flags = flags;
-                out.setSpan(new URLSpanBrowser(text.url, run), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                run.flags = flags | TextStyleSpan.FLAG_STYLE_TEXT_URL;
+                out.setSpan(new URLSpanReplacement(text.url, run), start, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         } else if (text instanceof TL_iv.textEmail) {
             formatRichText(text.text, isOut, photoViewer, maxLength, out, flags);
@@ -6389,8 +6389,8 @@ public class MessageObject {
             }
             if (!TextUtils.isEmpty(url) && out.length() > btnStart) {
                 final TextStyleSpan.TextStyleRun run = new TextStyleSpan.TextStyleRun();
-                run.flags = flags | TextStyleSpan.FLAG_STYLE_BOLD;
-                out.setSpan(new URLSpanBrowser(url, run), btnStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                run.flags = flags | TextStyleSpan.FLAG_STYLE_BOLD | TextStyleSpan.FLAG_STYLE_TEXT_URL;
+                out.setSpan(new URLSpanReplacement(url, run), btnStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         if (out.length() > start && flags != 0) {
