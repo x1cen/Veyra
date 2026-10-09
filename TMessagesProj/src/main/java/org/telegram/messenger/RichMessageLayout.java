@@ -3668,7 +3668,7 @@ public class RichMessageLayout {
                 }
                 this.url = u;
                 CharSequence title = pageButton != null && pageButton.text != null ? RichMessageLayout.getString(pageButton.text) : "";
-                this.text = title != null ? title : "";
+                this.text = title != null ? title.toString() : "";
                 if (!TextUtils.isEmpty(url)) {
                     try {
                         Context context = root.view != null ? root.view.getContext() : (root.getCell() != null ? root.getCell().getContext() : ApplicationLoader.applicationContext);
@@ -3710,6 +3710,7 @@ public class RichMessageLayout {
 
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             textPaint.setTextSize(dp(14.5f));
+            textPaint.setColor(0xFFFFFFFF);
             textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
             int curX = 0;
@@ -3742,6 +3743,7 @@ public class RichMessageLayout {
             Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             textPaint.setTextSize(dp(14.5f));
+            textPaint.setColor(0xFFFFFFFF);
             textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
             for (int i = 0; i < count; i++) {
@@ -3777,6 +3779,7 @@ public class RichMessageLayout {
                 canvas.drawRoundRect(AndroidUtilities.rectTmp, radius, radius, bgPaint);
 
                 if (btn.textLayout != null) {
+                    btn.textLayout.getPaint().setColor(textColor);
                     textPaint.setColor(textColor);
                     canvas.save();
                     float textX = btn.x + (btn.width - btn.textLayout.getWidth()) / 2f;
