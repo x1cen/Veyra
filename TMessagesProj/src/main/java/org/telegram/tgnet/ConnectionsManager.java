@@ -389,13 +389,6 @@ public class ConnectionsManager extends BaseController {
             long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
             if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
                     && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
-                if (onComplete != null) {
-                    TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                    int currentPts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
-                    aff.pts = currentPts > 0 ? currentPts : 0;
-                    aff.pts_count = 0;
-                    AndroidUtilities.runOnUIThread(() -> onComplete.run(aff, null));
-                }
                 return;
             }
         } else if (object instanceof TLRPC.TL_channels_readHistory) {
@@ -407,34 +400,14 @@ public class ConnectionsManager extends BaseController {
             } catch (Throwable ignore) {}
             if (peerDialogId != 0 && org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
                     && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
-                if (onComplete != null) {
-                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
-                }
                 return;
             }
         } else if (org.telegram.messenger.VeyraConfig.isGhostHideSecretRead() && object instanceof TLRPC.TL_messages_readEncryptedHistory) {
-            if (onComplete != null) {
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
-            }
             return;
         }
         if (org.telegram.messenger.VeyraConfig.isGhostHideReadContents() && (
                 object instanceof TLRPC.TL_messages_readMessageContents ||
                 object instanceof TLRPC.TL_channels_readMessageContents)) {
-            if (onComplete != null) {
-                TLObject dummy;
-                if (object instanceof TLRPC.TL_messages_readMessageContents) {
-                    TLRPC.TL_messages_affectedMessages aff = new TLRPC.TL_messages_affectedMessages();
-                    // Use actual stored pts to avoid getDifference loop
-                    int currentPts = org.telegram.messenger.MessagesStorage.getInstance(currentAccount).getLastPtsValue();
-                    aff.pts = currentPts > 0 ? currentPts : 0;
-                    aff.pts_count = 0;
-                    dummy = aff;
-                } else {
-                    dummy = new TLRPC.TL_boolTrue();
-                }
-                AndroidUtilities.runOnUIThread(() -> onComplete.run(dummy, null));
-            }
             return;
         }
         if (object instanceof TLRPC.TL_messages_getMessagesViews) {
@@ -1184,8 +1157,19 @@ public class ConnectionsManager extends BaseController {
         return lastClassGuid++;
     }
 
+    private final Runnable isUpdatingTimeoutRunnable = () -> {
+        if (isUpdating) {
+            FileLog.d("isUpdating safety watchdog: auto-clearing stuck isUpdating state");
+            setIsUpdating(false);
+        }
+    };
+
     public void setIsUpdating(final boolean value) {
         AndroidUtilities.runOnUIThread(() -> {
+            AndroidUtilities.cancelRunOnUIThread(isUpdatingTimeoutRunnable);
+            if (value) {
+                AndroidUtilities.runOnUIThread(isUpdatingTimeoutRunnable, 7000L);
+            }
             if (isUpdating == value) {
                 return;
             }

@@ -2739,6 +2739,12 @@ public class ChatActivity extends BaseFragment implements
             if (ChatObject.isChannel(currentChat)) {
                 if (ChatObject.isNotInChat(currentChat) && !ChatObject.isMonoForum(currentChat) && !isThreadChat() && !isInScheduleMode()) {
                     waitingForGetDifference = true;
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (waitingForGetDifference) {
+                            waitingForGetDifference = false;
+                            firstLoadMessages();
+                        }
+                    }, 2000L);
                     getMessagesController().startShortPoll(currentChat, classGuid, false, isGettingDifference -> {
                         waitingForGetDifference = isGettingDifference;
                         if (!waitingForGetDifference) {
