@@ -3266,6 +3266,9 @@ public class ChatActivity extends BaseFragment implements
                     getMessagesController().loadMessages(dialog_id, mergeDialogId, loadInfo, initialMessagesSize, startLoadFromMessageId, 0, true, 0, classGuid, MessagesController.LOAD_AROUND_MESSAGE, 0, chatMode, threadMessageId, replyMaxReadId, lastLoadIndex++, isTopic);
                 }
             } else {
+                if (ChatObject.isChannel(currentChat) && ChatObject.isNotInChat(currentChat)) {
+                    forwardEndReached[0] = false;
+                }
                 if (historyPreloaded) {
                     lastLoadIndex++;
                 } else {

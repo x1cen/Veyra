@@ -12033,7 +12033,10 @@ public class MessagesController extends BaseController implements NotificationCe
         } else if (mode == ChatActivity.MODE_SAVED) {
             reload = resCount == 0 && (!isInitialLoading || (SystemClock.elapsedRealtime() - lastSavedServerQueryTime.get(threadMessageId, 0L)) > 60 * 1000 || isCache);
         } else {
-            reload = resCount == 0 && (!isInitialLoading || (SystemClock.elapsedRealtime() - lastServerQueryTime.get(dialogId, 0L)) > 60 * 1000 || (isCache && isTopic));
+            final TLRPC.Chat chat = getChat(-dialogId);
+            boolean isNotInChannel = chat != null && ChatObject.isChannel(chat) && ChatObject.isNotInChat(chat);
+            boolean queryAllowed = (SystemClock.elapsedRealtime() - lastServerQueryTime.get(dialogId, 0L)) > 30 * 1000;
+            reload = (resCount == 0 || isNotInChannel || (isInitialLoading && queryAllowed)) && (!isInitialLoading || queryAllowed || (isCache && isTopic) || isNotInChannel);
         }
         if (!DialogObject.isEncryptedDialog(dialogId) && isCache && reload) {
             if (mode == ChatActivity.MODE_SCHEDULED) {
