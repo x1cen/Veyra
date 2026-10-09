@@ -95,13 +95,15 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         public final int date;
         public final int count;
         public final String action;
+        public final long userId;
 
-        public ReactionItem(String emoji, String title, int date, int count, String action) {
+        public ReactionItem(String emoji, String title, int date, int count, String action, long userId) {
             this.emoji = emoji;
             this.title = title;
             this.date = date;
             this.count = count;
             this.action = action;
+            this.userId = userId;
         }
     }
 
@@ -193,26 +195,29 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         // 2. Load Reaction History
         List<VeyraEditHistoryManager.ReactionEntry> dbReactions = VeyraEditHistoryManager.getReactionHistory(dialogId, messageId);
+        long currentSelfId = UserConfig.getInstance(currentAccount).getClientUserId();
         if (dbReactions != null && !dbReactions.isEmpty()) {
+            HashSet<String> seen = new HashSet<>();
             for (int i = 0; i < dbReactions.size(); i++) {
                 VeyraEditHistoryManager.ReactionEntry entry = dbReactions.get(i);
+                // Ignore self reactions unless explicitly enabled in settings
+                if (!VeyraConfig.reactionHistoryIncludeSelf && (entry.userId == currentSelfId || (entry.userId == 0 && entry.count == 1 && currentSelfId != 0))) {
+                    continue;
+                }
+                // Avoid duplicate same-action entries
+                String act = entry.action != null ? entry.action : "add";
+                String key = entry.reaction + "_" + entry.userId + "_" + act;
+                if (!seen.add(key)) {
+                    continue;
+                }
                 String userName;
                 if (entry.userId != 0) {
                     TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(entry.userId);
-                    if (user != null) {
-                        if (!TextUtils.isEmpty(user.username)) {
-                            userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
-                        } else {
-                            userName = UserObject.getUserName(user);
-                        }
-                    } else {
-                        userName = "User " + entry.userId;
-                    }
+                    userName = user != null ? UserObject.getUserName(user) : ("User " + entry.userId);
                 } else {
                     userName = LocaleController.getString("Reactions", R.string.Reactions);
                 }
-                String action = entry.action != null ? entry.action : "add";
-                reactionItems.add(new ReactionItem(entry.reaction, userName, entry.date, entry.count, action));
+                reactionItems.add(new ReactionItem(entry.reaction, userName, entry.date, entry.count, act, entry.userId));
             }
         } else if (currentMessageObject.messageOwner != null && currentMessageObject.messageOwner.reactions != null) {
             // Fallback: load live reactions
@@ -224,20 +229,14 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                     if (pr != null) {
                         String emoji = getReactionEmoji(pr.reaction);
                         long peerId = MessageObject.getPeerId(pr.peer_id);
+                        if (!VeyraConfig.reactionHistoryIncludeSelf && peerId == currentSelfId) {
+                            continue;
+                        }
                         String key = emoji + "_" + peerId;
                         if (seen.add(key)) {
                             TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(peerId);
-                            String userName;
-                            if (user != null) {
-                                if (!TextUtils.isEmpty(user.username)) {
-                                    userName = "@" + user.username + " (" + UserObject.getUserName(user) + ")";
-                                } else {
-                                    userName = UserObject.getUserName(user);
-                                }
-                            } else {
-                                userName = peerId != 0 ? ("User " + peerId) : LocaleController.getString("Reactions", R.string.Reactions);
-                            }
-                            reactionItems.add(new ReactionItem(emoji, userName, pr.date, 1, "add"));
+                            String userName = user != null ? UserObject.getUserName(user) : (peerId != 0 ? ("User " + peerId) : LocaleController.getString("Reactions", R.string.Reactions));
+                            reactionItems.add(new ReactionItem(emoji, userName, pr.date, 1, "add", peerId));
                         }
                     }
                 }
@@ -246,9 +245,12 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 for (int i = 0; i < reactions.results.size(); i++) {
                     TLRPC.ReactionCount rc = reactions.results.get(i);
                     if (rc != null) {
+                        if (!VeyraConfig.reactionHistoryIncludeSelf && rc.chosen) {
+                            continue;
+                        }
                         String emoji = getReactionEmoji(rc.reaction);
                         String detail = rc.chosen ? " (You)" : "";
-                        reactionItems.add(new ReactionItem(emoji, "Reaction" + detail, 0, rc.count, "add"));
+                        reactionItems.add(new ReactionItem(emoji, "Reaction" + detail, 0, rc.count, "add", 0));
                     }
                 }
             }
@@ -843,7 +845,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            return false;
+            int pos = holder.getAdapterPosition();
+            return pos >= 0 && pos < reactionItems.size() && reactionItems.get(pos).userId > 0;
         }
 
         @NonNull
@@ -855,10 +858,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             card.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
             card.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-            GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(AndroidUtilities.dp(14));
-            bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-            card.setBackground(bg);
+            card.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(14), Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_listSelector)));
 
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -919,6 +919,16 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             boolean isRemove = "remove".equals(item.action);
             actionView.setText(isRemove ? "- removed reaction" : "+ added reaction");
             actionView.setTextColor(isRemove ? 0xFFFF4444 : 0xFF10B981);
+
+            if (item.userId > 0) {
+                card.setOnClickListener(v -> {
+                    Bundle args = new Bundle();
+                    args.putLong("user_id", item.userId);
+                    presentFragment(new ProfileActivity(args));
+                });
+            } else {
+                card.setOnClickListener(null);
+            }
 
             if (item.date > 0) {
                 dateView.setText(LocaleController.formatDateTime(item.date, false));

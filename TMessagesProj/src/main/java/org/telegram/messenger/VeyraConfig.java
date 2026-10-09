@@ -319,6 +319,7 @@ public class VeyraConfig {
     public static boolean editHistoryDropOldest = true;
 
     public static boolean reactionHistoryEnabled = true;
+    public static boolean reactionHistoryIncludeSelf = false;
     public static int reactionHistoryLimit = 20;
     public static boolean reactionHistoryDropOldest = true;
     public static boolean reactionHistoryPrivate = true;
@@ -440,6 +441,7 @@ public class VeyraConfig {
         editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
 
         reactionHistoryEnabled = preferences.getBoolean("reactionHistoryEnabled", true);
+        reactionHistoryIncludeSelf = preferences.getBoolean("reactionHistoryIncludeSelf", false);
         reactionHistoryLimit = preferences.getInt("reactionHistoryLimit", 20);
         reactionHistoryDropOldest = preferences.getBoolean("reactionHistoryDropOldest", true);
         reactionHistoryPrivate = preferences.getBoolean("reactionHistoryPrivate", true);
@@ -1003,6 +1005,10 @@ public class VeyraConfig {
     public static void setReactionHistoryEnabled(boolean val) {
         reactionHistoryEnabled = val;
         save("reactionHistoryEnabled", val);
+    }
+    public static void setReactionHistoryIncludeSelf(boolean val) {
+        reactionHistoryIncludeSelf = val;
+        save("reactionHistoryIncludeSelf", val);
     }
     public static void setReactionHistoryLimit(int val) {
         reactionHistoryLimit = val;

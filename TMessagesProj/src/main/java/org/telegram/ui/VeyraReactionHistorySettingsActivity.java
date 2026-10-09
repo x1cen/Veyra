@@ -33,6 +33,13 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
                 v -> VeyraConfig.setReactionHistoryEnabled(v),
                 true
         ));
+        r.add(VeyraSettingsRow.toggle(
+                "Include My Own Reactions",
+                "Record reactions sent by your own account in the history",
+                () -> VeyraConfig.reactionHistoryIncludeSelf,
+                v -> VeyraConfig.setReactionHistoryIncludeSelf(v),
+                true
+        ));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraChatTypes", R.string.VeyraChatTypes)));

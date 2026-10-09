@@ -432,6 +432,13 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
+        if (object instanceof TLRPC.TL_messages_getMessagesViews) {
+            TLRPC.TL_messages_getMessagesViews viewsReq = (TLRPC.TL_messages_getMessagesViews) object;
+            long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(viewsReq.peer);
+            if (org.telegram.messenger.VeyraConfig.isGhostHideChannelViews(peerDialogId)) {
+                viewsReq.increment = false;
+            }
+        }
         if (object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
             long storiesPeerId = 0;
             try {

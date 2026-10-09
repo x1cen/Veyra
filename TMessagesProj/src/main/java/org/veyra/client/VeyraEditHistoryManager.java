@@ -362,9 +362,15 @@ public final class VeyraEditHistoryManager {
         if (!VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
             return;
         }
-        // Ignore own reactions
-        if (selfUserId != 0 && userId == selfUserId) {
-            return;
+        // Ignore own reactions unless enabled in settings
+        long currentSelfId = org.telegram.messenger.UserConfig.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getClientUserId();
+        if (!VeyraConfig.reactionHistoryIncludeSelf) {
+            if (selfUserId != 0 && userId == selfUserId) {
+                return;
+            }
+            if (currentSelfId != 0 && userId == currentSelfId) {
+                return;
+            }
         }
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
@@ -380,8 +386,8 @@ public final class VeyraEditHistoryManager {
                     int lastCount = lastCursor.getInt(0);
                     if (newCount < lastCount) {
                         action = "remove";
-                    } else if (newCount == lastCount) {
-                        // No change — skip
+                    } else if (newCount == lastCount && userId == 0) {
+                        // No count change and no user info — skip
                         lastCursor.close();
                         return;
                     }
@@ -392,7 +398,7 @@ public final class VeyraEditHistoryManager {
             // For user-specific reactions: avoid duplicate user+reaction entry for same action
             if (userId != 0) {
                 Cursor c = db.rawQuery(
-                        "SELECT action FROM " + REACTION_TABLE_NAME +
+                        "SELECT COALESCE(action, 'add') FROM " + REACTION_TABLE_NAME +
                                 " WHERE dialog_id = ? AND message_id = ? AND user_id = ? AND reaction = ? ORDER BY id DESC LIMIT 1",
                         new String[]{String.valueOf(dialogId), String.valueOf(messageId),
                                 String.valueOf(userId), reaction});
@@ -401,7 +407,7 @@ public final class VeyraEditHistoryManager {
                         String lastAction = c.getString(0);
                         c.close();
                         if (action.equals(lastAction)) {
-                            return; // same action repeated — skip
+                            return; // same action repeated by this user — skip
                         }
                     } else {
                         c.close();

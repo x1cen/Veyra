@@ -17703,7 +17703,6 @@ public class MessagesController extends BaseController implements NotificationCe
                                     if (obj.messageOwner != null) {
                                         obj.messageOwner.isDeleted = true;
                                     }
-                                    obj.deleted = true;
                                     break;
                                 }
                             }
@@ -17725,7 +17724,6 @@ public class MessagesController extends BaseController implements NotificationCe
                                 for (int b = 0, size2 = ids.size(); b < size2; b++) {
                                     if (obj.getId() == ids.get(b)) {
                                         obj.messageOwner.isDeleted = true;
-                                        obj.deleted = true;
                                         break;
                                     }
                                 }
@@ -17736,7 +17734,6 @@ public class MessagesController extends BaseController implements NotificationCe
             });
             if (isAntiDeleteAllowed) {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
-                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
             } else {
                 List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
