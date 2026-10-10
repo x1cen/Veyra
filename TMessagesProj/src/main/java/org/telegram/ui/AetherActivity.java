@@ -1,11 +1,7 @@
 package org.telegram.ui;
 
-import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.Gravity;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -20,6 +16,7 @@ import org.veyra.client.aether.AetherConfig;
 import org.veyra.client.aether.AetherController;
 import org.veyra.client.aether.AetherDownloader;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +39,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
     }
 
     @Override
-    protected String getTitle() {
+    protected String getScreenTitle() {
         return "Aether";
     }
 
@@ -76,15 +73,16 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.toggle(
                 "Enable Aether",
                 statusStr,
-                isEnabled,
-                (view, isChecked) -> {
+                AetherConfig::isEnabled,
+                isChecked -> {
                     if (isChecked) {
                         AetherController.getInstance().start();
                     } else {
                         AetherController.getInstance().stop();
                     }
                     reloadRows();
-                }
+                },
+                true
         ));
 
         r.add(VeyraSettingsRow.detail(
@@ -172,11 +170,12 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 r.add(VeyraSettingsRow.toggle(
                         "TLS Fragmentation",
                         "Split ClientHello",
-                        AetherConfig.isMasqueFragment(),
-                        (view, isChecked) -> {
+                        AetherConfig::isMasqueFragment,
+                        isChecked -> {
                             AetherConfig.setMasqueFragment(isChecked);
                             reloadRows();
-                        }
+                        },
+                        true
                 ));
             }
 
@@ -210,31 +209,34 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.toggle(
                 "Encrypted Client Hello",
                 "Hide SNI via ECH",
-                AetherConfig.isEch(),
-                (view, isChecked) -> {
+                AetherConfig::isEch,
+                isChecked -> {
                     AetherConfig.setEch(isChecked);
                     reloadRows();
-                }
+                },
+                true
         ));
 
         r.add(VeyraSettingsRow.toggle(
                 "Direct Iranian Sites",
                 "Bypass Iran LAN & sites",
-                AetherConfig.isBypassIran(),
-                (view, isChecked) -> {
+                AetherConfig::isBypassIran,
+                isChecked -> {
                     AetherConfig.setBypassIran(isChecked);
                     reloadRows();
-                }
+                },
+                true
         ));
 
         r.add(VeyraSettingsRow.toggle(
                 "Block Ads & Trackers",
                 "In-tunnel ad-block",
-                AetherConfig.isBlockAds(),
-                (view, isChecked) -> {
+                AetherConfig::isBlockAds,
+                isChecked -> {
                     AetherConfig.setBlockAds(isChecked);
                     reloadRows();
-                }
+                },
+                true
         ));
 
         r.add(VeyraSettingsRow.shadow());
@@ -266,11 +268,12 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.toggle(
                 "Quick Reconnect",
                 "Reuse last healthy IP",
-                AetherConfig.isQuickReconnect(),
-                (view, isChecked) -> {
+                AetherConfig::isQuickReconnect,
+                isChecked -> {
                     AetherConfig.setQuickReconnect(isChecked);
                     reloadRows();
-                }
+                },
+                false
         ));
 
         r.add(VeyraSettingsRow.shadow());
@@ -487,7 +490,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Engine Logs");
 
-        List<String> logs = AetherController.getInstance().getRecentLogs();
+        List<String> logs = AetherController.getInstance().getLogs();
         StringBuilder sb = new StringBuilder();
         for (String line : logs) {
             sb.append(line).append("\n");
@@ -516,12 +519,12 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         builder.setMessage("Fetch the latest release binary from GitHub?");
         builder.setPositiveButton("Download", (d, which) -> {
             BulletinFactory.of(AetherActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Downloading core...").show();
-            AetherDownloader.downloadCore(new AetherDownloader.DownloadCallback() {
+            AetherDownloader.downloadCore(new AetherDownloader.DownloadListener() {
                 @Override
-                public void onProgress(int percent) {}
+                public void onProgress(int percent, long downloadedBytes, long totalBytes) {}
 
                 @Override
-                public void onComplete(java.io.File file) {
+                public void onSuccess(File binaryFile) {
                     AndroidUtilities.runOnUIThread(() -> {
                         BulletinFactory.of(AetherActivity.this).createSimpleBulletin(R.raw.download_finish, "Core downloaded").show();
                     });
