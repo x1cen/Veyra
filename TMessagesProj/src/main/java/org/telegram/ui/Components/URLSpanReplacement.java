@@ -54,7 +54,7 @@ public class URLSpanReplacement extends URLSpan {
         if (style != null) {
             style.applyStyle(p);
         }
-        p.setUnderlineText(false);
-        p.setFlags(p.getFlags() &~ android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+        p.setUnderlineText(true);
+        p.setFlags(p.getFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
     }
 }
