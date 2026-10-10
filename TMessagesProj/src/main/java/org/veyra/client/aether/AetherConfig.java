@@ -15,10 +15,11 @@ public class AetherConfig {
 
     private static final String PREF_NAME = "veyra_aether";
 
-    public static final int PROTOCOL_MASQUE = 0;
-    public static final int PROTOCOL_WIREGUARD = 1;
-    public static final int PROTOCOL_GOOL = 2;
-    public static final int PROTOCOL_MIM = 3;
+    public static final int PROTOCOL_AUTO = 0;
+    public static final int PROTOCOL_MASQUE = 1;
+    public static final int PROTOCOL_WIREGUARD = 2;
+    public static final int PROTOCOL_GOOL = 3;
+    public static final int PROTOCOL_MIM = 4;
 
     public static final int BACKEND_AETHER = 0;
     public static final int BACKEND_AETHER_PSIPHON = 1;
@@ -26,22 +27,6 @@ public class AetherConfig {
     public static final int BACKEND_AETHER_TOR = 3;
     public static final int BACKEND_TOR_PSIPHON = 4;
     public static final int BACKEND_TOR_AETHER = 5;
-
-    public static int getBackend() {
-        return getPrefs().getInt("backend", BACKEND_AETHER);
-    }
-
-    public static void setBackend(int backend) {
-        getPrefs().edit().putInt("backend", backend).apply();
-    }
-
-    public static String getExitCountry() {
-        return getPrefs().getString("exit_country", "");
-    }
-
-    public static void setExitCountry(String country) {
-        getPrefs().edit().putString("exit_country", country != null ? country.trim() : "").apply();
-    }
 
     public static final int CARRIER_H3 = 0;
     public static final int CARRIER_H2 = 1;
@@ -73,8 +58,29 @@ public class AetherConfig {
         getPrefs().edit().putBoolean("enabled", enabled).apply();
     }
 
+    public static int getBackend() {
+        return getPrefs().getInt("backend", BACKEND_AETHER);
+    }
+
+    public static void setBackend(int backend) {
+        getPrefs().edit().putInt("backend", backend).apply();
+    }
+
+    public static boolean isPsiphonBackend() {
+        int b = getBackend();
+        return b == BACKEND_AETHER_PSIPHON || b == BACKEND_TOR_PSIPHON;
+    }
+
+    public static String getExitCountry() {
+        return getPrefs().getString("exit_country", "");
+    }
+
+    public static void setExitCountry(String country) {
+        getPrefs().edit().putString("exit_country", country != null ? country.trim() : "").apply();
+    }
+
     public static int getProtocol() {
-        return getPrefs().getInt("protocol", PROTOCOL_MASQUE);
+        return getPrefs().getInt("protocol", PROTOCOL_AUTO);
     }
 
     public static void setProtocol(int protocol) {
@@ -111,6 +117,30 @@ public class AetherConfig {
 
     public static void setMasqueFragmentDelay(String delay) {
         getPrefs().edit().putString("masque_fragment_delay", delay).apply();
+    }
+
+    public static boolean isEch() {
+        return getPrefs().getBoolean("ech", true);
+    }
+
+    public static void setEch(boolean ech) {
+        getPrefs().edit().putBoolean("ech", ech).apply();
+    }
+
+    public static boolean isBypassIran() {
+        return getPrefs().getBoolean("bypass_iran", false);
+    }
+
+    public static void setBypassIran(boolean bypass) {
+        getPrefs().edit().putBoolean("bypass_iran", bypass).apply();
+    }
+
+    public static boolean isBlockAds() {
+        return getPrefs().getBoolean("block_ads", false);
+    }
+
+    public static void setBlockAds(boolean block) {
+        getPrefs().edit().putBoolean("block_ads", block).apply();
     }
 
     public static int getScanMode() {
@@ -201,7 +231,7 @@ public class AetherConfig {
         getPrefs().edit().putString("dns", dns != null ? dns.trim() : "").apply();
     }
 
-    public static List<String> toArgs() {
+    public static List<String> toArgs(int effectiveProtocol, boolean forceH2) {
         List<String> args = new ArrayList<>();
         int port = getSocksPort();
         args.add("--bind");
@@ -221,18 +251,15 @@ public class AetherConfig {
             args.add("--tor-reverse");
         }
 
-        String exit = getExitCountry();
-        if (!TextUtils.isEmpty(exit)) {
-            if (backend == BACKEND_AETHER_PSIPHON || backend == BACKEND_TOR_PSIPHON) {
+        if (isPsiphonBackend()) {
+            String exit = getExitCountry();
+            if (!TextUtils.isEmpty(exit)) {
                 args.add("--psiphon-region");
-                args.add(exit);
-            } else {
-                args.add("--exit-loc");
                 args.add(exit);
             }
         }
 
-        int protocol = getProtocol();
+        int protocol = effectiveProtocol;
         if (protocol == PROTOCOL_MASQUE) {
             args.add("--masque");
         } else if (protocol == PROTOCOL_WIREGUARD) {
@@ -293,7 +320,7 @@ public class AetherConfig {
 
         args.add(isQuickReconnect() ? "--quick-reconnect" : "--no-quick-reconnect");
 
-        if (protocol == PROTOCOL_MASQUE) {
+        if (protocol == PROTOCOL_MASQUE || protocol == PROTOCOL_MIM) {
             int noize = getNoizeMasque();
             if (noize == NOIZE_MASQUE_FIREWALL) {
                 args.add("--noize");
@@ -306,7 +333,7 @@ public class AetherConfig {
                 args.add("off");
             }
 
-            if (getMasqueCarrier() == CARRIER_H2) {
+            if (forceH2 || getMasqueCarrier() == CARRIER_H2) {
                 args.add("--h2");
                 if (isMasqueFragment()) {
                     args.add("--fragment");
@@ -345,6 +372,19 @@ public class AetherConfig {
             }
         }
 
+        if (isEch()) {
+            args.add("--ech");
+            args.add("auto");
+        }
+
+        if (isBypassIran()) {
+            args.add("--route-direct");
+        }
+
+        if (isBlockAds()) {
+            args.add("--route-block");
+        }
+
         String dns = getDns();
         if (!TextUtils.isEmpty(dns)) {
             args.add("--dns");
@@ -354,9 +394,9 @@ public class AetherConfig {
         return args;
     }
 
-    public static Map<String, String> toEnv() {
+    public static Map<String, String> toEnv(boolean forceH2) {
         Map<String, String> env = new HashMap<>();
-        if (getProtocol() == PROTOCOL_MASQUE && getMasqueCarrier() == CARRIER_H2) {
+        if (forceH2 || getMasqueCarrier() == CARRIER_H2) {
             env.put("AETHER_MASQUE_HTTP2", "1");
             if (isMasqueFragment()) {
                 env.put("AETHER_MASQUE_H2_FRAGMENT", "1");

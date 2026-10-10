@@ -212,6 +212,24 @@ public class AetherController {
         detachTelegramProxy();
     }
 
+    private boolean probeUdpDirect() {
+        try (java.net.DatagramSocket socket = new java.net.DatagramSocket()) {
+            socket.setSoTimeout(1200);
+            byte[] dns = new byte[]{
+                    0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x01, 'a', 0x01, 'b', 0x00, 0x00, 0x01, 0x00, 0x01
+            };
+            java.net.DatagramPacket p = new java.net.DatagramPacket(dns, dns.length, java.net.InetAddress.getByName("1.1.1.1"), 53);
+            socket.send(p);
+            byte[] buf = new byte[512];
+            java.net.DatagramPacket r = new java.net.DatagramPacket(buf, buf.length);
+            socket.receive(r);
+            return true;
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
     private void launchProcess(File binary) {
         updateState(STATE_STARTING, "Starting engine...", -1);
         supervisorThread = new Thread(() -> {
@@ -219,16 +237,34 @@ public class AetherController {
                 Context context = ApplicationLoader.applicationContext;
                 File workDir = AetherDownloader.getAetherDirectory();
 
+                int requestedProto = AetherConfig.getProtocol();
+                int effectiveProto = requestedProto;
+                boolean forceH2 = false;
+
+                if (requestedProto == AetherConfig.PROTOCOL_AUTO) {
+                    updateState(STATE_STARTING, "Probing network...", -1);
+                    boolean udpOk = probeUdpDirect();
+                    appendLog("[smart-auto] UDP probe result: " + (udpOk ? "reachable" : "throttled/blocked"));
+                    if (udpOk) {
+                        effectiveProto = AetherConfig.PROTOCOL_MASQUE;
+                        forceH2 = false;
+                    } else {
+                        effectiveProto = AetherConfig.PROTOCOL_MASQUE;
+                        forceH2 = true;
+                        appendLog("[smart-auto] UDP throttled; switching to MASQUE HTTP/2 + fragmentation");
+                    }
+                }
+
                 List<String> cmd = new ArrayList<>();
                 cmd.add(binary.getAbsolutePath());
-                cmd.addAll(AetherConfig.toArgs());
+                cmd.addAll(AetherConfig.toArgs(effectiveProto, forceH2));
 
                 ProcessBuilder pb = new ProcessBuilder(cmd);
                 pb.directory(workDir);
                 pb.redirectErrorStream(true);
 
                 Map<String, String> env = pb.environment();
-                env.putAll(AetherConfig.toEnv());
+                env.putAll(AetherConfig.toEnv(forceH2));
                 env.put("HOME", workDir.getAbsolutePath());
                 env.put("TMPDIR", workDir.getAbsolutePath());
                 env.put("AETHER_CONFIG", new File(workDir, "aether.toml").getAbsolutePath());
@@ -242,7 +278,7 @@ public class AetherController {
                 boolean portReady = awaitPort("127.0.0.1", port, 35000);
                 if (!portReady || !shouldRun) {
                     if (shouldRun) {
-                        updateState(STATE_ERROR, "Port timeout: engine did not bind", -1);
+                        updateState(STATE_ERROR, "Port timeout", -1);
                         stop();
                     }
                     return;

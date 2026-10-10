@@ -887,7 +887,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                             long ping = ac.getPing();
                             sub = "Connected" + (ping > 0 ? " • " + ping + " ms" : "");
                         } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_DISCONNECTED) {
-                            sub = "Disconnected — Tap to configure";
+                            sub = "Tap to configure";
+                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTING) {
+                            sub = "Connecting...";
+                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_SCANNING) {
+                            sub = "Scanning...";
+                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_RECONNECTING) {
+                            sub = "Reconnecting...";
                         } else {
                             sub = ac.getStatusText();
                         }
