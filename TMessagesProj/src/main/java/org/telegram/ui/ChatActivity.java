@@ -26908,21 +26908,21 @@ public class ChatActivity extends BaseFragment implements
             if (old.messageOwner != null && messageObject.messageOwner != null) {
                 String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
                 String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
-                boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
+                boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(messageObject.getId());
+                boolean textChanged = !TextUtils.equals(oldText, newText);
                 boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
-                boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
 
-                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                    messageObject.messageOwner.edit_date = 0;
-                } else if (!textChanged && wasEditedBefore) {
-                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
-                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                } else if (textChanged) {
+                if (textChanged || isLocalEdit) {
                     messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                     if (messageObject.messageOwner.edit_date == 0) {
                         messageObject.messageOwner.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
                     }
+                } else if (wasEditedBefore) {
+                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                } else {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
                 }
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {

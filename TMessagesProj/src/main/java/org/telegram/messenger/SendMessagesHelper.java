@@ -132,6 +132,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     private final SparseArray<MessageObject> unsentMessages = new SparseArray<>();
     private final SparseArray<TLRPC.Message> sendingMessages = new SparseArray<>();
     private final SparseArray<TLRPC.Message> editingMessages = new SparseArray<>();
+    private final android.util.SparseIntArray locallyEditedMessages = new android.util.SparseIntArray();
+
+    public void registerLocalMessageEdit(int messageId) {
+        if (messageId > 0) {
+            locallyEditedMessages.put(messageId, (int) (android.os.SystemClock.elapsedRealtime() / 1000));
+        }
+    }
+
+    public boolean isRecentlyEditedLocally(int messageId) {
+        if (messageId <= 0) return false;
+        int time = locallyEditedMessages.get(messageId, 0);
+        return time != 0 && ((int) (android.os.SystemClock.elapsedRealtime() / 1000) - time) < 120;
+    }
     private final SparseArray<TLRPC.Message> uploadMessages = new SparseArray<>();
     private final LongSparseArray<Integer> sendingMessagesIdDialogs = new LongSparseArray<>();
     private final LongSparseArray<Integer> uploadingMessagesIdDialogs = new LongSparseArray<>();
@@ -2845,6 +2858,13 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
         TLRPC.Message newMsg = messageObject.messageOwner;
         messageObject.cancelEditing = false;
+        registerLocalMessageEdit(messageObject.getId());
+        if (newMsg != null) {
+            newMsg.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+            if (newMsg.edit_date == 0) {
+                newMsg.edit_date = getConnectionsManager().getCurrentTime();
+            }
+        }
 
         int pollAddingIndex = -1;
 
@@ -3364,9 +3384,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             return 0;
         }
 
-        if (messageObject != null && messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.message)) {
-            if (!TextUtils.equals(messageObject.messageOwner.message, message)) {
-                long did = messageObject.getDialogId();
+        if (messageObject != null) {
+            registerLocalMessageEdit(messageObject.getId());
+            if (messageObject.messageOwner != null) {
+                messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                if (messageObject.messageOwner.edit_date == 0) {
+                    messageObject.messageOwner.edit_date = getConnectionsManager().getCurrentTime();
+                }
+                if (!TextUtils.isEmpty(messageObject.messageOwner.message)) {
+                    if (!TextUtils.equals(messageObject.messageOwner.message, message)) {
+                        long did = messageObject.getDialogId();
+                    }
+                }
             }
         }
 

@@ -16067,20 +16067,21 @@ public class MessagesStorage extends BaseController {
                                     if (oldMessage != null) {
                                         String oldText = oldMessage.message != null ? oldMessage.message : "";
                                         String newText = message.message != null ? message.message : "";
-                                        boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
+                                        boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(message.id);
+                                        boolean textChanged = !TextUtils.equals(oldText, newText);
                                         boolean wasEditedBefore = oldMessage.edit_date != 0 || (oldMessage.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
 
-                                        if (!textChanged && !wasEditedBefore) {
-                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                            message.edit_date = 0;
-                                        } else if (!textChanged && wasEditedBefore) {
-                                            message.edit_date = oldMessage.edit_date;
-                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                                        } else if (textChanged) {
+                                        if (textChanged || isLocalEdit) {
                                             message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                                             if (message.edit_date == 0) {
-                                                message.edit_date = oldMessage.edit_date > 0 ? oldMessage.edit_date : org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                                                message.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
                                             }
+                                        } else if (wasEditedBefore) {
+                                            message.edit_date = oldMessage.edit_date;
+                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                        } else {
+                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                            message.edit_date = 0;
                                         }
 
                                         if (textChanged && !oldMessage.out && !message.out) {

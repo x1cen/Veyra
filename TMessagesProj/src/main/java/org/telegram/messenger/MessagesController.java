@@ -19645,31 +19645,21 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (oldMsgOwner != null) {
                     String oldText = oldMsgOwner.message != null ? oldMsgOwner.message : "";
                     String newText = message.message != null ? message.message : "";
-                    boolean textChanged = !TextUtils.isEmpty(oldText) && !TextUtils.equals(oldText, newText);
+                    boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(message.id);
+                    boolean textChanged = !TextUtils.equals(oldText, newText);
                     boolean wasEditedBefore = oldMsgOwner.edit_date != 0 || (oldMsgOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
-                    boolean isCurrentlyEditing = (oldMsg != null && oldMsg.isEditing()) || message.send_state == MessageObject.MESSAGE_SEND_STATE_EDITING;
 
-                    // A reaction update sets edit_date but does NOT change text/media/entities/reply_markup.
-                    // We must NOT show "edited" label for pure reaction updates.
-                    boolean isOnlyReactionUpdate = !textChanged && !isCurrentlyEditing
-                            && message.edit_date != oldMsgOwner.edit_date
-                            && TextUtils.equals(oldText, newText);
-
-                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
-                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        message.edit_date = 0;
-                    } else if (isOnlyReactionUpdate && wasEditedBefore) {
-                        // Preserve previous edited state but don't advance edit_date to reaction timestamp
-                        message.edit_date = oldMsgOwner.edit_date;
-                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                    } else if (!textChanged && wasEditedBefore) {
-                        message.edit_date = oldMsgOwner.edit_date;
-                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                    } else if (textChanged) {
+                    if (textChanged || isLocalEdit) {
                         message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
                         if (message.edit_date == 0) {
                             message.edit_date = getConnectionsManager().getCurrentTime();
                         }
+                    } else if (wasEditedBefore) {
+                        message.edit_date = oldMsgOwner.edit_date;
+                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    } else {
+                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                        message.edit_date = 0;
                     }
 
                     if (textChanged
