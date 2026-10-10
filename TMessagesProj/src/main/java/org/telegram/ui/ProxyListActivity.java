@@ -96,10 +96,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int proxyEndRow;
     @Keep
     private int proxyAddRow;
+    private int proxyImportRow;
     private int proxyShadowRow;
-    private int rotationRow;
-    private int rotationTimeoutRow;
-    private int rotationTimeoutInfoRow;
+    private int discoveryRow;
     private int deleteAllRow;
     private int aetherHeaderRow = -1;
     private int aetherRow = -1;
@@ -413,6 +412,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         listView.setOnItemClickListener((view, position) -> {
             if (position == aetherRow) {
                 presentFragment(new AetherActivity());
+            } else if (position == discoveryRow) {
+                presentFragment(new ProxyDiscoveryActivity());
+            } else if (position == proxyImportRow) {
+                showImportDialog();
             } else if (position == useProxyRow) {
                 if (SharedConfig.currentProxy == null) {
                     if (!proxyList.isEmpty()) {
@@ -452,13 +455,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                         cell.updateStatus();
                     }
                 }
-            } else if (position == rotationRow) {
-                SharedConfig.proxyRotationEnabled = !SharedConfig.proxyRotationEnabled;
-                TextCheckCell textCheckCell = (TextCheckCell) view;
-                textCheckCell.setChecked(SharedConfig.proxyRotationEnabled);
-                SharedConfig.saveConfig();
-
-                updateRows(true);
+            } else if (position == discoveryRow) {
+                presentFragment(new ProxyDiscoveryActivity());
             } else if (position >= proxyStartRow && position < proxyEndRow) {
                 if (!selectedItems.isEmpty()) {
                     listAdapter.toggleSelected(position);
@@ -616,25 +614,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private void updateRows(boolean notify) {
         rowCount = 0;
         useProxyRow = rowCount++;
-        if (useProxySettings && SharedConfig.currentProxy != null && SharedConfig.proxyList.size() > 1 && IS_PROXY_ROTATION_AVAILABLE) {
-            rotationRow = rowCount++;
-            if (SharedConfig.proxyRotationEnabled) {
-                rotationTimeoutRow = rowCount++;
-                rotationTimeoutInfoRow = rowCount++;
-            } else {
-                rotationTimeoutRow = -1;
-                rotationTimeoutInfoRow = -1;
-            }
-        } else {
-            rotationRow = -1;
-            rotationTimeoutRow = -1;
-            rotationTimeoutInfoRow = -1;
-        }
-        if (rotationTimeoutInfoRow == -1) {
-            useProxyShadowRow = rowCount++;
-        } else {
-            useProxyShadowRow = -1;
-        }
+        discoveryRow = rowCount++;
+        useProxyShadowRow = rowCount++;
         aetherHeaderRow = rowCount++;
         aetherRow = rowCount++;
         aetherShadowRow = rowCount++;
@@ -681,6 +662,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             proxyEndRow = -1;
         }
         proxyAddRow = rowCount++;
+        proxyImportRow = rowCount++;
         proxyShadowRow = rowCount++;
         if (proxyList.size() >= 10) {
             deleteAllRow = rowCount++;
@@ -864,7 +846,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
-                        textCell.setText(getString(R.string.AddProxy), deleteAllRow != -1);
+                        textCell.setText(getString(R.string.AddProxy), true);
+                    } else if (position == proxyImportRow) {
+                        textCell.setText("Import Proxies from File", deleteAllRow != -1);
                     } else if (position == deleteAllRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText(getString(R.string.DeleteAllProxies), false);
@@ -883,9 +867,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 case VIEW_TYPE_TEXT_CHECK: {
                     TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                     if (position == useProxyRow) {
-                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, rotationRow != -1);
-                    } else if (position == rotationRow) {
-                        checkCell.setTextAndCheck(getString(R.string.UseProxyRotation), SharedConfig.proxyRotationEnabled, true);
+                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, true);
+                    } else if (position == discoveryRow) {
+                        boolean enabled = org.veyra.client.proxy.ProxyDiscoveryConfig.isEnabled();
+                        int interval = org.veyra.client.proxy.ProxyDiscoveryConfig.getIntervalMinutes();
+                        String sub = enabled ? "Active • " + interval + "m interval" : "P2C tournament & health pipeline";
+                        checkCell.setTextAndValueAndCheck("Auto Discovery", sub, enabled, false, false);
                     } else if (position == aetherRow) {
                         org.veyra.client.aether.AetherController ac = org.veyra.client.aether.AetherController.getInstance();
                         boolean enabled = org.veyra.client.aether.AetherConfig.isEnabled();
@@ -983,7 +970,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == rotationRow || position == aetherRow || position == proxyAddRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
+            return position == useProxyRow || position == discoveryRow || position == aetherRow || position == proxyAddRow || position == proxyImportRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
         }
 
         @Override
@@ -1031,6 +1018,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -2;
             } else if (position == proxyAddRow) {
                 return -3;
+            } else if (position == proxyImportRow) {
+                return -15;
             } else if (position == useProxyRow) {
                 return -4;
             } else if (position == connectionsHeaderRow) {
@@ -1043,12 +1032,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -14;
             } else if (position == deleteAllRow) {
                 return -8;
-            } else if (position == rotationRow) {
+            } else if (position == discoveryRow) {
                 return -9;
-            } else if (position == rotationTimeoutRow) {
-                return -10;
-            } else if (position == rotationTimeoutInfoRow) {
-                return -11;
             } else if (position >= proxyStartRow && position < proxyEndRow) {
                 return proxyList.get(position - proxyStartRow).hashCode();
             } else {
@@ -1060,19 +1045,112 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         public int getItemViewType(int position) {
             if (position == useProxyShadowRow || position == proxyShadowRow || position == aetherShadowRow) {
                 return VIEW_TYPE_SHADOW;
-            } else if (position == proxyAddRow || position == deleteAllRow) {
+            } else if (position == proxyAddRow || position == proxyImportRow || position == deleteAllRow) {
                 return VIEW_TYPE_TEXT_SETTING;
-            } else if (position == useProxyRow || position == rotationRow || position == aetherRow) {
+            } else if (position == useProxyRow || position == discoveryRow || position == aetherRow) {
                 return VIEW_TYPE_TEXT_CHECK;
             } else if (position == connectionsHeaderRow || position == aetherHeaderRow) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == rotationTimeoutRow) {
-                return VIEW_TYPE_SLIDE_CHOOSER;
             } else if (position >= proxyStartRow && position < proxyEndRow) {
                 return VIEW_TYPE_PROXY_DETAIL;
             } else {
                 return VIEW_TYPE_INFO;
             }
+        }
+    }
+
+    private void showImportDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Import Proxies");
+        String[] options = new String[]{"Paste Proxy List", "Select File (.txt, .json)"};
+        builder.setItems(options, (dialog, which) -> {
+            if (which == 0) {
+                showPasteImportDialog();
+            } else {
+                try {
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);
+                    intent.setType("*/*");
+                    startActivityForResult(intent, 218);
+                } catch (Exception e) {
+                    FileLog.e("ProxyListActivity", e);
+                }
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showPasteImportDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Paste Proxies");
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        editText.setHint("Paste links (tg://proxy?...) or server:port lines");
+        editText.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setCursorSize(AndroidUtilities.dp(20));
+        editText.setCursorWidth(1.5f);
+        editText.setMinLines(5);
+        editText.setMaxLines(10);
+        editText.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP);
+        editText.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        editText.setLineColors(Theme.getColor(Theme.key_dialogInputField), Theme.getColor(Theme.key_dialogInputFieldActivated), Theme.getColor(Theme.key_text_RedRegular));
+
+        FrameLayout frame = new FrameLayout(getParentActivity());
+        frame.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(10), AndroidUtilities.dp(24), AndroidUtilities.dp(4));
+        frame.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        builder.setView(frame);
+
+        builder.setPositiveButton("Import", (d, which) -> {
+            String text = editText.getText().toString();
+            if (TextUtils.isEmpty(text)) return;
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Importing proxies...").show();
+            org.veyra.client.proxy.ProxyImporter.importFromText(text, new org.veyra.client.proxy.ProxyImporter.ImportCallback() {
+                @Override
+                public void onProgress(int parsedCount) {}
+
+                @Override
+                public void onComplete(int totalImported, int duplicatesSkipped) {
+                    updateRows(true);
+                    String msg = "Imported " + totalImported + " proxies" + (duplicatesSkipped > 0 ? " (" + duplicatesSkipped + " dupes skipped)" : "");
+                    BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.contact_check, msg).show();
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.error, "Import failed: " + error.getMessage()).show();
+                }
+            });
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResultFragment(requestCode, resultCode, data);
+        if (requestCode == 218 && resultCode == android.app.Activity.RESULT_OK && data != null && data.getData() != null) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Reading proxy file...").show();
+            org.veyra.client.proxy.ProxyImporter.importFromFile(getParentActivity(), data.getData(), new org.veyra.client.proxy.ProxyImporter.ImportCallback() {
+                @Override
+                public void onProgress(int parsedCount) {}
+
+                @Override
+                public void onComplete(int totalImported, int duplicatesSkipped) {
+                    updateRows(true);
+                    String msg = "Imported " + totalImported + " proxies" + (duplicatesSkipped > 0 ? " (" + duplicatesSkipped + " dupes skipped)" : "");
+                    BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.contact_check, msg).show();
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.error, "Import failed: " + error.getMessage()).show();
+                }
+            });
         }
     }
 
