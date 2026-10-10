@@ -18,6 +18,30 @@ public class AetherConfig {
     public static final int PROTOCOL_MASQUE = 0;
     public static final int PROTOCOL_WIREGUARD = 1;
     public static final int PROTOCOL_GOOL = 2;
+    public static final int PROTOCOL_MIM = 3;
+
+    public static final int BACKEND_AETHER = 0;
+    public static final int BACKEND_AETHER_PSIPHON = 1;
+    public static final int BACKEND_TOR = 2;
+    public static final int BACKEND_AETHER_TOR = 3;
+    public static final int BACKEND_TOR_PSIPHON = 4;
+    public static final int BACKEND_TOR_AETHER = 5;
+
+    public static int getBackend() {
+        return getPrefs().getInt("backend", BACKEND_AETHER);
+    }
+
+    public static void setBackend(int backend) {
+        getPrefs().edit().putInt("backend", backend).apply();
+    }
+
+    public static String getExitCountry() {
+        return getPrefs().getString("exit_country", "");
+    }
+
+    public static void setExitCountry(String country) {
+        getPrefs().edit().putString("exit_country", country != null ? country.trim() : "").apply();
+    }
 
     public static final int CARRIER_H3 = 0;
     public static final int CARRIER_H2 = 1;
@@ -183,6 +207,31 @@ public class AetherConfig {
         args.add("--bind");
         args.add("127.0.0.1:" + port);
 
+        int backend = getBackend();
+        if (backend == BACKEND_AETHER_PSIPHON) {
+            args.add("--psiphon");
+        } else if (backend == BACKEND_TOR) {
+            args.add("--tor-only");
+        } else if (backend == BACKEND_AETHER_TOR) {
+            args.add("--tor");
+        } else if (backend == BACKEND_TOR_PSIPHON) {
+            args.add("--tor-only");
+            args.add("--psiphon");
+        } else if (backend == BACKEND_TOR_AETHER) {
+            args.add("--tor-reverse");
+        }
+
+        String exit = getExitCountry();
+        if (!TextUtils.isEmpty(exit)) {
+            if (backend == BACKEND_AETHER_PSIPHON || backend == BACKEND_TOR_PSIPHON) {
+                args.add("--psiphon-region");
+                args.add(exit);
+            } else {
+                args.add("--exit-loc");
+                args.add(exit);
+            }
+        }
+
         int protocol = getProtocol();
         if (protocol == PROTOCOL_MASQUE) {
             args.add("--masque");
@@ -190,6 +239,8 @@ public class AetherConfig {
             args.add("--wg");
         } else if (protocol == PROTOCOL_GOOL) {
             args.add("--gool");
+        } else if (protocol == PROTOCOL_MIM) {
+            args.add("--mim");
         }
 
         boolean hasManualPeer = false;

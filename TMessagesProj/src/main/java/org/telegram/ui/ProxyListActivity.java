@@ -970,7 +970,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == rotationRow || position == proxyAddRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
+            return position == useProxyRow || position == rotationRow || position == aetherRow || position == proxyAddRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
         }
 
         @Override
@@ -1022,6 +1022,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -4;
             } else if (position == connectionsHeaderRow) {
                 return -6;
+            } else if (position == aetherHeaderRow) {
+                return -12;
+            } else if (position == aetherRow) {
+                return -13;
+            } else if (position == aetherShadowRow) {
+                return -14;
             } else if (position == deleteAllRow) {
                 return -8;
             } else if (position == rotationRow) {

@@ -94,11 +94,48 @@ public class AetherActivity extends VeyraSettingsBaseActivity implements AetherC
 
         r.add(VeyraSettingsRow.shadow());
 
-        // 2. Protocol Selection
+        // 2. Network Backend & Exit Country
+        r.add(VeyraSettingsRow.header("Network Backend & Egress"));
+        int backend = AetherConfig.getBackend();
+        String backendStr;
+        if (backend == AetherConfig.BACKEND_AETHER_PSIPHON) {
+            backendStr = "Aether → Psiphon";
+        } else if (backend == AetherConfig.BACKEND_TOR) {
+            backendStr = "Tor";
+        } else if (backend == AetherConfig.BACKEND_AETHER_TOR) {
+            backendStr = "Aether → Tor";
+        } else if (backend == AetherConfig.BACKEND_TOR_PSIPHON) {
+            backendStr = "Tor → Psiphon";
+        } else if (backend == AetherConfig.BACKEND_TOR_AETHER) {
+            backendStr = "Tor → Aether";
+        } else {
+            backendStr = "Aether";
+        }
+
+        r.add(VeyraSettingsRow.detail(
+                "Network Backend",
+                () -> backendStr,
+                true,
+                this::showBackendPicker
+        ));
+
+        String exit = AetherConfig.getExitCountry();
+        String exitDisplay = exit.isEmpty() ? "Any / Automatic" : getCountryDisplayName(exit);
+        r.add(VeyraSettingsRow.detail(
+                "Exit Country",
+                () -> exitDisplay,
+                false,
+                this::showExitCountryPicker
+        ));
+
+        r.add(VeyraSettingsRow.shadow());
+
+        // 3. Protocol Selection
         r.add(VeyraSettingsRow.header("Protocol"));
         int proto = AetherConfig.getProtocol();
         String protoStr = (proto == AetherConfig.PROTOCOL_WIREGUARD) ? "WireGuard" :
-                (proto == AetherConfig.PROTOCOL_GOOL ? "Gool (WARP in WARP)" : "MASQUE (HTTP/3 over QUIC)");
+                (proto == AetherConfig.PROTOCOL_GOOL ? "Gool (WARP in WARP)" :
+                        (proto == AetherConfig.PROTOCOL_MIM ? "MIM (MASQUE in MASQUE)" : "MASQUE (HTTP/3 over QUIC)"));
 
         r.add(VeyraSettingsRow.detail(
                 "Active Protocol",
@@ -298,6 +335,64 @@ public class AetherActivity extends VeyraSettingsBaseActivity implements AetherC
         return r;
     }
 
+    private void showBackendPicker() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Select Network Backend");
+        String[] options = new String[]{
+                "Aether (WARP — Fastest)",
+                "Aether → Psiphon (Chained — Country exit selection)",
+                "Tor (Pure onion routing)",
+                "Aether → Tor (WARP tunnel carries Tor)",
+                "Tor → Psiphon (Tor carries Psiphon)",
+                "Tor → Aether (Tor carries Aether over HTTP/2)"
+        };
+        builder.setItems(options, (d, which) -> {
+            AetherConfig.setBackend(which);
+            reloadRows();
+        });
+        builder.setNegativeButton("Cancel", null);
+        showDialog(builder.create());
+    }
+
+    private void showExitCountryPicker() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Select Exit Country");
+        String[] codes = new String[]{"", "GB", "DE", "US", "NL", "CA", "FR", "TR", "JP", "SG"};
+        String[] options = new String[]{
+                "Any / Automatic (Default)",
+                "🇬🇧 United Kingdom (GB)",
+                "🇩🇪 Germany (DE)",
+                "🇺🇸 United States (US)",
+                "🇳🇱 Netherlands (NL)",
+                "🇨🇦 Canada (CA)",
+                "🇫🇷 France (FR)",
+                "🇹🇷 Turkey (TR)",
+                "🇯🇵 Japan (JP)",
+                "🇸🇬 Singapore (SG)"
+        };
+        builder.setItems(options, (d, which) -> {
+            AetherConfig.setExitCountry(codes[which]);
+            reloadRows();
+        });
+        builder.setNegativeButton("Cancel", null);
+        showDialog(builder.create());
+    }
+
+    private String getCountryDisplayName(String code) {
+        if ("GB".equalsIgnoreCase(code)) return "🇬🇧 United Kingdom";
+        if ("DE".equalsIgnoreCase(code)) return "🇩🇪 Germany";
+        if ("US".equalsIgnoreCase(code)) return "🇺🇸 United States";
+        if ("NL".equalsIgnoreCase(code)) return "🇳🇱 Netherlands";
+        if ("CA".equalsIgnoreCase(code)) return "🇨🇦 Canada";
+        if ("FR".equalsIgnoreCase(code)) return "🇫🇷 France";
+        if ("TR".equalsIgnoreCase(code)) return "🇹🇷 Turkey";
+        if ("JP".equalsIgnoreCase(code)) return "🇯🇵 Japan";
+        if ("SG".equalsIgnoreCase(code)) return "🇸🇬 Singapore";
+        return code;
+    }
+
     private void showProtocolPicker() {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -305,7 +400,8 @@ public class AetherActivity extends VeyraSettingsBaseActivity implements AetherC
         String[] options = new String[]{
                 "MASQUE (HTTP/3 over QUIC) — Modern & Recommended",
                 "WireGuard — Classic & High-speed UDP",
-                "Gool (WARP in WARP) — Two encrypted hops"
+                "Gool (WARP in WARP) — Two encrypted hops",
+                "MIM (MASQUE in MASQUE) — Two MASQUE hops"
         };
         builder.setItems(options, (d, which) -> {
             AetherConfig.setProtocol(which);
