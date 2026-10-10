@@ -28,8 +28,8 @@ public class AetherConfig {
     public static final int BACKEND_TOR_PSIPHON = 4;
     public static final int BACKEND_TOR_AETHER = 5;
 
-    public static final int CARRIER_H3 = 0;
-    public static final int CARRIER_H2 = 1;
+    public static final int CARRIER_H2 = 0;
+    public static final int CARRIER_H3 = 1;
 
     public static final int SCAN_BALANCED = 0;
     public static final int SCAN_TURBO = 1;
@@ -45,8 +45,8 @@ public class AetherConfig {
     public static final int NOIZE_MASQUE_GFW = 1;
     public static final int NOIZE_MASQUE_OFF = 2;
 
-    public static final int NOIZE_WG_BALANCED = 0;
-    public static final int NOIZE_WG_AGGRESSIVE = 1;
+    public static final int NOIZE_WG_AGGRESSIVE = 0;
+    public static final int NOIZE_WG_BALANCED = 1;
     public static final int NOIZE_WG_LIGHT = 2;
     public static final int NOIZE_WG_OFF = 3;
 
@@ -88,7 +88,8 @@ public class AetherConfig {
     }
 
     public static int getMasqueCarrier() {
-        return getPrefs().getInt("masque_carrier", CARRIER_H3);
+        // Iran recommendation: HTTP/2 is far more reliable on Iranian DPI than QUIC/UDP
+        return getPrefs().getInt("masque_carrier", CARRIER_H2);
     }
 
     public static void setMasqueCarrier(int carrier) {
@@ -96,7 +97,8 @@ public class AetherConfig {
     }
 
     public static boolean isMasqueFragment() {
-        return getPrefs().getBoolean("masque_fragment", false);
+        // Iran recommendation: TLS fragmentation splits ClientHello to defeat SNI filtering
+        return getPrefs().getBoolean("masque_fragment", true);
     }
 
     public static void setMasqueFragment(boolean fragment) {
@@ -120,6 +122,7 @@ public class AetherConfig {
     }
 
     public static boolean isEch() {
+        // Iran recommendation: ECH hides SNI entirely
         return getPrefs().getBoolean("ech", true);
     }
 
@@ -128,7 +131,8 @@ public class AetherConfig {
     }
 
     public static boolean isBypassIran() {
-        return getPrefs().getBoolean("bypass_iran", false);
+        // Iran recommendation: route domestic sites direct so local banking/services work
+        return getPrefs().getBoolean("bypass_iran", true);
     }
 
     public static void setBypassIran(boolean bypass) {
@@ -168,11 +172,20 @@ public class AetherConfig {
     }
 
     public static int getNoizeWg() {
-        return getPrefs().getInt("noize_wg", NOIZE_WG_BALANCED);
+        return getPrefs().getInt("noize_wg", NOIZE_WG_AGGRESSIVE);
     }
 
     public static void setNoizeWg(int noize) {
         getPrefs().edit().putInt("noize_wg", noize).apply();
+    }
+
+    public static int getMtu() {
+        // Iran recommendation: 1280 avoids path-MTU blackholing on Iranian mobile operators
+        return getPrefs().getInt("mtu", 1280);
+    }
+
+    public static void setMtu(int mtu) {
+        getPrefs().edit().putInt("mtu", mtu).apply();
     }
 
     public static String getPeer() {
@@ -231,7 +244,7 @@ public class AetherConfig {
         getPrefs().edit().putString("dns", dns != null ? dns.trim() : "").apply();
     }
 
-    public static List<String> toArgs(int effectiveProtocol, boolean forceH2) {
+    public static List<String> toArgs(int effectiveProtocol, boolean forceH2, boolean forceFragment) {
         List<String> args = new ArrayList<>();
         int port = getSocksPort();
         args.add("--bind");
@@ -333,9 +346,10 @@ public class AetherConfig {
                 args.add("off");
             }
 
-            if (forceH2 || getMasqueCarrier() == CARRIER_H2) {
+            boolean useH2 = forceH2 || getMasqueCarrier() == CARRIER_H2;
+            if (useH2) {
                 args.add("--h2");
-                if (isMasqueFragment()) {
+                if (forceFragment || isMasqueFragment()) {
                     args.add("--fragment");
                     String fSize = getMasqueFragmentSize();
                     if (!TextUtils.isEmpty(fSize)) {
@@ -351,12 +365,12 @@ public class AetherConfig {
             }
         } else {
             int noize = getNoizeWg();
-            if (noize == NOIZE_WG_BALANCED) {
-                args.add("--noize");
-                args.add("balanced");
-            } else if (noize == NOIZE_WG_AGGRESSIVE) {
+            if (noize == NOIZE_WG_AGGRESSIVE) {
                 args.add("--noize");
                 args.add("aggressive");
+            } else if (noize == NOIZE_WG_BALANCED) {
+                args.add("--noize");
+                args.add("balanced");
             } else if (noize == NOIZE_WG_LIGHT) {
                 args.add("--noize");
                 args.add("light");
@@ -377,6 +391,12 @@ public class AetherConfig {
             args.add("auto");
         }
 
+        int mtu = getMtu();
+        if (mtu > 0) {
+            args.add("--mtu");
+            args.add(String.valueOf(mtu));
+        }
+
         if (isBypassIran()) {
             args.add("--route-direct");
         }
@@ -394,11 +414,12 @@ public class AetherConfig {
         return args;
     }
 
-    public static Map<String, String> toEnv(boolean forceH2) {
+    public static Map<String, String> toEnv(boolean forceH2, boolean forceFragment) {
         Map<String, String> env = new HashMap<>();
-        if (forceH2 || getMasqueCarrier() == CARRIER_H2) {
+        boolean useH2 = forceH2 || getMasqueCarrier() == CARRIER_H2;
+        if (useH2) {
             env.put("AETHER_MASQUE_HTTP2", "1");
-            if (isMasqueFragment()) {
+            if (forceFragment || isMasqueFragment()) {
                 env.put("AETHER_MASQUE_H2_FRAGMENT", "1");
                 String fSize = getMasqueFragmentSize();
                 if (!TextUtils.isEmpty(fSize)) {
@@ -411,6 +432,10 @@ public class AetherConfig {
             }
         } else {
             env.put("AETHER_MASQUE_HTTP2", "0");
+        }
+        int mtu = getMtu();
+        if (mtu > 0) {
+            env.put("AETHER_MTU", String.valueOf(mtu));
         }
         return env;
     }

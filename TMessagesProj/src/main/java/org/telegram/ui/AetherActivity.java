@@ -2,15 +2,19 @@ package org.telegram.ui;
 
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.veyra.client.aether.AetherConfig;
 import org.veyra.client.aether.AetherController;
@@ -85,6 +89,16 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 true
         ));
 
+        String gw = ctrl.getGateway();
+        if (!TextUtils.isEmpty(gw) && state == AetherController.STATE_CONNECTED) {
+            r.add(VeyraSettingsRow.detail(
+                    "Connected Gateway",
+                    () -> gw,
+                    true,
+                    null
+            ));
+        }
+
         r.add(VeyraSettingsRow.detail(
                 "Core Engine Logs",
                 () -> "View output",
@@ -115,7 +129,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.detail(
                 "Backend",
                 () -> backendStr,
-                true,
+                AetherConfig.isPsiphonBackend(),
                 this::showBackendPicker
         ));
 
@@ -133,18 +147,18 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.shadow());
 
-        // 3. Protocol Selection
-        r.add(VeyraSettingsRow.header("Protocol"));
+        // 3. Protocol Selection & Obfuscation
+        r.add(VeyraSettingsRow.header("Protocol & Obfuscation"));
         int proto = AetherConfig.getProtocol();
         String protoStr;
         if (proto == AetherConfig.PROTOCOL_AUTO) {
-            protoStr = "Smart Auto";
+            protoStr = "Smart Auto (Iran Optimized)";
         } else if (proto == AetherConfig.PROTOCOL_WIREGUARD) {
             protoStr = "WireGuard";
         } else if (proto == AetherConfig.PROTOCOL_GOOL) {
             protoStr = "Gool (WARP+WARP)";
         } else if (proto == AetherConfig.PROTOCOL_MIM) {
-            protoStr = "MIM";
+            protoStr = "MIM (MASQUE+MASQUE)";
         } else {
             protoStr = "MASQUE";
         }
@@ -152,31 +166,49 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.detail(
                 "Active Protocol",
                 () -> protoStr,
-                false,
+                true,
                 this::showProtocolPicker
         ));
 
         if (proto == AetherConfig.PROTOCOL_MASQUE || proto == AetherConfig.PROTOCOL_AUTO || proto == AetherConfig.PROTOCOL_MIM) {
             int carrier = AetherConfig.getMasqueCarrier();
-            String carrierStr = (carrier == AetherConfig.CARRIER_H2) ? "HTTP/2 (TCP)" : "HTTP/3 (QUIC)";
+            String carrierStr = (carrier == AetherConfig.CARRIER_H2) ? "HTTP/2 (TCP 443)" : "HTTP/3 (QUIC / UDP)";
             r.add(VeyraSettingsRow.detail(
-                    "Carrier",
+                    "Carrier Transport",
                     () -> carrierStr,
-                    false,
+                    true,
                     this::showCarrierPicker
             ));
 
-            if (carrier == AetherConfig.CARRIER_H2) {
+            if (carrier == AetherConfig.CARRIER_H2 || proto == AetherConfig.PROTOCOL_AUTO) {
                 r.add(VeyraSettingsRow.toggle(
                         "TLS Fragmentation",
-                        "Split ClientHello",
+                        "Split ClientHello across TCP frames",
                         AetherConfig::isMasqueFragment,
                         isChecked -> {
                             AetherConfig.setMasqueFragment(isChecked);
                             reloadRows();
                         },
-                        true
+                        AetherConfig.isMasqueFragment()
                 ));
+
+                if (AetherConfig.isMasqueFragment()) {
+                    String fragSize = AetherConfig.getMasqueFragmentSize();
+                    r.add(VeyraSettingsRow.detail(
+                            "Fragment Size",
+                            () -> fragSize,
+                            true,
+                            () -> promptTextInput("Fragment Size", fragSize, "e.g. 8-24", AetherConfig::setMasqueFragmentSize)
+                    ));
+
+                    String fragDelay = AetherConfig.getMasqueFragmentDelay();
+                    r.add(VeyraSettingsRow.detail(
+                            "Fragment Delay (ms)",
+                            () -> fragDelay,
+                            true,
+                            () -> promptTextInput("Fragment Delay", fragDelay, "e.g. 5-15", AetherConfig::setMasqueFragmentDelay)
+                    ));
+                }
             }
 
             int noize = AetherConfig.getNoizeMasque();
@@ -190,14 +222,27 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             ));
         } else {
             int noize = AetherConfig.getNoizeWg();
-            String noizeStr = (noize == AetherConfig.NOIZE_WG_BALANCED) ? "Balanced" :
-                    (noize == AetherConfig.NOIZE_WG_AGGRESSIVE ? "Aggressive" :
+            String noizeStr = (noize == AetherConfig.NOIZE_WG_AGGRESSIVE) ? "Aggressive" :
+                    (noize == AetherConfig.NOIZE_WG_BALANCED ? "Balanced" :
                             (noize == AetherConfig.NOIZE_WG_LIGHT ? "Light" : "Off"));
             r.add(VeyraSettingsRow.detail(
                     "Noise Obfuscation",
                     () -> noizeStr,
-                    false,
+                    true,
                     this::showWgNoisePicker
+            ));
+
+            int keepalive = AetherConfig.getKeepalive();
+            String keepStr = keepalive > 0 ? keepalive + "s" : "Off";
+            r.add(VeyraSettingsRow.detail(
+                    "Persistent Keepalive",
+                    () -> keepStr,
+                    false,
+                    () -> promptTextInput("Keepalive (seconds)", String.valueOf(keepalive), "0 to disable", s -> {
+                        try {
+                            AetherConfig.setKeepalive(Integer.parseInt(s));
+                        } catch (Exception ignore) {}
+                    })
             ));
         }
 
@@ -219,7 +264,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.toggle(
                 "Direct Iranian Sites",
-                "Bypass Iran LAN & sites",
+                "Bypass Iran domestic LAN & sites",
                 AetherConfig::isBypassIran,
                 isChecked -> {
                     AetherConfig.setBypassIran(isChecked);
@@ -230,13 +275,21 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.toggle(
                 "Block Ads & Trackers",
-                "In-tunnel ad-block",
+                "In-tunnel ad-blocking rules",
                 AetherConfig::isBlockAds,
                 isChecked -> {
                     AetherConfig.setBlockAds(isChecked);
                     reloadRows();
                 },
                 true
+        ));
+
+        String dns = AetherConfig.getDns();
+        r.add(VeyraSettingsRow.detail(
+                "Tunnel DNS",
+                () -> dns,
+                false,
+                () -> promptTextInput("Tunnel DNS Servers", dns, "1.1.1.1,1.0.0.1", AetherConfig::setDns)
         ));
 
         r.add(VeyraSettingsRow.shadow());
@@ -252,7 +305,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.detail(
                 "Scan Mode",
                 () -> scanStr,
-                false,
+                true,
                 this::showScanModePicker
         ));
 
@@ -261,13 +314,25 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.detail(
                 "IP Version",
                 () -> ipStr,
-                false,
+                true,
                 this::showIpPicker
+        ));
+
+        int mtu = AetherConfig.getMtu();
+        r.add(VeyraSettingsRow.detail(
+                "Interface MTU",
+                () -> String.valueOf(mtu),
+                true,
+                () -> promptTextInput("Interface MTU", String.valueOf(mtu), "1280 (recommended)", s -> {
+                    try {
+                        AetherConfig.setMtu(Integer.parseInt(s));
+                    } catch (Exception ignore) {}
+                })
         ));
 
         r.add(VeyraSettingsRow.toggle(
                 "Quick Reconnect",
-                "Reuse last healthy IP",
+                "Reuse last healthy IP endpoint",
                 AetherConfig::isQuickReconnect,
                 isChecked -> {
                     AetherConfig.setQuickReconnect(isChecked);
@@ -287,22 +352,22 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             r.add(VeyraSettingsRow.detail(
                     "Outer Peer",
                     () -> TextUtils.isEmpty(outer) ? "Auto" : outer,
-                    false,
-                    () -> promptTextInput("Outer Peer", outer, AetherConfig::setWiwOuter)
+                    true,
+                    () -> promptTextInput("Outer Peer", outer, "IP:Port", AetherConfig::setWiwOuter)
             ));
             r.add(VeyraSettingsRow.detail(
                     "Inner Peer",
                     () -> TextUtils.isEmpty(inner) ? "Auto" : inner,
-                    false,
-                    () -> promptTextInput("Inner Peer", inner, AetherConfig::setWiwInner)
+                    true,
+                    () -> promptTextInput("Inner Peer", inner, "IP:Port", AetherConfig::setWiwInner)
             ));
         } else {
             String peer = AetherConfig.getPeer();
             r.add(VeyraSettingsRow.detail(
                     "Manual Peer",
                     () -> TextUtils.isEmpty(peer) ? "Auto" : peer,
-                    false,
-                    () -> promptTextInput("Manual Peer (IP:Port)", peer, AetherConfig::setPeer)
+                    true,
+                    () -> promptTextInput("Manual Peer", peer, "IP:Port", AetherConfig::setPeer)
             ));
         }
 
@@ -332,7 +397,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setBackend(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -357,7 +422,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setExitCountry(codes[which]);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -379,7 +444,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Select Protocol");
         String[] options = new String[]{
-                "Smart Auto (Recommended)",
+                "Smart Auto (Iran Optimized)",
                 "MASQUE",
                 "WireGuard",
                 "Gool (WARP+WARP)",
@@ -389,7 +454,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setProtocol(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -398,14 +463,14 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Carrier Transport");
         String[] options = new String[]{
-                "HTTP/3 (QUIC / UDP)",
-                "HTTP/2 (TCP 443)"
+                "HTTP/2 (TCP 443) — Recommended for Iran",
+                "HTTP/3 (QUIC / UDP)"
         };
         builder.setItems(options, (d, which) -> {
             AetherConfig.setMasqueCarrier(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -418,7 +483,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setNoizeMasque(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -426,12 +491,12 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("WireGuard Noise");
-        String[] options = new String[]{"Balanced", "Aggressive", "Light", "Off"};
+        String[] options = new String[]{"Aggressive (Recommended)", "Balanced", "Light", "Off"};
         builder.setItems(options, (d, which) -> {
             AetherConfig.setNoizeWg(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -444,7 +509,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setScanMode(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -457,31 +522,39 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             AetherConfig.setIpVersion(which);
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
-    private void promptTextInput(String title, String currentVal, OnTextEntered callback) {
+    private void promptTextInput(String title, String currentVal, String hint, OnTextEntered callback) {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(title);
-        final org.telegram.ui.Components.EditTextBoldCursor editText = new org.telegram.ui.Components.EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(16);
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         editText.setText(currentVal != null ? currentVal : "");
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHint("Auto");
+        editText.setHint(hint != null ? hint : "Auto");
         editText.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setCursorSize(AndroidUtilities.dp(20));
+        editText.setCursorWidth(1.5f);
+        editText.setSingleLine(true);
+        editText.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
+        editText.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        editText.setLineColors(Theme.getColor(Theme.key_dialogInputField), Theme.getColor(Theme.key_dialogInputFieldActivated), Theme.getColor(Theme.key_text_RedRegular));
 
         FrameLayout frame = new FrameLayout(getParentActivity());
-        frame.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(10), AndroidUtilities.dp(20), AndroidUtilities.dp(10));
+        frame.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(10), AndroidUtilities.dp(24), AndroidUtilities.dp(4));
         frame.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         builder.setView(frame);
 
-        builder.setPositiveButton("Save", (d, which) -> {
+        builder.setPositiveButton(LocaleController.getString("Save", R.string.Save), (d, which) -> {
             callback.onEntered(editText.getText().toString().trim());
             reloadRows();
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 
@@ -504,11 +577,12 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         textView.setText(sb.toString());
         textView.setTextSize(12);
         textView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        textView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         textView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
         scrollView.addView(textView);
 
         builder.setView(scrollView);
-        builder.setPositiveButton("Close", null);
+        builder.setPositiveButton(LocaleController.getString("Close", R.string.Close), null);
         showDialog(builder.create());
     }
 
@@ -538,7 +612,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 }
             });
         });
-        builder.setNegativeButton("Cancel", null);
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 

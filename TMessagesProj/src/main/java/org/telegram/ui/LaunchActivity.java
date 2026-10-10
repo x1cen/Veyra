@@ -452,6 +452,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             SharedConfig.lastPauseTime = (int) (SystemClock.elapsedRealtime() / 1000);
         }
         AndroidUtilities.fillStatusBarHeight(this, false);
+
+        if (org.veyra.client.aether.AetherConfig.isEnabled()) {
+            org.veyra.client.aether.AetherController.getInstance().start();
+        }
         actionBarLayout = new ActionBarLayout(this, true);
 
         frameLayout = new ActivityContentLayout(this);

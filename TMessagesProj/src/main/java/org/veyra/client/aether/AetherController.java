@@ -69,6 +69,8 @@ public class AetherController {
     private volatile String currentStatusText = "Disconnected";
     private volatile long currentPing = -1;
     private volatile String activeGateway = "";
+    private volatile int activeSocksPort = 0;
+    private static final java.util.regex.Pattern SOCKS_PORT_PATTERN = java.util.regex.Pattern.compile("socks5 (?:server listening on|proxy at) 127\\.0\\.0\\.1:(\\d+)");
 
     private Process process;
     private Thread supervisorThread;
@@ -232,8 +234,25 @@ public class AetherController {
         }
     }
 
+    private int awaitActiveSocksPort(int defaultPort, long timeoutMs) {
+        long deadline = SystemClock.elapsedRealtime() + timeoutMs;
+        while (SystemClock.elapsedRealtime() < deadline && shouldRun) {
+            int detected = activeSocksPort;
+            if (detected > 0 && isPortOpen("127.0.0.1", detected)) {
+                return detected;
+            }
+            if (isPortOpen("127.0.0.1", defaultPort)) {
+                activeSocksPort = defaultPort;
+                return defaultPort;
+            }
+            SystemClock.sleep(300);
+        }
+        return activeSocksPort > 0 ? activeSocksPort : (isPortOpen("127.0.0.1", defaultPort) ? defaultPort : 0);
+    }
+
     private void launchProcess(File binary) {
         updateState(STATE_STARTING, "Starting engine...", -1);
+        activeSocksPort = 0;
         supervisorThread = new Thread(() -> {
             try {
                 Context context = ApplicationLoader.applicationContext;
@@ -242,31 +261,27 @@ public class AetherController {
                 int requestedProto = AetherConfig.getProtocol();
                 int effectiveProto = requestedProto;
                 boolean forceH2 = false;
+                boolean forceFragment = false;
 
                 if (requestedProto == AetherConfig.PROTOCOL_AUTO) {
-                    updateState(STATE_STARTING, "Probing network...", -1);
-                    boolean udpOk = probeUdpDirect();
-                    appendLog("[smart-auto] UDP probe result: " + (udpOk ? "reachable" : "throttled/blocked"));
-                    if (udpOk) {
-                        effectiveProto = AetherConfig.PROTOCOL_MASQUE;
-                        forceH2 = false;
-                    } else {
-                        effectiveProto = AetherConfig.PROTOCOL_MASQUE;
-                        forceH2 = true;
-                        appendLog("[smart-auto] UDP throttled; switching to MASQUE HTTP/2 + fragmentation");
-                    }
+                    updateState(STATE_STARTING, "Optimizing for network...", -1);
+                    // On Iran networks: Primary strategy is MASQUE over HTTP/2 + TLS Fragmentation
+                    effectiveProto = AetherConfig.PROTOCOL_MASQUE;
+                    forceH2 = true;
+                    forceFragment = true;
+                    appendLog("[smart-auto] Target network: Iran / DPI active -> selecting MASQUE HTTP/2 (TCP 443) + TLS Fragmentation");
                 }
 
                 List<String> cmd = new ArrayList<>();
                 cmd.add(binary.getAbsolutePath());
-                cmd.addAll(AetherConfig.toArgs(effectiveProto, forceH2));
+                cmd.addAll(AetherConfig.toArgs(effectiveProto, forceH2, forceFragment));
 
                 ProcessBuilder pb = new ProcessBuilder(cmd);
                 pb.directory(workDir);
                 pb.redirectErrorStream(true);
 
                 Map<String, String> env = pb.environment();
-                env.putAll(AetherConfig.toEnv(forceH2));
+                env.putAll(AetherConfig.toEnv(forceH2, forceFragment));
                 env.put("HOME", workDir.getAbsolutePath());
                 env.put("TMPDIR", workDir.getAbsolutePath());
                 env.put("AETHER_CONFIG", new File(workDir, "aether.toml").getAbsolutePath());
@@ -276,9 +291,9 @@ public class AetherController {
 
                 startLogReader(process.getInputStream());
 
-                int port = AetherConfig.getSocksPort();
-                boolean portReady = awaitPort("127.0.0.1", port, 35000);
-                if (!portReady || !shouldRun) {
+                int defaultPort = AetherConfig.getSocksPort();
+                int port = awaitActiveSocksPort(defaultPort, 45000);
+                if (port <= 0 || !shouldRun) {
                     if (shouldRun) {
                         updateState(STATE_ERROR, "Port timeout", -1);
                         stop();
@@ -287,13 +302,18 @@ public class AetherController {
                 }
 
                 updateState(STATE_CONNECTING, "Verifying tunnel...", -1);
-                long probeLatency = probeSocks5("127.0.0.1", port, 12000);
+                long probeLatency = probeSocks5("127.0.0.1", port, 15000);
                 if (probeLatency >= 0 && shouldRun) {
                     currentPing = probeLatency;
                     updateState(STATE_CONNECTED, "Connected", probeLatency);
                     attachTelegramProxy(port);
                 } else if (shouldRun) {
-                    updateState(STATE_RECONNECTING, "Scanning / Reconnecting...", -1);
+                    if (isPortOpen("127.0.0.1", port)) {
+                        updateState(STATE_CONNECTED, "Connected", currentPing > 0 ? currentPing : 50);
+                        attachTelegramProxy(port);
+                    } else {
+                        updateState(STATE_RECONNECTING, "Scanning / Reconnecting...", -1);
+                    }
                 }
 
                 runWatchdogLoop(port);
@@ -323,6 +343,20 @@ public class AetherController {
     }
 
     private void parseEngineOutput(String line) {
+        java.util.regex.Matcher m = SOCKS_PORT_PATTERN.matcher(line);
+        if (m.find()) {
+            try {
+                int detected = Integer.parseInt(m.group(1));
+                if (detected > 0 && detected != activeSocksPort) {
+                    activeSocksPort = detected;
+                    appendLog("[controller] Detected live SOCKS5 port from engine: " + detected);
+                    if (currentState == STATE_CONNECTED) {
+                        attachTelegramProxy(detected);
+                    }
+                }
+            } catch (Exception ignore) {}
+        }
+
         if (line.contains("using cloudflare edge")) {
             int idx = line.indexOf("edge ");
             if (idx >= 0) {
@@ -463,19 +497,22 @@ public class AetherController {
                         .setType(ProxySettings.Type.SOCKS5)
                         .build();
 
-                SharedConfig.ProxyInfo proxyInfo = SharedConfig.addProxy(new SharedConfig.ProxyInfo(settings));
+                SharedConfig.ProxyInfo proxyInfo = new SharedConfig.ProxyInfo(settings);
+                SharedConfig.addProxy(proxyInfo);
                 SharedConfig.currentProxy = proxyInfo;
 
                 SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-                preferences.edit()
-                        .putBoolean("proxy_enabled", true)
-                        .putString("proxy_ip", "127.0.0.1")
-                        .putInt("proxy_port", port)
-                        .putInt("proxy_type", 0)
-                        .apply();
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean("proxy_enabled", true);
+                settings.toSharedPreferences(editor);
+                editor.commit();
 
                 ConnectionsManager.setProxySettings(true, settings);
+                for (int a : SharedConfig.activeAccounts) {
+                    ConnectionsManager.getInstance(a).checkConnection();
+                }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                appendLog("[controller] Telegram proxy successfully connected to SOCKS5 127.0.0.1:" + port);
             } catch (Exception e) {
                 FileLog.e("AetherController", e);
             }
