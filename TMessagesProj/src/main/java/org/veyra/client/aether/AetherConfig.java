@@ -37,6 +37,7 @@ public class AetherConfig {
     public static final int SCAN_TURBO = 1;
     public static final int SCAN_THOROUGH = 2;
     public static final int SCAN_VERIFIED = 3;
+    public static final int SCAN_STEALTH = 3;
     public static final int SCAN_IRONCLAD = 4;
 
     public static final int IP_V4 = 0;
@@ -241,6 +242,22 @@ public class AetherConfig {
 
     public static void setBlockAds(boolean block) {
         getPrefs().edit().putBoolean("block_ads", block).apply();
+    }
+
+    public static int getMtu() {
+        return getPrefs().getInt("mtu", 1280);
+    }
+
+    public static void setMtu(int mtu) {
+        getPrefs().edit().putInt("mtu", mtu).apply();
+    }
+
+    public static String getPeer() {
+        return getManualPeer();
+    }
+
+    public static void setPeer(String peer) {
+        setManualPeer(peer);
     }
 
     public static String getManualPeer() {
@@ -448,6 +465,10 @@ public class AetherConfig {
         }
 
         return args;
+    }
+
+    public static Map<String, String> toEnv(boolean forceH2, boolean forceFragment) {
+        return toEnv(PROTOCOL_AUTO, forceH2, forceFragment);
     }
 
     public static Map<String, String> toEnv(int effectiveProto, boolean forceH2, boolean forceFragment) {
