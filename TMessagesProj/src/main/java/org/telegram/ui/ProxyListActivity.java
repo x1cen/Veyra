@@ -183,9 +183,16 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
 
         public void setProxy(SharedConfig.ProxyInfo proxyInfo) {
-            textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
-                    ? proxyInfo.settings.getAddress() + " (WEB)"
-                    : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort());
+            boolean isAether = "127.0.0.1".equals(proxyInfo.settings.getAddress()) &&
+                    (proxyInfo.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
+                     proxyInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+            if (isAether) {
+                textView.setText("⚡ Aether (127.0.0.1:" + proxyInfo.settings.getPort() + ")");
+            } else {
+                textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
+                        ? proxyInfo.settings.getAddress() + " (WEB)"
+                        : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort());
+            }
             currentInfo = proxyInfo;
         }
 

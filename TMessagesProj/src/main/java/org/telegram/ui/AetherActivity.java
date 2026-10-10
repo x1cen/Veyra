@@ -101,9 +101,9 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.detail(
                 "Core Engine Logs",
-                () -> "View output",
+                () -> "Live Terminal",
                 false,
-                this::showLogsDialog
+                () -> presentFragment(new AetherLogsActivity())
         ));
 
         r.add(VeyraSettingsRow.shadow());

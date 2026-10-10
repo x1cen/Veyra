@@ -111,6 +111,14 @@ public class AetherController {
         return currentState;
     }
 
+    public String getGateway() {
+        return activeGateway;
+    }
+
+    public int getActivePort() {
+        return activeSocksPort > 0 ? activeSocksPort : AetherConfig.getSocksPort();
+    }
+
     public String getStatusText() {
         return currentStatusText;
     }
