@@ -190,9 +190,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                      proxyInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
             if (isAether) {
                 textView.setText("Aether");
-                boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
-                        org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
-                setAlpha(aetherRunning ? 1.0f : 0.45f);
+                boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
+                setAlpha(aetherEnabled ? 1.0f : 0.45f);
             } else {
                 setAlpha(1.0f);
                 textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
@@ -210,16 +209,29 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                      currentInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
 
             if (isAether) {
-                boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
-                        org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
-                if (!aetherRunning) {
+                boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
+                if (!aetherEnabled) {
                     setAlpha(0.45f);
                     valueTextView.setText("Disabled (Turn on Aether)");
-                    color = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2);
-                    valueTextView.setTextColor(color);
+                    colorKey = Theme.key_windowBackgroundWhiteGrayText2;
+                    valueTextView.setTextColor(Theme.getColor(colorKey));
                     return;
                 } else {
                     setAlpha(1.0f);
+                    if (SharedConfig.currentProxy != currentInfo || !useProxySettings) {
+                        org.veyra.client.aether.AetherController ctrl = org.veyra.client.aether.AetherController.getInstance();
+                        if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
+                            valueTextView.setText("Available (" + ctrl.getPing() + "ms)");
+                            valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGreenText));
+                            return;
+                        } else if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTING ||
+                                   ctrl.getState() == org.veyra.client.aether.AetherController.STATE_RECONNECTING ||
+                                   ctrl.getState() == org.veyra.client.aether.AetherController.STATE_PREPARING) {
+                            valueTextView.setText(ctrl.getStatusText());
+                            valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+                            return;
+                        }
+                    }
                 }
             }
             if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
@@ -492,11 +504,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                         (info.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
                          info.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
                 if (isAether) {
-                    boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
-                            org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
-                    if (!aetherRunning) {
+                    boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
+                    if (!aetherEnabled) {
                         BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Turn on Aether to use this proxy").show();
                         return;
+                    }
+                    if (org.veyra.client.aether.AetherController.getInstance().getState() != org.veyra.client.aether.AetherController.STATE_CONNECTED) {
+                        org.veyra.client.aether.AetherController.getInstance().start();
                     }
                 }
                 useProxySettings = true;

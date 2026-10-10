@@ -167,6 +167,29 @@ public class AetherController {
         }
         shouldRun = true;
         AetherConfig.setEnabled(true);
+
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                SharedPreferences preferences = MessagesController.getGlobalMainSettings();
+                boolean proxyEnabled = preferences.getBoolean("proxy_enabled", false);
+                if (SharedConfig.currentProxy == null || !proxyEnabled) {
+                    String host = AetherConfig.getSocksHost();
+                    int port = getActivePort();
+                    ProxySettings settings = ProxySettings.builder()
+                            .setAddress(host)
+                            .setPort(port)
+                            .setType(ProxySettings.Type.SOCKS5)
+                            .build();
+                    SharedConfig.ProxyInfo proxyInfo = new SharedConfig.ProxyInfo(settings);
+                    SharedConfig.ProxyInfo actual = SharedConfig.addProxy(proxyInfo);
+                    SharedConfig.currentProxy = actual != null ? actual : proxyInfo;
+                    preferences.edit().putBoolean("proxy_enabled", true).commit();
+                    ConnectionsManager.setProxySettings(true, (actual != null ? actual : proxyInfo).settings);
+                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                }
+            } catch (Exception ignore) {}
+        });
+
         AetherService.start(ApplicationLoader.applicationContext);
         updateState(STATE_PREPARING, "Preparing Aether...", -1);
 
@@ -507,21 +530,34 @@ public class AetherController {
                         .build();
 
                 SharedConfig.ProxyInfo proxyInfo = new SharedConfig.ProxyInfo(settings);
-                SharedConfig.addProxy(proxyInfo);
-                SharedConfig.currentProxy = proxyInfo;
+                SharedConfig.ProxyInfo actual = SharedConfig.addProxy(proxyInfo);
+                if (actual != null) {
+                    proxyInfo = actual;
+                }
 
                 SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putBoolean("proxy_enabled", true);
-                settings.toSharedPreferences(editor);
-                editor.commit();
+                boolean proxyEnabled = preferences.getBoolean("proxy_enabled", false);
+                SharedConfig.ProxyInfo cur = SharedConfig.currentProxy;
 
-                ConnectionsManager.setProxySettings(true, settings);
-                for (int a : SharedConfig.activeAccounts) {
-                    ConnectionsManager.getInstance(a).checkConnection();
+                boolean isCurAether = cur != null && cur.settings != null &&
+                        (host.equals(cur.settings.getAddress()) || "127.0.0.1".equals(cur.settings.getAddress())) &&
+                        (cur.settings.getPort() == port || cur.settings.getPort() == AetherConfig.getSocksPort());
+
+                if (cur == null || !proxyEnabled || isCurAether) {
+                    SharedConfig.currentProxy = proxyInfo;
+
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putBoolean("proxy_enabled", true);
+                    settings.toSharedPreferences(editor);
+                    editor.commit();
+
+                    ConnectionsManager.setProxySettings(true, settings);
+                    for (int a : SharedConfig.activeAccounts) {
+                        ConnectionsManager.getInstance(a).checkConnection();
+                    }
+                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                    appendLog("[controller] Auto-switched and activated Aether proxy (" + host + ":" + port + ")");
                 }
-                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
-                appendLog("[controller] Telegram proxy successfully connected to SOCKS5 " + host + ":" + port);
             } catch (Exception e) {
                 FileLog.e("AetherController", e);
             }
