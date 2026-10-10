@@ -469,6 +469,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     }
                 }
                 useProxySettings = !useProxySettings;
+                if (!useProxySettings) {
+                    if (org.veyra.client.aether.AetherConfig.isEnabled()) {
+                        org.veyra.client.aether.AetherConfig.setEnabled(false);
+                        org.veyra.client.aether.AetherController.getInstance().stop();
+                    }
+                }
                 updateRows(true);
 
                 SharedPreferences preferences = MessagesController.getGlobalMainSettings();
@@ -784,11 +790,26 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         DownloadController.getInstance(currentAccount).checkAutodownloadSettings();
     }
 
+    private long lastClipboardSniffTime = 0;
+
     @Override
     public void onResume() {
         super.onResume();
         useProxySettings = MessagesController.getGlobalMainSettings().getBoolean("proxy_enabled", false);
         updateRows(true);
+
+        if (SystemClock.elapsedRealtime() - lastClipboardSniffTime > 15000 && getParentActivity() != null) {
+            lastClipboardSniffTime = SystemClock.elapsedRealtime();
+            int count = org.veyra.client.proxy.ProxyImporter.getClipboardProxyCount(getParentActivity());
+            if (count > 0) {
+                BulletinFactory.of(this).createSimpleBulletin(
+                        R.raw.chats_infotip,
+                        "Found " + count + " proxies in clipboard!",
+                        "Import",
+                        this::importFromClipboardDirectly
+                ).show();
+            }
+        }
     }
 
     @Override
@@ -1118,11 +1139,15 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
     private void showImportDialog() {
         if (getParentActivity() == null) return;
+        int clipCount = org.veyra.client.proxy.ProxyImporter.getClipboardProxyCount(getParentActivity());
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Import Proxies");
-        String[] options = new String[]{"Paste Proxy List", "Select File (.txt, .json)"};
+        String clipOption = clipCount > 0 ? "Import from Clipboard (" + clipCount + " detected)" : "Import from Clipboard";
+        String[] options = new String[]{clipOption, "Paste Proxy List", "Select File (.txt, .json)"};
         builder.setItems(options, (dialog, which) -> {
             if (which == 0) {
+                importFromClipboardDirectly();
+            } else if (which == 1) {
                 showPasteImportDialog();
             } else {
                 try {
@@ -1136,6 +1161,28 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
+    }
+
+    private void importFromClipboardDirectly() {
+        if (getParentActivity() == null) return;
+        BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Importing from clipboard...").show();
+        org.veyra.client.proxy.ProxyImporter.importFromClipboard(getParentActivity(), new org.veyra.client.proxy.ProxyImporter.ImportCallback() {
+            @Override
+            public void onProgress(int parsedCount) {}
+
+            @Override
+            public void onComplete(int totalImported, int duplicatesSkipped) {
+                loadProxyList();
+                updateRows(true);
+                String msg = totalImported > 0 ? "Imported " + totalImported + " proxies!" : "No new proxies found (" + duplicatesSkipped + " dupes).";
+                BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.ic_done, msg).show();
+            }
+
+            @Override
+            public void onError(Exception error) {
+                BulletinFactory.of(ProxyListActivity.this).createErrorBulletin("Clipboard import failed").show();
+            }
+        });
     }
 
     private void showPasteImportDialog() {

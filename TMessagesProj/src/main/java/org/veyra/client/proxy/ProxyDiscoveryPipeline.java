@@ -230,6 +230,39 @@ public class ProxyDiscoveryPipeline {
 
     private BenchmarkResult benchmarkProxy(SharedConfig.ProxyInfo proxy) {
         BenchmarkResult r = new BenchmarkResult();
+        if (proxy == null || proxy.settings == null) {
+            r.isAlive = false;
+            r.score = -99999f;
+            return r;
+        }
+
+        if (proxy.settings.getType() == ProxySettings.Type.WEB) {
+            java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            final long[] latency = new long[]{-1};
+            org.telegram.tgnet.ConnectionsManager.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
+                    .checkProxy(proxy.settings, time -> {
+                        latency[0] = time;
+                        latch.countDown();
+                    });
+            try {
+                latch.await(4500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignore) {}
+
+            if (latency[0] >= 0) {
+                r.isAlive = true;
+                r.pingMs = latency[0];
+                proxy.ping = latency[0];
+                proxy.available = true;
+                r.downloadSpeedKbps = Math.max(20, 15000.0f / (latency[0] + 1));
+                r.score = (r.downloadSpeedKbps * 0.7f) - (r.pingMs * 0.3f);
+            } else {
+                r.isAlive = false;
+                r.score = -99999f;
+                proxy.available = false;
+            }
+            return r;
+        }
+
         String host = proxy.settings.getAddress();
         int port = proxy.settings.getPort();
 
@@ -282,6 +315,9 @@ public class ProxyDiscoveryPipeline {
         if (info == null) return "None";
         if ("127.0.0.1".equals(info.settings.getAddress())) {
             return "⚡ Aether (" + info.settings.getPort() + ")";
+        }
+        if (info.settings.getType() == ProxySettings.Type.WEB) {
+            return "🌐 Web Proxy (" + info.settings.getAddress() + ")";
         }
         return info.settings.getAddress() + ":" + info.settings.getPort();
     }

@@ -26912,7 +26912,7 @@ public class ChatActivity extends BaseFragment implements
                 boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
                 boolean isCurrentlyEditing = old.isEditing() || messageObject.isEditing();
 
-                if (!messageObject.isOut() && !textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
                     messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                     messageObject.messageOwner.edit_date = 0;
                 } else if (!textChanged && wasEditedBefore) {

@@ -19626,7 +19626,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             && message.edit_date != oldMsgOwner.edit_date
                             && TextUtils.equals(oldText, newText);
 
-                    if (!message.out && !textChanged && !wasEditedBefore && !isCurrentlyEditing) {
+                    if (!textChanged && !wasEditedBefore && !isCurrentlyEditing) {
                         message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         message.edit_date = 0;
                     } else if (isOnlyReactionUpdate && wasEditedBefore) {

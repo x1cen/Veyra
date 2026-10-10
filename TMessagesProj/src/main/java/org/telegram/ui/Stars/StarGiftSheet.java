@@ -1040,6 +1040,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             .addIf(canSetAsTheme(), R.drawable.msg_colors, getString(R.string.GiftThemesSetIn), this::openSetAsTheme)
             .addIf(canTransfer(), R.drawable.menu_feature_transfer, getString(R.string.Gift2TransferOption), this::openTransfer)
             .addIf(savedStarGift == null && getDialogId() != 0, R.drawable.msg_view_file, getString(R.string.Gift2ViewInProfile), this::openInProfile)
+            .add(R.drawable.msg_code, "View Details (JSON)", () -> {
+                showGiftJsonDetails(giftUnique, savedStarGift);
+            })
             .setDrawScrim(false)
             .setOnTopOfScrim()
             .setDimAlpha(0)
@@ -4170,11 +4173,18 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 tableView.addRow(getString(R.string.Gift2Quantity), formatPluralStringComma("Gift2QuantityIssued1", gift.availability_issued) + formatPluralStringComma("Gift2QuantityIssued2", gift.availability_total));
             }
             if (!TextUtils.isEmpty(gift.slug) && (gift.flags & 256) != 0) {
-                final String roundedValue = BuildVars.gimmeFuLabel();
-                final String value = BuildVars.gimmeFuLabel();
-                tableView.addRow(getString(R.string.GiftValue2), "~" + roundedValue, getString(R.string.GiftValue2LearnMore), () -> {
-                    openValueStats(gift.gift_id, gift.title, getGiftName(), value, gift.getDocument(), gift.slug);
-                });
+                String roundedValue = getGiftValueString(gift, true);
+                String value = getGiftValueString(gift, false);
+                if (TextUtils.isEmpty(roundedValue) && gift.value_amount > 0) {
+                    roundedValue = (gift.value_amount / 1_000_000_000.0) + " TON";
+                }
+                if (!TextUtils.isEmpty(roundedValue)) {
+                    final String fRoundedValue = roundedValue;
+                    final String fValue = TextUtils.isEmpty(value) ? roundedValue : value;
+                    tableView.addRow(getString(R.string.GiftValue2), "~" + fRoundedValue, getString(R.string.GiftValue2LearnMore), () -> {
+                        openValueStats(gift.gift_id, gift.title, getGiftName(), fValue, gift.getDocument(), gift.slug);
+                    });
+                }
             }
         }
         final TL_stars.starGiftAttributeOriginalDetails details = findAttribute(gift.attributes, TL_stars.starGiftAttributeOriginalDetails.class);
@@ -6520,8 +6530,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         addAttributeRow(tableView, findAttribute(gift.attributes, TL_stars.starGiftAttributeBackdrop.class));
         addAttributeRow(tableView, findAttribute(gift.attributes, TL_stars.starGiftAttributePattern.class));
         if (!TextUtils.isEmpty(gift.slug) && (gift.flags & 256) != 0) {
-            final String roundedValue = BuildVars.gimmeFuLabel();
-            tableView.addRow(getString(R.string.GiftValue2), "~" + roundedValue);
+            String roundedValue = getGiftValueString(gift, true);
+            if (!TextUtils.isEmpty(roundedValue)) {
+                tableView.addRow(getString(R.string.GiftValue2), "~" + roundedValue);
+            }
         }
         topView.addView(tableView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 23, 16, 23, 4));
         new AlertDialog.Builder(getContext(), resourcesProvider)
@@ -7811,8 +7823,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 addAttributeRow(tableView, findAttribute(gift.attributes, TL_stars.starGiftAttributeBackdrop.class));
                 addAttributeRow(tableView, findAttribute(gift.attributes, TL_stars.starGiftAttributePattern.class));
                 if (!TextUtils.isEmpty(gift.slug) && (gift.flags & 256) != 0) {
-                    final String roundedValue = BuildVars.gimmeFuLabel();
-                    tableView.addRow(getString(R.string.GiftValue2), "~" + roundedValue);
+                    String roundedValue = getGiftValueString(gift, true);
+                    if (!TextUtils.isEmpty(roundedValue)) {
+                        tableView.addRow(getString(R.string.GiftValue2), "~" + roundedValue);
+                    }
                 }
                 topView.addView(tableView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 23, 16, 23, 4));
             }
@@ -10690,6 +10704,139 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         @Override
         public int getOpacity() {
             return PixelFormat.TRANSPARENT;
+        }
+    }
+
+    public static String getGiftValueString(TL_stars.TL_starGiftUnique gift, boolean rounded) {
+        if (gift == null) return "";
+        if (gift.value_amount > 0) {
+            String curr = gift.value_currency != null ? gift.value_currency.toUpperCase() : "TON";
+            if ("TON".equals(curr)) {
+                double tonVal = gift.value_amount / 1_000_000_000.0;
+                if (rounded) {
+                    if (tonVal >= 1000) {
+                        return String.format(java.util.Locale.US, "%.0f TON", tonVal);
+                    } else if (tonVal >= 10) {
+                        return String.format(java.util.Locale.US, "%.1f TON", tonVal);
+                    } else {
+                        return String.format(java.util.Locale.US, "%.2f TON", tonVal);
+                    }
+                } else {
+                    return String.format(java.util.Locale.US, "%.2f TON", tonVal);
+                }
+            } else if ("USD".equals(curr)) {
+                double usdVal = gift.value_amount / 100.0;
+                return String.format(java.util.Locale.US, "$%.2f", usdVal);
+            } else {
+                return gift.value_amount + " " + curr;
+            }
+        }
+        if (gift.value_usd_amount > 0) {
+            double usdVal = gift.value_usd_amount / 100.0;
+            if (rounded) {
+                if (usdVal >= 1000) {
+                    return String.format(java.util.Locale.US, "$%.0f", usdVal);
+                } else {
+                    return String.format(java.util.Locale.US, "$%.2f", usdVal);
+                }
+            } else {
+                return String.format(java.util.Locale.US, "$%.2f", usdVal);
+            }
+        }
+        if (gift.resell_amount != null && !gift.resell_amount.isEmpty()) {
+            for (TL_stars.StarsAmount sa : gift.resell_amount) {
+                if (sa instanceof TL_stars.TL_starsTonAmount) {
+                    double tonVal = sa.amount / 1_000_000_000.0;
+                    return String.format(java.util.Locale.US, "%.2f TON", tonVal);
+                } else if (sa instanceof TL_stars.TL_starsAmount) {
+                    return sa.amount + " ⭐️";
+                }
+            }
+        }
+        return "";
+    }
+
+    private void showGiftJsonDetails(TL_stars.TL_starGiftUnique giftUnique, TL_stars.SavedStarGift savedGift) {
+        try {
+            Object target = giftUnique != null ? giftUnique : savedGift;
+            if (target == null) {
+                target = this.slugStarGift;
+            }
+            if (target == null) return;
+
+            String jsonStr;
+            try {
+                com.google.gson.Gson gson = new com.google.gson.GsonBuilder()
+                        .setPrettyPrinting()
+                        .create();
+                jsonStr = gson.toJson(target);
+            } catch (Exception e) {
+                org.json.JSONObject obj = new org.json.JSONObject();
+                if (giftUnique != null) {
+                    obj.put("id", giftUnique.id);
+                    obj.put("gift_id", giftUnique.gift_id);
+                    obj.put("title", giftUnique.title);
+                    obj.put("slug", giftUnique.slug);
+                    obj.put("num", giftUnique.num);
+                    obj.put("value_amount", giftUnique.value_amount);
+                    obj.put("value_currency", giftUnique.value_currency);
+                    obj.put("value_usd_amount", giftUnique.value_usd_amount);
+                    obj.put("availability_issued", giftUnique.availability_issued);
+                    obj.put("availability_total", giftUnique.availability_total);
+                } else if (savedGift != null) {
+                    obj.put("saved_id", savedGift.gift != null ? savedGift.gift.id : 0);
+                    obj.put("date", savedGift.date);
+                    obj.put("pinned_to_top", savedGift.pinned_to_top);
+                    obj.put("unsaved", savedGift.unsaved);
+                }
+                jsonStr = obj.toString(2);
+            }
+
+            final String finalJson = jsonStr;
+            BottomSheet.Builder builder = new BottomSheet.Builder(getContext(), false, resourcesProvider);
+            android.widget.LinearLayout layout = new android.widget.LinearLayout(getContext());
+            layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+            layout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+
+            android.widget.TextView titleView = new android.widget.TextView(getContext());
+            titleView.setText("Gift Details (JSON)");
+            titleView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 18);
+            titleView.setTypeface(AndroidUtilities.bold());
+            titleView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+            layout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
+
+            android.widget.ScrollView scrollView = new android.widget.ScrollView(getContext());
+            android.widget.TextView jsonView = new android.widget.TextView(getContext());
+            jsonView.setText(finalJson);
+            jsonView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12);
+            jsonView.setTypeface(android.graphics.Typeface.MONOSPACE);
+            jsonView.setTextIsSelectable(true);
+            jsonView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+            jsonView.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_chat_inBubble, resourcesProvider)));
+            jsonView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12));
+            scrollView.addView(jsonView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            layout.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 320, 0, 0, 0, 12));
+
+            android.widget.TextView copyBtn = new android.widget.TextView(getContext());
+            copyBtn.setText("Copy JSON");
+            copyBtn.setGravity(android.view.Gravity.CENTER);
+            copyBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 14);
+            copyBtn.setTypeface(AndroidUtilities.bold());
+            copyBtn.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText, resourcesProvider));
+            copyBtn.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
+            copyBtn.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12));
+            copyBtn.setOnClickListener(v -> {
+                AndroidUtilities.addToClipboard(finalJson);
+                if (getBulletinFactory() != null) {
+                    getBulletinFactory().createCopyBulletin("JSON copied to clipboard").show();
+                }
+            });
+            layout.addView(copyBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            builder.setCustomView(layout);
+            builder.show();
+        } catch (Exception e) {
+            FileLog.e("StarGiftSheet", e);
         }
     }
 }

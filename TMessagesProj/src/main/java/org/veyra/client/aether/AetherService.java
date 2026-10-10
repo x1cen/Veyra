@@ -69,7 +69,11 @@ public class AetherService extends Service {
 
         Notification notification = buildNotification("Aether Active", "Tunneling proxy traffic in background");
         try {
-            startForeground(NOTIF_ID, notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIF_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIF_ID, notification);
+            }
         } catch (Exception e) {
             FileLog.e("AetherService", e);
         }

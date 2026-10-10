@@ -499,6 +499,15 @@ public class AetherController {
                 break;
             }
 
+            // In background (app paused / screen off), do NOT drop connection just because external 1.1.1.1 probe is delayed by Android Doze!
+            boolean isBackground = org.telegram.messenger.ApplicationLoader.mainInterfacePaused;
+            if (isBackground) {
+                if (isPortOpen("127.0.0.1", port)) {
+                    consecutiveProbeFailures = 0;
+                }
+                continue;
+            }
+
             long latency = probeSocks5("127.0.0.1", port, 8000);
             if (latency >= 0) {
                 consecutiveProbeFailures = 0;
