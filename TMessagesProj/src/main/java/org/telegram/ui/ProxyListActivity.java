@@ -41,6 +41,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DownloadController;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
@@ -57,6 +58,8 @@ import org.telegram.ui.ActionBar.BackDrawable;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
+import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCheckCell;
@@ -896,10 +899,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     break;
                 }
                 case VIEW_TYPE_INFO: {
-                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-                    if (position == rotationTimeoutInfoRow) {
-                        cell.setText(getString(R.string.ProxyRotationTimeoutInfo));
-                    }
                     break;
                 }
                 case VIEW_TYPE_PROXY_DETAIL: {
@@ -909,22 +908,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     cell.setChecked(SharedConfig.currentProxy == info);
                     cell.setItemSelected(selectedItems.contains(proxyList.get(position - proxyStartRow)), false);
                     cell.setSelectionEnabled(!selectedItems.isEmpty(), false);
-                    break;
-                }
-                case VIEW_TYPE_SLIDE_CHOOSER: {
-                    if (position == rotationTimeoutRow) {
-                        SlideChooseView chooseView = (SlideChooseView) holder.itemView;
-                        ArrayList<Integer> options = new ArrayList<>(ProxyRotationController.ROTATION_TIMEOUTS);
-                        String[] values = new String[options.size()];
-                        for (int i = 0; i < options.size(); i++) {
-                            values[i] = LocaleController.formatString(R.string.ProxyRotationTimeoutSeconds, options.get(i));
-                        }
-                        chooseView.setCallback(i -> {
-                            SharedConfig.proxyRotationTimeout = i;
-                            SharedConfig.saveConfig();
-                        });
-                        chooseView.setOptions(SharedConfig.proxyRotationTimeout, values);
-                    }
                     break;
                 }
             }
@@ -945,8 +928,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                 if (position == useProxyRow) {
                     checkCell.setChecked(useProxySettings);
-                } else if (position == rotationRow) {
-                    checkCell.setChecked(SharedConfig.proxyRotationEnabled);
                 }
             } else {
                 super.onBindViewHolder(holder, position, payloads);
@@ -961,8 +942,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 int position = holder.getAdapterPosition();
                 if (position == useProxyRow) {
                     checkCell.setChecked(useProxySettings);
-                } else if (position == rotationRow) {
-                    checkCell.setChecked(SharedConfig.proxyRotationEnabled);
                 }
             }
         }

@@ -391,12 +391,6 @@ public class AetherConfig {
             args.add("auto");
         }
 
-        int mtu = getMtu();
-        if (mtu > 0) {
-            args.add("--mtu");
-            args.add(String.valueOf(mtu));
-        }
-
         if (isBypassIran()) {
             args.add("--route-direct");
         }

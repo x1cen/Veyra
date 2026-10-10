@@ -140,7 +140,7 @@ public class ProxyImporter {
                         return ProxySettings.builder()
                                 .setAddress(server)
                                 .setPort(port)
-                                .setUsername(user != null ? user : "")
+                                .setUser(user != null ? user : "")
                                 .setPassword(pass != null ? pass : "")
                                 .setType(ProxySettings.Type.SOCKS5)
                                 .build();
@@ -182,7 +182,7 @@ public class ProxyImporter {
                 return ProxySettings.builder()
                         .setAddress(host)
                         .setPort(port)
-                        .setUsername(user)
+                        .setUser(user)
                         .setPassword(pass)
                         .setType(ProxySettings.Type.SOCKS5)
                         .build();
