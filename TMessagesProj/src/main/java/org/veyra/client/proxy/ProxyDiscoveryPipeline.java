@@ -108,7 +108,21 @@ public class ProxyDiscoveryPipeline {
         }
 
         // Candidates pool
-        List<SharedConfig.ProxyInfo> pool = new ArrayList<>(originalList);
+        List<SharedConfig.ProxyInfo> pool = new ArrayList<>();
+        for (SharedConfig.ProxyInfo p : originalList) {
+            if (p.settings == null) continue;
+            boolean isAether = (org.veyra.client.aether.AetherConfig.getSocksHost().equals(p.settings.getAddress()) || "127.0.0.1".equals(p.settings.getAddress())) &&
+                    (p.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
+                     p.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+            if (isAether) {
+                boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
+                        org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
+                if (!aetherRunning) {
+                    continue; // Skip disabled Aether from tournament
+                }
+            }
+            pool.add(p);
+        }
         Collections.shuffle(pool, random);
 
         List<SharedConfig.ProxyInfo> deadProxies = new ArrayList<>();
@@ -163,6 +177,14 @@ public class ProxyDiscoveryPipeline {
         if (ProxyDiscoveryConfig.isPruneDeadEnabled() && !deadProxies.isEmpty()) {
             boolean listChanged = false;
             for (SharedConfig.ProxyInfo dead : deadProxies) {
+                if (dead.settings != null) {
+                    boolean isAether = (org.veyra.client.aether.AetherConfig.getSocksHost().equals(dead.settings.getAddress()) || "127.0.0.1".equals(dead.settings.getAddress())) &&
+                            (dead.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
+                             dead.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+                    if (isAether) {
+                        continue; // NEVER prune Aether
+                    }
+                }
                 if (champion != dead && SharedConfig.proxyList.remove(dead)) {
                     prunedCount++;
                     listChanged = true;

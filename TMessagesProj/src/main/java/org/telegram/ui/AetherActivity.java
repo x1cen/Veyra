@@ -82,12 +82,6 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 AetherConfig::isEnabled,
                 isChecked -> {
                     if (isChecked) {
-                        android.content.SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
-                        editor.putBoolean("proxy_enabled", false);
-                        editor.commit();
-                        org.telegram.tgnet.ConnectionsManager.setProxySettings(false, null);
-                        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
-
                         AetherController.getInstance().start();
                     } else {
                         AetherController.getInstance().stop();

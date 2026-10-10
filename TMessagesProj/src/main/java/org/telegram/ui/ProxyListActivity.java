@@ -190,7 +190,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                      proxyInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
             if (isAether) {
                 textView.setText("Aether");
+                boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
+                        org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
+                setAlpha(aetherRunning ? 1.0f : 0.45f);
             } else {
+                setAlpha(1.0f);
                 textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
                         ? proxyInfo.settings.getAddress() + " (WEB)"
                         : proxyInfo.settings.getAddress() + ":" + proxyInfo.settings.getPort());
@@ -200,6 +204,24 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         public void updateStatus() {
             int colorKey;
+            boolean isAether = currentInfo != null && currentInfo.settings != null &&
+                    (org.veyra.client.aether.AetherConfig.getSocksHost().equals(currentInfo.settings.getAddress()) || "127.0.0.1".equals(currentInfo.settings.getAddress())) &&
+                    (currentInfo.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
+                     currentInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+
+            if (isAether) {
+                boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
+                        org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
+                if (!aetherRunning) {
+                    setAlpha(0.45f);
+                    valueTextView.setText("Disabled (Turn on Aether)");
+                    color = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2);
+                    valueTextView.setTextColor(color);
+                    return;
+                } else {
+                    setAlpha(1.0f);
+                }
+            }
             if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
                 if (currentConnectionState == ConnectionsManager.ConnectionStateConnected || currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
                     colorKey = Theme.key_windowBackgroundWhiteBlueText6;
@@ -420,10 +442,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             } else if (position == proxyImportRow) {
                 showImportDialog();
             } else if (position == useProxyRow) {
-                if (org.veyra.client.aether.AetherConfig.isEnabled()) {
-                    org.veyra.client.aether.AetherConfig.setEnabled(false);
-                    org.veyra.client.aether.AetherController.getInstance().stop();
-                }
                 if (SharedConfig.currentProxy == null) {
                     if (!proxyList.isEmpty()) {
                         SharedConfig.currentProxy = proxyList.get(0);
@@ -470,6 +488,17 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     return;
                 }
                 SharedConfig.ProxyInfo info = proxyList.get(position - proxyStartRow);
+                boolean isAether = (org.veyra.client.aether.AetherConfig.getSocksHost().equals(info.settings.getAddress()) || "127.0.0.1".equals(info.settings.getAddress())) &&
+                        (info.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
+                         info.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+                if (isAether) {
+                    boolean aetherRunning = org.veyra.client.aether.AetherConfig.isEnabled() &&
+                            org.veyra.client.aether.AetherController.getInstance().getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
+                    if (!aetherRunning) {
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Turn on Aether to use this proxy").show();
+                        return;
+                    }
+                }
                 useProxySettings = true;
                 SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
                 info.settings.toSharedPreferences(editor);
@@ -618,13 +647,35 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         return super.onBackPressed(invoked);
     }
 
+    private void ensureAetherProxyInList() {
+        String host = org.veyra.client.aether.AetherConfig.getSocksHost();
+        int port = org.veyra.client.aether.AetherConfig.getSocksPort();
+        boolean found = false;
+        for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
+            if (p.settings != null && (host.equals(p.settings.getAddress()) || "127.0.0.1".equals(p.settings.getAddress())) &&
+                    (p.settings.getPort() == port || p.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort())) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ProxySettings settings = ProxySettings.builder()
+                    .setAddress(host)
+                    .setPort(port)
+                    .setType(ProxySettings.Type.SOCKS5)
+                    .build();
+            SharedConfig.ProxyInfo info = new SharedConfig.ProxyInfo(settings);
+            SharedConfig.addProxy(info);
+        }
+    }
+
     private void updateRows(boolean notify) {
-        boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
+        ensureAetherProxyInList();
 
         rowCount = 0;
         useProxyRow = rowCount++;
 
-        if (useProxySettings && !aetherEnabled) {
+        if (useProxySettings) {
             discoveryRow = rowCount++;
         } else {
             discoveryRow = -1;
@@ -635,72 +686,54 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         aetherRow = rowCount++;
         aetherShadowRow = rowCount++;
 
-        if (useProxySettings && !aetherEnabled) {
-            connectionsHeaderRow = rowCount++;
+        connectionsHeaderRow = rowCount++;
 
-            if (notify) {
-                proxyList.clear();
-                proxyList.addAll(SharedConfig.proxyList);
-                for (int i = proxyList.size() - 1; i >= 0; i--) {
-                    SharedConfig.ProxyInfo p = proxyList.get(i);
-                    if (p.settings != null && "127.0.0.1".equals(p.settings.getAddress()) &&
-                            (p.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
-                             p.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort())) {
-                        proxyList.remove(i);
+        if (notify) {
+            proxyList.clear();
+            proxyList.addAll(SharedConfig.proxyList);
+
+            boolean checking = false;
+            if (!wasCheckedAllList) {
+                for (SharedConfig.ProxyInfo info : proxyList) {
+                    if (info.checking || info.availableCheckTime == 0) {
+                        checking = true;
+                        break;
                     }
                 }
-
-                boolean checking = false;
-                if (!wasCheckedAllList) {
-                    for (SharedConfig.ProxyInfo info : proxyList) {
-                        if (info.checking || info.availableCheckTime == 0) {
-                            checking = true;
-                            break;
-                        }
-                    }
-                    if (!checking) {
-                        wasCheckedAllList = true;
-                    }
+                if (!checking) {
+                    wasCheckedAllList = true;
                 }
-
-                boolean isChecking = checking;
-                Collections.sort(proxyList, (o1, o2) -> {
-                    long bias1 = SharedConfig.currentProxy == o1 ? -200000 : 0;
-                    if (!o1.available) {
-                        bias1 += 100000;
-                    }
-                    long bias2 = SharedConfig.currentProxy == o2 ? -200000 : 0;
-                    if (!o2.available) {
-                        bias2 += 100000;
-                    }
-                    return Long.compare(isChecking && o1 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o1) * 10000L : o1.ping + bias1,
-                            isChecking && o2 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o2) * 10000L : o2.ping + bias2);
-                });
             }
 
-            if (!proxyList.isEmpty()) {
-                proxyStartRow = rowCount;
-                rowCount += proxyList.size();
-                proxyEndRow = rowCount;
-            } else {
-                proxyStartRow = -1;
-                proxyEndRow = -1;
-            }
-            proxyAddRow = rowCount++;
-            proxyImportRow = rowCount++;
-            proxyShadowRow = rowCount++;
-            if (proxyList.size() >= 10) {
-                deleteAllRow = rowCount++;
-            } else {
-                deleteAllRow = -1;
-            }
+            boolean isChecking = checking;
+            Collections.sort(proxyList, (o1, o2) -> {
+                long bias1 = SharedConfig.currentProxy == o1 ? -200000 : 0;
+                if (!o1.available) {
+                    bias1 += 100000;
+                }
+                long bias2 = SharedConfig.currentProxy == o2 ? -200000 : 0;
+                if (!o2.available) {
+                    bias2 += 100000;
+                }
+                return Long.compare(isChecking && o1 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o1) * 10000L : o1.ping + bias1,
+                        isChecking && o2 != SharedConfig.currentProxy ? SharedConfig.proxyList.indexOf(o2) * 10000L : o2.ping + bias2);
+            });
+        }
+
+        if (!proxyList.isEmpty()) {
+            proxyStartRow = rowCount;
+            rowCount += proxyList.size();
+            proxyEndRow = rowCount;
         } else {
-            connectionsHeaderRow = -1;
             proxyStartRow = -1;
             proxyEndRow = -1;
-            proxyAddRow = -1;
-            proxyImportRow = -1;
-            proxyShadowRow = -1;
+        }
+        proxyAddRow = rowCount++;
+        proxyImportRow = rowCount++;
+        proxyShadowRow = rowCount++;
+        if (proxyList.size() >= 10) {
+            deleteAllRow = rowCount++;
+        } else {
             deleteAllRow = -1;
         }
 
@@ -740,11 +773,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     @Override
     public void onResume() {
         super.onResume();
-        if (org.veyra.client.aether.AetherConfig.isEnabled()) {
-            useProxySettings = false;
-        } else {
-            useProxySettings = MessagesController.getGlobalMainSettings().getBoolean("proxy_enabled", false);
-        }
+        useProxySettings = MessagesController.getGlobalMainSettings().getBoolean("proxy_enabled", false);
         updateRows(true);
     }
 
@@ -905,8 +934,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 case VIEW_TYPE_TEXT_CHECK: {
                     TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                     if (position == useProxyRow) {
-                        boolean aetherOn = org.veyra.client.aether.AetherConfig.isEnabled();
-                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings && !aetherOn, true);
+                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, true);
                     } else if (position == discoveryRow) {
                         boolean enabled = org.veyra.client.proxy.ProxyDiscoveryConfig.isEnabled();
                         int interval = org.veyra.client.proxy.ProxyDiscoveryConfig.getIntervalMinutes();
