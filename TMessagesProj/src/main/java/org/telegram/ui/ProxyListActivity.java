@@ -101,6 +101,17 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int rotationTimeoutRow;
     private int rotationTimeoutInfoRow;
     private int deleteAllRow;
+    private int aetherHeaderRow = -1;
+    private int aetherRow = -1;
+    private int aetherShadowRow = -1;
+
+    private final org.veyra.client.aether.AetherController.StatusListener aetherStatusListener = (state, statusText, pingMs) -> {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (listAdapter != null && aetherRow != -1) {
+                listAdapter.notifyItemChanged(aetherRow);
+            }
+        });
+    };
 
     private ItemTouchHelper itemTouchHelper;
     private NumberTextView selectedCountTextView;
@@ -339,6 +350,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.proxySettingsChanged);
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.proxyCheckDone);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didUpdateConnectionState);
+        org.veyra.client.aether.AetherController.getInstance().addStatusListener(aetherStatusListener);
 
         final SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         useProxySettings = preferences.getBoolean("proxy_enabled", false) && !SharedConfig.proxyList.isEmpty();
@@ -355,6 +367,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.proxySettingsChanged);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.proxyCheckDone);
         NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.didUpdateConnectionState);
+        org.veyra.client.aether.AetherController.getInstance().removeStatusListener(aetherStatusListener);
     }
 
     @Override
@@ -391,7 +404,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener((view, position) -> {
-            if (position == useProxyRow) {
+            if (position == aetherRow) {
+                presentFragment(new AetherActivity());
+            } else if (position == useProxyRow) {
                 if (SharedConfig.currentProxy == null) {
                     if (!proxyList.isEmpty()) {
                         SharedConfig.currentProxy = proxyList.get(0);
@@ -613,6 +628,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         } else {
             useProxyShadowRow = -1;
         }
+        aetherHeaderRow = rowCount++;
+        aetherRow = rowCount++;
+        aetherShadowRow = rowCount++;
         connectionsHeaderRow = rowCount++;
 
         if (notify) {
@@ -850,6 +868,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     HeaderCell headerCell = (HeaderCell) holder.itemView;
                     if (position == connectionsHeaderRow) {
                         headerCell.setText(getString(R.string.ProxyConnections));
+                    } else if (position == aetherHeaderRow) {
+                        headerCell.setText("Aether");
                     }
                     break;
                 }
@@ -859,6 +879,19 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                         checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, rotationRow != -1);
                     } else if (position == rotationRow) {
                         checkCell.setTextAndCheck(getString(R.string.UseProxyRotation), SharedConfig.proxyRotationEnabled, true);
+                    } else if (position == aetherRow) {
+                        org.veyra.client.aether.AetherController ac = org.veyra.client.aether.AetherController.getInstance();
+                        boolean enabled = org.veyra.client.aether.AetherConfig.isEnabled();
+                        String sub;
+                        if (ac.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
+                            long ping = ac.getPing();
+                            sub = "Connected" + (ping > 0 ? " • " + ping + " ms" : "");
+                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_DISCONNECTED) {
+                            sub = "Disconnected — Tap to configure";
+                        } else {
+                            sub = ac.getStatusText();
+                        }
+                        checkCell.setTextAndValueAndCheck("Aether", sub, enabled, true, false);
                     }
                     break;
                 }
@@ -1006,13 +1039,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         @Override
         public int getItemViewType(int position) {
-            if (position == useProxyShadowRow || position == proxyShadowRow) {
+            if (position == useProxyShadowRow || position == proxyShadowRow || position == aetherShadowRow) {
                 return VIEW_TYPE_SHADOW;
             } else if (position == proxyAddRow || position == deleteAllRow) {
                 return VIEW_TYPE_TEXT_SETTING;
-            } else if (position == useProxyRow || position == rotationRow) {
+            } else if (position == useProxyRow || position == rotationRow || position == aetherRow) {
                 return VIEW_TYPE_TEXT_CHECK;
-            } else if (position == connectionsHeaderRow) {
+            } else if (position == connectionsHeaderRow || position == aetherHeaderRow) {
                 return VIEW_TYPE_HEADER;
             } else if (position == rotationTimeoutRow) {
                 return VIEW_TYPE_SLIDE_CHOOSER;
