@@ -112,7 +112,21 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 
 ### 🌐 Network and Anti-Censorship
 
-* Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, letting it bypass DPI restrictions without native overhead.
+* Aether Circumvention Engine (Native v2.3.0 Core): deep integration of the state-of-the-art Aether circumvention protocol directly into the client:
+  * Multi-Protocol Support: MASQUE over HTTP/2 (with TLS ClientHello packet fragmentation) and HTTP/3 (QUIC), classic WireGuard, WARP-in-WARP (Gool), and MASQUE-in-MASQUE (MIM).
+  * Backend Chaining: route through Direct WARP, Tor, Psiphon, or multi-hop chains (Aether → Psiphon, Aether → Tor, Tor → Psiphon, Tor → Aether), including targeted Exit Country selection.
+  * Foreground Tunnel Resilience: runs as an unkillable foreground service (`AetherService`) holding a partial `WakeLock` and system notification to maintain live sockets when switching apps or locking the device.
+  * Dynamic Port Resolution: automatically extracts live ephemeral SOCKS5 ports from core daemon logs and steers Telegram connections dynamically.
+  * Smart Regional Detection: detects Iranian phone numbers (`+98`) on first setup to apply optimal DPI-piercing defaults (HTTP/2 MASQUE, TLS fragmentation `8-24` bytes, `5-15ms` delay, `firewall` noise, ECH, and domestic bypass for `private,ir`).
+  * Configurable Endpoint: customizable local SOCKS5 listen host (`127.0.0.1`, `0.0.0.0`) and port.
+* Mutually Exclusive Routing Isolation: strict separation between Aether and the standard proxy pool. Activating Aether hides the proxy list to prevent routing conflicts, while enabling regular proxies automatically halts Aether and restores the candidate list.
+* Auto Discovery (P2C Tournament Pipeline): replaces legacy proxy rotation with a Power of Two Choices (P2C) tournament engine:
+  * Multi-Stage Health Pipeline: validates TCP socket handshakes, measures RTT jitter, and benchmarks micro-throughput download speeds before selecting the active proxy.
+  * Auto-Prune Non-Working Proxies: automatically cleans dead and unreachable proxies from the list.
+  * Configurable Tournament Cadence: scheduled runs from 5 to 60 minutes.
+* Multi-Proxy Bulk Importer: high-performance non-blocking background importer supporting file uploads (`.txt`, `.json`, `.conf`) and mass clipboard paste (`tg://proxy`, `tg://socks`, `https://t.me/proxy`, and raw `host:port:secret` strings) with automatic batch deduplication.
+* Real-Time Monospace Terminal: full-screen console (`Aether Terminal`) with colorized telemetry displaying live gateway RTTs, candidate selection, and handshake logs with auto-scrolling.
+* Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, bypassing strict DPI filters without native overhead.
 
 ### 🔄 Upstream Telegram 12.10.x Core Sync
 
