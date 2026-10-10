@@ -100,6 +100,31 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         }
 
         r.add(VeyraSettingsRow.detail(
+                "SOCKS5 Host",
+                AetherConfig::getSocksHost,
+                true,
+                () -> promptTextInput("SOCKS5 Host", AetherConfig.getSocksHost(), "127.0.0.1", s -> {
+                    if (!TextUtils.isEmpty(s)) {
+                        AetherConfig.setSocksHost(s);
+                    }
+                })
+        ));
+
+        r.add(VeyraSettingsRow.detail(
+                "SOCKS5 Port",
+                () -> String.valueOf(AetherConfig.getSocksPort()),
+                true,
+                () -> promptTextInput("SOCKS5 Port", String.valueOf(AetherConfig.getSocksPort()), "1819", s -> {
+                    try {
+                        int p = Integer.parseInt(s);
+                        if (p > 0 && p < 65536) {
+                            AetherConfig.setSocksPort(p);
+                        }
+                    } catch (Exception ignore) {}
+                })
+        ));
+
+        r.add(VeyraSettingsRow.detail(
                 "Core Engine Logs",
                 () -> "Live Terminal",
                 false,
@@ -323,7 +348,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 "Interface MTU",
                 () -> String.valueOf(mtu),
                 true,
-                () -> promptTextInput("Interface MTU", String.valueOf(mtu), "1280 (recommended)", s -> {
+                () -> promptTextInput("Interface MTU", String.valueOf(mtu), "1280", s -> {
                     try {
                         AetherConfig.setMtu(Integer.parseInt(s));
                     } catch (Exception ignore) {}

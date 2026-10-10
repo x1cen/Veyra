@@ -499,8 +499,9 @@ public class AetherController {
     private void attachTelegramProxy(int port) {
         AndroidUtilities.runOnUIThread(() -> {
             try {
+                String host = AetherConfig.getSocksHost();
                 ProxySettings settings = ProxySettings.builder()
-                        .setAddress("127.0.0.1")
+                        .setAddress(host)
                         .setPort(port)
                         .setType(ProxySettings.Type.SOCKS5)
                         .build();
@@ -520,7 +521,7 @@ public class AetherController {
                     ConnectionsManager.getInstance(a).checkConnection();
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
-                appendLog("[controller] Telegram proxy successfully connected to SOCKS5 127.0.0.1:" + port);
+                appendLog("[controller] Telegram proxy successfully connected to SOCKS5 " + host + ":" + port);
             } catch (Exception e) {
                 FileLog.e("AetherController", e);
             }
@@ -530,7 +531,8 @@ public class AetherController {
     private void detachTelegramProxy() {
         AndroidUtilities.runOnUIThread(() -> {
             try {
-                if (SharedConfig.currentProxy != null && "127.0.0.1".equals(SharedConfig.currentProxy.getAddress())) {
+                String host = AetherConfig.getSocksHost();
+                if (SharedConfig.currentProxy != null && (host.equals(SharedConfig.currentProxy.getAddress()) || "127.0.0.1".equals(SharedConfig.currentProxy.getAddress()))) {
                     SharedConfig.currentProxy = null;
                     SharedPreferences preferences = MessagesController.getGlobalMainSettings();
                     preferences.edit()
