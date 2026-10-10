@@ -1293,10 +1293,18 @@ public class ConnectionsManager extends BaseController {
                 InetAddress[] addresses = InetAddress.getAllByName(currentHostName);
                 if (addresses != null && addresses.length > 0) {
                     ArrayList<String> result = new ArrayList<>(addresses.length);
+                    boolean hasPoisoned = false;
                     for (InetAddress addr : addresses) {
-                        result.add(addr.getHostAddress());
+                        String ip = addr.getHostAddress();
+                        if (ip.startsWith("10.10.34.") || ip.startsWith("127.") || ip.startsWith("10.") || ip.startsWith("192.168.")) {
+                            hasPoisoned = true;
+                            break;
+                        }
+                        result.add(ip);
                     }
-                    return new ResolvedDomain(result, SystemClock.elapsedRealtime());
+                    if (!hasPoisoned && !result.isEmpty()) {
+                        return new ResolvedDomain(result, SystemClock.elapsedRealtime());
+                    }
                 }
             } catch (Throwable ignored) {
             }

@@ -332,6 +332,9 @@ public class MessagesStorage extends BaseController {
                     if (cursor.next()) {
                         lastSeqValue = cursor.intValue(0);
                         lastPtsValue = cursor.intValue(1);
+                        if (lastPtsValue < 0) {
+                            lastPtsValue = 0;
+                        }
                         lastDateValue = cursor.intValue(2);
                         lastQtsValue = cursor.intValue(3);
                         lastSecretVersion = cursor.intValue(4);

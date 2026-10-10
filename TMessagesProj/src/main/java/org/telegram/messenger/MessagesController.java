@@ -12035,7 +12035,8 @@ public class MessagesController extends BaseController implements NotificationCe
         } else {
             final TLRPC.Chat chat = getChat(-dialogId);
             boolean isNotInChannel = chat != null && ChatObject.isChannel(chat) && ChatObject.isNotInChat(chat);
-            reload = (resCount == 0 || isNotInChannel) && (!isInitialLoading || (SystemClock.elapsedRealtime() - lastServerQueryTime.get(dialogId, 0L)) > 60 * 1000 || (isCache && isTopic) || isNotInChannel);
+            boolean queryAllowed = (SystemClock.elapsedRealtime() - lastServerQueryTime.get(dialogId, 0L)) > 25 * 1000;
+            reload = (resCount == 0 || isNotInChannel || (isInitialLoading && queryAllowed)) && (!isInitialLoading || queryAllowed || (isCache && isTopic) || isNotInChannel);
         }
         if (!DialogObject.isEncryptedDialog(dialogId) && isCache && reload) {
             if (mode == ChatActivity.MODE_SCHEDULED) {
@@ -12907,6 +12908,8 @@ public class MessagesController extends BaseController implements NotificationCe
                         d.pinned = true;
                     }
                     resetDialogs(false, seq, newPts, date, qts);
+                } else {
+                    resetingDialogs = false;
                 }
             });
             TLRPC.TL_messages_getDialogs req2 = new TLRPC.TL_messages_getDialogs();
@@ -12917,6 +12920,8 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (error == null) {
                     resetDialogsAll = (TLRPC.messages_Dialogs) response;
                     resetDialogs(false, seq, newPts, date, qts);
+                } else {
+                    resetingDialogs = false;
                 }
             });
         } else if (resetDialogsPinned != null && resetDialogsAll != null) {
@@ -16949,13 +16954,24 @@ public class MessagesController extends BaseController implements NotificationCe
         }
     }
 
+    private final Runnable gettingDifferenceTimeoutRunnable = () -> {
+        if (gettingDifference) {
+            FileLog.d("gettingDifference safety watchdog: clearing stuck state");
+            gettingDifference = false;
+            resetingDialogs = false;
+            getConnectionsManager().setIsUpdating(false);
+        }
+    };
+
     public void getDifference() {
         getDifference(getMessagesStorage().getLastPtsValue(), getMessagesStorage().getLastDateValue(), getMessagesStorage().getLastQtsValue(), false);
     }
 
     public void getDifference(int pts, int date, int qts, boolean slice) {
         registerForPush(SharedConfig.pushType, SharedConfig.pushString);
-        if (getMessagesStorage().getLastPtsValue() == 0) {
+        int currentPts = getMessagesStorage().getLastPtsValue();
+        if (currentPts <= 0) {
+            getMessagesStorage().setLastPtsValue(0);
             loadCurrentState();
             return;
         }
@@ -16963,6 +16979,9 @@ public class MessagesController extends BaseController implements NotificationCe
             return;
         }
         gettingDifference = true;
+        AndroidUtilities.cancelRunOnUIThread(gettingDifferenceTimeoutRunnable);
+        AndroidUtilities.runOnUIThread(gettingDifferenceTimeoutRunnable, 12000L);
+
         TLRPC.TL_updates_getDifference req = new TLRPC.TL_updates_getDifference();
         req.pts = pts;
         req.date = date;
@@ -16985,9 +17004,12 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         getConnectionsManager().setIsUpdating(true);
         getConnectionsManager().sendRequest(req, (response, error) -> {
+            AndroidUtilities.cancelRunOnUIThread(gettingDifferenceTimeoutRunnable);
             if (error == null) {
                 TLRPC.updates_Difference res = (TLRPC.updates_Difference) response;
                 if (res instanceof TLRPC.TL_updates_differenceTooLong) {
+                    gettingDifference = false;
+                    getConnectionsManager().setIsUpdating(false);
                     AndroidUtilities.runOnUIThread(() -> {
                         loadedFullUsers.clear();
                         loadedFullChats.clear();
@@ -17191,7 +17213,14 @@ public class MessagesController extends BaseController implements NotificationCe
             } else {
                 gettingDifference = false;
                 getConnectionsManager().setIsUpdating(false);
-                FileLog.d("received: isUpdating = false");
+                FileLog.d("received: isUpdating = false, error = " + (error != null ? error.text : "null"));
+                if (error != null && (error.code == 400 || (error.text != null && (error.text.contains("PTS_INVALID") || error.text.contains("PERSISTENT_TIMESTAMP_INVALID") || error.text.contains("DATE_INVALID"))))) {
+                    FileLog.e("getDifference PTS corrupted on server, auto-healing PTS and reloading dialogs...");
+                    getMessagesStorage().setLastPtsValue(0);
+                    getMessagesStorage().saveDiffParams(getMessagesStorage().getLastSeqValue(), 0, 0, 0);
+                    loadCurrentState();
+                    AndroidUtilities.runOnUIThread(() -> resetDialogs(true, 0, 0, 0, 0));
+                }
             }
         });
     }
