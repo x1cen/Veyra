@@ -11,7 +11,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.tgnet.ConnectionsManager;
-import org.telegram.tgnet.ProxySettings;
+import org.telegram.utils.proxy.ProxySettings;
 
 import java.io.BufferedReader;
 import java.io.File;
