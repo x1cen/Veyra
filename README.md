@@ -119,10 +119,10 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
   * Dynamic Port Resolution: automatically extracts live ephemeral SOCKS5 ports from core daemon logs and steers Telegram connections dynamically.
   * Smart Regional Detection: detects Iranian phone numbers (`+98`) on first setup to apply optimal DPI-piercing defaults (HTTP/2 MASQUE, TLS fragmentation `8-24` bytes, `5-15ms` delay, `firewall` noise, ECH, and domestic bypass for `private,ir`).
   * Configurable Endpoint: customizable local SOCKS5 listen host (`127.0.0.1`, `0.0.0.0`) and port.
-* Mutually Exclusive Routing Isolation: strict separation between Aether and the standard proxy pool. Activating Aether hides the proxy list to prevent routing conflicts, while enabling regular proxies automatically halts Aether and restores the candidate list.
+* Unified Proxy Architecture & Intelligent State Dimming: Aether is directly integrated into Telegram's standard proxy list. When Aether is stopped, its entry is automatically dimmed (grayed out) with a disabled state. Once Aether is active, it seamlessly attaches to Telegram, and can participate in Auto Discovery benchmarking alongside your other proxies without separate isolation barriers.
 * Auto Discovery (P2C Tournament Pipeline): replaces legacy proxy rotation with a Power of Two Choices (P2C) tournament engine:
   * Multi-Stage Health Pipeline: validates TCP socket handshakes, measures RTT jitter, and benchmarks micro-throughput download speeds before selecting the active proxy.
-  * Auto-Prune Non-Working Proxies: automatically cleans dead and unreachable proxies from the list.
+  * Auto-Prune Non-Working Proxies: automatically cleans dead and unreachable external proxies from the list while safeguarding the local Aether engine.
   * Configurable Tournament Cadence: scheduled runs from 5 to 60 minutes.
 * Multi-Proxy Bulk Importer: high-performance non-blocking background importer supporting file uploads (`.txt`, `.json`, `.conf`) and mass clipboard paste (`tg://proxy`, `tg://socks`, `https://t.me/proxy`, and raw `host:port:secret` strings) with automatic batch deduplication.
 * Real-Time Monospace Terminal: full-screen console (`Aether Terminal`) with colorized telemetry displaying live gateway RTTs, candidate selection, and handshake logs with auto-scrolling.
@@ -188,6 +188,10 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 | Complete Channel Ad Suppression | No (Premium Only) | Partial | Built-in Permanent Free |
 | Unrestricted Forward & Copy | Blocked | Modded | Seamless Bypass |
 | Unlocked Pins & Stickers | 5 pins / 5 fave | Variable | 100 pins / 500 stickers |
+| Aether Anti-Censorship Engine | No | No | Native v2.3.0 Core (MASQUE/WG/WARP/Tor/Psiphon) |
+| Proxy Auto Discovery (P2C Tournament) | No | Simple Rotation | P2C Tournament + 3-Stage Benchmarking |
+| Multi-Proxy Bulk File/Text Importer | Single tg:// | Basic | Async Bulk Files & Clipboard (.txt/.json/.conf) |
+| Real-Time Terminal Engine Logs | No | No | Live Dark Monospace Console |
 
 ---
 
@@ -195,6 +199,10 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 
 The Veyra-specific code is kept modular so it doesn't entangle with upstream Telegram internals:
 
+* `org.veyra.client.aether.*`: native integration layer for the Aether v2.3.0 core, process supervisor, dynamic SOCKS5 port resolution, foreground service (`AetherService`), and configuration.
+* `org.veyra.client.proxy.ProxyDiscoveryPipeline`: multi-stage Power of Two Choices (P2C) proxy tournament engine and micro-throughput benchmarking suite.
+* `org.veyra.client.proxy.ProxyImporter`: asynchronous high-volume proxy parser for bulk text files and clipboard imports.
+* `org.telegram.ui.AetherActivity` & `org.telegram.ui.AetherLogsActivity`: full settings dashboard and real-time monospace terminal console for live engine telemetry.
 * `org.telegram.messenger.VeyraConfig`: persistent configuration controller for all privacy switches and feature flags, including per-chat-type rules for Anti-Delete and Edit History.
 * `org.telegram.ui.VeyraSettingsActivity`: the main Veyra settings hub, linking out to Ghost Mode, Anti-Delete, and Edit History sub-screens.
 * `org.veyra.client.VeyraEmergencyHandler`: emergency protocol executor for the local wipe and full remote self-destruction flows.
@@ -242,7 +250,7 @@ The Veyra-specific code is kept modular so it doesn't entangle with upstream Tel
 
 4. The built package lands at:
    ```
-   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.2.0.apk
+   TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.1.4.0-universal.apk
    ```
 
 ---
