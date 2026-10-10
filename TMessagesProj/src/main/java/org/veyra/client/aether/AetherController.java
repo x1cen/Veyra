@@ -157,6 +157,7 @@ public class AetherController {
         }
         shouldRun = true;
         AetherConfig.setEnabled(true);
+        AetherService.start(ApplicationLoader.applicationContext);
         updateState(STATE_PREPARING, "Preparing Aether...", -1);
 
         File binary = findCoreBinary();
@@ -194,6 +195,7 @@ public class AetherController {
     public synchronized void stop() {
         shouldRun = false;
         AetherConfig.setEnabled(false);
+        AetherService.stop(ApplicationLoader.applicationContext);
         updateState(STATE_DISCONNECTED, "Disconnected", -1);
         activeGateway = "";
 

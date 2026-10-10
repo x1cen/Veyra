@@ -498,6 +498,12 @@
             android:foregroundServiceType="dataSync"
         />
         <service
+            android:name="org.veyra.client.aether.AetherService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+        />
+        <service
             android:name="org.telegram.ui.Stories.recorder.StoryUploadingService"
             android:enabled="true"
             android:exported="true"

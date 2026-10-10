@@ -296,6 +296,10 @@ public class ApplicationLoader extends Application {
             ContactsController.getInstance(a).checkAppAccount();
             DownloadController.getInstance(a);
         }
+
+        if (org.veyra.client.aether.AetherConfig.isEnabled()) {
+            org.veyra.client.aether.AetherController.getInstance().start();
+        }
     }
 
     public ApplicationLoader() {
