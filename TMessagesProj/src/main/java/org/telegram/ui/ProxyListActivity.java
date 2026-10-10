@@ -1172,10 +1172,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
             @Override
             public void onComplete(int totalImported, int duplicatesSkipped) {
-                loadProxyList();
+                SharedConfig.loadProxyList();
                 updateRows(true);
                 String msg = totalImported > 0 ? "Imported " + totalImported + " proxies!" : "No new proxies found (" + duplicatesSkipped + " dupes).";
-                BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.ic_done, msg).show();
+                BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(R.raw.contact_check, msg).show();
             }
 
             @Override

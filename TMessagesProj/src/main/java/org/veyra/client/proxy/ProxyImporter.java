@@ -230,7 +230,7 @@ public class ProxyImporter {
         if (TextUtils.isEmpty(url)) return null;
         try {
             Uri uri = Uri.parse(url);
-            ProxySettings built = ProxySettings.builder(uri).build();
+            ProxySettings built = ProxySettings.fromUri(uri);
             if (built != null) {
                 return built;
             }

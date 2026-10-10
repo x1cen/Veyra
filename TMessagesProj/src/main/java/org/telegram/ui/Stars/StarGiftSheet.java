@@ -1040,7 +1040,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             .addIf(canSetAsTheme(), R.drawable.msg_colors, getString(R.string.GiftThemesSetIn), this::openSetAsTheme)
             .addIf(canTransfer(), R.drawable.menu_feature_transfer, getString(R.string.Gift2TransferOption), this::openTransfer)
             .addIf(savedStarGift == null && getDialogId() != 0, R.drawable.msg_view_file, getString(R.string.Gift2ViewInProfile), this::openInProfile)
-            .add(R.drawable.msg_code, "View Details (JSON)", () -> {
+            .add(R.drawable.msg_info, "View Details (JSON)", () -> {
                 showGiftJsonDetails(giftUnique, savedStarGift);
             })
             .setDrawScrim(false)
