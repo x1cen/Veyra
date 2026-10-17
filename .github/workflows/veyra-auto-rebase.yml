@@ -1,0 +1,40 @@
+name: veyra-auto-rebase
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: fetch upstream and check
+        run: |
+          git remote add upstream https://github.com/DrKLO/Telegram.git 2>/dev/null || true
+          git fetch upstream master --tags
+          echo "upstream HEAD: $(git rev-parse upstream/master | cut -c1-9)"
+          BASE=$(git rev-parse origin/master 2>/dev/null || git rev-parse master)
+          echo "base: $BASE" | cut -c1-40
+          if [ "$(git rev-parse upstream/master)" = "$BASE" ]; then echo "no update"; exit 0; fi
+          echo "UPDATE_AVAILABLE=1" >> $GITHUB_ENV
+      - name: attempt rebase
+        if: env.UPDATE_AVAILABLE == '1'
+        run: |
+          git config rerere.enabled true
+          git config user.name "veyra-bot"
+          git config user.email "veyra-bot@users.noreply.github.com"
+          bash scripts/veyra-rebase.sh || true
+          if git status | grep -q "rebase in progress\|Unmerged paths"; then
+            echo "REBASE_CONFLICT=1" >> $GITHUB_ENV
+            git diff --name-only --diff-filter=U | head -n 50
+          else echo "REBASE_CONFLICT=0" >> $GITHUB_ENV
+          fi
+      - name: push clean rebase
+        if: env.UPDATE_AVAILABLE == '1' && env.REBASE_CONFLICT == '0'
+        run: |
+          git push origin master --force || true
+          git push origin veyra --force

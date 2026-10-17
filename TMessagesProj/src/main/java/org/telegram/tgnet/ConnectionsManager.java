@@ -13,6 +13,7 @@ import android.text.TextUtils;
 import android.util.Base64;
 
 import androidx.annotation.Keep;
+import org.veyra.client.VeyraSecurity;
 
 import androidx.annotation.OptIn;
 import androidx.media3.common.util.UnstableApi;
@@ -395,7 +396,199 @@ public class ConnectionsManager extends BaseController {
         return requestToken;
     }
 
-    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {        if (object instanceof TLRPC.TL_messages_readHistory) {
+            long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
+            if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
+                    && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        } else if (object instanceof TLRPC.TL_channels_readHistory) {
+            long peerDialogId = 0;
+            try {
+                if (((TLRPC.TL_channels_readHistory) object).channel != null) {
+                    peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
+                }
+            } catch (Throwable ignore) {}
+            if (peerDialogId != 0 && org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
+                    && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        } else if (org.telegram.messenger.VeyraConfig.isGhostHideSecretRead() && object instanceof TLRPC.TL_messages_readEncryptedHistory) {
+            if (onComplete != null) {
+                AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+            }
+            return;
+        }
+        if (org.telegram.messenger.VeyraConfig.isGhostHideReadContents() && (
+                object instanceof TLRPC.TL_messages_readMessageContents ||
+                object instanceof TLRPC.TL_channels_readMessageContents)) {
+            if (onComplete != null) {
+                TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
+                res.pts = 0;
+                res.pts_count = 0;
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
+        if (object instanceof TLRPC.TL_messages_getMessagesViews) {
+            TLRPC.TL_messages_getMessagesViews viewsReq = (TLRPC.TL_messages_getMessagesViews) object;
+            long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(viewsReq.peer);
+            if (org.telegram.messenger.VeyraConfig.isGhostHideChannelViews(peerDialogId)) {
+                viewsReq.increment = false;
+            }
+        }
+        if (object instanceof org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) {
+            long storiesPeerId = 0;
+            try {
+                storiesPeerId = org.telegram.messenger.DialogObject.getPeerDialogId(((org.telegram.tgnet.tl.TL_stories.TL_stories_readStories) object).peer);
+            } catch (Throwable ignore) {}
+            if (org.telegram.messenger.VeyraConfig.isGhostHideStories(storiesPeerId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
+        if (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping) {
+            TLRPC.SendMessageAction action = null;
+            long typingDialogId = 0;
+            if (object instanceof TLRPC.TL_messages_setTyping) {
+                action = ((TLRPC.TL_messages_setTyping) object).action;
+                typingDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_setTyping) object).peer);
+            }
+            boolean isTypingAction = action == null || action instanceof TLRPC.TL_sendMessageTypingAction || action instanceof TLRPC.TL_sendMessageCancelAction;
+            boolean isVoiceAction = action instanceof TLRPC.TL_sendMessageRecordAudioAction || action instanceof TLRPC.TL_sendMessageUploadAudioAction;
+            boolean isVideoAction = action instanceof TLRPC.TL_sendMessageRecordVideoAction || action instanceof TLRPC.TL_sendMessageUploadVideoAction
+                    || action instanceof TLRPC.TL_sendMessageRecordRoundAction || action instanceof TLRPC.TL_sendMessageUploadRoundAction;
+            boolean isFileAction = action instanceof TLRPC.TL_sendMessageUploadDocumentAction || action instanceof TLRPC.TL_sendMessageUploadPhotoAction;
+
+            boolean drop = false;
+            if (org.telegram.messenger.VeyraConfig.isGhostHideTyping(typingDialogId)) {
+                if (isTypingAction && org.telegram.messenger.VeyraConfig.ghostTypingText) {
+                    drop = true;
+                } else if (isVoiceAction && org.telegram.messenger.VeyraConfig.ghostTypingVoice) {
+                    drop = true;
+                } else if (isVideoAction && org.telegram.messenger.VeyraConfig.ghostTypingVideo) {
+                    drop = true;
+                } else if (isFileAction && org.telegram.messenger.VeyraConfig.ghostTypingFiles) {
+                    drop = true;
+                } else if (!isTypingAction && org.telegram.messenger.VeyraConfig.isGhostHideUpload(typingDialogId)) {
+                    drop = true;
+                }
+            }
+            if (drop) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
+        if ((org.telegram.messenger.VeyraConfig.isGhostHideOnline() || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2) && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+            org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
+            if (!statusReq.offline) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 3 && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+            org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
+            if (statusReq.offline) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        }
+        final RequestDelegate finalOnComplete;
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && (object instanceof TLRPC.TL_messages_sendMessage || object instanceof TLRPC.TL_messages_sendMedia || object instanceof TLRPC.TL_messages_sendMultiMedia)) {
+            final RequestDelegate origDelegate = onComplete;
+            finalOnComplete = (response, error) -> {
+                if (origDelegate != null) {
+                    origDelegate.run(response, error);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    org.telegram.tgnet.tl.TL_account.updateStatus offlineReq = new org.telegram.tgnet.tl.TL_account.updateStatus();
+                    offlineReq.offline = true;
+                    sendRequest(offlineReq, null);
+                }, 500);
+            };
+        } else {
+            finalOnComplete = onComplete;
+        }
+         if (BuildVars.LOGS_ENABLED) {
+             FileLog.d("send request " + object + " with token = " + requestToken);
+         }
+@@ -646,47 +755,27 @@ public class ConnectionsManager extends BaseController {
+     }
+ 
+     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
+-        final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        String proxyAddress = preferences.getString("proxy_ip", "");
+        String proxyUsername = preferences.getString("proxy_user", "");
+        String proxyPassword = preferences.getString("proxy_pass", "");
+        String proxySecret = preferences.getString("proxy_secret", "");
+        int proxyPort = preferences.getInt("proxy_port", 1080);
+
+         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
+         if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
+-            if (proxySettings.getType() == ProxySettings.Type.WEB) {
+            if (org.veyra.client.proxy.ProxyStatusManager.isAether(proxySettings)) {
+                int localPort = org.veyra.client.aether.AetherController.getInstance().getActivePort();
+                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : org.veyra.client.aether.AetherConfig.getSocksPort(), "", "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
+            } else if (proxySettings.getType() == ProxySettings.Type.WEB) {
+                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
+-                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
+-                        proxySettings.getSecret());
+-            } else {
+-                native_setProxySettings(currentAccount, proxySettings.getAddress(), proxySettings.getPort(),
+-                        proxySettings.getUser(), proxySettings.getPassword(), proxySettings.getSecret());
+-            }
+-        }
+-        String installer = "";
+-        try {
+-            Context context = ApplicationLoader.applicationContext;
+-            if (Build.VERSION.SDK_INT >= 30) {
+-                InstallSourceInfo installSourceInfo = context.getPackageManager().getInstallSourceInfo(context.getPackageName());
+-                if (installSourceInfo != null) {
+-                    installer = installSourceInfo.getInitiatingPackageName();
+-                    if (installer == null) {
+-                        installer = installSourceInfo.getInstallingPackageName();
+-                    }
+-                }
+                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
+             } else {
+-                installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
+                native_setProxySettings(currentAccount, proxySettings.getAddress() != null ? proxySettings.getAddress() : "", proxySettings.getPort(), proxySettings.getUser() != null ? proxySettings.getUser() : "", proxySettings.getPassword() != null ? proxySettings.getPassword() : "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
+             }
+-        } catch (Throwable ignore) {
+-
+-        }
+-        if (installer == null) {
+-            installer = "";
+-        }
+-        String packageId = "";
+-        try {
+-            packageId = ApplicationLoader.applicationContext.getPackageName();
+-        } catch (Throwable ignore) {
+-
+-        }
+-        if (packageId == null) {
+-            packageId = "";
+         }
+        String installer = VeyraSecurity.getVendor();
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
