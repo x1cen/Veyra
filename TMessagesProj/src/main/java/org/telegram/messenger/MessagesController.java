@@ -1460,6 +1460,30 @@ public class MessagesController extends BaseController implements NotificationCe
         MediaDataController mediaDataController = getMediaDataController();
         long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
         long date2 = DialogObject.getLastMessageOrDraftDate(dialog2, mediaDataController.getDraft(dialog2.id, 0));
+        // Veyra: optional sort by unread/unmuted priority matching Nagram logic
+        if (org.telegram.messenger.VeyraConfig.sortByUnread) {
+            if (dialog1.unread_count == 0 && dialog2.unread_count > 0) {
+                return 1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0) {
+                return -1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count > 0) {
+                if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+                    boolean m1 = isDialogMuted(dialog1.id, 0);
+                    boolean m2 = isDialogMuted(dialog2.id, 0);
+                    if (m1 && !m2) {
+                        return 1;
+                    } else if (!m1 && m2) {
+                        return -1;
+                    }
+                }
+            }
+        } else if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+            if (dialog1.unread_count == 0 && dialog2.unread_count > 0 && isDialogMuted(dialog1.id, 0) && !isDialogMuted(dialog2.id, 0)) {
+                return 1;
+            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0 && !isDialogMuted(dialog1.id, 0) && isDialogMuted(dialog2.id, 0)) {
+                return -1;
+            }
+        }
         if (date1 < date2) {
             return 1;
         } else if (date1 > date2) {
@@ -1636,27 +1660,25 @@ public class MessagesController extends BaseController implements NotificationCe
         ringtoneSizeMax = mainPreferences.getInt("ringtoneSizeMax", 1024_00);
         pmReadDateExpirePeriod = mainPreferences.getInt("pmReadDateExpirePeriod", 7 * 86400);
         suggestStickersApiOnly = mainPreferences.getBoolean("suggestStickersApiOnly", false);
-        roundVideoSize = mainPreferences.getInt("roundVideoSize", 384);
-        roundVideoBitrate = mainPreferences.getInt("roundVideoBitrate", 1000);
+        roundVideoSize = mainPreferences.getInt("roundVideoSize", VeyraConfig.highQualityVideoMessages ? 640 : 384);
+        roundVideoBitrate = mainPreferences.getInt("roundVideoBitrate", VeyraConfig.highQualityVideoMessages ? 2500 : 1000);
         roundAudioBitrate = mainPreferences.getInt("roundAudioBitrate", 64);
         pendingSuggestions = mainPreferences.getStringSet("pendingSuggestions", null);
         dismissedSuggestions = mainPreferences.getStringSet("dismissedSuggestions", null);
         channelsLimitDefault = mainPreferences.getInt("channelsLimitDefault", 500);
         channelsLimitPremium = mainPreferences.getInt("channelsLimitPremium", 2 * channelsLimitDefault);
-        savedGifsLimitDefault = mainPreferences.getInt("savedGifsLimitDefault", 200);
-        savedGifsLimitPremium = mainPreferences.getInt("savedGifsLimitPremium", 400);
-        stickersFavedLimitDefault = mainPreferences.getInt("stickersFavedLimitDefault", 5);
-        stickersFavedLimitPremium = mainPreferences.getInt("stickersFavedLimitPremium", 200);
-        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 5);
-        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 5);
-        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 5);
-        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 5);
-        dialogFiltersLimitDefault = mainPreferences.getInt("dialogFiltersLimitDefault", 10);
-        dialogFiltersLimitPremium = mainPreferences.getInt("dialogFiltersLimitPremium", 20);
-        dialogFiltersChatsLimitDefault = mainPreferences.getInt("dialogFiltersChatsLimitDefault", 100);
-        dialogFiltersChatsLimitPremium = mainPreferences.getInt("dialogFiltersChatsLimitPremium", 200);
-        dialogFiltersPinnedLimitDefault = mainPreferences.getInt("dialogFiltersPinnedLimitDefault", 5);
-        dialogFiltersPinnedLimitPremium = mainPreferences.getInt("dialogFiltersPinnedLimitPremium", 10);
+        savedGifsLimitDefault = mainPreferences.getInt("savedGifsLimitDefault", 1000);
+        savedGifsLimitPremium = mainPreferences.getInt("savedGifsLimitPremium", 1000);
+        stickersFavedLimitDefault = mainPreferences.getInt("stickersFavedLimitDefault", 500);
+        stickersFavedLimitPremium = mainPreferences.getInt("stickersFavedLimitPremium", 500);
+        maxPinnedDialogsCountDefault = mainPreferences.getInt("maxPinnedDialogsCountDefault", 100);
+        maxPinnedDialogsCountPremium = mainPreferences.getInt("maxPinnedDialogsCountPremium", 100);
+        dialogFiltersLimitDefault = mainPreferences.getInt("dialogFiltersLimitDefault", 30);
+        dialogFiltersLimitPremium = mainPreferences.getInt("dialogFiltersLimitPremium", 30);
+        dialogFiltersChatsLimitDefault = mainPreferences.getInt("dialogFiltersChatsLimitDefault", 500);
+        dialogFiltersChatsLimitPremium = mainPreferences.getInt("dialogFiltersChatsLimitPremium", 500);
+        dialogFiltersPinnedLimitDefault = mainPreferences.getInt("dialogFiltersPinnedLimitDefault", 100);
+        dialogFiltersPinnedLimitPremium = mainPreferences.getInt("dialogFiltersPinnedLimitPremium", 100);
         publicLinksLimitDefault = mainPreferences.getInt("publicLinksLimitDefault", 10);
         publicLinksLimitPremium = mainPreferences.getInt("publicLinksLimitPremium", 20);
         captionLengthLimitDefault = mainPreferences.getInt("captionLengthLimitDefault", 1024);
@@ -9335,21 +9357,17 @@ public class MessagesController extends BaseController implements NotificationCe
             } else if (welcomeMessages) {
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_WELCOME_MESSAGES, topicId);
             } else {
-                if (channelId == 0) {
-                    for (int a = 0; a < messages.size(); a++) {
-                        Integer id = messages.get(a);
-                        MessageObject obj = dialogMessagesByIds.get(id);
-                        if (obj != null) {
-                            obj.deleted = true;
-                        }
-                    }
-                } else {
-                    markDialogMessageAsDeleted(dialogId, messages);
+                for (int a = 0; a < messages.size(); a++) {
+                    Integer id = messages.get(a);
+                    dialogMessagesByIds.remove(id);
                 }
-                getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId);
+                markDialogMessageAsDeleted(dialogId, messages);
+                getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId); // Veyra: delete marker
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
+                getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
             }
-            getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId);
+            getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, messages, channelId, scheduled, false, movedToScheduled, movedToScheduledMessageId, null, false);
+            org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(dialogId, messages);
         } else {
             if (taskRequest instanceof TLRPC.TL_channels_deleteMessages) {
                 channelId = ((TLRPC.TL_channels_deleteMessages) taskRequest).channel.channel_id;
@@ -10501,6 +10519,25 @@ public class MessagesController extends BaseController implements NotificationCe
         });
     }
 
+    public void updateOnlineStatus() {
+        Utilities.stageQueue.postRunnable(() -> {
+            if (VeyraConfig.onlineMode == 1 || VeyraConfig.onlineMode == 2) {
+                TL_account.updateStatus req = new TL_account.updateStatus();
+                req.offline = true;
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        offlineSent = true;
+                        statusSettingState = 2;
+                    }
+                });
+            } else {
+                statusSettingState = 0;
+                lastStatusUpdateTime = 0;
+                offlineSent = true;
+            }
+        });
+    }
+
     public void updateTimerProc() {
         long currentTime = System.currentTimeMillis();
 
@@ -10508,7 +10545,9 @@ public class MessagesController extends BaseController implements NotificationCe
         checkReadTasks();
 
         if (getUserConfig().isClientActivated()) {
-            if (!ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
+            // Veyra: online visibility control (0=normal, 1=hide, 2=hide+offline after message, 3=always online)
+            final int onlineMode = VeyraConfig.onlineMode;
+            if (!ignoreSetOnline && onlineMode != 1 && onlineMode != 2 && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
                     if (statusSettingState != 1 && (lastStatusUpdateTime == 0 || Math.abs(System.currentTimeMillis() - lastStatusUpdateTime) >= 55000 || offlineSent)) {
                         statusSettingState = 1;
@@ -10583,7 +10622,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.TL_messages_getMessagesViews req = new TLRPC.TL_messages_getMessagesViews();
                     req.peer = getInputPeer(key);
                     req.id = channelViewsToSend.valueAt(a);
-                    req.increment = a == 0;
+                    req.increment = a == 0 && !VeyraConfig.isGhostHideChannelViews(key);
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         if (response != null) {
                             TLRPC.TL_messages_messageViews res = (TLRPC.TL_messages_messageViews) response;
@@ -14540,7 +14579,38 @@ public class MessagesController extends BaseController implements NotificationCe
         }
     }
 
+    private final androidx.collection.LongSparseArray<ReadTask> pendingReadOnReply = new androidx.collection.LongSparseArray<>();
+
+    public void sendPendingReadOnReply(long dialogId) {
+        if (!VeyraConfig.isGhostReadOnReply(dialogId)) {
+            return;
+        }
+        Utilities.stageQueue.postRunnable(() -> {
+            ReadTask task = pendingReadOnReply.get(dialogId);
+            if (task != null) {
+                pendingReadOnReply.remove(dialogId);
+                task.fromSendReply = true;
+                completeReadTask(task);
+            } else {
+                Integer maxId = dialogs_read_inbox_max.get(dialogId);
+                if (maxId != null && maxId > 0) {
+                    ReadTask newTask = new ReadTask();
+                    newTask.dialogId = dialogId;
+                    newTask.maxId = maxId;
+                    newTask.fromSendReply = true;
+                    completeReadTask(newTask);
+                }
+            }
+        });
+    }
+
     private void completeReadTask(ReadTask task) {
+        if (task.fromSendReply) {
+            VeyraConfig.allowSendReadOnce(task.dialogId);
+        } else if (VeyraConfig.isGhostReadOnReply(task.dialogId) && DialogObject.isUserDialog(task.dialogId)) {
+            pendingReadOnReply.put(task.dialogId, task);
+            return;
+        }
         if (task.replyId != 0 && task.monoForumPeerId == 0) {
             TLRPC.TL_messages_readDiscussion req = new TLRPC.TL_messages_readDiscussion();
             req.msg_id = (int) task.replyId;
@@ -17581,35 +17651,67 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
+        // If this is a DM with the developer and the viewer is NOT the developer themselves,
+        // bypass anti-delete entirely — their messages should disappear normally.
+        if (VeyraConfig.isDeveloperChat(dialogId) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+            getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+                AndroidUtilities.runOnUIThread(() ->
+                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, false));
+            });
+            return;
+        }
+        final boolean isAntiDeleteAllowed = VeyraConfig.isChatTypeAllowedForAntiDelete(dialogId);
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
-                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false);
-                if (channelId == 0) {
-                    for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                        Integer id = ids.get(b);
-                        MessageObject obj = dialogMessagesByIds.get(id);
-                        if (obj != null) {
-                            obj.deleted = true;
+                boolean isRemotePeerRevoke = true;
+                getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, isAntiDeleteAllowed ? isRemotePeerRevoke : false);
+                if (isAntiDeleteAllowed) {
+                    ArrayList<MessageObject> dialogObjs = dialogMessage.get(dialogId);
+                    if (dialogObjs != null) {
+                        for (int i = 0; i < dialogObjs.size(); ++i) {
+                            MessageObject obj = dialogObjs.get(i);
+                            for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                                if (obj != null && obj.getId() == ids.get(b)) {
+                                    if (obj.messageOwner != null) {
+                                        obj.messageOwner.isDeleted = true;
+                                    }
+                                    break;
+                                }
+                            }
                         }
                     }
-                } else {
-                    ArrayList<MessageObject> objs = dialogMessage.get(-channelId);
-                    if (objs != null) {
-                        for (int i = 0; i < objs.size(); ++i) {
-                            MessageObject obj = objs.get(i);
-                            for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                                if (obj.getId() == ids.get(b)) {
-                                    obj.deleted = true;
-                                    break;
+                    if (channelId == 0) {
+                        for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                            Integer id = ids.get(b);
+                            MessageObject obj = dialogMessagesByIds.get(id);
+                            if (obj != null) {
+                                obj.messageOwner.isDeleted = true;
+                            }
+                        }
+                    } else {
+                        ArrayList<MessageObject> objs = dialogMessage.get(-channelId);
+                        if (objs != null) {
+                            for (int i = 0; i < objs.size(); ++i) {
+                                MessageObject obj = objs.get(i);
+                                for (int b = 0, size2 = ids.size(); b < size2; b++) {
+                                    if (obj.getId() == ids.get(b)) {
+                                        obj.messageOwner.isDeleted = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             });
-            getMessagesStorage().deletePushMessages(dialogId, ids);
-            ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, false, true, 0, 0);
-            getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+            if (isAntiDeleteAllowed) {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
+            } else {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+            }
         });
     }
 
@@ -19510,17 +19612,51 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
 
                 ImageLoader.saveMessageThumbs(message);
-                AndroidUtilities.runOnUIThread(() -> {
-                    getSendMessagesHelper().onMessageEdited(message);
-                    if (!message.out && message.dialog_id == 777000
-                            && message.action instanceof TLRPC.TL_messageActionWalletTonConnectRequest) {
-                        TLRPC.TL_messageActionWalletTonConnectRequest request =
-                                (TLRPC.TL_messageActionWalletTonConnectRequest) message.action;
-                        if (request.accepted || request.declined) {
-                            GramWallet.getInstance(currentAccount).tonConnect.markProcessed(request.session_id, message.id);
+                MessageObject oldMsg = dialogMessagesByIds.get(message.id);
+                TLRPC.Message oldMsgOwner = oldMsg != null ? oldMsg.messageOwner : null;
+                if (oldMsgOwner == null) {
+                    oldMsgOwner = getMessagesStorage().getMessage(message.dialog_id, message.id);
+                }
+                boolean isReactionUpdate = getSendMessagesHelper().isRecentlyReacted(message.id);
+                if (oldMsgOwner != null) {
+                    String oldText = oldMsgOwner.message != null ? oldMsgOwner.message : "";
+                    String newText = message.message != null ? message.message : "";
+                    boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(message.id);
+                    boolean textChanged = !TextUtils.equals(oldText, newText);
+                    boolean wasEditedBefore = oldMsgOwner.edit_date != 0 || (oldMsgOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+
+                    if (textChanged || isLocalEdit) {
+                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                        if (message.edit_date == 0) {
+                            message.edit_date = getConnectionsManager().getCurrentTime();
                         }
+                    } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(message.dialog_id, message.id)) {
+                        message.edit_date = oldMsgOwner.edit_date;
+                        message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    } else {
+                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                        message.edit_date = 0;
                     }
-                });
+
+                    if (textChanged
+                            && !oldMsgOwner.out && !message.out
+                            && !VeyraConfig.isDeveloperChat(message.dialog_id)
+                            && VeyraConfig.isChatTypeAllowedForEditHistory(message.dialog_id)
+                            && (MessageObject.getPeerId(message.from_id) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
+                        // Skip edit history logging for the developer's DM and messages
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(
+                                message.dialog_id,
+                                message.id,
+                                oldMsgOwner.edit_date > 0 ? oldMsgOwner.edit_date : oldMsgOwner.date,
+                                oldText,
+                                oldMsgOwner
+                        );
+                    }
+                } else if (isReactionUpdate && !getSendMessagesHelper().isRecentlyEditedLocally(message.id)) {
+                    message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    message.edit_date = 0;
+                }
+                AndroidUtilities.runOnUIThread(()-> getSendMessagesHelper().onMessageEdited(message));
 
                 boolean isDialogCreated = createdDialogIds.contains(message.dialog_id);
                 MessageObject obj = new MessageObject(currentAccount, message, usersDict, chatsDict, isDialogCreated, isDialogCreated);
@@ -21136,16 +21272,19 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (arrayList == null) {
                         continue;
                     }
-                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, arrayList, -dialogId, false);
+                    getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, arrayList, -dialogId, false, false, false, 0, null, true);
                     if (dialogId == 0) {
                         for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                             Integer id = arrayList.get(b);
                             MessageObject obj = dialogMessagesByIds.get(id);
                             if (obj != null) {
+                                if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                                    continue;
+                                }
                                 if (BuildVars.LOGS_ENABLED) {
                                     FileLog.d("mark messages " + obj.getId() + " deleted");
                                 }
-                                obj.deleted = true;
+                                obj.messageOwner.isDeleted = true;
                             }
                         }
                     } else {
@@ -21154,9 +21293,12 @@ public class MessagesController extends BaseController implements NotificationCe
                             for (int i = 0; i < objs.size(); ++i) {
                                 MessageObject obj = objs.get(i);
                                 if (obj != null) {
+                                    if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                                        continue;
+                                    }
                                     for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                                         if (obj.getId() == arrayList.get(b)) {
-                                            obj.deleted = true;
+                                            obj.messageOwner.isDeleted = true;
                                             break;
                                         }
                                     }
@@ -21249,13 +21391,19 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().markMessagesContentAsRead(key, arrayList, currentTime2, markContentAsReadMessagesDate);
             }
         }
-        if (deletedMessages != null) {
+        if (deletedMessages != null && !deletedMessages.isEmpty()) {
             for (int a = 0, size = deletedMessages.size(); a < size; a++) {
                 long key = deletedMessages.keyAt(a);
-                ArrayList<Integer> arrayList = deletedMessages.valueAt(a);
+                List<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
-                    ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0);
-                    getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    boolean allowAntiDelete = VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, key);
+                    if (allowAntiDelete) {
+                        List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    } else {
+                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList instanceof ArrayList ? (ArrayList<Integer>) arrayList : new ArrayList<>(arrayList), false, true, 0, 0);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    }
                 });
             }
         }
@@ -22626,25 +22774,12 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public String getRestrictionReason(ArrayList<TLRPC.RestrictionReason> reasons) {
-        if (reasons.isEmpty()) {
-            return null;
-        }
-        for (int a = 0, N = reasons.size(); a < N; a++) {
-            TLRPC.RestrictionReason reason = reasons.get(a);
-            if (ignoreRestrictionReasons != null && ignoreRestrictionReasons.contains(reason.reason)) continue;
-            if ("sensitive".equals(reason.reason)) continue;
-            if (
-                "all".equals(reason.platform) ||
-                "android".equals(reason.platform) && (!ApplicationLoader.isStandaloneBuild() && !BuildVars.isBetaApp() || BuildVars.DEBUG_PRIVATE_VERSION) ||
-                "android-all".equals(reason.platform)
-            ) {
-                return reason.text;
-            }
-        }
+        if (VeyraConfig.ignoreContentRestrictions) return null;
         return null;
     }
 
     public boolean isSensitive(ArrayList<TLRPC.RestrictionReason> reasons) {
+        if (VeyraConfig.ignoreContentRestrictions) return false;
         if (reasons == null || reasons.isEmpty()) {
             return false;
         }
@@ -25268,14 +25403,23 @@ public class MessagesController extends BaseController implements NotificationCe
 
 
     public boolean isWebBrowserUseCustomTabs() {
+        if (org.veyra.client.aether.AetherInAppTunnelManager.isTunnelActive()) {
+            return false;
+        }
         return !isWebBrowserInAppEnabled() && (webBrowserSettings == null || webBrowserSettings.display_close_button);
     }
 
     public boolean isWebBrowserInAppEnabled() {
+        if (org.veyra.client.aether.AetherInAppTunnelManager.isTunnelActive()) {
+            return true;
+        }
         return webBrowserSettings != null && !webBrowserSettings.open_external_browser;
     }
 
     public boolean isWebBrowserOpenInApp(String url) {
+        if (org.veyra.client.aether.AetherInAppTunnelManager.isTunnelActive()) {
+            return true;
+        }
         return webBrowserSettings != null && url != null && !isWebBrowserOpenInExternal(webBrowserSettings, url);
     }
 

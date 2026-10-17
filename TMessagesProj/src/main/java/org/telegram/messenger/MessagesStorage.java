@@ -410,6 +410,18 @@ public class MessagesStorage extends BaseController {
         loadUnreadMessages();
         loadPendingTasks();
         try {
+            org.veyra.client.VeyraAntiDelete.initFromDb(database);
+            try {
+                database.executeFast(
+                    "UPDATE dialogs SET (last_mid, last_mid_group) = (" +
+                    "  SELECT mid, group_id FROM messages_v2 WHERE uid = dialogs.did ORDER BY date DESC, mid DESC LIMIT 1" +
+                    ") WHERE did IN (" +
+                    "  SELECT d.did FROM dialogs as d JOIN messages_v2 as m ON d.did = m.uid " +
+                    "  GROUP BY d.did HAVING d.last_mid IS NULL OR d.last_mid = 0 OR d.last_mid < max(m.mid)" +
+                    ")"
+                ).stepThis().dispose();
+            } catch (Throwable ignore) {
+            }
             openSync.countDown();
         } catch (Throwable ignore) {
 
@@ -1451,6 +1463,8 @@ public class MessagesStorage extends BaseController {
                 database.executeFast("DELETE FROM quick_replies_messages").stepThis().dispose();
                 database.executeFast("DELETE FROM welcome_messages").stepThis().dispose();
                 database.executeFast("DELETE FROM effects").stepThis().dispose();
+                database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
+                org.veyra.client.VeyraEditHistoryManager.clearAll();
                 database.executeFast("DELETE FROM app_config").stepThis().dispose();
                 database.executeFast("DELETE FROM star_gifts2").stepThis().dispose();
                 database.executeFast("DELETE FROM premium_promo").stepThis().dispose();
@@ -2250,6 +2264,7 @@ public class MessagesStorage extends BaseController {
     public void fullReset() {
         storageQueue.postRunnable(() -> {
             cleanupInternal(true);
+            org.veyra.client.VeyraEditHistoryManager.clearAll();
             clearLoadingDialogsOffsets();
             openDatabase(1);
             AndroidUtilities.runOnUIThread(() -> {
@@ -5287,6 +5302,84 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
+                                if (!org.veyra.client.VeyraEditHistoryManager.hasHistory(dialogId, msgId)) {
+                                    message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                    message.edit_date = 0;
+                                }
+                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
+                                    int nowTime = (int) (System.currentTimeMillis() / 1000);
+                                    long mySelfId = getUserConfig().clientUserId;
+                                    if (pastReactions != null && pastReactions.recent_reactions != null && !pastReactions.recent_reactions.isEmpty()) {
+                                        for (int p = 0; p < pastReactions.recent_reactions.size(); p++) {
+                                            TLRPC.MessagePeerReaction oldMpr = pastReactions.recent_reactions.get(p);
+                                            if (oldMpr == null) continue;
+                                            long oldPeerId = MessageObject.getPeerId(oldMpr.peer_id);
+                                            String oldEmoji = "";
+                                            if (oldMpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                oldEmoji = "\u2b50\ufe0f";
+                                            } else if (oldMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldMpr.reaction).emoticon;
+                                            }
+                                            if (TextUtils.isEmpty(oldEmoji)) continue;
+
+                                            boolean stillExists = false;
+                                            if (reactions != null && reactions.recent_reactions != null) {
+                                                for (int r = 0; r < reactions.recent_reactions.size(); r++) {
+                                                    TLRPC.MessagePeerReaction newMpr = reactions.recent_reactions.get(r);
+                                                    if (newMpr != null && MessageObject.getPeerId(newMpr.peer_id) == oldPeerId) {
+                                                        String newEmoji = "";
+                                                        if (newMpr.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                            newEmoji = "\u2b50\ufe0f";
+                                                        } else if (newMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newMpr.reaction).emoticon;
+                                                        }
+                                                        if (oldEmoji.equals(newEmoji)) {
+                                                            stillExists = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (!stillExists) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, oldPeerId, mySelfId);
+                                            }
+                                        }
+                                    } else if (pastReactions != null && pastReactions.results != null && !pastReactions.results.isEmpty()) {
+                                        for (int p = 0; p < pastReactions.results.size(); p++) {
+                                            TLRPC.ReactionCount oldRc = pastReactions.results.get(p);
+                                            if (oldRc == null) continue;
+                                            String oldEmoji = "";
+                                            if (oldRc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                oldEmoji = "\u2b50\ufe0f";
+                                            } else if (oldRc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldRc.reaction).emoticon;
+                                            }
+                                            if (TextUtils.isEmpty(oldEmoji)) continue;
+
+                                            int newCount = 0;
+                                            if (reactions != null && reactions.results != null) {
+                                                for (int r = 0; r < reactions.results.size(); r++) {
+                                                    TLRPC.ReactionCount newRc = reactions.results.get(r);
+                                                    if (newRc != null) {
+                                                        String newEmoji = "";
+                                                        if (newRc.reaction instanceof TLRPC.TL_reactionPaid) {
+                                                            newEmoji = "\u2b50\ufe0f";
+                                                        } else if (newRc.reaction instanceof TLRPC.TL_reactionEmoji) {
+                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newRc.reaction).emoticon;
+                                                        }
+                                                        if (oldEmoji.equals(newEmoji)) {
+                                                            newCount = newRc.count;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (newCount < oldRc.count) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, 0, mySelfId);
+                                            }
+                                        }
+                                    }
+                                }
                                 SQLitePreparedStatement state;
                                 if (i == 0) {
                                     state = database.executeFast("UPDATE messages_v2 SET data = ? WHERE mid = ? AND uid = ?");
@@ -15093,7 +15186,178 @@ public class MessagesStorage extends BaseController {
         return null;
     }
 
-    private void updateDialogsWithDeletedMessagesInternal(long originalDialogId, long channelId, ArrayList<Integer> messages, ArrayList<Long> additionalDialogsToUpdate) {
+    private List<Long> markMessagesAsIsDeletedInternal(Long dialogId, List<Integer> messages) {
+        try {
+            SQLiteCursor cursor;
+            String ids = TextUtils.join(",", messages);
+            List<Long> dialogsToUpdate = new ArrayList<>();
+            if (dialogId != 0) {
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND uid = %d", ids, dialogId));
+            } else {
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
+            }
+            HashMap<Long, ArrayList<Integer>> devMessagesByChat = new HashMap<>();
+            while (cursor.next()) {
+                try {
+                    long did = cursor.longValue(0);
+                    int mid = cursor.intValue(1);
+                    boolean isDevMsg = false;
+                    if (VeyraConfig.isDeveloperChat(did)) {
+                        isDevMsg = true;
+                    } else if (VeyraConfig.getDeveloperUserId() != 0) {
+                        try {
+                            NativeByteBuffer data = cursor.byteBufferValue(2);
+                            if (data != null) {
+                                TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                                data.reuse();
+                                if (msg != null && MessageObject.getPeerId(msg.from_id) == VeyraConfig.getDeveloperUserId()) {
+                                    isDevMsg = true;
+                                }
+                            }
+                        } catch (Throwable ignore) {}
+                    }
+
+                    boolean allowed = VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, did);
+                    if (!allowed || (isDevMsg && !VeyraConfig.isSelfDeveloper(currentAccount))) {
+                        ArrayList<Integer> arr = devMessagesByChat.get(did);
+                        if (arr == null) {
+                            arr = new ArrayList<>();
+                            devMessagesByChat.put(did, arr);
+                        }
+                        arr.add(mid);
+                        continue;
+                    }
+
+                    database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
+                    org.veyra.client.VeyraAntiDelete.markChatDeleted(did);
+                } catch (Exception e) {
+                    //we don't care, made to ignore unique key errors
+                }
+            }
+            cursor.dispose();
+
+            for (Map.Entry<Long, ArrayList<Integer>> entry : devMessagesByChat.entrySet()) {
+                markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), true, 0, 0);
+                if (!dialogsToUpdate.contains(entry.getKey())) {
+                    dialogsToUpdate.add(entry.getKey());
+                }
+            }
+            updateWidgets(dialogsToUpdate);
+            return dialogsToUpdate;
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return null;
+    }
+
+    public List<Long> markMessagesAsIsDeleted(Long dialogId, List<Integer> messages, boolean useQueue) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        if (useQueue) {
+            storageQueue.postRunnable(() -> markMessagesAsIsDeletedInternal(dialogId, messages));
+        } else {
+            return markMessagesAsIsDeletedInternal(dialogId, messages);
+        }
+        return null;
+    }
+
+    public void clearAllAntiDelete() {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
+                HashMap<Long, ArrayList<Integer>> toDelete = new HashMap<>();
+                while (cursor.next()) {
+                    int mid = cursor.intValue(0);
+                    long uid = cursor.longValue(1);
+                    ArrayList<Integer> arr = toDelete.get(uid);
+                    if (arr == null) {
+                        arr = new ArrayList<>();
+                        toDelete.put(uid, arr);
+                    }
+                    arr.add(mid);
+                }
+                cursor.dispose();
+                database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
+                for (Map.Entry<Long, ArrayList<Integer>> entry : toDelete.entrySet()) {
+                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), false, 0, 0);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.needReloadRecentDialogsSearch);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    public void clearDeletedMessagesForDialog(long dialogId) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_message_deletions WHERE uid = %d", dialogId));
+                ArrayList<Integer> mids = new ArrayList<>();
+                while (cursor.next()) {
+                    mids.add(cursor.intValue(0));
+                }
+                cursor.dispose();
+
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
+                if (!mids.isEmpty()) {
+                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (!mids.isEmpty()) {
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    }
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    public void clearVeyraCacheForDialog(long dialogId) {
+        storageQueue.postRunnable(() -> {
+            try {
+                SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_message_deletions WHERE uid = %d", dialogId));
+                ArrayList<Integer> mids = new ArrayList<>();
+                while (cursor.next()) {
+                    mids.add(cursor.intValue(0));
+                }
+                cursor.dispose();
+
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
+                if (!mids.isEmpty()) {
+                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                }
+                org.veyra.client.VeyraEditHistoryManager.clearDialog(dialogId);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (!mids.isEmpty()) {
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    }
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    public void markEcryptedMessagesIsDeleted(long did, int messagesOnly) {//TODO REFAIRE not used anymore
+        storageQueue.postRunnable(() -> { // Veyra: legacy mark-deleted helper
+            try {
+                database.executeFast(String.format(Locale.US, "UPDATE messages_v2 SET isdel=1 WHERE uid = %d;", did)).stepThis().dispose();
+                updateWidgets(did);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    private void updateDialogsWithDeletedMessagesInternal(long originalDialogId, long channelId, List<Integer> messages, List<Long> additionalDialogsToUpdate) {
         SQLitePreparedStatement state = null;
         SQLiteCursor cursor = null;
         try {
@@ -16282,6 +16546,39 @@ public class MessagesStorage extends BaseController {
                                     data.reuse();
                                     if (reactionUpdates != null) {
                                         reactionUpdates.add(new SavedReactionsUpdate(selfId, oldMessage, message));
+                                    }
+                                    boolean isReactionUpdate = getSendMessagesHelper().isRecentlyReacted(message.id);
+                                    if (oldMessage != null) {
+                                        String oldText = oldMessage.message != null ? oldMessage.message : "";
+                                        String newText = message.message != null ? message.message : "";
+                                        boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(message.id);
+                                        boolean textChanged = !TextUtils.equals(oldText, newText);
+                                        boolean wasEditedBefore = oldMessage.edit_date != 0 || (oldMessage.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+
+                                        if (textChanged || isLocalEdit) {
+                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                            if (message.edit_date == 0) {
+                                                message.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                                            }
+                                        } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(MessageObject.getDialogId(message), message.id)) {
+                                            message.edit_date = oldMessage.edit_date;
+                                            message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                                        } else {
+                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                            message.edit_date = 0;
+                                        }
+
+                                        if (textChanged && !oldMessage.out && !message.out) {
+                                            long did = MessageObject.getDialogId(message);
+                                            long fromId = MessageObject.getPeerId(message.from_id);
+                                            if (!VeyraConfig.isDeveloperChat(did) && VeyraConfig.isChatTypeAllowedForEditHistory(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
+                                                int prevDate = oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date;
+                                                org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText, oldMessage);
+                                            }
+                                        }
+                                    } else if (isReactionUpdate && !getSendMessagesHelper().isRecentlyEditedLocally(message.id)) {
+                                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                        message.edit_date = 0;
                                     }
                                     int send_state = cursor.intValue(5);
                                     if (send_state != 3) {
