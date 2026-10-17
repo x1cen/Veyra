@@ -2158,6 +2158,10 @@ public class ChatObject {
         return canUserDoAction(chat, ACTION_MANAGE_CALLS);
     }
 
+    public static boolean canDeleteMessages(TLRPC.Chat chat) { // Veyra: uses generic permission check
+        return canUserDoAction(chat, ACTION_DELETE_MESSAGES);
+    }
+
     public static boolean canSendStickers(TLRPC.Chat chat) {
         if (isIgnoredChatRestrictionsForBoosters(chat)) {
             return true;

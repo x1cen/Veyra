@@ -46,15 +46,8 @@ import androidx.biometric.BiometricManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.LocaleController;
-import org.telegram.messenger.NotificationCenter;
-import org.telegram.messenger.R;
-import org.telegram.messenger.SharedConfig;
-import org.telegram.messenger.UserConfig;
-import org.telegram.messenger.Utilities;
+import org.veyra.client.VeyraSecurity;
+import org.telegram.messenger.*;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -307,8 +300,61 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                                 }).create();
                         alertDialog.show();
                         ((TextView)alertDialog.getButton(Dialog.BUTTON_POSITIVE)).setTextColor(Theme.getColor(Theme.key_text_RedBold));
+                    } else if (position == disableDuressRow) {
+                        AlertDialog alertDialog = new AlertDialog.Builder(getParentActivity())
+                                .setTitle(LocaleController.getString(R.string.DisableDuress))
+                                .setMessage(LocaleController.getString(R.string.DisableDuressConfirmMessage))
+                                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                                .setPositiveButton(LocaleController.getString(R.string.DisablePasscodeTurnOff), (dialog, which) -> {
+                                    SharedConfig.duressHash = "";
+                                    SharedConfig.saveConfig();
+                                    getMediaDataController().buildShortcuts();
+                                    int count = listView.getChildCount();
+                                    for (int a = 0; a < count; a++) {
+                                        View child = listView.getChildAt(a);
+                                        if (child instanceof TextSettingsCell) {
+                                            TextSettingsCell textCell = (TextSettingsCell) child;
+                                            textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
+                                            break;
+                                        }
+                                    }
+                                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetPasscode);
+                                    finishFragment();
+                                }).create();
+                        alertDialog.show();
+                        ((TextView) alertDialog.getButton(Dialog.BUTTON_POSITIVE)).setTextColor(Theme.getColor(Theme.key_text_RedBold));
                     } else if (position == changePasscodeRow) {
                         presentFragment(new PasscodeActivity(TYPE_SETUP_CODE));
+                    } else if (position == changeDuressCodeRow) {
+                        presentFragment(new PasscodeActivity(TYPE_SETUP_DURESS));
+                    } else if (position == duressActionRow) {
+                        if (getParentActivity() == null) {
+                            return;
+                        }
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                        builder.setTitle(LocaleController.getString("VeyraDuressAction", R.string.VeyraDuressAction));
+                        final String[] items = new String[]{
+                                LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe),
+                                LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe)
+                        };
+                        builder.setItems(items, (dialog, which) -> {
+                            SharedConfig.duressAction = which;
+                            if (which == SharedConfig.DURESS_ACTION_FULL_WIPE) {
+                                SharedConfig.duressFallbackToLocal = true;
+                            }
+                            SharedConfig.saveConfig();
+                            if (listAdapter != null) {
+                                listAdapter.notifyDataSetChanged();
+                            }
+                        });
+                        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                        showDialog(builder.create());
+                    } else if (position == duressFallbackRow) {
+                        SharedConfig.duressFallbackToLocal = !SharedConfig.duressFallbackToLocal;
+                        SharedConfig.saveConfig();
+                        if (view instanceof TextCheckCell) {
+                            ((TextCheckCell) view).setChecked(SharedConfig.duressFallbackToLocal);
+                        }
                     } else if (position == autoLockRow) {
                         if (getParentActivity() == null) {
                             return;
@@ -1023,29 +1069,20 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetPasscode);
             });
-        } else if (type == TYPE_ENTER_CODE_TO_MANAGE_SETTINGS || type == TYPE_ENTER_CODE_TO_GRAM_WALLET) {
-            if (SharedConfig.passcodeRetryInMs > 0) {
-                int value = Math.max(1, (int) Math.ceil(SharedConfig.passcodeRetryInMs / 1000.0));
-                Toast.makeText(getParentActivity(), LocaleController.formatString("TooManyTries", R.string.TooManyTries, LocaleController.formatPluralString("Seconds", value)), Toast.LENGTH_SHORT).show();
-
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.setText("");
-                }
-                passwordEditText.setText("");
-                if (isPinCode()) {
-                    codeFieldContainer.codeField[0].requestFocus();
-                }
-                onPasscodeError();
+        } else if (type == TYPE_ENTER_CODE_TO_MANAGE_SETTINGS || type == TYPE_ENTER_DURESS_TO_MANAGE_SETTINGS) {
+            if (SharedConfig.checkDuress(password)) {
+                VeyraSecurity.wipeAllDataAndReset(getContext());
                 return;
             }
             if (!SharedConfig.checkPasscode(password)) {
                 SharedConfig.increaseBadPasscodeTries();
+                VeyraSecurity.kaboomPIG(getContext(), SharedConfig.badPasscodeTries);
                 passwordEditText.setText("");
-                for (CodeNumberField f : codeFieldContainer.codeField) {
-                    f.setText("");
-                }
-                if (isPinCode()) {
-                    codeFieldContainer.codeField[0].requestFocus();
+                if (pinEditText != null) {
+                    pinEditText.setText("");
+                    if (isPinCode()) {
+                        pinEditText.requestFocus();
+                    }
                 }
                 onPasscodeError();
                 return;
@@ -1173,12 +1210,12 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     TextCheckCell textCell = (TextCheckCell) holder.itemView;
                     if (position == fingerprintRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.UnlockFingerprint), SharedConfig.useFingerprintLock, false);
+                    } else if (position == shufflePinButtons) {
+                        textCell.setTextAndCheck(LocaleController.getString(R.string.ShufflePinButton), SharedConfig.shufflePinButtons, false);
                     } else if (position == captureRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.ScreenCaptureShowContent), SharedConfig.allowScreenCapture, false);
-                    } else if (position == walletFingerprintRow) {
-                        textCell.setTextAndCheck(LocaleController.getString(R.string.WalletConfirmWithFingerprint), GramWallet.getInstance(currentAccount).canSend() && GramWallet.getInstance(currentAccount).needsFingerprint(), false);
-                    } else if (position == walletPasscodeRow) {
-                        textCell.setTextAndCheck(LocaleController.getString(R.string.WalletConfirmWithPasscode), GramWallet.getInstance(currentAccount).needsPasscode(), false);
+                    } else if (position == duressFallbackRow) {
+                        textCell.setTextAndCheck(LocaleController.getString("VeyraDuressFallback", R.string.VeyraDuressFallback), SharedConfig.duressFallbackToLocal, false);
                     }
                     break;
                 }
@@ -1193,6 +1230,22 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                             textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
                             textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                         }
+                    } else if (position == changeDuressCodeRow) {
+                        textCell.setText(LocaleController.getString(R.string.ChangeDuress), true);
+                        if (SharedConfig.duressHash.isEmpty()) {
+                            textCell.setTag(Theme.key_windowBackgroundWhiteGrayText7);
+                            textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
+                        } else {
+                            textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
+                            textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                        }
+                    } else if (position == duressActionRow) {
+                        String actionText = SharedConfig.duressAction == SharedConfig.DURESS_ACTION_FULL_WIPE
+                                ? LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe)
+                                : LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe);
+                        textCell.setTextAndValue(LocaleController.getString("VeyraDuressAction", R.string.VeyraDuressAction), actionText, true);
+                        textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
+                        textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     } else if (position == autoLockRow) {
                         String val;
                         if (SharedConfig.autoLockIn == 0) {
@@ -1239,11 +1292,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     } else if (position == autoLockDetailRow) {
                         cell.setText(LocaleController.getString(R.string.AutoLockInfo));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-                    } else if (position == walletInfoRow) {
-                        cell.setText(LocaleController.getString(R.string.WalletLockInfo));
-                        cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
                     } else if (position == captureDetailRow) {
                         cell.setText(LocaleController.getString(R.string.ScreenCaptureInfo));
+                        cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+                    } else if (position == duressFallbackDetailRow) {
+                        cell.setText(LocaleController.getString("VeyraDuressFallbackDetail", R.string.VeyraDuressFallbackDetail));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
                     }
                     break;

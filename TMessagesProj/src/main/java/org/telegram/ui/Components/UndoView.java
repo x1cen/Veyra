@@ -481,6 +481,14 @@ public class UndoView extends FrameLayout {
         currentAction = action;
         timeLeft = 5000;
         currentInfoObject = infoObject;
+
+        if (org.telegram.messenger.VeyraConfig.disableUndo && !isTooltipAction()) {
+            if (actionRunnable != null) {
+                actionRunnable.run();
+            }
+            return;
+        }
+
         currentInfoObject2 = infoObject2;
         lastUpdateTime = SystemClock.elapsedRealtime();
         undoTextView.setText(LocaleController.getString(R.string.UndoNoCaps));

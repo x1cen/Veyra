@@ -149,13 +149,13 @@ import org.telegram.messenger.FlagSecureReason;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
-import org.telegram.messenger.LanguageDetector;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.NotificationsController;
@@ -605,7 +605,17 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int delete_group = 45;
     private final static int enable_no_forwards = 46;
     private final static int disable_no_forwards = 47;
-    private final static int send_money = 48;
+    private final static int kill_app_item = 48;
+    // Veyra additions
+    private final static int veyra_delete_all_messages = 60;
+    private final static int veyra_upgrade_to_supergroup = 61;
+    private final static int veyra_qr_code = 62;
+    private final static int veyra_view_details = 63;
+
+    // Extra info rows for user profile
+    private int veyra_mutualContactRow = -1;
+    private int veyra_premiumStatusRow = -1;
+    private int veyra_verifiedRow = -1;
 
     private Rect rect = new Rect();
 
@@ -2617,6 +2627,38 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     leaveChatPressed(false);
                 } else if (id == delete_group) {
                     leaveChatPressed(true);
+                } else if (id == veyra_delete_all_messages) {
+                    // Veyra: Delete all messages in the group
+                    if (currentChat == null) return;
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                    builder.setTitle("Delete All Messages");
+                    builder.setMessage("Delete all messages in this group? This cannot be undone.");
+                    builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialog2, which) -> {
+                        getMessagesController().deleteDialog(-currentChat.id, 0, true);
+                    });
+                    builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                    AlertDialog alertDialog = builder.create();
+                    alertDialog.show();
+                    TextView alertBtn = (TextView) alertDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                    if (alertBtn != null) alertBtn.setTextColor(getThemedColor(Theme.key_text_RedBold));
+                } else if (id == veyra_upgrade_to_supergroup) {
+                    // Veyra: Upgrade regular group to supergroup
+                    if (currentChat == null) return;
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                    builder.setTitle("Upgrade to Supergroup");
+                    builder.setMessage("Upgrade this group to a supergroup? You can add more members, set an invite link, and have admins.");
+                    builder.setPositiveButton("Upgrade", (dialog2, which) -> {
+                        getMessagesController().convertToMegaGroup(getParentActivity(), currentChat.id, ProfileActivity.this, param -> {
+                            if (param != 0) {
+                                Bundle args = new Bundle();
+                                args.putLong("chat_id", param);
+                                ProfileActivity profileActivity = new ProfileActivity(args);
+                                presentFragment(profileActivity, true);
+                            }
+                        });
+                    });
+                    builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                    builder.create().show();
                 } else if (id == enable_no_forwards) {
                     if (!getUserConfig().isPremium()) {
                         new PremiumFeatureBottomSheet(ProfileActivity.this, getContext(), currentAccount, false, PremiumPreviewFragment.PREMIUM_FEATURE_SHARING_DISABLE, false, null).show();
@@ -2743,6 +2785,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     presentFragment(fragment);
                 } else if (id == share) {
                     onShareClicked();
+                } else if (id == veyra_qr_code) {
+                    showProfileQrCode();
+                } else if (id == veyra_view_details) {
+                    showDetailsJson();
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -10500,6 +10546,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         setAvatarRow = -1;
         setAvatarSectionRow = -1;
         numberSectionRow = -1;
+        veyra_mutualContactRow = -1;
+        veyra_premiumStatusRow = -1;
+        veyra_verifiedRow = -1;
         numberRow = -1;
         birthdayRow = -1;
         setUsernameRow = -1;
@@ -10671,6 +10720,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 numberRow = rowCount++;
                 setUsernameRow = rowCount++;
                 bioRow = rowCount++;
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
 
                 settingsSectionRow = rowCount++;
 
@@ -10761,6 +10813,22 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (user != null && username != null) {
                     usernameRow = rowCount++;
+                }
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
+                // Veyra: mutual contact + premium status rows (private user chats only)
+                if (userId != 0 && userId != getUserConfig().getClientUserId()) {
+                    TLRPC.User profileUser = getMessagesController().getUser(userId);
+                    if (profileUser != null && profileUser.mutual_contact) {
+                        veyra_mutualContactRow = rowCount++;
+                    }
+                    if (profileUser != null) {
+                        veyra_premiumStatusRow = rowCount++;
+                    }
+                    if (profileUser != null && profileUser.verified) {
+                        veyra_verifiedRow = rowCount++;
+                    }
                 }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
@@ -10873,7 +10941,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     sharedMediaRow = rowCount++;
                 } else if (lastSectionRow == -1 && needSendMessage) {
                     sendMessageRow = rowCount++;
-                    // reportRow = rowCount++;
+                    if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        reportRow = rowCount++;
+                    }
                     lastSectionRow = rowCount++;
                 }
             }
@@ -10886,6 +10956,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             }
             usernameRow = rowCount++;
+            if (topicId != 0) {
+                if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                    idRow = rowCount++;
+                }
+            }
             if (actionsView == null) {
                 notificationsSimpleRow = rowCount++;
             }
@@ -10905,21 +10980,28 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         emptyRow = rowCount++;
                     }
                 }
+            }
 
-                if (actionsView == null) {
-                    infoHeaderRow = rowCount++;
+            if (actionsView == null) {
+                infoHeaderRow = rowCount++;
+            }
+            if (chatInfo != null) {
+                if (!TextUtils.isEmpty(chatInfo.about)) {
+                    channelInfoRow = rowCount++;
                 }
-                if (chatInfo != null) {
-                    if (!TextUtils.isEmpty(chatInfo.about)) {
-                        channelInfoRow = rowCount++;
-                    }
-                    if (chatInfo.location instanceof TLRPC.TL_channelLocation) {
-                        locationRow = rowCount++;
-                    }
+                if (chatInfo.location instanceof TLRPC.TL_channelLocation) {
+                    locationRow = rowCount++;
                 }
-                if (ChatObject.isPublic(currentChat)) {
-                    usernameRow = rowCount++;
-                }
+            }
+            if (ChatObject.isPublic(currentChat)) {
+                usernameRow = rowCount++;
+            }
+            if (org.telegram.messenger.VeyraConfig.showProfileId) {
+                idRow = rowCount++;
+            }
+            // Veyra: show verified badge as a row for groups/channels
+            if (currentChat != null && currentChat.verified) {
+                veyra_verifiedRow = rowCount++;
             }
             if (emptyRow < 0 && emptyRow2 < 0) {
                 if (hasMusic || hasBalance || peerColor != null || actionsView == null) {
@@ -11319,7 +11401,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
             onlineTextOverride = LocaleController.getString(R.string.Updating);
         } else if (currentConnectionState == ConnectionsManager.ConnectionStateConnectingToProxy) {
-            onlineTextOverride = LocaleController.getString(R.string.ConnectingToProxy);
+            onlineTextOverride = org.telegram.messenger.VeyraConfig.hideConnectingToProxy ? null : LocaleController.getString(R.string.ConnectingToProxy);
         } else {
             onlineTextOverride = null;
         }
@@ -12216,17 +12298,23 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 otherItem.addSubItem(block_contact, R.drawable.msg_retry, LocaleController.getString(R.string.BotRestart));
                             }
                         } else {
-                            otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
+                            // Never show block/report for the developer user unless viewer is self developer
+                            if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
+                                otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
+                            }
                         }
                     }
                 } else {
-                    if (currentEncryptedChat == null) {
-                        createAutoDeleteItem(context);
+                    if (user != null && user.bot) {
+                        otherItem.addSubItem(share_contact, R.drawable.msg_share, LocaleController.getString(R.string.BotShare));
                     }
                     if (!TextUtils.isEmpty(user.phone)) {
                         otherItem.addSubItem(share_contact, R.drawable.msg_share, LocaleController.getString(R.string.ShareContact));
                     }
-                    otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
+                    // Never show block option for the developer user unless viewer is self developer
+                    if (!VeyraConfig.isDeveloperChat(userId) || VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        otherItem.addSubItem(block_contact, !userBlocked ? R.drawable.msg_block : R.drawable.msg_block, !userBlocked ? LocaleController.getString(R.string.BlockContact) : LocaleController.getString(R.string.Unblock));
+                    }
                     otherItem.addSubItem(edit_contact, R.drawable.msg_edit, LocaleController.getString(R.string.EditContact));
                     otherItem.addSubItem(delete_contact, R.drawable.msg_delete, LocaleController.getString(R.string.DeleteContact));
                 }
@@ -12254,23 +12342,35 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (!isBot && getContactsController().contactsDict.get(userId) != null) {
                     otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
                 }
+                if (user != null && !TextUtils.isEmpty(UserObject.getPublicUsername(user))) {
+                    otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
+                }
             }
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
             hasVoiceChatItem = false;
 
-            if (topicId == 0 && ChatObject.canChangeChatInfo(chat)) {
+            if (topicId == 0 && (ChatObject.canChangeChatInfo(chat) || !ChatObject.isChannel(chat) || (chatInfo != null && chatInfo.can_delete_channel))) {
                 createAutoDeleteItem(context);
             }
+            boolean canEditGroup = false;
             if (ChatObject.isChannel(chat)) {
                 if (isTopic) {
                     if (ChatObject.canManageTopic(currentAccount, chat, topicId)) {
-                        editItemVisible = true;
+                        canEditGroup = true;
                     }
                 } else {
                     if (ChatObject.hasAdminRights(chat) || chat.megagroup && ChatObject.canChangeChatInfo(chat)) {
-                        editItemVisible = true;
+                        canEditGroup = true;
                     }
+                }
+                // Show edit button only for admins, not for regular members
+                if (canEditGroup) {
+                    editItemVisible = true;
+                }
+                if (editItem != null && canEditGroup) {
+                    editItem.setIcon(R.drawable.group_edit_profile);
+                    editItem.setContentDescription(LocaleController.getString(R.string.Edit));
                 }
                 if (chatInfo != null) {
                     if (ChatObject.canManageCalls(chat) && chatInfo.call == null) {
@@ -12321,6 +12421,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 } else {
                     if (ChatObject.isPublic(chat)) {
                         otherItem.addSubItem(share, R.drawable.msg_share, LocaleController.getString(R.string.BotShare));
+                        otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
                         shareAction = !chat.creator;
                     }
                     if (!BuildVars.IS_BILLING_UNAVAILABLE && !getMessagesController().premiumPurchaseBlocked()) {
@@ -12372,6 +12473,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (topicId == 0) {
                     otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
                 }
+                // Veyra: Delete all messages (for admin/creator of regular groups)
+                if (chat.creator || ChatObject.hasAdminRights(chat)) {
+                    otherItem.addColoredGap();
+                    final ActionBarMenuSubItem deleteAllItem = otherItem.addSubItem(veyra_delete_all_messages, R.drawable.msg_delete, "Delete All Messages");
+                    deleteAllItem.setColors(getThemedColor(Theme.key_text_RedBold), getThemedColor(Theme.key_text_RedRegular));
+                }
+                // Veyra: Upgrade to supergroup (for regular groups only)
+                if (chat.creator && !ChatObject.isChannel(chat)) {
+                    otherItem.addSubItem(veyra_upgrade_to_supergroup, R.drawable.msg_groups, "Upgrade to Supergroup");
+                }
+                if ((chatInfo != null && chatInfo.exported_invite != null) || !TextUtils.isEmpty(ChatObject.getPublicUsername(chat))) {
+                    otherItem.addSubItem(veyra_qr_code, R.drawable.msg_qrcode, LocaleController.getString(R.string.GetQRCode));
+                }
                 otherItem.addSubItem(leave_group, R.drawable.msg_leave, LocaleController.getString(R.string.DeleteAndExit));
                 leaveAction = true;
             }
@@ -12402,6 +12516,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.showSubItem(add_photo);
             otherItem.hideSubItem(edit_avatar);
             otherItem.hideSubItem(delete_avatar);
+        }
+
+
+
+        if (otherItem != null) {
+            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
         }
 
         isCallAvailable = callItemVisible;
@@ -13634,6 +13754,58 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             usernames = new ArrayList<>();
                         }
                         detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0);
+                    } else if (position == idRow) {
+                        long displayId = 0;
+                        int dc = 0;
+                        String label = "ID";
+                        if (userId != 0) {
+                            displayId = userId;
+                            TLRPC.User u = getMessagesController().getUser(userId);
+                            if (u != null) {
+                                if (u.bot) {
+                                    label = "Bot ID";
+                                } else if (UserObject.isUserSelf(u)) {
+                                    label = "My ID";
+                                } else {
+                                    label = "User ID";
+                                }
+                                if (u.photo != null && u.photo.dc_id != 0) {
+                                    dc = u.photo.dc_id;
+                                } else if (UserObject.isUserSelf(u) && getConnectionsManager().getCurrentDatacenterId() > 0) {
+                                    dc = getConnectionsManager().getCurrentDatacenterId();
+                                }
+                            }
+                        } else if (chatId != 0) {
+                            displayId = chatId;
+                            TLRPC.Chat c = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
+                            if (c != null) {
+                                if (ChatObject.isChannel(c)) {
+                                    label = c.megagroup ? "Group ID" : "Channel ID";
+                                } else {
+                                    label = "Group ID";
+                                }
+                                if (c.photo != null && c.photo.dc_id != 0) {
+                                    dc = c.photo.dc_id;
+                                } else if (chatInfo != null && chatInfo.stats_dc != 0) {
+                                    dc = chatInfo.stats_dc;
+                                }
+                            }
+                        } else if (isTopic && topicId != 0) {
+                            displayId = topicId;
+                            label = "Topic ID";
+                        }
+                        String text = String.valueOf(displayId);
+                        String value = dc > 0 ? label + " (DC " + dc + ")" : label;
+                        boolean needDivider = myProfile ? false : (position < infoEndRow);
+                        detailCell.setTextAndValue(text, value, needDivider);
+                    } else if (position == veyra_mutualContactRow) {
+                        detailCell.setTextAndValue("Mutual Contact", "Yes — they have saved your number too", position < infoEndRow);
+                    } else if (position == veyra_premiumStatusRow) {
+                        TLRPC.User profileUser = getMessagesController().getUser(userId);
+                        boolean hasPremium = profileUser != null && profileUser.premium;
+                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active" : "Not active", position < infoEndRow);
+                    } else if (position == veyra_verifiedRow) {
+                        detailCell.setTextAndValue("Verified", "Yes - verified by Telegram", position < infoEndRow);
                     } else if (position == locationRow) {
                         if (chatInfo != null && chatInfo.location instanceof TLRPC.TL_channelLocation) {
                             TLRPC.TL_channelLocation location = (TLRPC.TL_channelLocation) chatInfo.location;
@@ -14372,7 +14544,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (position == infoHeaderRow || position == membersHeaderRow || position == settingsSectionRow2 ||
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow) {
+            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow
+                    || position == veyra_mutualContactRow || position == veyra_premiumStatusRow || position == veyra_verifiedRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;

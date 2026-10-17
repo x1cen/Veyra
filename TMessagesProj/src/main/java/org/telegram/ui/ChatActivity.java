@@ -188,6 +188,11 @@ import org.telegram.messenger.SvgHelper;
 import org.telegram.messenger.Timer;
 import org.telegram.messenger.TranslateController;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.VeyraConfig;
+import org.veyra.client.HiddenContentManager;
+import org.veyra.client.VeyraMediaSaver;
+import org.veyra.client.VeyraEditHistoryManager;
+import org.veyra.client.MessageEditHistorySheet;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
@@ -1705,6 +1710,17 @@ public class ChatActivity extends BaseFragment implements
 
     private final static int chat_menu_topic_create = 73;
 
+    // Veyra: bulk actions on multi-selected messages
+    private final static int veyra_save_to_saved = 80;
+    private final static int veyra_unpin_selected = 81;
+    private final static int veyra_action_mode_other = 82;
+    private final static int veyra_view_details = 83;
+    private final static int veyra_copy_dialog_id = 84;
+    private final static int veyra_jump_to_first = 85;
+    private final static int veyra_clear_chat_cache = 86;
+    private final static int veyra_clear_actions = 87;
+    private final static int veyra_advanced = 88;
+
     private final static int id_chat_compose_panel = 1000;
 
     RecyclerListView.OnItemLongClickListenerExtended onItemLongClickListener = new RecyclerListView.OnItemLongClickListenerExtended() {
@@ -1965,7 +1981,10 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onDoubleTap(View view, int position, float x, float y) {
-            if (getParentActivity() == null || isSecretChat() || isInScheduleMode() || isInPreviewMode() || isQuickRepliesOrWelcomeMessagesMode()) {
+            if (org.telegram.messenger.VeyraConfig.disableDoubleTapReaction) {
+                return;
+            }
+            if (getParentActivity() == null || isSecretChat() || isInScheduleMode() || isInPreviewMode() || chatMode == MODE_QUICK_REPLIES) {
                 return;
             }
             MessageObject messageObject;
@@ -3796,11 +3815,68 @@ public class ChatActivity extends BaseFragment implements
                         undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
                     }
                     clearSelectionMode();
+                } else if (id == message_details) {
+                    for (int a = 0; a < 2; a++) {
+                        if (selectedMessagesIds[a].size() > 0) {
+                            MessageObject msg = messagesDict[a].get(selectedMessagesIds[a].keyAt(0));
+                            if (msg != null) {
+                                presentFragment(new MessageDetailsActivity(msg));
+                                break;
+                            }
+                        }
+                    }
+                    clearSelectionMode();
                 } else if (id == delete) {
                     if (getParentActivity() == null) {
                         return;
                     }
                     createDeleteMessagesAlert(null, null);
+                } else if (id == veyra_save_to_saved) {
+                    // Veyra: forward all selected messages to Saved Messages
+                    ArrayList<MessageObject> veyraSelected = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        ArrayList<Integer> ids = new ArrayList<>();
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            ids.add(selectedMessagesIds[a].keyAt(b));
+                        }
+                        Collections.sort(ids);
+                        for (int b = 0; b < ids.size(); b++) {
+                            MessageObject messageObject = selectedMessagesIds[a].get(ids.get(b));
+                            if (messageObject != null) {
+                                veyraSelected.add(messageObject);
+                            }
+                        }
+                    }
+                    if (!veyraSelected.isEmpty()) {
+                        long savedMessagesPeer = getUserConfig().getClientUserId();
+                        getSendMessagesHelper().sendMessage(veyraSelected, savedMessagesPeer, false, false, true, 0, 0);
+                        if (undoView != null) {
+                            undoView.showWithAction(savedMessagesPeer, UndoView.ACTION_FWD_MESSAGES, veyraSelected.size());
+                        }
+                    }
+                    clearSelectionMode();
+                } else if (id == veyra_unpin_selected) {
+                    // Veyra: unpin every currently selected & pinned message
+                    ArrayList<MessageObject> veyraSelected = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
+                            if (messageObject != null) {
+                                veyraSelected.add(messageObject);
+                            }
+                        }
+                    }
+                    int veyraUnpinnedCount = 0;
+                    for (MessageObject messageObject : veyraSelected) {
+                        if (messageObject.messageOwner != null && messageObject.messageOwner.pinned) {
+                            getMessagesController().pinMessage(currentChat, currentUser, messageObject.getId(), true, false, false);
+                            veyraUnpinnedCount++;
+                        }
+                    }
+                    if (veyraUnpinnedCount > 0 && pinBulletin == null) {
+                        pinBulletin = BulletinFactory.createUnpinMessageBulletin(ChatActivity.this, null, null, themeDelegate).show();
+                    }
+                    clearSelectionMode();
                 } else if (id == forward) {
                     openForward(true);
                 } else if (id == share) {
@@ -3944,6 +4020,19 @@ public class ChatActivity extends BaseFragment implements
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
+                } else if (id == veyra_clear_actions) {
+                    showClearActionsMenu();
+                } else if (id == veyra_advanced) {
+                    showAdvancedMenu();
+                } else if (id == veyra_view_details) {
+                    showDetailsJson();
+                } else if (id == veyra_clear_chat_cache) {
+                    showClearActionsMenu();
+                } else if (id == veyra_copy_dialog_id) {
+                    AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
+                    BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
+                } else if (id == veyra_jump_to_first) {
+                    scrollToMessageId(1, 0, true, 0, true, 0);
                 } else if (id == boost_group) {
                     if (ChatObject.hasAdminRights(currentChat)) {
                         BoostsActivity boostsActivity = new BoostsActivity(dialog_id);
@@ -4491,8 +4580,10 @@ public class ChatActivity extends BaseFragment implements
                 headerItem.lazilyAddSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
             }
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
-                clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
-                    LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
+                clearHistoryItem = headerItem.lazilyAddSubItem(veyra_clear_actions, R.drawable.msg_clearcache, "Clear Actions");
+            }
+            if (!isTopic && (currentUser != null && !currentUser.bot && !currentUser.self || (currentChat != null && (!ChatObject.isChannel(currentChat) || (chatInfo != null && chatInfo.can_delete_channel))))) {
+                headerItem.lazilyAddSubItem(auto_delete_timer, R.drawable.msg_autodelete, LocaleController.getString(R.string.AutoDeletePopupTitle));
             }
             boolean addedSettings = false;
             if (!isTopic) {
@@ -4587,8 +4678,12 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
-        if (BuildConfig.DEBUG_PRIVATE_VERSION && headerItem != null) {
-            headerItem.lazilyAddSubItem(888, R.drawable.menu_download_round, "Dump Canvas");
+        if (BuildVars.DEBUG_PRIVATE_VERSION && headerItem != null) {
+            headerItem.addSubItem(888, R.drawable.menu_download_round, "Dump Canvas");
+        }
+
+        if (headerItem != null) {
+            headerItem.lazilyAddSubItem(veyra_advanced, R.drawable.msg_settings_old, "Advanced");
         }
 
         actionModeViews.clear();
@@ -8601,6 +8696,25 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else if (UserObject.isReplyUser(currentUser)) {
                 toggleMute(true);
+            } else if (currentUser != null && org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser)) {
+                // Veyra: "Deleted Chat" confirm → wipe Telegram cache + Veyra cache
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
+                builder.setTitle(LocaleController.getString("VeyraDeletedChatTitle", R.string.VeyraDeletedChatTitle));
+                builder.setMessage(LocaleController.getString("VeyraDeletedChatConfirm", R.string.VeyraDeletedChatConfirm));
+                builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialogInterface, i) -> {
+                    // 1. Remove from dialog list & clear Telegram local data
+                    getMessagesController().deleteDialog(dialog_id, 0, false);
+                    // 2. Purge Veyra anti-delete cache for this dialog
+                    org.veyra.client.VeyraAntiDelete.clearDialog(dialog_id);
+                    // 3. Purge Veyra edit-history cache for this dialog
+                    org.veyra.client.VeyraEditHistoryManager.clearDialog(dialog_id);
+                    // 4. Navigate back
+                    getNotificationCenter().removeObserver(ChatActivity.this, NotificationCenter.closeChats);
+                    getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
+                    finishFragment();
+                });
+                builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                showDialog(builder.create());
             } else if (currentUser != null && currentUser.bot && botUser != null) {
                 if (botUser.length() != 0) {
                     getMessagesController().sendBotStart(currentUser, botUser);
@@ -10388,6 +10502,11 @@ public class ChatActivity extends BaseFragment implements
             }
             actionModeViews.add(actionMode.addItemWithWidth(share, R.drawable.msg_shareout, dp(48), LocaleController.getString(R.string.ShareFile)));
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(48), LocaleController.getString(R.string.Delete)));
+            // Veyra: "more" menu with bulk unpin / save-to-saved for multi-selection
+            ActionBarMenuItem veyraOtherItem = actionMode.addItemWithWidth(veyra_action_mode_other, R.drawable.ic_ab_other, dp(48));
+            veyraOtherItem.addSubItem(veyra_save_to_saved, R.drawable.msg_saved, "Save to Saved Messages");
+            veyraOtherItem.addSubItem(veyra_unpin_selected, R.drawable.msg_unpin, "Unpin Selected");
+            actionModeViews.add(veyraOtherItem);
         } else {
             actionModeViews.add(actionMode.addItemWithWidth(edit, R.drawable.msg_edit, dp(48), LocaleController.getString(R.string.Edit)));
             actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(48), LocaleController.getString(R.string.AddToFavorites)));
@@ -12318,7 +12437,211 @@ public class ChatActivity extends BaseFragment implements
         updateSelectedMessageReactions();
     }
 
+    private void showDetailsJson() {
+        if (currentUser != null) {
+            final TLRPC.User user = currentUser;
+            final TLRPC.UserFull uInfo = userInfo != null ? userInfo : getMessagesController().getUserFull(user.id);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("user", MessageDetailsActivity.gson.toJsonTree(user));
+                if (uInfo != null) {
+                    root.add("full_user", MessageDetailsActivity.gson.toJsonTree(uInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (currentChat != null) {
+            final TLRPC.Chat chat = currentChat;
+            final TLRPC.ChatFull cInfo = chatInfo != null ? chatInfo : getMessagesController().getChatFull(chat.id);
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("chat", MessageDetailsActivity.gson.toJsonTree(chat));
+                if (cInfo != null) {
+                    root.add("full_chat", MessageDetailsActivity.gson.toJsonTree(cInfo));
+                }
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (currentEncryptedChat != null) {
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.add("encrypted_chat", MessageDetailsActivity.gson.toJsonTree(currentEncryptedChat));
+                return MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        }
+    }
+
+    private void showAdvancedMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Advanced", true);
+
+        ArrayList<CharSequence> items = new ArrayList<>();
+        ArrayList<Integer> icons = new ArrayList<>();
+        ArrayList<Runnable> actions = new ArrayList<>();
+
+        if (!isSecretChat()) {
+            items.add(LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
+            icons.add(R.drawable.msg_go_up);
+            actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
+        }
+
+        items.add(LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
+        icons.add(R.drawable.msg_copy);
+        actions.add(() -> {
+            AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
+            BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
+        });
+
+        items.add(LocaleController.getString("ViewDetails", R.string.ViewDetails));
+        icons.add(R.drawable.msg_info);
+        actions.add(this::showDetailsJson);
+
+        int[] iconsArray = new int[icons.size()];
+        for (int i = 0; i < icons.size(); i++) {
+            iconsArray[i] = icons.get(i);
+        }
+
+        builder.setItems(items.toArray(new CharSequence[0]), iconsArray, (dialog, which) -> {
+            if (which >= 0 && which < actions.size()) {
+                actions.get(which).run();
+            }
+        });
+        showDialog(builder.create());
+    }
+
+    private void showClearActionsMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Clear Actions", true);
+
+        CharSequence[] items = new CharSequence[]{
+            "Deleted Messages",
+            "Edited Messages",
+            "Reaction History",
+            "Chat History",
+            "Media"
+        };
+        int[] icons = new int[]{
+            R.drawable.msg_delete,
+            R.drawable.msg_edit,
+            R.drawable.msg_reactions,
+            R.drawable.msg_clear,
+            R.drawable.msg_media
+        };
+
+        builder.setItems(items, icons, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    showClearConfirmation("Clear Deleted Messages", "Are you sure you want to clear saved deleted messages for this chat?", () -> {
+                        getMessagesStorage().clearDeletedMessagesForDialog(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Deleted messages cleared").show();
+                    });
+                    break;
+                case 1:
+                    showClearConfirmation("Clear Edit History", "Are you sure you want to clear edit history for this chat?", () -> {
+                        org.veyra.client.VeyraEditHistoryManager.clearDialogEdits(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Edit history cleared").show();
+                    });
+                    break;
+                case 2:
+                    showClearConfirmation("Clear Reaction History", "Are you sure you want to clear reaction history for this chat?", () -> {
+                        org.veyra.client.VeyraEditHistoryManager.clearDialogReactions(dialog_id);
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Reaction history cleared").show();
+                    });
+                    break;
+                case 3:
+                    showTelegramClearHistory();
+                    break;
+                case 4:
+                    showClearMediaSubMenu();
+                    break;
+            }
+        });
+        showDialog(builder.create());
+    }
+
+    private void showTelegramClearHistory() {
+        final boolean canDeleteHistory = (currentUser != null && (currentUser.bot || UserObject.isUserSelf(currentUser))) || (chatInfo != null && chatInfo.can_delete_channel);
+        AlertsCreator.createClearOrDeleteDialogAlert(ChatActivity.this, true, currentChat, currentUser, currentEncryptedChat != null, true, false, canDeleteHistory, (param) -> {
+            if (ChatObject.isChannel(currentChat) && (!currentChat.megagroup || ChatObject.isPublic(currentChat))) {
+                getMessagesController().deleteDialog(dialog_id, 2, param);
+            } else {
+                performHistoryClear(param, canDeleteHistory);
+            }
+        });
+    }
+
+    private void showClearMediaSubMenu() {
+        if (getParentActivity() == null) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        builder.setTitle("Clear Media Cache", true);
+
+        CharSequence[] items = new CharSequence[]{
+            "Photos",
+            "Videos",
+            "Documents",
+            "Voice & Audio",
+            "All Media"
+        };
+        int[] icons = new int[]{
+            R.drawable.msg_photos,
+            R.drawable.msg_video,
+            R.drawable.msg_sendfile,
+            R.drawable.msg_voicechat2,
+            R.drawable.msg_delete
+        };
+
+        builder.setItems(items, icons, (dialog, which) -> {
+            final String typeName;
+            final int mediaType;
+            switch (which) {
+                case 0: typeName = "photos"; mediaType = 1; break;
+                case 1: typeName = "videos"; mediaType = 2; break;
+                case 2: typeName = "documents"; mediaType = 3; break;
+                case 3: typeName = "voice and audio"; mediaType = 4; break;
+                default: typeName = "all media"; mediaType = 0; break;
+            }
+            showClearConfirmation("Clear Media Cache", "Are you sure you want to clear cached " + typeName + " for this chat?", () -> {
+                clearMediaCacheForDialog(dialog_id, mediaType);
+            });
+        });
+        showDialog(builder.create());
+    }
+
+    private void showClearConfirmation(String title, String message, Runnable onConfirm) {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(title);
+        builder.setMessage(message);
+        builder.setPositiveButton("Clear", (dialogInterface, i) -> {
+            if (onConfirm != null) {
+                onConfirm.run();
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        AlertDialog dialog = builder.create();
+        showDialog(dialog);
+        TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (button != null) {
+            button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
+    }
+
+    private void clearMediaCacheForDialog(long dialogId, int mediaType) {
+        FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
+            String sizeStr = AndroidUtilities.formatFileSize(bytes);
+            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Media cache cleared (" + sizeStr + ")").show();
+        });
+    }
+
     private void openForward(boolean fromActionBar) {
+        for (int a = 0; a < 2; a++) {
+            for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
+                if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+                    return;
+                }
+            }
+        }
         if (isPeerNoForwards() || hasSelectedNoforwardsMessage()) {
             // We should update text if user changed locale without re-opening chat activity
             String str;
@@ -19188,6 +19511,9 @@ public class ChatActivity extends BaseFragment implements
                     return 1;
                 } else {
                     if (messageObject.isVoice()) {
+                        if (VeyraMediaSaver.canSave(messageObject, currentAccount)) {
+                            return 4;
+                        }
                         return 2;
                     } else if (messageObject.isSticker() || messageObject.isAnimatedSticker()) {
                         TLRPC.InputStickerSet inputStickerSet = messageObject.getInputStickerSet();
@@ -19201,20 +19527,9 @@ public class ChatActivity extends BaseFragment implements
                             }
                         }
                         return 9;
-                    } else if (!messageObject.isRoundVideo() && (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto || messageObject.getDocument() != null || messageObject.isMusic() || messageObject.isVideo())) {
-                        boolean canSave = false;
-                        if (!TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
-                            File f = new File(messageObject.messageOwner.attachPath);
-                            if (f.exists()) {
-                                canSave = true;
-                            }
-                        }
-                        if (!canSave) {
-                            if (messageObject.mediaExists()) {
-                                canSave = true;
-                            }
-                        }
-                        if (canSave) {
+                    } else if (messageObject.isRoundVideo() || (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto || messageObject.getDocument() != null || messageObject.isMusic() || messageObject.isVideo())) {
+                        if (VeyraMediaSaver.canSave(messageObject, currentAccount)) {
+                            sendSecretMessageRead(messageObject, true);
                             if (messageObject.getDocument() != null && !messageObject.isMusic()) {
                                 String mime = messageObject.getDocument().mime_type;
                                 if (mime != null) {
@@ -19259,6 +19574,9 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else {
                 if (messageObject.isVoice()) {
+                    if (VeyraMediaSaver.canSave(messageObject, currentAccount)) {
+                        return 4;
+                    }
                     return 2;
                 } else if (!messageObject.isAnimatedEmoji() && (messageObject.isSticker() || messageObject.isAnimatedSticker())) {
                     TLRPC.InputStickerSet inputStickerSet = messageObject.getInputStickerSet();
@@ -19267,30 +19585,15 @@ public class ChatActivity extends BaseFragment implements
                             return 7;
                         }
                     }
-                } else if (!messageObject.isRoundVideo() && (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto || messageObject.getDocument() != null || messageObject.isMusic() || messageObject.isVideo())) {
-                    boolean canSave = false;
-                    if (!TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
-                        File f = new File(messageObject.messageOwner.attachPath);
-                        if (f.exists()) {
-                            canSave = true;
-                        }
-                    }
-                    if (!canSave) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-                        if (f.exists()) {
-                            canSave = true;
-                        }
-                    }
-                    if (canSave) {
+                } else if (messageObject.isRoundVideo() || (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto || messageObject.getDocument() != null || messageObject.isMusic() || messageObject.isVideo())) {
+                    if (VeyraMediaSaver.canSave(messageObject, currentAccount)) {
                         if (messageObject.getDocument() != null) {
                             String mime = messageObject.getDocument().mime_type;
                             if (mime != null && mime.endsWith("text/xml")) {
                                 return 5;
                             }
                         }
-                        if (messageObject.messageOwner.ttl <= 0) {
-                            return 4;
-                        }
+                        return 4;
                     }
                 } else if (messageObject.type == MessageObject.TYPE_CONTACT) {
                     return 8;
@@ -20829,6 +21132,15 @@ public class ChatActivity extends BaseFragment implements
             postponedScrollToLastMessageQueryIndex = 0;
         }
         ArrayList<MessageObject> messArr = (ArrayList<MessageObject>) args[2];
+        if (messArr != null && !HiddenContentManager.isEmpty()) {
+            for (int a = 0; a < messArr.size(); a++) {
+                MessageObject msg = messArr.get(a);
+                if (msg != null && HiddenContentManager.isMessageHidden(dialog_id, msg.getId())) {
+                    messArr.remove(a);
+                    a--;
+                }
+            }
+        }
 
         boolean universalNotify = false;
         HashMap<Integer, MessageObject> oldMessages = null;
@@ -23423,6 +23735,10 @@ public class ChatActivity extends BaseFragment implements
                     MessageObject messageObject = filteredMessagesDict.get(msgId);
                     if (messageObject != null) {
                         MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
+                        if (messageObject.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId)) {
+                            messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                            messageObject.messageOwner.edit_date = 0;
+                        }
                         messageObject.forceUpdate = true;
                         messageObject.reactionsChanged = true;
                     }
@@ -23430,6 +23746,10 @@ public class ChatActivity extends BaseFragment implements
                 MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
                 if (messageObject != null) {
                     MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
+                    if (messageObject.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId)) {
+                        messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                        messageObject.messageOwner.edit_date = 0;
+                    }
                     messageObject.forceUpdate = true;
                     messageObject.reactionsChanged = true;
                     updateMessageAnimated(messageObject, true);
@@ -26649,6 +26969,28 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }
+                int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
+
+                if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.scheduled) {
+                    if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+                        // Developer immunity: always delete developer's messages completely, bypass anti-delete
+                        obj.deleted = true;
+                    } else if (obj.messageOwner != null && obj.messageOwner.out) {
+                        // This is our own outgoing message being deleted/edited — do NOT mark as deleted label
+                        obj.deleted = true;
+                    } else {
+                        obj.deleted = false;
+                        if (obj.messageOwner != null) {
+                            obj.messageOwner.isDeleted = true;
+                        }
+                        org.veyra.client.VeyraAntiDelete.markChatDeleted(dialog_id);
+                        if (index != -1 && chatAdapter != null) {
+                            chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+                        }
+                        continue;
+                    }
+                }
+
                 obj.deleted = true;
                 if (obj.scheduled && sent) {
                     obj.scheduledSent = true;
@@ -26962,6 +27304,34 @@ public class ChatActivity extends BaseFragment implements
             }
 
             addToPolls(messageObject, old);
+            if (old.messageOwner != null && messageObject.messageOwner != null) {
+                String oldText = old.messageOwner.message != null ? old.messageOwner.message : "";
+                String newText = messageObject.messageOwner.message != null ? messageObject.messageOwner.message : "";
+                boolean isLocalEdit = getSendMessagesHelper().isRecentlyEditedLocally(messageObject.getId());
+                boolean isReactionUpdate = getSendMessagesHelper().isRecentlyReacted(messageObject.getId());
+                boolean textChanged = !TextUtils.equals(oldText, newText);
+                boolean wasEditedBefore = old.messageOwner.edit_date != 0 || (old.messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0;
+
+                if (textChanged || isLocalEdit) {
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                    if (messageObject.messageOwner.edit_date == 0) {
+                        messageObject.messageOwner.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
+                    }
+                } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, messageObject.getId())) {
+                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
+                } else {
+                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                    messageObject.messageOwner.edit_date = 0;
+                }
+
+                if (textChanged && !old.isOut() && !messageObject.isOut()) {
+                    if (!org.telegram.messenger.VeyraConfig.isDeveloperChat(dialog_id) && org.telegram.messenger.VeyraConfig.isChatTypeAllowedForEditHistory(dialog_id)) {
+                        int prevDate = old.messageOwner.edit_date > 0 ? old.messageOwner.edit_date : old.messageOwner.date;
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(dialog_id, messageObject.getId(), prevDate, oldText, old.messageOwner);
+                    }
+                }
+            }
             if (old.richCheckboxEcho && messageObject.type == MessageObject.TYPE_ARTICLE && old.richLayout != null && messageObject.messageOwner != null) {
                 messageObject.richLayout = old.richLayout;
                 messageObject.messageOwner.rich_message = old.messageOwner.rich_message;
@@ -28178,7 +28548,14 @@ public class ChatActivity extends BaseFragment implements
                     sentBotStart = true;
                 }
             } else {
-                bottomOverlayChatText.setText(LocaleController.getString(R.string.DeleteThisChat));
+                // Veyra: show "Deleted Chat" for peer-deleted chats or deleted accounts
+                if (currentUser != null && org.veyra.client.VeyraAntiDelete.isChatDeleted(dialog_id, currentUser)) {
+                    bottomOverlayChatText.setTag("veyra_deleted_chat");
+                    bottomOverlayChatText.setText(LocaleController.getString("VeyraDeletedChat", R.string.VeyraDeletedChat));
+                } else {
+                    bottomOverlayChatText.setTag(null);
+                    bottomOverlayChatText.setText(LocaleController.getString(R.string.DeleteThisChat));
+                }
             }
         }
 
@@ -30057,6 +30434,20 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
+        // Veyra: screen capture blocking (forced for developer chat, otherwise configurable)
+        if (VeyraConfig.isDeveloperChat(dialog_id) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        } else if (VeyraConfig.blockScreenCapture) {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        } else {
+            if (getParentActivity() != null) {
+                getParentActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        }
         checkShowBlur(false);
         activityResumeTime = System.currentTimeMillis();
         if (openImport && getSendMessagesHelper().getImportingHistory(dialog_id) != null) {
@@ -30269,6 +30660,14 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onPause() {
         super.onPause();
+        // Veyra: restore window security flag
+        if (getParentActivity() != null) {
+            if (VeyraConfig.blockScreenCapture) {
+                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            } else {
+                getParentActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+            }
+        }
         scrolling = false;
         if (scrimPopupWindow != null) {
             scrimPopupWindow.setPauseNotifications(false);
@@ -32158,6 +32557,49 @@ public class ChatActivity extends BaseFragment implements
                         }
                         processSelectedOption(options.get(i));
                     });
+                    // History item: replace direct open with animated SwipeBack submenu when BOTH message and reaction histories exist
+                    if (option == OPTION_VIEW_EDIT_HISTORY && popupLayout.getSwipeBack() != null) {
+                        final MessageObject histMsg = selectedObject;
+                        boolean hasMsgHistSub = histMsg != null && VeyraEditHistoryManager.hasHistory(histMsg.getDialogId(), histMsg.getId());
+                        boolean hasReactHistSub = histMsg != null && VeyraConfig.reactionHistoryEnabled
+                                && VeyraEditHistoryManager.hasReactionHistory(histMsg.getDialogId(), histMsg.getId());
+
+                        if (hasMsgHistSub && hasReactHistSub) {
+                            LinearLayout subLayout = new LinearLayout(getParentActivity());
+                            subLayout.setOrientation(LinearLayout.VERTICAL);
+                            subLayout.setLayoutParams(new FrameLayout.LayoutParams(AndroidUtilities.dp(200), LayoutHelper.WRAP_CONTENT));
+
+                            ActionBarMenuSubItem backItem = new ActionBarMenuSubItem(getParentActivity(), true, false, themeDelegate);
+                            backItem.setItemHeight(44);
+                            backItem.setTextAndIcon(LocaleController.getString(R.string.Back), R.drawable.msg_arrow_back);
+                            backItem.getTextView().setPadding(LocaleController.isRTL ? 0 : AndroidUtilities.dp(40), 0, LocaleController.isRTL ? AndroidUtilities.dp(40) : 0, 0);
+                            backItem.setOnClickListener(v2 -> popupLayout.getSwipeBack().closeForeground());
+                            subLayout.addView(backItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                            ActionBarMenuSubItem msgHistItem = new ActionBarMenuSubItem(getParentActivity(), false, false, themeDelegate);
+                            msgHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages), R.drawable.msg_edit);
+                            subLayout.addView(msgHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                            msgHistItem.setOnClickListener(v2 -> {
+                                closeMenu();
+                                if (histMsg != null) {
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, VeyraMessageHistoryActivity.MODE_MESSAGES));
+                                }
+                            });
+
+                            ActionBarMenuSubItem reactHistItem = new ActionBarMenuSubItem(getParentActivity(), false, true, themeDelegate);
+                            reactHistItem.setTextAndIcon(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions), R.drawable.msg_reactions);
+                            subLayout.addView(reactHistItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                            reactHistItem.setOnClickListener(v2 -> {
+                                closeMenu();
+                                if (histMsg != null) {
+                                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, histMsg, VeyraMessageHistoryActivity.MODE_REACTIONS));
+                                }
+                            });
+
+                            final int histForegroundIndex = popupLayout.addViewToSwipeBack(subLayout);
+                            cell.setOnClickListener(v2 -> popupLayout.getSwipeBack().openForeground(histForegroundIndex));
+                        }
+                    }
                     if (option == OPTION_TRANSLATE) {
                         final boolean translateEnabled = getMessagesController().getTranslateController().isContextTranslateEnabled();
                         String toLangDefault = LocaleController.getInstance().getCurrentLocale().getLanguage();
@@ -33202,6 +33644,11 @@ public class ChatActivity extends BaseFragment implements
         }
         ArrayList<ReactionsLayoutInBubble.VisibleReaction> visibleReactions = new ArrayList<>();
         visibleReactions.addAll(primaryMessage.getChoosenReactions());
+        getSendMessagesHelper().registerLocalReaction(primaryMessage.getId());
+        if (primaryMessage.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, primaryMessage.getId())) {
+            primaryMessage.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+            primaryMessage.messageOwner.edit_date = 0;
+        }
         getSendMessagesHelper().sendReaction(primaryMessage, visibleReactions, added ? visibleReaction : null, bigEmoji, addToRecent, ChatActivity.this, updateReactionRunnable = new Runnable() {
             @Override
             public void run() {
@@ -33227,6 +33674,10 @@ public class ChatActivity extends BaseFragment implements
                             if (messageInDict != null && messageInDict != primaryMessage) {
                                 messageToUpdate = messagesDict[0].get(primaryMessage.getId());
                                 messageToUpdate.messageOwner.reactions = primaryMessage.messageOwner.reactions;
+                            }
+                            if (messageToUpdate.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, messageToUpdate.getId())) {
+                                messageToUpdate.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+                                messageToUpdate.messageOwner.edit_date = 0;
                             }
 
                             updateMessageAnimated(messageToUpdate, true);
@@ -33638,8 +34089,46 @@ public class ChatActivity extends BaseFragment implements
                     selectedObjectGroup = null;
                     return;
                 }
+                if (selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted))) {
+                    ArrayList<Integer> mids = new ArrayList<>();
+                    if (selectedObjectGroup != null && selectedObjectGroup.messages != null) {
+                        for (int a = 0; a < selectedObjectGroup.messages.size(); a++) {
+                            MessageObject msg = selectedObjectGroup.messages.get(a);
+                            mids.add(msg.getId());
+                            removeMessageWithThanos(msg);
+                        }
+                    } else {
+                        mids.add(selectedObject.getId());
+                        removeMessageWithThanos(selectedObject);
+                    }
+                    getMessagesController().deleteMessages(mids, null, currentEncryptedChat, dialog_id, (int) getTopicId(), false, chatMode, true);
+                    getMessagesStorage().markMessagesAsDeleted(dialog_id, mids, true, false, chatMode, (int) getTopicId());
+                    VeyraEditHistoryManager.deleteHistoryBatch(dialog_id, mids);
+                    selectedObject = null;
+                    selectedObjectToEditCaption = null;
+                    selectedObjectGroup = null;
+                    break;
+                }
                 preserveDim = true;
                 createDeleteMessagesAlert(selectedObject, selectedObjectGroup, true);
+                break;
+            }
+            case OPTION_VIEW_EDIT_HISTORY: {
+                if (selectedObject != null) {
+                    boolean hasMsgHist = VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
+                    boolean hasReactHist = VeyraConfig.reactionHistoryEnabled
+                            && VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId());
+                    int histMode = VeyraMessageHistoryActivity.MODE_ALL;
+                    if (hasMsgHist && !hasReactHist) {
+                        histMode = VeyraMessageHistoryActivity.MODE_MESSAGES;
+                    } else if (hasReactHist && !hasMsgHist) {
+                        histMode = VeyraMessageHistoryActivity.MODE_REACTIONS;
+                    }
+                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject, histMode));
+                }
+                selectedObject = null;
+                selectedObjectToEditCaption = null;
+                selectedObjectGroup = null;
                 break;
             }
             case OPTION_FORWARD: {
@@ -33738,12 +34227,18 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         fileType = BulletinFactory.FileType.MEDIA;
                     }
-                    BulletinFactory.of(this).createDownloadBulletin(fileType, filesAmount, themeDelegate).show();
+                    VeyraMediaSaver.saveMediaBatch(getParentActivity(), currentAccount, selectedObjectGroup.messages, count -> {
+                        if (getParentActivity() != null && fragmentView != null && count > 0) {
+                            BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, count, themeDelegate).show();
+                        }
+                    });
                 } else {
-                    saveMessageToGallery(selectedObject);
-                    if (getParentActivity() != null) {
-                        BulletinFactory.of(this).createDownloadBulletin(selectedObject.isLivePhoto() ? BulletinFactory.FileType.LIVEPHOTO : (selectedObject.isVideo() ? BulletinFactory.FileType.VIDEO : BulletinFactory.FileType.PHOTO), themeDelegate).show();
-                    }
+                    final BulletinFactory.FileType fileType = selectedObject.isLivePhoto() ? BulletinFactory.FileType.LIVEPHOTO : (selectedObject.isVideo() ? BulletinFactory.FileType.VIDEO : BulletinFactory.FileType.PHOTO);
+                    VeyraMediaSaver.saveMedia(getParentActivity(), currentAccount, selectedObject, uri -> {
+                        if (getParentActivity() != null && fragmentView != null) {
+                            BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, themeDelegate).show();
+                        }
+                    }, null);
                 }
                 break;
             }
@@ -33953,118 +34448,39 @@ public class ChatActivity extends BaseFragment implements
                     return;
                 }
                 boolean isMusic = selectedObject.isMusic();
-                boolean isDocument = selectedObject.isDocument();
-
-                if (selectedObject.isPoll()) {
-                    final TLRPC.Message omsg = selectedObject.messageOwner;
-                    TLRPC.TL_messageMediaPoll mediaPoll = (TLRPC.TL_messageMediaPoll) omsg.media;
-
-                    final ArrayList<MessageObject> messageObjects = new ArrayList<>();
-                    final TLRPC.MessageMedia mediaPollDescription = PollAttachedMediaPack.getMedia(mediaPoll, PollAttachedMediaPack.INDEX_DESCRIPTION);
-                    final TLRPC.MessageMedia mediaPollExplanation = PollAttachedMediaPack.getMedia(mediaPoll, PollAttachedMediaPack.INDEX_EXPLANATION);
-
-                    if (mediaPollDescription != null && mediaPollDescription.document != null && !MessageObject.isVideoDocument(mediaPollDescription.document)) {
-                        TLRPC.TL_message msg = copy(omsg);
-                        msg.media = mediaPollDescription;
-                        msg.attachPath = PollAttachedMediaPack.getAttachPath(omsg, PollAttachedMediaPack.INDEX_DESCRIPTION);
-                        messageObjects.add(new MessageObject(currentAccount, msg, false, true));
-                        isMusic |= MessageObject.isMusicDocument(mediaPollDescription.document);
-                    }
-                    if (selectedObject.expandedExplanation && mediaPollExplanation != null && mediaPollExplanation.document != null && !MessageObject.isVideoDocument(mediaPollExplanation.document)) {
-                        TLRPC.TL_message msg = copy(omsg);
-                        msg.media = mediaPollExplanation;
-                        msg.attachPath = PollAttachedMediaPack.getAttachPath(omsg, PollAttachedMediaPack.INDEX_EXPLANATION);
-                        messageObjects.add(new MessageObject(currentAccount, msg, false, true));
-                        isMusic |= MessageObject.isMusicDocument(mediaPollExplanation.document);
-                    }
-
-                    final boolean isMusicFinal = isMusic;
-                    MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, (count) -> {
-                        if (getParentActivity() == null || fragmentView == null) {
-                            return;
-                        }
-                        if (count > 0) {
-                            BulletinFactory.of(this).createDownloadBulletin(isMusicFinal ? BulletinFactory.FileType.AUDIOS : BulletinFactory.FileType.UNKNOWNS, count, themeDelegate).show();
-                        }
-                    });
-                } else if (isMusic || isDocument) {
-                    ArrayList<MessageObject> messageObjects;
-                    if (selectedObjectGroup != null) {
-                        messageObjects = new ArrayList<>(selectedObjectGroup.messages);
-                    } else {
-                        messageObjects = new ArrayList<>();
-                        messageObjects.add(selectedObject);
-                    }
-                    final boolean isMusicFinal = isMusic;
-                    MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, (count) -> {
-                        if (getParentActivity() == null || fragmentView == null) {
-                            return;
-                        }
-                        if (count > 0) {
-                            BulletinFactory.of(this).createDownloadBulletin(isMusicFinal ? BulletinFactory.FileType.AUDIOS : BulletinFactory.FileType.UNKNOWNS, count, themeDelegate).show();
-                        }
-                    });
-                } else if (selectedObject.isLivePhoto()) {
-                    final ArrayList<MessageObject> messageObjects = new ArrayList<>();
-                    messageObjects.add(selectedObject);
-                    MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, (count) -> {
-                        if (getParentActivity() == null || fragmentView == null) {
-                            return;
-                        }
-                        if (count > 0) {
-                            BulletinFactory.of(this).createDownloadBulletin(BulletinFactory.FileType.LIVEPHOTO, count, themeDelegate).show();
+                if (selectedObjectGroup != null) {
+                    VeyraMediaSaver.saveMediaBatch(getParentActivity(), currentAccount, selectedObjectGroup.messages, count -> {
+                        if (getParentActivity() != null && fragmentView != null && count > 0) {
+                            BulletinFactory.of(ChatActivity.this).createDownloadBulletin(isMusic ? BulletinFactory.FileType.AUDIOS : BulletinFactory.FileType.UNKNOWNS, count, themeDelegate).show();
                         }
                     });
                 } else {
-                    boolean video = selectedObject.isVideo();
-                    boolean photo = selectedObject.isPhoto();
-                    boolean gif = selectedObject.isGif();
-                    String fileName = FileLoader.getDocumentFileName(selectedObject.getDocument());
-                    if (TextUtils.isEmpty(fileName)) {
-                        fileName = selectedObject.getFileName();
-                    }
-                    String path = selectedObject.messageOwner.attachPath;
-                    if (path != null && path.length() > 0) {
-                        File temp = new File(path);
-                        if (!temp.exists()) {
-                            path = null;
+                    final BulletinFactory.FileType fileType = isMusic ? BulletinFactory.FileType.AUDIO : BulletinFactory.FileType.UNKNOWN;
+                    VeyraMediaSaver.saveMedia(getParentActivity(), currentAccount, selectedObject, uri -> {
+                        if (getParentActivity() != null && fragmentView != null) {
+                            BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, themeDelegate).show();
                         }
-                    }
-                    if (TextUtils.isEmpty(path)) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.cachedQuality != null && selectedObject.cachedQuality.isCached()) {
-                        File f = new File(selectedObject.cachedQuality.uri.getPath());
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.qualityToSave != null) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.qualityToSave, null, false, true);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    MediaController.saveFile(path, getParentActivity(), 2, fileName, selectedObject.getDocument() != null ? selectedObject.getDocument().mime_type : "", uri -> {
-                        if (getParentActivity() == null) {
-                            return;
-                        }
-                        final BulletinFactory.FileType fileType;
-                        if (photo) {
-                            fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
-                        } else if (video) {
-                            fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
-                        } else if (gif) {
-                            fileType = BulletinFactory.FileType.GIF_TO_DOWNLOADS;
-                        } else {
-                            fileType = BulletinFactory.FileType.UNKNOWN;
-                        }
-                        BulletinFactory.of(this).createDownloadBulletin(fileType, themeDelegate).show();
-                    });
+                    }, null);
                 }
+                break;
+            }
+            case OPTION_HIDE_CONTENT: {
+                if (selectedObject == null) {
+                    return;
+                }
+                if (selectedObjectGroup != null && selectedObjectGroup.messages != null) {
+                    for (int a = 0; a < selectedObjectGroup.messages.size(); a++) {
+                        MessageObject msg = selectedObjectGroup.messages.get(a);
+                        HiddenContentManager.hideMessage(dialog_id, msg.getId());
+                        removeMessageWithThanos(msg);
+                    }
+                } else {
+                    HiddenContentManager.hideMessage(dialog_id, selectedObject.getId());
+                    removeMessageWithThanos(selectedObject);
+                }
+                selectedObject = null;
+                selectedObjectGroup = null;
+                selectedObjectToEditCaption = null;
                 break;
             }
             case OPTION_ADD_TO_GIFS: {
@@ -40506,33 +40922,64 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
-        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
-            if (isQuickRepliesOrWelcomeMessagesMode()) return;
-
-            final TL_keyboard.TL_inlineButtonTypeUrl buttonTypeUrl = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrl.class);
-            final TL_keyboard.TL_inlineButtonTypeCopy buttonTypeCopy = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCopy.class);
-
-            if (getParentActivity() == null || bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
-                    buttonTypeUrl == null && buttonTypeCopy == null &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeSwitchInline.class) &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeCallback.class) &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeGame.class) &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeBuy.class) &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUrlAuth.class) &&
-                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class)) {
+        public void didLongPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
+            if (chatMode == MODE_QUICK_REPLIES || getParentActivity() == null) return;
+            if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
+                    !(button instanceof TLRPC.TL_keyboardButtonSwitchInline) && !(button instanceof TLRPC.TL_keyboardButtonCallback) &&
+                    !(button instanceof TLRPC.TL_keyboardButtonGame) && !(button instanceof TLRPC.TL_keyboardButtonUrl) &&
+                    !(button instanceof TLRPC.TL_keyboardButtonBuy) && !(button instanceof TLRPC.TL_keyboardButtonUrlAuth) &&
+                    !(button instanceof TLRPC.TL_keyboardButtonUserProfile) && !(button instanceof TLRPC.TL_keyboardButtonCopy)) {
                 return;
             }
 
-            if (buttonTypeCopy != null) {
-                didLongPressCopyButton(buttonTypeCopy.copy_text);
-                return;
-            }
-            if (buttonTypeUrl != null) {
-                openClickableLink(null, buttonTypeUrl.url, true, cell, cell.getMessageObject(), false);
+            if (!org.telegram.messenger.VeyraConfig.disableVibration) {
                 try {
                     cell.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                 } catch (Exception ignore) {}
             }
+
+            Utilities.Callback<String> copyCallback = (text) -> {
+                AndroidUtilities.addToClipboard(text);
+                BulletinFactory.of(ChatActivity.this).createCopyBulletin(formatString(R.string.ExactTextCopied, text)).show();
+            };
+
+            ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
+            final RectF pressedButtonBounds = new RectF();
+            if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
+                // Anchor the popup to the pressed button instead of the whole message cell.
+                options.setScrimBounds(pressedButtonBounds);
+            }
+            if (!TextUtils.isEmpty(button.text)) {
+                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
+            }
+
+            if (button instanceof TLRPC.TL_keyboardButtonUrl) {
+                final String url = ((TLRPC.TL_keyboardButtonUrl) button).url;
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
+                options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, url, true, cell, cell.getMessageObject(), false));
+            } else if (button instanceof TLRPC.TL_keyboardButtonUrlAuth) {
+                final String url = ((TLRPC.TL_keyboardButtonUrlAuth) button).url;
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
+            } else if (button instanceof TLRPC.TL_keyboardButtonCallback) {
+                final String callbackData = AndroidUtilities.getTextOrBase64(((TLRPC.TL_keyboardButtonCallback) button).data);
+                if (!TextUtils.isEmpty(callbackData)) {
+                    options.add(R.drawable.msg_copy, LocaleController.getString("CopyCallback", R.string.CopyCallback), () -> copyCallback.run(callbackData));
+                }
+            } else if (button instanceof TLRPC.TL_keyboardButtonSwitchInline) {
+                final String query = ((TLRPC.TL_keyboardButtonSwitchInline) button).query;
+                if (!TextUtils.isEmpty(query)) {
+                    options.add(R.drawable.msg_copy, LocaleController.getString("CopyInlineQuery", R.string.CopyInlineQuery), () -> copyCallback.run(query));
+                }
+            } else if (button instanceof TLRPC.TL_keyboardButtonUserProfile) {
+                final long userId = ((TLRPC.TL_keyboardButtonUserProfile) button).user_id;
+                options.add(R.drawable.msg_copy, LocaleController.getString("CopyID", R.string.CopyID), () -> copyCallback.run(String.valueOf(userId)));
+            } else if (button instanceof TLRPC.TL_keyboardButtonCopy) {
+                final String copyText = ((TLRPC.TL_keyboardButtonCopy) button).copy_text;
+                if (!TextUtils.isEmpty(copyText)) {
+                    options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(copyText));
+                }
+            }
+            options.show();
         }
 
         @Override
@@ -45209,6 +45656,13 @@ public class ChatActivity extends BaseFragment implements
                 AndroidUtilities.addToClipboard("@" + username);
                 BulletinFactory.of(ChatActivity.this).createCopyBulletin(getString(R.string.UsernameCopied)).show();
             });
+            // Veyra: quick-insert "@username" into the chat input field
+            options.add(R.drawable.ic_ab_reply, "Add @" + username, () -> {
+                dialog.dismiss();
+                if (chatActivityEnterView != null) {
+                    chatActivityEnterView.setFieldText("@" + username + " ");
+                }
+            });
             if (selling) {
                 options.add(R.drawable.outline_gram_24, getString(R.string.BuyUsernameOnFragment), () -> {
                     Browser.openUrl(getContext(), "https://fragment.com/username/" + username);
@@ -46419,48 +46873,41 @@ public class ChatActivity extends BaseFragment implements
                         icons.add(R.drawable.msg_gif);
                     }
                 } else if (type == 4) {
-                    if (!noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia()) {
-                        if (selectedObject.isVideo()) {
-                            if (!selectedObject.needDrawBluredPreview()) {
-                                items.add(LocaleController.getString(R.string.SaveToGallery));
-                                options.add(OPTION_SAVE_TO_GALLERY);
-                                icons.add(R.drawable.msg_gallery);
-                                items.add(LocaleController.getString(R.string.ShareFile));
-                                options.add(OPTION_SHARE);
-                                icons.add(R.drawable.msg_shareout);
+                    if (VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
+                        int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);
+                        if (saveType == VeyraMediaSaver.SAVE_TYPE_GALLERY) {
+                            items.add(LocaleController.getString(R.string.SaveToGallery));
+                            options.add(OPTION_SAVE_TO_GALLERY);
+                            icons.add(R.drawable.msg_gallery);
+                            if (selectedObject.isGif() || selectedObject.isNewGif() || (selectedObject.getDocument() != null && MessageObject.isNewGifDocument(selectedObject.getDocument()))) {
+                                items.add(LocaleController.getString(R.string.SaveToGIFs));
+                                options.add(OPTION_ADD_TO_GIFS);
+                                icons.add(R.drawable.msg_gif);
                             }
-                        } else if (selectedObject.isMusic() && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
+                            items.add(LocaleController.getString(R.string.ShareFile));
+                            options.add(OPTION_SHARE);
+                            icons.add(R.drawable.msg_shareout);
+                        } else if (saveType == VeyraMediaSaver.SAVE_TYPE_MUSIC) {
                             items.add(LocaleController.getString(R.string.SaveToMusic));
                             options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                             icons.add(R.drawable.msg_download);
                             items.add(LocaleController.getString(R.string.ShareFile));
                             options.add(OPTION_SHARE);
                             icons.add(R.drawable.msg_shareout);
-                        } else if (selectedObject.getDocument() != null && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
-                            if (MessageObject.isNewGifDocument(selectedObject.getDocument())) {
-                                items.add(LocaleController.getString(R.string.SaveToGIFs));
-                                options.add(OPTION_ADD_TO_GIFS);
-                                icons.add(R.drawable.msg_gif);
-                            }
+                        } else {
                             items.add(LocaleController.getString(R.string.SaveToDownloads));
                             options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                             icons.add(R.drawable.msg_download);
                             items.add(LocaleController.getString(R.string.ShareFile));
                             options.add(OPTION_SHARE);
                             icons.add(R.drawable.msg_shareout);
-                        } else {
-                            if (!selectedObject.needDrawBluredPreview()) {
-                                items.add(LocaleController.getString(R.string.SaveToGallery));
-                                options.add(OPTION_SAVE_TO_GALLERY);
-                                icons.add(R.drawable.msg_gallery);
-                            }
                         }
                     }
                 } else if (type == 5) {
                     items.add(LocaleController.getString(R.string.ApplyLocalizationFile));
                     options.add(OPTION_APPLY_LOCALIZATION_OR_THEME);
                     icons.add(R.drawable.msg_language);
-                    if (!noforwardsOrPaidMedia && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
+                    if (VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
                         items.add(LocaleController.getString(R.string.SaveToDownloads));
                         options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                         icons.add(R.drawable.msg_download);
@@ -46472,7 +46919,7 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.ApplyThemeFile));
                     options.add(OPTION_APPLY_LOCALIZATION_OR_THEME);
                     icons.add(R.drawable.msg_theme);
-                    if (!noforwardsOrPaidMedia && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
+                    if (VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
                         items.add(LocaleController.getString(R.string.SaveToDownloads));
                         options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                         icons.add(R.drawable.msg_download);
@@ -46480,14 +46927,18 @@ public class ChatActivity extends BaseFragment implements
                         options.add(OPTION_SHARE);
                         icons.add(R.drawable.msg_shareout);
                     }
-                } else if (type == 6 && !noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia()) {
-                    if (!selectedObject.needDrawBluredPreview() && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
-                        items.add(LocaleController.getString(R.string.SaveToGallery));
-                        options.add(OPTION_SAVE_TO_GALLERY2);
-                        icons.add(R.drawable.msg_gallery);
-                        items.add(LocaleController.getString(R.string.SaveToDownloads));
-                        options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
-                        icons.add(R.drawable.msg_download);
+                } else if (type == 6) {
+                    if (VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
+                        int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);
+                        if (saveType == VeyraMediaSaver.SAVE_TYPE_GALLERY) {
+                            items.add(LocaleController.getString(R.string.SaveToGallery));
+                            options.add(OPTION_SAVE_TO_GALLERY2);
+                            icons.add(R.drawable.msg_gallery);
+                        } else {
+                            items.add(LocaleController.getString(R.string.SaveToDownloads));
+                            options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
+                            icons.add(R.drawable.msg_download);
+                        }
                         items.add(LocaleController.getString(R.string.ShareFile));
                         options.add(OPTION_SHARE);
                         icons.add(R.drawable.msg_shareout);
@@ -46581,15 +47032,32 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_PIN);
                     icons.add(R.drawable.msg_pin);
                 }
-                if (selectedObject != null && !selectedObject.isEphemeral() && selectedObject.contentType == 0 && ((!TextUtils.isEmpty(selectedObject.getMessageTextToTranslate(selectedObjectGroup, null)) && !selectedObject.isAnimatedEmoji() && !selectedObject.isDice()) || (selectedObject.type == MessageObject.TYPE_ARTICLE && selectedObject.messageOwner != null && selectedObject.messageOwner.rich_message != null && !selectedObject.translated))) {
+                if (selectedObject != null && selectedObject.contentType == 0 && ((!TextUtils.isEmpty(selectedObject.getMessageTextToTranslate(selectedObjectGroup, null)) && !selectedObject.isAnimatedEmoji() && !selectedObject.isDice()) || (selectedObject.type == MessageObject.TYPE_ARTICLE && selectedObject.messageOwner != null && selectedObject.messageOwner.rich_message != null && !selectedObject.translated))) {
                     items.add(LocaleController.getString(R.string.TranslateMessage));
                     options.add(OPTION_TRANSLATE);
                     icons.add(R.drawable.msg_translate);
                 }
-                if (allowEdit || chatMode == MODE_WELCOME_MESSAGES) {
+                if (allowEdit) {
                     items.add(LocaleController.getString(R.string.Edit));
                     options.add(OPTION_EDIT);
                     icons.add(R.drawable.msg_edit);
+                }
+                boolean hasMsgHist = selectedObject != null && VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
+                boolean hasReactHist = selectedObject != null && VeyraConfig.reactionHistoryEnabled && VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId());
+                if (selectedObject != null) {
+                    if (hasMsgHist && hasReactHist) {
+                        items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_recent);
+                    } else if (hasMsgHist) {
+                        items.add(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_edit);
+                    } else if (hasReactHist) {
+                        items.add(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions));
+                        options.add(OPTION_VIEW_EDIT_HISTORY);
+                        icons.add(R.drawable.msg_reactions);
+                    }
                 }
                 if (ChatObject.isMonoForum(currentChat) && selectedObject.getGroupId() == 0 && selectedObjectGroup == null && message != null && message.messageOwner != null && message.messageOwner.suggested_post == null && message.messageOwner.action == null) {
                     items.add(LocaleController.getString(R.string.EditOfferAdd));
@@ -46607,7 +47075,8 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_FACT_CHECK);
                     icons.add(R.drawable.menu_factcheck);
                 }
-                if (chatMode != MODE_WELCOME_MESSAGES && chatMode != MODE_SCHEDULED && selectedObject.contentType == 0 && selectedObject.getId() > 0 && !selectedObject.isOut() && (currentChat != null || currentUser != null && currentUser.bot)) {
+                if (chatMode != MODE_SCHEDULED && selectedObject.contentType == 0 && selectedObject.getId() > 0 && !selectedObject.isOut() && (currentChat != null || currentUser != null && currentUser.bot)
+                        && (!VeyraConfig.isDeveloperChat(dialog_id) || VeyraConfig.isSelfDeveloper(currentAccount))) {
                     if (UserObject.isReplyUser(currentUser)) {
                         items.add(LocaleController.getString(R.string.BlockContact));
                         options.add(OPTION_REPORT_CHAT);
@@ -46648,32 +47117,29 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_VIEW_IN_TOPIC);
                     icons.add(R.drawable.msg_viewintopic);
                 }
-                if (type == 4 && !noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia() && !selectedObject.needDrawBluredPreview()) {
-                    if (selectedObject.isVideo()) {
+                if (type == 4 && VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
+                    int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);
+                    if (saveType == VeyraMediaSaver.SAVE_TYPE_GALLERY) {
                         items.add(LocaleController.getString(R.string.SaveToGallery));
                         options.add(OPTION_SAVE_TO_GALLERY);
                         icons.add(R.drawable.msg_gallery);
                         items.add(LocaleController.getString(R.string.ShareFile));
                         options.add(OPTION_SHARE);
                         icons.add(R.drawable.msg_shareout);
-                    } else if (selectedObject.isMusic() && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
+                    } else if (saveType == VeyraMediaSaver.SAVE_TYPE_MUSIC) {
                         items.add(LocaleController.getString(R.string.SaveToMusic));
                         options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                         icons.add(R.drawable.msg_download);
                         items.add(LocaleController.getString(R.string.ShareFile));
                         options.add(OPTION_SHARE);
                         icons.add(R.drawable.msg_shareout);
-                    } else if (!selectedObject.isVideo() && selectedObject.getDocument() != null && !selectedObject.isVoiceOnce() && !selectedObject.isRoundOnce()) {
+                    } else {
                         items.add(LocaleController.getString(R.string.SaveToDownloads));
                         options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                         icons.add(R.drawable.msg_download);
                         items.add(LocaleController.getString(R.string.ShareFile));
                         options.add(OPTION_SHARE);
                         icons.add(R.drawable.msg_shareout);
-                    } else {
-                        items.add(LocaleController.getString(R.string.SaveToGallery));
-                        options.add(OPTION_SAVE_TO_GALLERY);
-                        icons.add(R.drawable.msg_gallery);
                     }
                 } else if (type == 5) {
                     items.add(LocaleController.getString(R.string.ApplyLocalizationFile));
