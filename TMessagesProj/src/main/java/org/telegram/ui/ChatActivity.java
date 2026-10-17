@@ -12630,11 +12630,11 @@ public class ChatActivity extends BaseFragment implements
 
     private void clearMediaCacheForDialog(long dialogId, int mediaType) {
         try {
-            try { FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
-            String sizeStr = AndroidUtilities.formatFileSize(bytes);
-            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Media cache cleared (" + sizeStr + ")").show();
-        }); } catch (Throwable ignore) { FileLog.e(ignore); }
-        } catch (Throwable ignore) {}
+            FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
+                String sizeStr = AndroidUtilities.formatFileSize(bytes);
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Media cache cleared (" + sizeStr + ")").show();
+            });
+        } catch (Throwable e) { FileLog.e(e); }
     }
 
     private void openForward(boolean fromActionBar) {

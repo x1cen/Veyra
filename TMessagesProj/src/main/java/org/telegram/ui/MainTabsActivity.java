@@ -13,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Build;
+import android.os.SystemClock;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -926,6 +927,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
     /* * */
 
+    private int chatsTabClickCount;
+    private long lastChatsTabClickTime;
     private int navigationBarHeight;
     private int insetLeft;
     private int insetRight;

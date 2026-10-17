@@ -613,6 +613,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int veyra_view_details = 63;
 
     // Extra info rows for user profile
+    private int idRow = -1;
     private int veyra_mutualContactRow = -1;
     private int veyra_premiumStatusRow = -1;
     private int veyra_verifiedRow = -1;
@@ -13073,6 +13074,43 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             actionBar.createMenu().requestLayout();
         });
+    }
+
+    private void showDetailsJson() {
+        if (userId != 0) {
+            final long uid = userId;
+            final TLRPC.User user = getMessagesController().getUser(uid);
+            final TLRPC.UserFull uInfo = userInfo;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (user != null) root.add("user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(user));
+                if (uInfo != null) root.add("full_user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(uInfo));
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (chatId != 0) {
+            final TLRPC.Chat chat = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
+            final TLRPC.ChatFull cInfo = chatInfo;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (chat != null) root.add("chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(chat));
+                if (cInfo != null) root.add("full_chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(cInfo));
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        } else if (topicId != 0) {
+            final long tid = topicId;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.addProperty("topic_id", tid);
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+        }
+    }
+
+    private void showProfileQrCode() {
+        Bundle args = new Bundle();
+        if (chatId != 0) args.putLong("chat_id", chatId);
+        if (userId != 0) args.putLong("user_id", userId);
+        presentFragment(new QrActivity(args));
     }
 
     private void showAvatarProgress(boolean show, boolean animated) {

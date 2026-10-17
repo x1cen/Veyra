@@ -15552,7 +15552,7 @@ public class MessagesStorage extends BaseController {
                 getUsersInternal(usersToLoad, dialogs.users);
             }
 
-            getMessagesController().getTopicsController().updateTopicsWithDeletedMessages(originalDialogId, messages);
+            getMessagesController().getTopicsController().updateTopicsWithDeletedMessages(originalDialogId, messages instanceof ArrayList ? (ArrayList<Integer>) messages : new ArrayList<>(messages));
 
             if (!dialogs.dialogs.isEmpty() || !encryptedChats.isEmpty()) {
                 getMessagesController().processDialogsUpdate(dialogs, encryptedChats, true);
@@ -15572,7 +15572,7 @@ public class MessagesStorage extends BaseController {
         }
     }
 
-    public void updateDialogsWithDeletedMessages(long dialogId, long channelId, ArrayList<Integer> messages, ArrayList<Long> additionalDialogsToUpdate) {
+    public void updateDialogsWithDeletedMessages(long dialogId, long channelId, List<Integer> messages, List<Long> additionalDialogsToUpdate) {
         executeInStorageQueue(() -> updateDialogsWithDeletedMessagesInternal(dialogId, channelId, messages, additionalDialogsToUpdate));
     }
 

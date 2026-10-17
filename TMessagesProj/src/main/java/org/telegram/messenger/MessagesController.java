@@ -1254,6 +1254,7 @@ public class MessagesController extends BaseController implements NotificationCe
         public int maxId;
         public int maxDate;
         public long sendRequestTime;
+        public boolean fromSendReply;
     }
 
     public static class PrintingUser {

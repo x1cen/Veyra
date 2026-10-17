@@ -526,6 +526,41 @@ public class FilePathDatabase {
         }
     }
 
+    public void clearDialogFiles(long dialogId, int mediaType, Utilities.Callback<Long> callback) {
+        postRunnable(() -> {
+            ensureDatabaseCreated();
+            long totalBytes = 0;
+            java.util.ArrayList<String> pathsToDelete = new java.util.ArrayList<>();
+            SQLiteCursor cursor = null;
+            try {
+                String query = "SELECT path FROM paths_by_dialog_id WHERE dialog_id = " + dialogId;
+                if (mediaType != 0) query += " AND message_type = " + mediaType;
+                cursor = database.queryFinalized(query);
+                while (cursor.next()) {
+                    String p = cursor.stringValue(0);
+                    if (p != null) pathsToDelete.add(p);
+                }
+            } catch (Exception e) { FileLog.e(e); } finally { if (cursor != null) cursor.dispose(); }
+            for (String path : pathsToDelete) {
+                try {
+                    java.io.File f = new java.io.File(path);
+                    if (f.exists()) {
+                        totalBytes += f.length();
+                        //noinspection ResultOfMethodCallIgnored
+                        f.delete();
+                    }
+                    database.executeFast("DELETE FROM paths_by_dialog_id WHERE path = '" + shield(path) + "'").stepThis().dispose();
+                    database.executeFast("DELETE FROM paths WHERE path = '" + shield(path) + "'").stepThis().dispose();
+                    cache.remove(path);
+                } catch (Exception e) { FileLog.e(e); }
+            }
+            long result = totalBytes;
+            if (callback != null) {
+                AndroidUtilities.runOnUIThread(() -> callback.run(result));
+            }
+        });
+    }
+
     public boolean isLocallyCreated(String path) {
         CountDownLatch syncLatch = new CountDownLatch(1);
         boolean[] res = new boolean[]{false};
