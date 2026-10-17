@@ -737,7 +737,7 @@ public class InstantCameraView extends InstantCameraViewBase implements Notifica
         selectedCamera = null;
         if (!fromPaused) {
             if (!useCamera2) {
-                isFrontface = true;
+                isFrontface = !org.telegram.messenger.VeyraConfig.rearCameraVideoMessages;
             }
             updateFlash();
             recordedTime = 0;
@@ -2384,8 +2384,12 @@ public class InstantCameraView extends InstantCameraViewBase implements Notifica
             started = true;
             int resolution = MessagesController.getInstance(currentAccount).roundVideoSize;
             int bitrate = MessagesController.getInstance(currentAccount).roundVideoBitrate * 1024;
+            if (org.telegram.messenger.VeyraConfig.highQualityVideoMessages) {
+                resolution = Math.max(resolution, 640);
+                bitrate = Math.max(bitrate, 2800 * 1024);
+            }
             AndroidUtilities.runOnUIThread(() -> {
-                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.stopAllHeavyOperations, 512);
+                NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.stopAllHeavyOperations, 512);
             });
 
             videoFile = outputFile;

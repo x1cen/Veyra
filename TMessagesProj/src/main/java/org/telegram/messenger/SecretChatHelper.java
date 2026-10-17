@@ -188,6 +188,10 @@ public class SecretChatHelper extends BaseController {
         TLRPC.EncryptedChat existingChat = getMessagesController().getEncryptedChatDB(newChat.id, false);
 
         if (newChat instanceof TLRPC.TL_encryptedChatRequested && existingChat == null) {
+            if (VeyraConfig.blockSecretChat) {
+                declineSecretChat(newChat.id, false);
+                return;
+            }
             long userId = newChat.participant_id;
             if (userId == getUserConfig().getClientUserId()) {
                 userId = newChat.admin_id;
@@ -1362,56 +1366,43 @@ public class SecretChatHelper extends BaseController {
         return newMsg;
     }
 
-    private void resendMessages(int startSeq_, int endSeq_, TLRPC.EncryptedChat encryptedChat) {
-        if (encryptedChat == null) {
+    private void resendMessages(int startSeq, int endSeq, TLRPC.EncryptedChat encryptedChat) {
+        if (encryptedChat == null || endSeq - startSeq < 0) {
             return;
         }
-
-        final long startSeq = startSeq_;
-        final long endSeq = endSeq_;
-        final long range = endSeq - startSeq;
-        if (startSeq < 0 || endSeq < 0 || endSeq >= Integer.MAX_VALUE || range < 0 || range > 10_000L) {
+        if (endSeq - startSeq > 10000) {
             return;
         }
-
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             try {
-                long sSeqLong = startSeq;
-                if (encryptedChat.admin_id == getUserConfig().getClientUserId() && (sSeqLong & 1L) == 0L) {
-                    sSeqLong++;
+                int sSeq = startSeq;
+                if (encryptedChat.admin_id == getUserConfig().getClientUserId() && sSeq % 2 == 0) {
+                    sSeq++;
                 }
 
-                if (sSeqLong > endSeq) {
-                    return;
-                }
-
-                final int sSeq = (int) sSeqLong;
-                final int safeEndSeq = (int) endSeq;
-                SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT uid FROM requested_holes WHERE uid = %d AND ((seq_out_start >= %d AND %d <= seq_out_end) OR (seq_out_start >= %d AND %d <= seq_out_end))", encryptedChat.id, sSeq, sSeq, safeEndSeq, safeEndSeq));
+                SQLiteCursor cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT uid FROM requested_holes WHERE uid = %d AND ((seq_out_start >= %d AND %d <= seq_out_end) OR (seq_out_start >= %d AND %d <= seq_out_end))", encryptedChat.id, sSeq, sSeq, endSeq, endSeq));
                 boolean exists = cursor.next();
                 cursor.dispose();
                 if (exists) {
                     return;
                 }
 
-                long dialogId = DialogObject.makeEncryptedDialogId(encryptedChat.id);
+                long dialog_id = DialogObject.makeEncryptedDialogId(encryptedChat.id);
                 SparseArray<TLRPC.Message> messagesToResend = new SparseArray<>();
                 ArrayList<TLRPC.Message> messages = new ArrayList<>();
-                for (long seq = sSeqLong; seq <= endSeq; seq += 2L) {
-                    messagesToResend.put((int) seq, null);
+                for (int a = sSeq; a <= endSeq; a += 2) {
+                    messagesToResend.put(a, null);
                 }
-
-                cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, r.random_id, s.seq_in, s.seq_out, m.ttl, s.mid FROM messages_seq as s LEFT JOIN randoms_v2 as r ON r.mid = s.mid LEFT JOIN messages_v2 as m ON m.mid = s.mid WHERE m.uid = %d AND m.out = 1 AND s.seq_out >= %d AND s.seq_out <= %d ORDER BY seq_out ASC", dialogId, sSeq, safeEndSeq));
-
+//                cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, r.random_id, s.seq_in, s.seq_out, m.ttl, s.mid FROM messages_seq as s LEFT JOIN randoms_v2 as r ON r.mid = s.mid LEFT JOIN messages_v2 as m ON m.mid = s.mid WHERE m.uid = %d AND m.out = 1 AND s.seq_out >= %d AND s.seq_out <= %d ORDER BY seq_out ASC", dialog_id, sSeq, endSeq));
+                cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT m.data, r.random_id, s.seq_in, s.seq_out, m.ttl, s.mid, tmd.isdel FROM messages_seq as s LEFT JOIN randoms_v2 as r ON r.mid = s.mid LEFT JOIN messages_v2 as m ON m.mid = s.mid LEFT JOIN veyra_message_deletions as tmd ON tmd.mid=m.mid AND tmd.uid=m.uid WHERE m.uid = %d AND m.out = 1 AND s.seq_out >= %d AND s.seq_out <= %d ORDER BY seq_out ASC", dialog_id, sSeq, endSeq));
                 while (cursor.next()) {
                     TLRPC.Message message;
-                    long randomId = cursor.longValue(1);
-                    if (randomId == 0) {
-                        randomId = Utilities.random.nextLong();
+                    long random_id = cursor.longValue(1);
+                    if (random_id == 0) {
+                        random_id = Utilities.random.nextLong();
                     }
-
-                    int seqIn = cursor.intValue(2);
-                    int seqOut = cursor.intValue(3);
+                    int seq_in = cursor.intValue(2);
+                    int seq_out = cursor.intValue(3);
                     int mid = cursor.intValue(5);
 
                     NativeByteBuffer data = cursor.byteBufferValue(0);

@@ -1377,8 +1377,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
 
         if (currentChat != null) {
+            // Veyra: keep infoContainer visible for non-admin group members so they can view members, admins, permissions, reactions
+            infoContainer.setVisibility(View.VISIBLE);
             if (!ChatObject.hasAdminRights(currentChat)) {
-                infoContainer.setVisibility(View.GONE);
                 settingsTopSectionCell.setVisibility(View.GONE);
             }
 

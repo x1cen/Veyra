@@ -89,6 +89,8 @@ import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
+
+import org.veyra.helpers.MonetHelper;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.SvgHelper;
@@ -4016,14 +4018,46 @@ public class Theme {
         themes.add(themeInfo);
         themesDict.put("Night", themeInfo);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            themeInfo = new ThemeInfo();
+            themeInfo.name = "Monet Light";
+            themeInfo.assetName = "monet_light.attheme";
+            themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_50");
+            themeInfo.previewInColor = MonetHelper.getColor("a2_50");
+            themeInfo.previewOutColor = MonetHelper.getColor("a1_600");
+            themeInfo.sortIndex = 6;
+            themes.add(themeInfo);
+            themesDict.put("Monet Light", themeInfo);
+
+            themeInfo = new ThemeInfo();
+            themeInfo.name = "Monet Dark";
+            themeInfo.assetName = "monet_dark.attheme";
+            themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_900");
+            themeInfo.previewInColor = MonetHelper.getColor("n2_800");
+            themeInfo.previewOutColor = MonetHelper.getColor("a1_100");
+            themeInfo.sortIndex = 7;
+            themes.add(themeInfo);
+            themesDict.put("Monet Dark", themeInfo);
+
+            themeInfo = new ThemeInfo();
+            themeInfo.name = "Monet AMOLED";
+            themeInfo.assetName = "monet_amoled.attheme";
+            themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_1000");
+            themeInfo.previewInColor = MonetHelper.getColor("n2_800");
+            themeInfo.previewOutColor = MonetHelper.getColor("a1_100");
+            themeInfo.sortIndex = 8;
+            themes.add(themeInfo);
+            themesDict.put("Monet AMOLED", themeInfo);
+        }
+
         String themesString = themeConfig.getString("themes2", null);
 
         int remoteVersion = themeConfig.getInt("remote_version", 0);
         int appRemoteThemesVersion = 1;
         if (remoteVersion == appRemoteThemesVersion) {
-            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-                remoteThemesHash[a] = themeConfig.getLong("2remoteThemesHash" + (a != 0 ? a : ""), 0);
-                lastLoadingThemesTime[a] = themeConfig.getInt("lastLoadingThemesTime" + (a != 0 ? a : ""), 0);
+            for (int a : SharedConfig.activeAccounts) {
+                remoteThemesHash.put(a, themeConfig.getLong("2remoteThemesHash" + (a != 0 ? a : ""), 0));
+                lastLoadingThemesTime.put(a, themeConfig.getInt("lastLoadingThemesTime" + (a != 0 ? a : ""), 0));
             }
         }
         themeConfig.edit().putInt("remote_version", appRemoteThemesVersion).apply();
@@ -7597,6 +7631,8 @@ public class Theme {
                                     } catch (Exception ignore) {
                                         value = Utilities.parseInt(param);
                                     }
+                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (param.startsWith("a") || param.startsWith("n") || param.startsWith("monet"))) {
+                                    value = MonetHelper.getColor(param.trim());
                                 } else {
                                     value = Utilities.parseInt(param);
                                 }

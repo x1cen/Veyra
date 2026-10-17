@@ -237,7 +237,7 @@ public class InstantCameraVideoEncoderOverlayHelper {
             GLES20.glUseProgram(0);
         }
 
-        {
+        if (!org.telegram.messenger.VeyraConfig.disableVideoNoteWatermark) {
             final Program program = programRenderWatermark;
 
             GLES20.glEnable(GLES20.GL_BLEND);

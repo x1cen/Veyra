@@ -113,6 +113,22 @@ public class SearchAdapterHelper {
         queryServerSearch(query, allowUsername, allowChats, allowBots, allowSelf, canAddGroupsOnly, channelId, phoneNumbers, type, searchId, exceptDialogId, null);
     }
     public void queryServerSearch(String query, boolean allowUsername, boolean allowChats, boolean allowBots, boolean allowSelf, boolean canAddGroupsOnly, long channelId, boolean phoneNumbers, int type, int searchId, long exceptDialogId, Runnable onEnd) {
+        if (org.telegram.messenger.VeyraConfig.disableGlobalSearch) {
+            groupSearch.clear();
+            groupSearchMap.clear();
+            globalSearch.clear();
+            globalSearchMap.clear();
+            phonesSearch.clear();
+            phoneSearchMap.clear();
+            lastFoundUsername = null;
+            if (delegate != null) {
+                delegate.onDataSetChanged(searchId);
+            }
+            if (onEnd != null) {
+                onEnd.run();
+            }
+            return;
+        }
         for (int reqId : pendingRequestIds) {
             ConnectionsManager.getInstance(currentAccount).cancelRequest(reqId, true);
         }
