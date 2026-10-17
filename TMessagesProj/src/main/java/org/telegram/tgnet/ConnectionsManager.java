@@ -13,6 +13,7 @@ import android.text.TextUtils;
 import android.util.Base64;
 
 import androidx.annotation.Keep;
+
 import org.veyra.client.VeyraSecurity;
 
 import androidx.annotation.OptIn;
@@ -396,7 +397,8 @@ public class ConnectionsManager extends BaseController {
         return requestToken;
     }
 
-    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {        if (object instanceof TLRPC.TL_messages_readHistory) {
+    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (object instanceof TLRPC.TL_messages_readHistory) {
             long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
             if (org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
                     && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
@@ -527,68 +529,8 @@ public class ConnectionsManager extends BaseController {
         } else {
             finalOnComplete = onComplete;
         }
-         if (BuildVars.LOGS_ENABLED) {
-             FileLog.d("send request " + object + " with token = " + requestToken);
-         }
-@@ -646,47 +755,27 @@ public class ConnectionsManager extends BaseController {
-     }
  
-     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
--        final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
-        String proxyAddress = preferences.getString("proxy_ip", "");
-        String proxyUsername = preferences.getString("proxy_user", "");
-        String proxyPassword = preferences.getString("proxy_pass", "");
-        String proxySecret = preferences.getString("proxy_secret", "");
-        int proxyPort = preferences.getInt("proxy_port", 1080);
 
-         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
-         if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
--            if (proxySettings.getType() == ProxySettings.Type.WEB) {
-            if (org.veyra.client.proxy.ProxyStatusManager.isAether(proxySettings)) {
-                int localPort = org.veyra.client.aether.AetherController.getInstance().getActivePort();
-                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : org.veyra.client.aether.AetherConfig.getSocksPort(), "", "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
-            } else if (proxySettings.getType() == ProxySettings.Type.WEB) {
-                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
--                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
--                        proxySettings.getSecret());
--            } else {
--                native_setProxySettings(currentAccount, proxySettings.getAddress(), proxySettings.getPort(),
--                        proxySettings.getUser(), proxySettings.getPassword(), proxySettings.getSecret());
--            }
--        }
--        String installer = "";
--        try {
--            Context context = ApplicationLoader.applicationContext;
--            if (Build.VERSION.SDK_INT >= 30) {
--                InstallSourceInfo installSourceInfo = context.getPackageManager().getInstallSourceInfo(context.getPackageName());
--                if (installSourceInfo != null) {
--                    installer = installSourceInfo.getInitiatingPackageName();
--                    if (installer == null) {
--                        installer = installSourceInfo.getInstallingPackageName();
--                    }
--                }
-                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
-             } else {
--                installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
-                native_setProxySettings(currentAccount, proxySettings.getAddress() != null ? proxySettings.getAddress() : "", proxySettings.getPort(), proxySettings.getUser() != null ? proxySettings.getUser() : "", proxySettings.getPassword() != null ? proxySettings.getPassword() : "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
-             }
--        } catch (Throwable ignore) {
--
--        }
--        if (installer == null) {
--            installer = "";
--        }
--        String packageId = "";
--        try {
--            packageId = ApplicationLoader.applicationContext.getPackageName();
--        } catch (Throwable ignore) {
--
--        }
--        if (packageId == null) {
--            packageId = "";
-         }
-        String installer = VeyraSecurity.getVendor();
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
@@ -842,7 +784,10 @@ public class ConnectionsManager extends BaseController {
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
         if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
-            if (proxySettings.getType() == ProxySettings.Type.WEB) {
+            if (org.veyra.client.proxy.ProxyStatusManager.isAether(proxySettings)) {
+                int localPort = org.veyra.client.aether.AetherController.getInstance().getActivePort();
+                native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : org.veyra.client.aether.AetherConfig.getSocksPort(), "", "", proxySettings.getSecret() != null ? proxySettings.getSecret() : "");
+            } else if (proxySettings.getType() == ProxySettings.Type.WEB) {
                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
                 native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
                         proxySettings.getSecret());
@@ -851,26 +796,7 @@ public class ConnectionsManager extends BaseController {
                         proxySettings.getUser(), proxySettings.getPassword(), proxySettings.getSecret());
             }
         }
-        String installer = "";
-        try {
-            Context context = ApplicationLoader.applicationContext;
-            if (Build.VERSION.SDK_INT >= 30) {
-                InstallSourceInfo installSourceInfo = context.getPackageManager().getInstallSourceInfo(context.getPackageName());
-                if (installSourceInfo != null) {
-                    installer = installSourceInfo.getInitiatingPackageName();
-                    if (installer == null) {
-                        installer = installSourceInfo.getInstallingPackageName();
-                    }
-                }
-            } else {
-                installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
-            }
-        } catch (Throwable ignore) {
-
-        }
-        if (installer == null) {
-            installer = "";
-        }
+        String installer = org.veyra.client.VeyraSecurity.getVendor();
         String packageId = "";
         try {
             packageId = ApplicationLoader.applicationContext.getPackageName();
