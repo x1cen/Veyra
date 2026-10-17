@@ -5,6 +5,7 @@ on:
   workflow_dispatch: {}
 permissions:
   contents: write
+  issues: write
 jobs:
   rebase:
     runs-on: ubuntu-latest
@@ -16,12 +17,12 @@ jobs:
         run: |
           git remote add upstream https://github.com/DrKLO/Telegram.git 2>/dev/null || true
           git fetch upstream master --tags
+          git fetch origin master dev
+          git checkout master
+          git checkout dev
           echo "upstream HEAD: $(git rev-parse upstream/master | cut -c1-9)"
-          BASE=$(git rev-parse origin/master 2>/dev/null || git rev-parse master)
-          echo "base: $BASE" | cut -c1-40
-          if [ "$(git rev-parse upstream/master)" = "$BASE" ]; then echo "no update"; exit 0; fi
-          echo "UPDATE_AVAILABLE=1" >> $GITHUB_ENV
-      - name: attempt rebase
+          if [ "$(git rev-parse upstream/master)" = "$(git rev-parse origin/master)" ]; then echo "no update"; echo "UPDATE_AVAILABLE=0" >> $GITHUB_ENV; else echo "UPDATE_AVAILABLE=1" >> $GITHUB_ENV; fi
+      - name: attempt rebase master -> dev
         if: env.UPDATE_AVAILABLE == '1'
         run: |
           git config rerere.enabled true
@@ -36,5 +37,19 @@ jobs:
       - name: push clean rebase
         if: env.UPDATE_AVAILABLE == '1' && env.REBASE_CONFLICT == '0'
         run: |
-          git push origin master --force || true
-          git push origin veyra --force
+          git push origin master --force
+          git push origin dev --force
+      - name: open issue on conflict
+        if: env.UPDATE_AVAILABLE == '1' && env.REBASE_CONFLICT == '1'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const files = require('child_process').execSync('git diff --name-only --diff-filter=U || true').toString().trim() || '(unknown)';
+            const upstream = require('child_process').execSync('git rev-parse --short upstream/master').toString().trim();
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Rebase conflict: upstream ${upstream} → dev`,
+              body: `Auto-rebase **master → dev** failed with conflicts.\n\n**Conflicting files:**\n\`\`\`\n${files}\n\`\`\`\n\n**Fix locally:**\n\`\`\`bash\ngit fetch upstream && git fetch origin\nbash scripts/veyra-rebase.sh\n# fix files listed above, then:\ngit add <fixed files>\ngit rebase --continue\ngit push --force-with-lease origin master dev\n\`\`\`\nAfter testing on \`dev\`, sync to \`veyra\` only after approval:\n\`\`\`bash\ngit checkout veyra && git merge dev --ff-only && git push origin veyra\n\`\`\``,
+              labels: ['rebase-conflict']
+            });

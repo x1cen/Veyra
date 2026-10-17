@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# veyra-rebase.sh — یک دستوری آپدیت veyra روی آخرین upstream
-# Usage: ./scripts/veyra-rebase.sh
-# این اسکریپت فقط master رو به upstream/master میبره و veyra رو روش rebase میکنه
-# هیچوقت compat/boringssl/LAYER رو به عنوان فیچر کپی نمیکنه — upstream خودش داره
-
+# veyra-rebase.sh — one-command upstream sync (dev-first)
+# Flow: upstream/master → master (ff) → dev (rebase on master)
+# veyra is NEVER touched here — sync dev → veyra only after user approval
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -19,25 +17,25 @@ if [ "$NEW_SHA" = "$OLD_SHA" ]; then
   exit 0
 fi
 
-# 1) clean base forward
 echo "== fast-forward master =="
 git checkout master
 git reset --hard upstream/master
 
-# 2) rebase feature branch
-echo "== rebase veyra onto master =="
-git checkout veyra
+echo "== rebase dev onto master =="
+git checkout dev
 if git rebase master; then
   echo "✅ rebase clean — no conflicts"
 else
   echo ""
-  echo "⚠️  CONFLICT — فقط همین فایل‌ها رو دستی درست کن:"
-  git diff --name-only --diff-filter=U
+  echo "⚠️  CONFLICT — fix these files:"
+  git diff --name-only --diff-filter=U || true
   echo ""
-  echo "بعدش:"
+  echo "Then:"
   echo "  git add <fixed files>"
   echo "  git rebase --continue"
-  echo "  # rerere روشنه — دفعه بعد همین کانفلیکت اتومات حل میشه"
+  echo "  # rerere is on — next time this conflict auto-resolves"
+  echo "  git push --force-with-lease origin dev"
+  echo "  # after testing, sync to veyra: git checkout veyra && git merge dev --ff-only && git push origin veyra"
   exit 1
 fi
 
@@ -45,4 +43,5 @@ echo ""
 echo "Done. branches:"
 git log --oneline --graph --all -8
 echo ""
-echo "اگر خواستی پوش کنی: git push -f origin veyra master"
+echo "Push dev: git push --force-with-lease origin master dev"
+echo "After approval sync to veyra: git checkout veyra && git merge dev --ff-only && git push origin veyra"
