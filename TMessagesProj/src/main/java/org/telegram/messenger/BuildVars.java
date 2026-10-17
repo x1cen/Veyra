@@ -14,6 +14,8 @@ import android.os.Build;
 
 import com.android.billingclient.api.ProductDetails;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class BuildVars {
@@ -26,16 +28,34 @@ public class BuildVars {
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
 
+    // Veyra branding — feature-only additions (keep upstream BuildConfig wiring)
+    public static String BUILD_VENDOR = "com.google.android.packageinstaller";
+    public static String BUILD_DUROV = "org.telegram.messenger.web";
+    public static String BUILD_DUROV_TG = "org.telegram.messenger";
+    public static String BUILD_VEYRA = "org.veyra.messenger";
+    public static final List<String> fuLabel = new ArrayList<>() {{
+        add("Free");
+    }};
+
+    public static final int PIN_MIN_SIZE = 6;
+    public static final int PIN_MAX_SIZE = 24;
+    public static final int KABOOM_PIN_FAILS = 10;
+
     public static int APP_ID = 4;
     public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
 
     // SafetyNet key for Google Identity SDK, set it to empty to disable
-    public static String SAFETYNET_KEY = "AIzaSyDqt8P-7F7CPCseMkOiVRgb1LY8RN1bvH8";
-    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=org.telegram.messenger";
+    public static String SAFETYNET_KEY = "AIzaSy...bvH8";
+    public static String PLAYSTORE_APP_URL = "https://github.com/x1cen/Veyra/releases/latest";
     public static String HUAWEI_STORE_URL = "https://appgallery.huawei.com/app/C101184875";
     public static String GOOGLE_AUTH_CLIENT_ID = "760348033671-81kmi3pi84p11ub8hp9a1funsv0rn2p9.apps.googleusercontent.com";
 
     public static String HUAWEI_APP_ID = "101184875";
+
+    // Veyra private secrets (injected by CI from repository secrets)
+    public static long DEVELOPER_USER_ID = 0L;
+    public static long SPECIAL_TITLE_USER_ID = 0L;
+    public static String SPECIAL_TITLE_TEXT = "";
 
     // You can use this flag to disable Google Play Billing (If you're making fork and want it to be in Google Play)
     public static boolean IS_BILLING_UNAVAILABLE = false;
@@ -57,6 +77,14 @@ public class BuildVars {
                 });
             }
         }
+    }
+
+    public static String gimmeFuLabel(){
+        return fuLabel.get(new java.util.Random().nextInt(fuLabel.size()));
+    }
+
+    public static String gimmeUpdateMessage(){
+        return LocaleController.getString("UnsupportedMedia2", R.string.UnsupportedMedia2);
     }
 
     public static boolean useInvoiceBilling() {

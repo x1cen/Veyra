@@ -363,6 +363,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     private ImageView proxyButtonView;
     private ProxyDrawable proxyDrawable;
 
+    // Veyra: QR Login
+    private ImageView qrLoginButtonView;
+    private TLRPC.TL_auth_exportLoginToken exportLoginTokenRequest;
+    private AlertDialog exportLoginTokenProgress;
+    private QRCodeBottomSheet exportLoginTokenDialog;
+
     // Open animation stuff
     private LinearLayout keyboardLinearLayout;
     private FrameLayout slideViewsContainer;

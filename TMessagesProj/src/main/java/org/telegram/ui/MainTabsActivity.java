@@ -80,7 +80,7 @@ import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.glass.GlassTabView;
 import org.telegram.ui.Stories.recorder.HintView2;
-import org.telegram.ui.Wallet.WalletActivity;
+import org.veyra.client.HiddenContentManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -331,9 +331,30 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             final GlassTabView view = tabs[index];
 
             final int position = indexToPosition(index);
+            final int finalIndex = index;
             tabs[index].setOnClickListener(v -> {
                 if (viewPager.isManualScrolling() || viewPager.isTouch()) {
                     return;
+                }
+
+                if (finalIndex == INDEX_CHATS) {
+                    long now = SystemClock.uptimeMillis();
+                    if (now - lastChatsTabClickTime < 1500) {
+                        chatsTabClickCount++;
+                    } else {
+                        chatsTabClickCount = 1;
+                    }
+                    lastChatsTabClickTime = now;
+
+                    if (chatsTabClickCount >= 7) {
+                        chatsTabClickCount = 0;
+                        HiddenContentManager.unhideAll(currentAccount);
+                        if (getParentActivity() != null) {
+                            BulletinFactory.of(MainTabsActivity.this).createSuccessBulletin(LocaleController.getString("HiddenMessagesRestored", R.string.HiddenMessagesRestored)).show();
+                        }
+                    }
+                } else {
+                    chatsTabClickCount = 0;
                 }
 
                 if (viewPager.getCurrentPosition() == position) {

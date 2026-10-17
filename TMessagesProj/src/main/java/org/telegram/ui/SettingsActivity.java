@@ -546,7 +546,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         subtitleView.setText(sb);
 
-        versionView.setText(getVersionName());
+        versionView.setText("Veyra " + getVersionName());
     }
 
 
@@ -690,12 +690,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        final boolean walletAbove = getConnectionsManager().getCurrentTime() - 1791538462 < 4 * 7 * 24 * 60 * 60;
-        if (walletAbove && getMessagesController().config.walletAvailable.get()) {
-            final GramWallet wallet = GramWallet.getInstance(currentAccount);
-            items.add(SettingCell.Factory.of(25, 0, 0, Theme.isCurrentThemeDark() ? R.drawable.settings_wallet_dark : R.drawable.settings_wallet, TextCell.applyNewSpanTimed(getString(R.string.WalletAttachMoney), 1790679020), null, wallet.getBalance() > 0 ? GramWallet.formatGrams(wallet.getBalance()) : null));
-            items.add(UItem.asShadow(null));
-        }
+        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings)));
+        items.add(UItem.asShadow(null));
 
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
@@ -743,12 +739,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(18, IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom, R.drawable.settings_faq, getString(R.string.TelegramFAQ)));
         items.add(SettingCell.Factory.of(23, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, getString(R.string.TelegramFeatures)));
         items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
-
-        if (SharedSettings.experimentalSettingsAllowed.get()) {
-            items.add(UItem.asShadow(null));
-            items.add(UItem.asHeader("Experimental"));
-            items.add(SettingCell.Factory.of(24, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.RoundVideoSettings)));
-        }
+        items.add(SettingCell.Factory.of(102, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.msg_channel, "Veyra Channel"));
+        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "Github"));
+        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates)));
 
         if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
             items.add(UItem.asShadow(null));
@@ -817,6 +810,18 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             return;
         }
         switch (item.id) {
+            case 100:
+                presentSettingFragment(new VeyraSettingsActivity());
+                break;
+            case 101:
+                Browser.openUrl(getParentActivity(), "https://github.com/x1cen/Veyra");
+                break;
+            case 102:
+                Browser.openUrl(getParentActivity(), "https://t.me/GetVeyra");
+                break;
+            case 103:
+                VeyraSettingsActivity.checkForUpdates(getParentActivity(), this);
+                break;
             case 1:
                 presentSettingFragment(new UserInfoActivity());
                 break;

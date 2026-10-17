@@ -118,11 +118,20 @@ public class ApplicationLoader extends Application {
     }
 
     public static String getApplicationId() {
-        return applicationLoaderInstance.onGetApplicationId();
+        if (applicationContext != null) {
+            return applicationContext.getPackageName();
+        }
+        if (applicationLoaderInstance != null) {
+            String id = applicationLoaderInstance.onGetApplicationId();
+            if (id != null) {
+                return id;
+            }
+        }
+        return BuildVars.BUILD_VEYRA;
     }
 
     protected String onGetApplicationId() {
-        return null;
+        return applicationContext != null ? applicationContext.getPackageName() : BuildVars.BUILD_VEYRA;
     }
 
     public static boolean isHuaweiStoreBuild() {
@@ -172,7 +181,7 @@ public class ApplicationLoader extends Application {
         } catch (Exception e) {
             FileLog.e(e);
         }
-        return new File("/data/data/org.telegram.messenger/files");
+        return new File("/data/data/" + BuildVars.BUILD_VEYRA + "/files");
     }
 
     public static File getFilesDirFixed(String child) {
@@ -195,10 +204,14 @@ public class ApplicationLoader extends Application {
         applicationInited = true;
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
 
+        SharedConfig.loadConfig();
+        VeyraConfig.loadConfig();
+        SharedPrefsHelper.init(applicationContext);
+
         try {
-            LocaleController.getInstance(); //TODO improve
+            LocaleController.getInstance();
         } catch (Exception e) {
-            e.printStackTrace();
+            FileLog.e(e);
         }
 
         try {
@@ -261,18 +274,20 @@ public class ApplicationLoader extends Application {
             }
         }
 
-        ApplicationLoader app = (ApplicationLoader) ApplicationLoader.applicationContext;
-        app.initPushServices();
+        ((ApplicationLoader) ApplicationLoader.applicationContext).initPushServices();
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("app initied");
         }
 
         MediaController.getInstance();
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
+        for (int a : SharedConfig.activeAccounts) {
             ContactsController.getInstance(a).checkAppAccount();
             DownloadController.getInstance(a);
         }
-        BillingController.getInstance().startConnection();
+
+        if (org.veyra.client.aether.AetherConfig.isEnabled()) {
+            org.veyra.client.aether.AetherController.getInstance().start();
+        }
     }
 
     public ApplicationLoader() {
@@ -290,16 +305,17 @@ public class ApplicationLoader extends Application {
 
         super.onCreate();
 
-        // AndroidUtilities must be initialized before FileLog
-        final String helloWorld = AndroidUtilities.getHelloWorld();
+        // Veyra: install crash handler early to log crashes to Documents/Telegram
+        org.veyra.client.VeyraCrashHandler.install();
+
+        // Veyra: initialize security guard early
+        org.veyra.client.VeyraSecurityGuard.initialize(this);
 
         if (BuildVars.LOGS_ENABLED) {
-            FileLog.d(helloWorld);
             FileLog.d("app start time = " + (startTime = SystemClock.elapsedRealtime()));
             try {
-                final PackageInfo info = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
                 final String abi;
-                switch (info.versionCode % 10) {
+                switch (BuildVars.BUILD_VERSION_FULL % 10) {
                     case 1:
                     case 2:
                         abi = "store bundled " + Build.CPU_ABI + " " + Build.CPU_ABI2;

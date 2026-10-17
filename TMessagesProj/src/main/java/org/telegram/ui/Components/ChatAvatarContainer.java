@@ -234,6 +234,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                 } else {
                     super.onDraw(canvas);
                 }
+                // Veyra: dead badge removed by user request
             }
 
             @Override
@@ -1587,7 +1588,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
             title = getString(R.string.Connecting);
         } else if (currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
             title = getString(R.string.Updating);
-        } else if (currentConnectionState == ConnectionsManager.ConnectionStateConnectingToProxy) {
+        } else if (currentConnectionState == ConnectionsManager.ConnectionStateConnectingToProxy && !org.telegram.messenger.VeyraConfig.hideConnectingToProxy) {
             title = getString(R.string.ConnectingToProxy);
         }
         if (title == null) {

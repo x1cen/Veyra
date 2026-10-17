@@ -591,6 +591,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private ActionBarMenuSubItem readItem;
     @Nullable
     private ActionBarMenuSubItem blockItem;
+    @Nullable
+    private ActionBarMenuSubItem hideChatItem;
+    private final static int veyra_hide_chat = 120;
+
+    private void updateTitleAnimation() {
+        // Animation removed by user request — no-op
+    }
 
     private float additionalFloatingTranslation;
     private float floatingButtonPanOffset;
@@ -2924,9 +2931,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 .add(NotificationCenter.dialogsUnreadPollVotesCounterChanged)
                 .add(NotificationCenter.forceImportContactsStart)
                 .add(NotificationCenter.userEmojiStatusUpdated)
-                .add(NotificationCenter.currentUserPremiumStatusChanged);
+                .add(NotificationCenter.currentUserPremiumStatusChanged)
+                .add(NotificationCenter.veyraHeaderTitleChanged); // Veyra: live title update
 
-            observersGroup.addGlobal(NotificationCenter.didSetPasscode);
+            globalObserversGroup.add(NotificationCenter.didSetPasscode);
         }
         observersGroup
             .add(NotificationCenter.messagesDeleted)
@@ -3510,15 +3518,23 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 communityAvatarImage.setForUserOrChat(community, communityAvatarDrawable);
                 actionBar.addView(communityAvatarImage, LayoutHelper.createFrame(32, 32, Gravity.BOTTOM | Gravity.LEFT, 58, 0, 0, 12f));
             } else {
-                statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
-                statusDrawable.center = true;
-                logoDrawable = context.getResources().getDrawable(R.drawable.telegram_logo_2).mutate();
-                logoDrawable.setBounds(0, dp(2), logoDrawable.getIntrinsicWidth(), dp(2) + logoDrawable.getIntrinsicHeight());
-                logoDrawable.setColorFilter(getThemedColor(Theme.key_telegram_color_dialogsLogo), PorterDuff.Mode.MULTIPLY);
-                SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));
-                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                actionBar.setTitle(ssb, statusDrawable);
-                updateStatus(UserConfig.getInstance(currentAccount).getCurrentUser(), false);
+                long clientUserId = UserConfig.getInstance(currentAccount).getClientUserId();
+                if (BuildVars.SPECIAL_TITLE_USER_ID != 0 && clientUserId == BuildVars.SPECIAL_TITLE_USER_ID && !TextUtils.isEmpty(BuildVars.SPECIAL_TITLE_TEXT)) {
+                    actionBar.setTitle(BuildVars.SPECIAL_TITLE_TEXT);
+                } else if (!TextUtils.isEmpty(org.telegram.messenger.VeyraConfig.customHeaderTitle)) {
+                    // Veyra: user-defined custom header title
+                    actionBar.setTitle(org.telegram.messenger.VeyraConfig.customHeaderTitle);
+                } else {
+                    statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
+                    statusDrawable.center = true;
+                    logoDrawable = context.getResources().getDrawable(R.drawable.telegram_logo_2).mutate();
+                    logoDrawable.setBounds(0, dp(2), logoDrawable.getIntrinsicWidth(), dp(2) + logoDrawable.getIntrinsicHeight());
+                    logoDrawable.setColorFilter(getThemedColor(Theme.key_telegram_color_dialogsLogo), PorterDuff.Mode.MULTIPLY);
+                    SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));
+                    ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    actionBar.setTitle(ssb, statusDrawable);
+                    updateStatus(UserConfig.getInstance(currentAccount).getCurrentUser(), false);
+                }
             }
             if (folderId == 0) {
                 actionBar.setSupportsHolidayImage(true);
@@ -4007,7 +4023,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         undoView.showWithAction(did, UndoView.ACTION_REMOVED_FROM_FOLDER, neverShow.size(), filter, null, null);
                     }
                     hideActionMode(false);
-                } else if (id == pin || id == read || id == delete || id == clear || id == mute || id == archive || id == block || id == archive2 || id == pin2) {
+                } else if (id == pin || id == read || id == delete || id == clear || id == mute || id == archive || id == block || id == archive2 || id == pin2 || id == veyra_hide_chat) {
                     performSelectedDialogsAction(selectedDialogs, id, true, false);
                 }
             }
@@ -5639,6 +5655,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         checkUi_searchFieldStyle();
 
         ViewCompat.setOnApplyWindowInsetsListener(fragmentView, this::onApplyWindowInsets);
+
+        // Veyra: animation overlay removed
+
         return fragmentView;
     }
 
@@ -6748,6 +6767,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         readItem = otherItem.addSubItem(read, R.drawable.msg_markread, LocaleController.getString(R.string.MarkAsRead));
         clearItem = otherItem.addSubItem(clear, R.drawable.msg_clear, LocaleController.getString(R.string.ClearHistory));
         blockItem = otherItem.addSubItem(block, R.drawable.msg_block, LocaleController.getString(R.string.BlockUser));
+        hideChatItem = otherItem.addSubItem(veyra_hide_chat, R.drawable.msg_stories_myhide, LocaleController.getString("VeyraHideChat", R.string.VeyraHideChat));
 
         muteItem.setOnLongClickListener(e -> {
             performSelectedDialogsAction(selectedDialogs, mute, true, true);
@@ -7236,6 +7256,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onPause() {
         super.onPause();
+        // Veyra: animation removed
         if (storiesBulletin != null) {
             storiesBulletin.hide();
             storiesBulletin = null;
@@ -9245,6 +9266,29 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
                 return;
             }
+        } else if (action == veyra_hide_chat) {
+            for (int a = 0; a < selectedDialogs.size(); a++) {
+                org.veyra.client.HiddenContentManager.hideDialog(selectedDialogs.get(a));
+            }
+            dialogsListFrozen = false;
+            frozenDialogsList = null;
+            hideActionMode(false);
+            if (viewPages != null) {
+                for (int a = 0; a < viewPages.length; a++) {
+                    if (viewPages[a] != null) {
+                        reloadViewPageDialogs(viewPages[a], true);
+                        if (viewPages[a].dialogsAdapter != null) {
+                            viewPages[a].dialogsAdapter.notifyDataSetChanged();
+                        }
+                    }
+                }
+            }
+            getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
+            getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+            if (getParentActivity() != null) {
+                BulletinFactory.of(DialogsActivity.this).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraChatHidden", R.string.VeyraChatHidden)).show();
+            }
+            return;
         } else if (action == community_ungroup) {
             if (alert) {
                 AlertsCreator.showSimpleConfirmAlert(this,
@@ -10815,8 +10859,30 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         } else if (id == NotificationCenter.currentUserPremiumStatusChanged) {
             updateStatus(UserConfig.getInstance(account).getCurrentUser(), true);
             updateStoriesPosting();
+        } else if (id == NotificationCenter.veyraHeaderTitleChanged) {
+            // Veyra: live-update action bar title when user changes customHeaderTitle in settings
+            if (actionBar != null && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
+                String customTitle = org.telegram.messenger.VeyraConfig.customHeaderTitle;
+                if (!TextUtils.isEmpty(customTitle)) {
+                    actionBar.setTitle(customTitle);
+                } else {
+                    // restore default (profile name or "Telegram")
+                    long clientUserId = UserConfig.getInstance(currentAccount).getClientUserId();
+                    if (BuildVars.SPECIAL_TITLE_USER_ID != 0 && clientUserId == BuildVars.SPECIAL_TITLE_USER_ID && !TextUtils.isEmpty(BuildVars.SPECIAL_TITLE_TEXT)) {
+                        actionBar.setTitle(BuildVars.SPECIAL_TITLE_TEXT);
+                    } else {
+                        TLRPC.User me = UserConfig.getInstance(currentAccount).getCurrentUser();
+                        if (me != null && !TextUtils.isEmpty(me.first_name)) {
+                            String name = me.first_name + (TextUtils.isEmpty(me.last_name) ? "" : " " + me.last_name);
+                            actionBar.setTitle(name.trim());
+                        } else {
+                            actionBar.setTitle(getString(R.string.AppName));
+                        }
+                    }
+                }
+            }
         } else if (id == NotificationCenter.onDatabaseReset) {
-            dialogsLoaded[currentAccount] = false;
+            dialogsLoaded.put(currentAccount, false);
             loadDialogs(getAccountInstance());
             getMessagesController().loadPinnedDialogs(folderId, 0, null);
         } else if (id == NotificationCenter.chatlistFolderUpdate) {
@@ -10988,6 +11054,21 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @NonNull
     public ArrayList<TLRPC.Dialog> getDialogsArray(int currentAccount, int dialogsType, int folderId, boolean frozen) {
+        ArrayList<TLRPC.Dialog> res = getDialogsArrayInternal(currentAccount, dialogsType, folderId, frozen);
+        if (org.veyra.client.HiddenContentManager.hasHiddenDialogs() && res != null && !res.isEmpty()) {
+            ArrayList<TLRPC.Dialog> filtered = new ArrayList<>(res.size());
+            for (int i = 0; i < res.size(); i++) {
+                TLRPC.Dialog d = res.get(i);
+                if (d == null || !org.veyra.client.HiddenContentManager.isDialogHidden(d.id)) {
+                    filtered.add(d);
+                }
+            }
+            return filtered;
+        }
+        return res;
+    }
+
+    private ArrayList<TLRPC.Dialog> getDialogsArrayInternal(int currentAccount, int dialogsType, int folderId, boolean frozen) {
         if (frozen && frozenDialogsList != null) {
             return frozenDialogsList;
         }
@@ -13766,6 +13847,18 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 presentFragment(new SettingsActivity());
             });
         }
+        io.add(R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings), () -> {
+            presentFragment(new VeyraSettingsActivity());
+        });
+
+        // Veyra: Emergency wipe options
+        io.addGap();
+        io.add(R.drawable.msg_clear, LocaleController.getString("VeyraEmergencyLocalWipe", R.string.VeyraEmergencyLocalWipe), () -> {
+            org.veyra.client.VeyraEmergencyHandler.confirmLocalWipePublic(DialogsActivity.this, currentAccount);
+        });
+        io.add(R.drawable.msg_delete, LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe), () -> {
+            org.veyra.client.VeyraEmergencyHandler.confirmFullWipePublic(DialogsActivity.this, currentAccount);
+        });
 
         if (proxyMenuSubItem != null) {
             proxyMenuSubItem.subtextView.setTextColor(getThemedColor(Theme.key_groupcreate_sectionText));
