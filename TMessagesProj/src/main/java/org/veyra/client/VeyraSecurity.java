@@ -51,65 +51,15 @@ public class VeyraSecurity {
 
     public static String mrHangman(int tries) {
         if (tries >= BuildVars.KABOOM_PIN_FAILS) return "\uD83D\uDCA3";
-        if (tries < BuildVars.KABOOM_PIN_FAILS - 6) return "\uD83D\uDC37\uD83D\uDC6E\u200D♂️";
+        if (tries < BuildVars.KABOOM_PIN_FAILS - 6) return "\uD83D\uDC37\uD83D\uDC6E\u200D\u2642\uFE0F";
         String[] hangman = new String[]{
-                """
- +--+
- |  |
-    |
-    |
-    |
-    |
-=====""",
-                """
- +--+
- |  |
- O  |
-    |
-    |
-    |
-=====""",
-                """
- +--+
- |  |
- O  |
- |  |
-    |
-    |
-=====""",
-                """
- +--+
- |  |
- O  |
-/|  |
-    |
-    |
-====="""
-                , """
- +--+
- |  |
- O  |
-/|\\ |
-    |
-    |
-====="""
-                ,
-                """
- +--+
- |  |
- O  |
-/|\\ |
-/   |
-    |
-====="""
-                , """
- +--+
- |  |
- O  |
-/|\\ |
-/ \\ |
-    |
-====="""
+                " +--+\n |  |\n    |\n    |\n    |\n    |\n=====",
+                " +--+\n |  |\n O  |\n    |\n    |\n    |\n=====",
+                " +--+\n |  |\n O  |\n |  |\n    |\n    |\n=====",
+                " +--+\n |  |\n O  |\n/|  |\n    |\n    |\n=====",
+                " +--+\n |  |\n O  |\n/|\\\\ |\n    |\n    |\n=====",
+                " +--+\n |  |\n O  |\n/|\\\\ |\n/   |\n    |\n=====",
+                " +--+\n |  |\n O  |\n/|\\\\ |\n/ \\\\ |\n    |\n====="
         };
         return hangman[tries - BuildVars.KABOOM_PIN_FAILS + 6];
     }
