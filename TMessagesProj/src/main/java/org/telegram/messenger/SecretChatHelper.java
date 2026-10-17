@@ -1411,16 +1411,16 @@ public class SecretChatHelper extends BaseController {
                         message.readAttachPath(data, getUserConfig().clientUserId);
                         data.reuse();
 
-                        message.random_id = randomId;
-                        message.dialog_id = dialogId;
-                        message.seq_in = seqIn;
-                        message.seq_out = seqOut;
+                        message.random_id = random_id;
+                        message.dialog_id = dialog_id;
+                        message.seq_in = seq_in;
+                        message.seq_out = seq_out;
                         message.ttl = cursor.intValue(4);
                     } else {
-                        message = createDeleteMessage(mid, seqOut, seqIn, randomId, encryptedChat);
+                        message = createDeleteMessage(mid, seq_out, seq_in, random_id, encryptedChat);
                     }
                     messages.add(message);
-                    messagesToResend.remove(seqOut);
+                    messagesToResend.remove(seq_out);
                 }
                 cursor.dispose();
 
@@ -1445,7 +1445,7 @@ public class SecretChatHelper extends BaseController {
                 });
 
                 getSendMessagesHelper().processUnsentMessages(messages, null, new ArrayList<>(), new ArrayList<>(), encryptedChats);
-                getMessagesStorage().getDatabase().executeFast(String.format(Locale.US, "REPLACE INTO requested_holes VALUES(%d, %d, %d)", encryptedChat.id, sSeq, safeEndSeq)).stepThis().dispose();
+                getMessagesStorage().getDatabase().executeFast(String.format(Locale.US, "REPLACE INTO requested_holes VALUES(%d, %d, %d)", encryptedChat.id, sSeq, endSeq)).stepThis().dispose();
             } catch (Exception e) {
                 FileLog.e(e);
             }
