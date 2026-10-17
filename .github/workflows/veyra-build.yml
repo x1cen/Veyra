@@ -35,6 +35,10 @@ on:
 permissions:
     contents: write
 
+concurrency:
+    group: veyra-build-${{ github.ref }}
+    cancel-in-progress: false
+
 run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
@@ -48,6 +52,9 @@ jobs:
             CCACHE_COMPILERCHECK: content
             CCACHE_NOHASHDIR: "1"
             CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
+            CCACHE_COMPRESS: "1"
+            CCACHE_COMPRESSLEVEL: "1"
+            GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=true -Xmx4g"
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
             VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
             IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
@@ -91,6 +98,25 @@ jobs:
                     gradle-version: '8.14.5'
                     cache-read-only: false
 
+            -   name: Cache NDK & CMake
+                uses: actions/cache@v5
+                with:
+                    path: |
+                        /usr/local/lib/android/sdk/ndk/27.2.12479018
+                        /usr/local/lib/android/sdk/cmake/3.22.1
+                    key: ndk27-cmake322-${{ runner.os }}-v1
+
+            -   name: Cache Aether Core
+                uses: actions/cache@v5
+                with:
+                    path: |
+                        TMessagesProj/jni/arm64-v8a/libaether.so
+                        TMessagesProj/jni/armeabi-v7a/libaether.so
+                        TMessagesProj/jni/x86_64/libaether.so
+                    key: aether-v2.3.0-${{ hashFiles('TMessagesProj/jni/**') }}
+                    restore-keys: |
+                        aether-v2.3.0-
+
             -   name: Pin CMake 3.22.1 and NDK 27.2.12479018
                 run: |
                     set -euo pipefail
@@ -110,10 +136,12 @@ jobs:
 
             -   name: Install ccache and nasm
                 run: |
-                    sudo apt-get update
-                    sudo apt-get install -y ccache nasm
+                    command -v ccache >/dev/null 2>&1 || { sudo apt-get update -qq; sudo apt-get install -y -qq ccache nasm; }
+                    command -v nasm >/dev/null 2>&1 || sudo apt-get install -y -qq nasm
                     mkdir -p "${CCACHE_DIR}"
-                    ccache -s
+                    ccache --max-size=8G >/dev/null 2>&1 || true
+                    ccache -z >/dev/null 2>&1 || true
+                    ccache -s || true
 
             -   name: Cache ccache
                 uses: actions/cache@v5
@@ -180,6 +208,7 @@ jobs:
 
             -   name: Setup Aether Core
                 run: |
+                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ] && [ -s "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ]; then echo "Aether cached — skip download"; ls -lh "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"; exit 0; fi
                     mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a"
                     echo "Fetching Aether arm64 core..."
                     curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-arm64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a" aether
@@ -198,7 +227,7 @@ jobs:
             -   name: Build APK
                 run: |
                     echo "Target Architecture: ${TARGET_ARCH}"
-                    gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=4
+                    gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=6 --configuration-cache 2>&1 | tail -n 200; test ${PIPESTATUS[0]} -eq 0 || gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=6
 
             -   name: ccache stats
                 if: ${{always()}}
