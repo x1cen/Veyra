@@ -70,9 +70,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.veyra.client.SecretMediaExport;
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
+import androidx.media3.common.C;
+import androidx.media3.common.Player;
+import org.telegram.ui.AspectRatioFrameLayout;
 
 import org.telegram.messenger.*;
 import org.telegram.messenger.utils.WindowVisibilityManager;
@@ -703,7 +703,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                     }
                     AndroidUtilities.cancelRunOnUIThread(updateProgressRunnable);
                     AndroidUtilities.runOnUIThread(updateProgressRunnable);
-                    if (playbackState != ExoPlayer.STATE_ENDED && playbackState != ExoPlayer.STATE_IDLE) {
+                    if (playbackState != Player.STATE_ENDED && playbackState != Player.STATE_IDLE) {
                         try {
                             parentActivity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                         } catch (Exception e) {
@@ -716,16 +716,16 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                             FileLog.e(e);
                         }
                     }
-                    if (playbackState == ExoPlayer.STATE_READY && aspectRatioFrameLayout.getVisibility() != View.VISIBLE) {
+                    if (playbackState == Player.STATE_READY && aspectRatioFrameLayout.getVisibility() != View.VISIBLE) {
                         aspectRatioFrameLayout.setVisibility(View.VISIBLE);
                     }
-                    if (videoPlayer.isPlaying() && playbackState != ExoPlayer.STATE_ENDED) {
+                    if (videoPlayer.isPlaying() && playbackState != Player.STATE_ENDED) {
                         if (!isPlaying) {
                             isPlaying = true;
                         }
                     } else if (isPlaying) {
                         isPlaying = false;
-                        if (playbackState == ExoPlayer.STATE_ENDED) {
+                        if (playbackState == Player.STATE_ENDED) {
                             videoWatchedOneTime = true;
                             if (closeVideoAfterWatch) {
                                 closePhoto(true, !ignoreDelete);

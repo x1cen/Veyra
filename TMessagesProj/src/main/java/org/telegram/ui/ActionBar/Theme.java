@@ -4055,9 +4055,10 @@ public class Theme {
         int remoteVersion = themeConfig.getInt("remote_version", 0);
         int appRemoteThemesVersion = 1;
         if (remoteVersion == appRemoteThemesVersion) {
-            for (int a : SharedConfig.activeAccounts) {
-                remoteThemesHash.put(a, themeConfig.getLong("2remoteThemesHash" + (a != 0 ? a : ""), 0));
-                lastLoadingThemesTime.put(a, themeConfig.getInt("lastLoadingThemesTime" + (a != 0 ? a : ""), 0));
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                if (!UserConfig.getInstance(a).isClientActivated()) continue;
+                remoteThemesHash[a] = themeConfig.getLong("2remoteThemesHash" + (a != 0 ? a : ""), 0);
+                lastLoadingThemesTime[a] = themeConfig.getInt("lastLoadingThemesTime" + (a != 0 ? a : ""), 0);
             }
         }
         themeConfig.edit().putInt("remote_version", appRemoteThemesVersion).apply();

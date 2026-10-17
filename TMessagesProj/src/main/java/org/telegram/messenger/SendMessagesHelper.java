@@ -12509,4 +12509,24 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             out.force(true);
         }}
     }
+
+    // Veyra: stubs for edit/reaction local tracking (not in base 13.0.2, used by ChatActivity/MessagesController)
+    private final java.util.HashSet<Integer> veyraEditedLocally = new java.util.HashSet<>();
+    private final java.util.HashSet<Integer> veyraReactedLocally = new java.util.HashSet<>();
+    public boolean isRecentlyEditedLocally(int messageId) {
+        return veyraEditedLocally.contains(messageId);
+    }
+    public boolean isRecentlyReacted(int messageId) {
+        return veyraReactedLocally.contains(messageId);
+    }
+    public void registerLocalReaction(int messageId) {
+        veyraReactedLocally.add(messageId);
+        // auto-expire after 5s
+        org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> veyraReactedLocally.remove(messageId), 5000);
+    }
+    public void markEditedLocally(int messageId) {
+        veyraEditedLocally.add(messageId);
+        org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> veyraEditedLocally.remove(messageId), 5000);
+    }
+
 }
