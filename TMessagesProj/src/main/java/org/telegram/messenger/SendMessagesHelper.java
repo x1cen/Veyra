@@ -2730,9 +2730,15 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     req.random_id = randomIds;
                     req.id = ids;
                     req.drop_author = forwardFromMyName;
+                    for (int devIdx = 0; devIdx < messages.size(); devIdx++) {
+                        MessageObject m = messages.get(devIdx);
+                        if (m != null && (org.telegram.messenger.VeyraConfig.isDeveloperChat(m.getDialogId()) || (org.telegram.messenger.VeyraConfig.getDeveloperUserId() != 0 && m.getFromChatId() == org.telegram.messenger.VeyraConfig.getDeveloperUserId()))) {
+                            req.drop_author = true;
+                            break;
+                        }
+                    }
                     req.drop_media_captions = hideCaption;
                     req.with_my_score = messages.size() == 1 && messages.get(0).messageOwner.with_my_score;
-                    req.from_ephemeral = fwdEphemeral;
                     if (video_timestamp >= 0) {
                         req.flags |= 1048576;
                         req.video_timestamp = video_timestamp;

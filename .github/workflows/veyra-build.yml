@@ -1,0 +1,365 @@
+name: Build and Release Veyra APK
+
+on:
+    workflow_dispatch:
+        inputs:
+            veyra-version:
+                description: 'Veyra version'
+                type: string
+                default: '13.0.2'
+            arch:
+                description: 'Target Architecture (auto = all for main, arm64-v8a for dev)'
+                type: choice
+                options:
+                    - 'auto'
+                    - 'arm64-v8a'
+                    - 'arm64-v8a,armeabi-v7a'
+                    - 'all'
+                default: 'auto'
+            veyra-changes:
+                description: 'Changelog / Release notes'
+                type: string
+                default: 'Veyra Release'
+            multi-pass:
+                description: 'Signing mode'
+                type: choice
+                options:
+                    - Multipass
+                    - Korben Dallas
+                default: 'Korben Dallas'
+            prerelease:
+                description: 'Mark as pre-release?'
+                type: boolean
+                default: false
+
+permissions:
+    contents: write
+
+run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
+
+jobs:
+    apk:
+        name: Generate APK
+        runs-on: ubuntu-latest
+        env:
+            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}
+            CCACHE_DIR: ${{github.workspace}}/.ccache
+            CCACHE_MAXSIZE: 3G
+            CCACHE_COMPILERCHECK: content
+            CCACHE_NOHASHDIR: "1"
+            CCACHE_SLOPPINESS: file_stat_matches,include_file_mtime,include_file_ctime,time_macros
+            CMAKE_BUILD_PARALLEL_LEVEL: "4"
+            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+            IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v6
+
+            -   name: Telegram log - build started
+                if: ${{ always() }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🔨 *Veyra build started*
+                    Version: \`${VERSION_NAME}\`
+                    Branch: \`${{ github.ref_name }}\`
+                    Arch: \`${TARGET_ARCH}\`
+                    Commit: [\`${GITHUB_SHA:0:9}\`](${{ github.server_url }}/${{ github.repository }}/commit/${GITHUB_SHA})
+                    Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" > /dev/null
+
+            -   name: Set up AWS Corretto 21
+                uses: actions/setup-java@v5
+                with:
+                    java-version: '21'
+                    distribution: 'corretto'
+                    architecture: x64
+
+            -   name: Setup Gradle 8.14.5
+                uses: gradle/actions/setup-gradle@v6
+                with:
+                    gradle-version: '8.14.5'
+                    cache-read-only: false
+
+            -   name: Pin CMake 3.22.1 and NDK 27.2.12479018
+                run: |
+                    set -euo pipefail
+                    SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+                    CMAKE_DIR="${ANDROID_HOME}/cmake/3.22.1"
+                    NDK_DIR="${ANDROID_HOME}/ndk/27.2.12479018"
+                    install_pkg() {
+                      set +o pipefail
+                      echo y | "${SDKMANAGER}" --install "$1"
+                      set -o pipefail
+                    }
+                    if [ ! -x "${CMAKE_DIR}/bin/cmake" ]; then install_pkg "cmake;3.22.1"; fi
+                    if [ ! -d "${NDK_DIR}" ]; then install_pkg "ndk;27.2.12479018"; fi
+                    printf 'sdk.dir=%s\ncmake.dir=%s\n' "${ANDROID_HOME}" "${CMAKE_DIR}" > local.properties
+                    echo "ANDROID_NDK_HOME=${NDK_DIR}" >> "${GITHUB_ENV}"
+                    "${CMAKE_DIR}/bin/cmake" --version
+
+            -   name: Install ccache and nasm
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y ccache nasm
+                    mkdir -p "${CCACHE_DIR}"
+                    ccache -s
+
+            -   name: Cache ccache
+                uses: actions/cache@v5
+                with:
+                    path: ${{github.workspace}}/.ccache
+                    key: ${{runner.os}}-ccache-ndk27-${{hashFiles('TMessagesProj/jni/**', 'TMessagesProj/**/CMakeLists.txt')}}
+                    restore-keys: |
+                        ${{runner.os}}-ccache-ndk27-
+
+            -   name: ccache before build
+                run: |
+                    echo "CCACHE_DIR=${CCACHE_DIR}"
+                    du -sh "${CCACHE_DIR}" || true
+                    ccache -s
+
+            -   name: Inject API Secrets
+                env:
+                    APP_ID: ${{secrets.APP_ID || secrets.API_ID}}
+                    APP_HASH: ${{secrets.APP_HASH || secrets.API_HASH}}
+                    GOOGLE_API_KEY: ${{secrets.GOOGLE_API_KEY}}
+                    DEVELOPER_USER_ID: ${{secrets.DEVELOPER_USER_ID}}
+                    SPECIAL_TITLE_USER_ID: ${{secrets.SPECIAL_TITLE_USER_ID}}
+                    SPECIAL_TITLE_TEXT: ${{secrets.SPECIAL_TITLE_TEXT}}
+                run: |
+                    set +x
+                    if [ -n "$APP_ID" ] && [ -n "$APP_HASH" ]; then
+                        echo "Configuring APP_ID and APP_HASH from repository secrets..."
+                        sed -i "s/public static int APP_ID = .*/public static int APP_ID = $APP_ID;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                        sed -i "s/public static String APP_HASH = .*/public static String APP_HASH = \"$APP_HASH\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$DEVELOPER_USER_ID" ]; then
+                        echo "Configuring DEVELOPER_USER_ID from repository secrets..."
+                        sed -i "s/public static long DEVELOPER_USER_ID = .*/public static long DEVELOPER_USER_ID = ${DEVELOPER_USER_ID}L;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$SPECIAL_TITLE_USER_ID" ]; then
+                        echo "Configuring SPECIAL_TITLE_USER_ID from repository secrets..."
+                        sed -i "s/public static long SPECIAL_TITLE_USER_ID = .*/public static long SPECIAL_TITLE_USER_ID = ${SPECIAL_TITLE_USER_ID}L;/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$SPECIAL_TITLE_TEXT" ]; then
+                        echo "Configuring SPECIAL_TITLE_TEXT from repository secrets..."
+                        sed -i "s/public static String SPECIAL_TITLE_TEXT = .*/public static String SPECIAL_TITLE_TEXT = \"$SPECIAL_TITLE_TEXT\";/g" TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+                    fi
+                    if [ -n "$GOOGLE_API_KEY" ]; then
+                        echo "Injecting Google API Key from secrets..."
+                        sed -i "s/REDACTED_VEYRA_GOOGLE_SERVICES_KEY/$GOOGLE_API_KEY/g" TMessagesProj*/google-services.json
+                    fi
+
+            -   name: Enable Custom Keystore
+                if: ${{ (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
+                env:
+                    VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64}}
+                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || 'veyra_release_pass_2026'}}
+                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || 'veyra'}}
+                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || 'veyra_release_pass_2026'}}
+                run: |
+                    if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"
+                        echo "$VEYRA_KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                        cp "${GITHUB_WORKSPACE}/gradle.properties" "${GITHUB_WORKSPACE}/gradle.properties.old"
+                        sed -i "s/RELEASE_STORE_PASSWORD=.*/RELEASE_STORE_PASSWORD=$VEYRA_RELEASE_STORE_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_ALIAS=.*/RELEASE_KEY_ALIAS=$VEYRA_RELEASE_KEY_ALIAS/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                        sed -i "s/RELEASE_KEY_PASSWORD=.*/RELEASE_KEY_PASSWORD=$VEYRA_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
+                    fi
+
+            -   name: Setup Aether Core
+                run: |
+                    mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a"
+                    echo "Fetching Aether arm64 core..."
+                    curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-arm64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a" aether
+                    mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
+                    chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
+                    if [ "${TARGET_ARCH}" = "all" ]; then
+                        mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64"
+                        curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-armv7.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" aether
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so"
+                        chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so"
+                        curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-x86_64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64" aether
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so"
+                        chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so"
+                    fi
+
+            -   name: Build APK
+                run: |
+                    echo "Target Architecture: ${TARGET_ARCH}"
+                    gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=4
+
+            -   name: ccache stats
+                if: ${{always()}}
+                run: |
+                    echo "CCACHE_DIR=${CCACHE_DIR}"
+                    du -sh "${CCACHE_DIR}" || true
+                    ccache -s || true
+
+            -   name: Restore Default Keystore
+                if: ${{ always() && (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
+                run: |
+                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old" ]; then
+                        rm -f "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                        mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore"
+                    fi
+                    if [ -f "${GITHUB_WORKSPACE}/gradle.properties.old" ]; then
+                        rm -f "${GITHUB_WORKSPACE}/gradle.properties"
+                        mv "${GITHUB_WORKSPACE}/gradle.properties.old" "${GITHUB_WORKSPACE}/gradle.properties"
+                    fi
+
+            -   name: Process and verify generated APKs
+                id: locate_apk
+                env:
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+                run: |
+                    APK_DIR="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone"
+                    cd "$APK_DIR"
+                    echo "=== Generated build artifacts ==="
+                    ls -la
+
+                    # Handle multi-arch splits (main / all build)
+                    if [ -f "app-universal.apk" ]; then
+                        mv "app-universal.apk" "Veyra.${VERSION_NAME}-universal.apk"
+                    fi
+
+                    for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+                        if [ -f "app-${abi}.apk" ]; then
+                            mv "app-${abi}.apk" "Veyra.${VERSION_NAME}-${abi}.apk"
+                        fi
+                    done
+
+                    # Handle single APK (dev / single-arch build)
+                    if [ -f "app.apk" ]; then
+                        mv "app.apk" "Veyra.${VERSION_NAME}-arm64-v8a.apk"
+                    fi
+
+                    # Remove any legacy untagged duplicate package
+                    rm -f "Veyra.${VERSION_NAME}.apk"
+
+                    echo "=== Final release packages ==="
+                    ls -la Veyra.*.apk
+
+                    # Calculate sha256 checksums
+                    sha256sum Veyra.*.apk > "${APK_DIR}/SHA256SUMS.txt"
+                    cat "${APK_DIR}/SHA256SUMS.txt"
+
+                    if [ -f "${APK_DIR}/Veyra.${VERSION_NAME}-arm64-v8a.apk" ]; then
+                        PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}-arm64-v8a.apk"
+                    elif [ -f "${APK_DIR}/Veyra.${VERSION_NAME}-universal.apk" ]; then
+                        PRIMARY_APK="${APK_DIR}/Veyra.${VERSION_NAME}-universal.apk"
+                    else
+                        PRIMARY_APK=$(ls ${APK_DIR}/Veyra.*.apk | head -n 1)
+                    fi
+                    echo "apk_path=$PRIMARY_APK" >> "$GITHUB_OUTPUT"
+                    echo "apk_sha256=$(sha256sum "$PRIMARY_APK" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+            -   name: Create Release and Upload APK
+                id: gh_release
+                uses: softprops/action-gh-release@v3
+                with:
+                    tag_name: ${{env.TNAME}}
+                    name: ${{env.RNAME}}
+                    prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || github.ref_name != 'main' }}
+                    files: |
+                        TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.*.apk
+                        TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/SHA256SUMS.txt
+                    body: |
+                        **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
+                        Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal + Dedicated per-architecture APKs (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
+
+                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v13.0.2 — Stable Release' || 'Veyra v13.0.2 preview build on dev branch.') }}
+                env:
+                    GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+
+            -   name: Telegram announcement - stable release
+                if: ${{ success() && env.IS_STABLE == 'true' }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_RELEASE_CHANNEL_ID: ${{secrets.TELEGRAM_RELEASE_CHANNEL_ID}}
+                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra stable release. Available in Universal and per-architecture packages.' }}
+                    RELEASE_URL: ${{ steps.gh_release.outputs.url }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_RELEASE_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🚀 *Veyra ${VERSION_NAME} — Stable Release*
+
+                    ${CHANGELOG}
+
+                    📦 *Available Packages:*
+                    • Universal: \`Veyra.${VERSION_NAME}-universal.apk\`
+                    • ARM64 (64-bit): \`Veyra.${VERSION_NAME}-arm64-v8a.apk\`
+                    • ARMv7 (32-bit): \`Veyra.${VERSION_NAME}-armeabi-v7a.apk\`
+                    • \`x86_64\` / \`x86\`: Available on Release page
+
+                    Verify file hashes in \`SHA256SUMS.txt\` on GitHub."
+                    REPLY_MARKUP='{"inline_keyboard":[[{"text":"📦 GitHub Repository","url":"${{ github.server_url }}/${{ github.repository }}"},{"text":"⬇️ Release Page","url":"'"${RELEASE_URL}"'"}]]}'
+                    RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_RELEASE_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" \
+                        --data-urlencode reply_markup="$REPLY_MARKUP")
+                    echo "Telegram API Response: $RESPONSE"
+
+            -   name: Telegram announcement - beta build
+                if: ${{ success() && env.IS_STABLE != 'true' }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                    CHANGELOG: ${{ inputs.veyra-changes || 'Veyra preview build on the dev branch.' }}
+                    RELEASE_URL: ${{ steps.gh_release.outputs.url }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    TEXT="🧪 *Veyra ${VERSION_NAME} — Beta Build*
+
+                    ${CHANGELOG}
+
+                    SHA-256: \`${{ steps.locate_apk.outputs.apk_sha256 }}\`"
+                    REPLY_MARKUP='{"inline_keyboard":[[{"text":"📦 GitHub Repository","url":"${{ github.server_url }}/${{ github.repository }}"},{"text":"⬇️ Release Page","url":"'"${RELEASE_URL}"'"}]]}'
+                    RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" \
+                        --data-urlencode reply_markup="$REPLY_MARKUP")
+                    echo "Telegram API Response: $RESPONSE"
+
+            -   name: Telegram log - build finished
+                if: ${{ always() }}
+                continue-on-error: true
+                env:
+                    TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+                    TELEGRAM_BETA_CHANNEL_ID: ${{secrets.TELEGRAM_BETA_CHANNEL_ID}}
+                    JOB_STATUS: ${{ job.status }}
+                run: |
+                    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+                    if [ "$JOB_STATUS" = "success" ]; then
+                        ICON="✅"; LABEL="Build succeeded"
+                    elif [ "$JOB_STATUS" = "cancelled" ]; then
+                        ICON="⚪"; LABEL="Build cancelled"
+                    else
+                        ICON="❌"; LABEL="Build failed"
+                    fi
+                    TEXT="${ICON} *Veyra ${LABEL}*
+                    Version: \`${VERSION_NAME}\`
+                    Branch: \`${{ github.ref_name }}\`
+                    Arch: \`${TARGET_ARCH}\`
+                    Run log: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+                        -d parse_mode="Markdown" \
+                        -d disable_web_page_preview="true" \
+                        --data-urlencode text="$TEXT" > /dev/null

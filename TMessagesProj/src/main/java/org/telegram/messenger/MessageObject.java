@@ -2094,6 +2094,9 @@ public class MessageObject {
     }
 
     private void checkEmojiOnly(Integer emojiOnly) {
+        if (VeyraConfig.disableBigEmoji) {
+            return;
+        }
         if (emojiOnly != null && emojiOnly >= 1 && messageOwner != null && !hasNonEmojiEntities()) {
             Emoji.EmojiSpan[] spans = ((Spannable) messageText).getSpans(0, messageText.length(), Emoji.EmojiSpan.class);
             AnimatedEmojiSpan[] aspans = ((Spannable) messageText).getSpans(0, messageText.length(), AnimatedEmojiSpan.class);
@@ -3974,6 +3977,10 @@ public class MessageObject {
         }
         message.reactions = reactions;
         message.flags |= 1048576;
+        if (message.edit_date == 0 || !org.veyra.client.VeyraEditHistoryManager.hasHistory(MessageObject.getDialogId(message), message.id)) {
+            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
+            message.edit_date = 0;
+        }
     }
 
     public boolean hasReactions() {
