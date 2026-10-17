@@ -227,6 +227,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -5294,7 +5295,9 @@ public class AndroidUtilities {
      * function i keep from legacy code to generate sha256 fingerprints from existing RSA certs
      * it's disabled/never_called
      */
+    @SuppressWarnings({"unused", "SpellCheckingInspection"})
     public static void veyraGenSha256() {
+        if (true) return;
         Map<String, String> mapRSA = new TreeMap<>();
 //        mapRSA.put("gplay843", "MIIDWAYJKoZIhvcNAQcCoIIDSTCCA0UCAQExDzANBglghkgBZQMEAgEFADALBgkqhkiG9w0BBwGgggIbMIICFzCCAYCgAwIBAgIEUh+dSTANBgkqhkiG9w0BAQUFADBQMRkwFwYDVQQHExBTYWludC1QZXRlcnNidXJnMQswCQYDVQQKEwJWSzELMAkGA1UECxMCVksxGTAXBgNVBAMTEE5pa29sYXkgS3VkYXNob3YwHhcNMTMwODI5MTkxMzEzWhcNMzgwODIzMTkxMzEzWjBQMRkwFwYDVQQHExBTYWludC1QZXRlcnNidXJnMQswCQYDVQQKEwJWSzELMAkGA1UECxMCVksxGTAXBgNVBAMTEE5pa29sYXkgS3VkYXNob3YwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAN9emToN7Aq1tVff/3fgsiJxhsvxPR/R7Y6d61ZQxf1EZ7tRv6WFIo0IS9JwRfdBW3xOOPCL42Jjmi7rmwx0naRg8nBfan4UrKdqvjNgrwC3GcxfP/TU2gWVgyfpSLNnnmQXrXuqh3m51ol5m6NFg5oEn9RDYkmQVKCAOgF4x3N5AgMBAAEwDQYJKoZIhvcNAQEFBQADgYEA3aWM3ZAVnEMezEoVkC6vsHpQ4Bup1PjmVewUsGvY6HcSOXEKKJkQOeAuNSdi61JK8HYCu9+0edNxhlilNNQR36swEiyNCl79FlpiBmnYCiIaBKx9aLOBEVDHac+X0ydL6bnyfExYd+q7z4mQQJ5ZQ9+N61CfqD1o6rx098WXZ0MxggEBMIH+AgEBMFgwUDEZMBcGA1UEBxMQU2FpbnQtUGV0ZXJzYnVyZzELMAkGA1UEChMCVksxCzAJBgNVBAsTAlZLMRkwFwYDVQQDExBOaWtvbGF5IEt1ZGFzaG92AgRSH51JMA0GCWCGSAFlAwQCAQUAMA0GCSqGSIb3DQEBAQUABIGAtFpytAKYOzDCtfBLU6ZBIQ1RM75PCRnyU6gGbX9HD3a+HKtI7k1UrtrVAJUAgfbdy7p2MOrsYoGjKrwXep/wd96iBNXs9WUmagEYCsznDUSRzScZnu6d9BxUznSYNfoBFR4eFXOZOKwf5Kme0gn8mkF45m+S3k819jYPsNPf3NM=");
 //        mapRSA.put("store843", "MIIDTwYJKoZIhvcNAQcCoIIDQDCCAzwCAQExCzAJBgUrDgMCGgUAMAsGCSqGSIb3DQEHAaCCAhswggIXMIIBgKADAgECAgRSH51JMA0GCSqGSIb3DQEBBQUAMFAxGTAXBgNVBAcTEFNhaW50LVBldGVyc2J1cmcxCzAJBgNVBAoTAlZLMQswCQYDVQQLEwJWSzEZMBcGA1UEAxMQTmlrb2xheSBLdWRhc2hvdjAeFw0xMzA4MjkxOTEzMTNaFw0zODA4MjMxOTEzMTNaMFAxGTAXBgNVBAcTEFNhaW50LVBldGVyc2J1cmcxCzAJBgNVBAoTAlZLMQswCQYDVQQLEwJWSzEZMBcGA1UEAxMQTmlrb2xheSBLdWRhc2hvdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA316ZOg3sCrW1V9//d+CyInGGy/E9H9Htjp3rVlDF/URnu1G/pYUijQhL0nBF90FbfE448IvjYmOaLuubDHSdpGDycF9qfhSsp2q+M2CvALcZzF8/9NTaBZWDJ+lIs2eeZBete6qHebnWiXmbo0WDmgSf1ENiSZBUoIA6AXjHc3kCAwEAATANBgkqhkiG9w0BAQUFAAOBgQDdpYzdkBWcQx7MShWQLq+welDgG6nU+OZV7BSwa9jodxI5cQoomRA54C41J2LrUkrwdgK737R503GGWKU01BHfqzASLI0KXv0WWmIGadgKIhoErH1os4ERUMdpz5fTJ0vpufJ8TFh36rvPiZBAnllD343rUJ+oPWjqvHT3xZdnQzGB/TCB+gIBATBYMFAxGTAXBgNVBAcTEFNhaW50LVBldGVyc2J1cmcxCzAJBgNVBAoTAlZLMQswCQYDVQQLEwJWSzEZMBcGA1UEAxMQTmlrb2xheSBLdWRhc2hvdgIEUh+dSTAJBgUrDgMCGgUAMA0GCSqGSIb3DQEBAQUABIGAL6s7YgwAEmS9GnsU4XPqwDAi5u/TlTHxpwJlmxn76+N71GIphsKUJvvsz5LEX9pp+jgtXDolW9zIpk/HUf7IthvfJdCfZbw/8wsmThn0P/n4tf8SvwGRWOpjzhH794DToDWlu4wdPMfY/8mjuHPkVQVNbEgAu/rrOWMtVEeSDy4=");
@@ -5315,7 +5318,7 @@ public class AndroidUtilities {
                 InputStream input = new ByteArrayInputStream(android.util.Base64.decode(m.getValue(), android.util.Base64.NO_WRAP));
                 CertificateFactory cf = CertificateFactory.getInstance("X509");
                 X509Certificate c = (X509Certificate) cf.generateCertificate(input);
-                System.out.printf("%nRSA `%s`%nX509:%n`%s`%n%nSHA256 `%s`%n%n", m.getKey(), android.util.Base64.encodeToString(c.getEncoded(), Base64.NO_WRAP), Utilities.bytesToHex(Utilities.computeSHA256(c.getEncoded())));
+                System.out.printf("%nRSA `%s`%nX509:%n`%s`%n%nSHA256 `%s`%n%n", m.getKey(), android.util.Base64.encodeToString(c.getEncoded(), android.util.Base64.NO_WRAP), Utilities.bytesToHex(Utilities.computeSHA256(c.getEncoded())));
             }
         } catch (Exception e) {
             e.printStackTrace();

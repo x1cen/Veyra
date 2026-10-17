@@ -6,8 +6,6 @@ import android.os.Build;
 import androidx.annotation.RequiresApi;
 import androidx.core.graphics.ColorUtils;
 
-import com.google.android.material.color.utilities.Blend;
-
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.NotificationCenter;
@@ -174,7 +172,14 @@ public class MonetHelper {
 
     private static int getHarmonizedAvatarColor(int baseColor) {
         int accentColor = resolveColor("a1_600");
-        return Blend.harmonize(baseColor, accentColor);
+        // Blend.harmonize from com.google.android.material:material not available on all builds;
+        // fallback to ColorUtils.blendARGB with a subtle 0.15 harmonize factor (visually close to Blend.harmonize)
+        try {
+            Class<?> blendClazz = Class.forName("com.google.android.material.color.utilities.Blend");
+            java.lang.reflect.Method m = blendClazz.getMethod("harmonize", int.class, int.class);
+            return (int) m.invoke(null, baseColor, accentColor);
+        } catch (Throwable ignored) {}
+        return ColorUtils.blendARGB(baseColor, accentColor, 0.15f);
     }
 
 

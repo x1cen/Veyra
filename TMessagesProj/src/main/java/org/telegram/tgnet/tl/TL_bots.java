@@ -1069,59 +1069,31 @@ public class TL_bots {
         }
     }
 
-    public static class botVerification extends TLObject {
-        public static final int constructor = 0xf93cd45c;
+    public static class BotVerification extends TLObject {
+        public static final int constructor = 0xf72e0ed9;
 
         public long bot_id;
         public long icon;
-        public String description;
+        public TLRPC.TL_textWithEntities description;
 
-        public static botVerification TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
-            // Support both legacy 0xf93cd45c and new 0xf72e0ed9 (layer 231 BotVerification)
-            if (constructor == 0xf72e0ed9) {
-                botVerification result = new botVerification();
-                result.readParams(stream, exception);
-                // Old Veyra string-based description: upstream sends TL_textWithEntities
-                // We already consumed fields; if it was the new format, readParams already handled,
-                // otherwise we fall through to normal read. Keep tolerant.
-                return result;
+        public static BotVerification TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            BotVerification result = null;
+            switch (constructor) {
+                case BotVerification.constructor:
+                    result = new BotVerification();
+                    break;
+                case botVerification_layer229.constructor:
+                    result = new botVerification_layer229();
+                    break;
             }
-            final botVerification result = botVerification.constructor != constructor ? null : new botVerification();
-            return TLdeserialize(botVerification.class, result, stream, constructor, exception);
+            return TLdeserialize(BotVerification.class, result, stream, constructor, exception);
         }
 
         @Override
         public void readParams(InputSerializedData stream, boolean exception) {
             bot_id = stream.readInt64(exception);
             icon = stream.readInt64(exception);
-            // Upstream 231 sends TL_textWithEntities here, Veyra historically used String.
-            // NativeByteBuffer implements InputSerializedData with getPosition; for compat
-            // we try TL_textWithEntities first and fall back to plain string.
-            if (stream instanceof NativeByteBuffer) {
-                NativeByteBuffer nb = (NativeByteBuffer) stream;
-                int pos = nb.getPosition();
-                try {
-                    int maybeConstructor = nb.readInt32(exception);
-                    if (maybeConstructor == 0x566bd38e || maybeConstructor == 0x1cc6e91f) {
-                        nb.position(pos);
-                        TLRPC.TL_textWithEntities te = TLRPC.TL_textWithEntities.TLdeserialize(nb, nb.readInt32(exception), exception);
-                        description = te != null ? te.text : "";
-                    } else {
-                        nb.position(pos);
-                        description = nb.readString(exception);
-                    }
-                } catch (Exception e) {
-                    try { nb.position(pos); description = nb.readString(exception); } catch (Exception ignore) {}
-                }
-            } else {
-                // Fallback path: try entity, fall back to string
-                try {
-                    TLRPC.TL_textWithEntities te = TLRPC.TL_textWithEntities.TLdeserialize(stream, stream.readInt32(exception), exception);
-                    description = te != null ? te.text : "";
-                } catch (Exception e) {
-                    description = stream.readString(exception);
-                }
-            }
+            description = TLRPC.TL_textWithEntities.TLdeserialize(stream, stream.readInt32(exception), exception);
         }
 
         @Override

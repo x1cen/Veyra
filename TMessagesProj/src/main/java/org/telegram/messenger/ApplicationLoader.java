@@ -280,7 +280,8 @@ public class ApplicationLoader extends Application {
         }
 
         MediaController.getInstance();
-        for (int a : SharedConfig.activeAccounts) {
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!UserConfig.getInstance(a).isClientActivated()) continue;
             ContactsController.getInstance(a).checkAppAccount();
             DownloadController.getInstance(a);
         }

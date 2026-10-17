@@ -249,8 +249,10 @@ public class ProxyDiscoveryPipeline {
                 SharedConfig.saveProxyList();
 
                 ConnectionsManager.setProxySettings(true, champion.settings);
-                for (int a : SharedConfig.activeAccounts) {
-                    ConnectionsManager.getInstance(a).checkConnection();
+                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                    if (UserConfig.getInstance(a).isClientActivated()) {
+                        ConnectionsManager.getInstance(a).checkConnection();
+                    }
                 }
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
             } catch (Exception e) {

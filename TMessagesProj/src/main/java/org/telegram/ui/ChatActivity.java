@@ -1269,6 +1269,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_WELCOME_REVERT = 116;
     public final static int OPTION_SEND_MONEY = 117;
+    public final static int OPTION_VIEW_EDIT_HISTORY = 118;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -1720,6 +1721,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int veyra_clear_chat_cache = 86;
     private final static int veyra_clear_actions = 87;
     private final static int veyra_advanced = 88;
+    private final static int message_details = 89;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -12627,17 +12629,19 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void clearMediaCacheForDialog(long dialogId, int mediaType) {
-        FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
+        try {
+            try { FileLoader.getInstance(currentAccount).getFileDatabase().clearDialogFiles(dialogId, mediaType, (bytes) -> {
             String sizeStr = AndroidUtilities.formatFileSize(bytes);
             BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Media cache cleared (" + sizeStr + ")").show();
-        });
+        }); } catch (Throwable ignore) { FileLog.e(ignore); }
+        } catch (Throwable ignore) {}
     }
 
     private void openForward(boolean fromActionBar) {
         for (int a = 0; a < 2; a++) {
             for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
                 MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
-                if (messageObject != null && (messageObject.deleted || (messageObject.messageOwner != null && messageObject.messageOwner.isDeleted))) {
+                if (messageObject != null && messageObject.deleted) {
                     return;
                 }
             }
@@ -26980,9 +26984,7 @@ public class ChatActivity extends BaseFragment implements
                         obj.deleted = true;
                     } else {
                         obj.deleted = false;
-                        if (obj.messageOwner != null) {
-                            obj.messageOwner.isDeleted = true;
-                        }
+                        // Veyra: isDeleted not in this TLRPC base; use MessageObject.deleted
                         org.veyra.client.VeyraAntiDelete.markChatDeleted(dialog_id);
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
@@ -26998,8 +27000,8 @@ public class ChatActivity extends BaseFragment implements
                 if (editingMessageObject == obj) {
                     hideFieldPanel(true);
                 }
-                int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
-                if (index != -1) {
+                int index2 = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
+                if (index2 != -1) {
                     if (obj.scheduled) {
                         scheduledMessagesCount--;
                         updateScheduled = true;
@@ -27008,7 +27010,7 @@ public class ChatActivity extends BaseFragment implements
                         updatedSelected = true;
                         addToSelectedMessages(obj, false, updatedSelectedLast = (a == size - 1));
                     }
-                    MessageObject removed = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.remove(index) : messages.remove(index);
+                    MessageObject removed = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.remove(index2) : messages.remove(index2);
                     if (chatAdapter != null) {
                         if (chatAdapter.isFiltered) {
                             int mindex = -1;
@@ -27033,9 +27035,9 @@ public class ChatActivity extends BaseFragment implements
                         if (messagesSearchAdapter != null) {
                             messagesSearchAdapter.notifyDataSetChanged();
                         }
-                        removedIndexes.add(chatAdapter.messagesStartRow + index);
+                        removedIndexes.add(chatAdapter.messagesStartRow + index2);
                         if (thanos && !sent && !obj.scheduledSent && removed != null && removed.messageOwner != null && removed.messageOwner.send_state == MessageObject.MESSAGE_SEND_STATE_SENT && currentTime - removed.messageOwner.date >= (currentChat != null || currentUser != null && currentUser.bot ? 2 : 0)) {
-                            thanosMessagesIndexes.add(chatAdapter.messagesStartRow + index);
+                            thanosMessagesIndexes.add(chatAdapter.messagesStartRow + index2);
                             removed.deletedByThanos = LiteMode.isEnabled(LiteMode.FLAG_CHAT_THANOS);
                         }
                     }
@@ -27057,7 +27059,7 @@ public class ChatActivity extends BaseFragment implements
                     MessageObject conversionMsg = conversionMessages.get(mid);
                     if (conversionMsg != null) {
                         conversionMessages.remove(mid);
-                        int dindex = index;
+                        int dindex = index2;
                         if (chatAdapter != null && chatAdapter.isFiltered) {
                             dindex = messages.indexOf(obj);
                         }
@@ -27074,7 +27076,7 @@ public class ChatActivity extends BaseFragment implements
                         if (dayArr.isEmpty()) {
                             messagesByDays.remove(obj.dateKey);
                             messagesByDaysSorted.remove(obj.dateKeyInt);
-                            int dindex = index;
+                            int dindex = index2;
                             if (chatAdapter != null && chatAdapter.isFiltered) {
                                 dindex = messages.indexOf(obj);
                             }
@@ -34089,7 +34091,7 @@ public class ChatActivity extends BaseFragment implements
                     selectedObjectGroup = null;
                     return;
                 }
-                if (selectedObject != null && (selectedObject.deleted || (selectedObject.messageOwner != null && selectedObject.messageOwner.isDeleted))) {
+                if (selectedObject != null && selectedObject.deleted) {
                     ArrayList<Integer> mids = new ArrayList<>();
                     if (selectedObjectGroup != null && selectedObjectGroup.messages != null) {
                         for (int a = 0; a < selectedObjectGroup.messages.size(); a++) {
@@ -40922,13 +40924,13 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
-        public void didLongPressBotButton(ChatMessageCell cell, TLRPC.KeyboardButton button) {
+        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButton button) {
             if (chatMode == MODE_QUICK_REPLIES || getParentActivity() == null) return;
             if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
-                    !(button instanceof TLRPC.TL_keyboardButtonSwitchInline) && !(button instanceof TLRPC.TL_keyboardButtonCallback) &&
-                    !(button instanceof TLRPC.TL_keyboardButtonGame) && !(button instanceof TLRPC.TL_keyboardButtonUrl) &&
-                    !(button instanceof TLRPC.TL_keyboardButtonBuy) && !(button instanceof TLRPC.TL_keyboardButtonUrlAuth) &&
-                    !(button instanceof TLRPC.TL_keyboardButtonUserProfile) && !(button instanceof TLRPC.TL_keyboardButtonCopy)) {
+                    !(button instanceof TL_keyboard.TL_keyboardButtonSwitchInline) && !(button instanceof TL_keyboard.TL_keyboardButtonCallback) &&
+                    !(button instanceof TL_keyboard.TL_keyboardButtonGame) && !(button instanceof TL_keyboard.TL_keyboardButtonUrl) &&
+                    !(button instanceof TL_keyboard.TL_keyboardButtonBuy) && !(button instanceof TL_keyboard.TL_keyboardButtonUrlAuth) &&
+                    !(button instanceof TL_keyboard.TL_keyboardButtonUserProfile) && !(button instanceof TL_keyboard.TL_keyboardButtonCopy)) {
                 return;
             }
 
@@ -40945,36 +40947,38 @@ public class ChatActivity extends BaseFragment implements
 
             ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
             final RectF pressedButtonBounds = new RectF();
-            if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
-                // Anchor the popup to the pressed button instead of the whole message cell.
-                options.setScrimBounds(pressedButtonBounds);
-            }
+            try {
+                if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
+                    // Anchor the popup to the pressed button instead of the whole message cell.
+                    options.setScrimBounds(pressedButtonBounds);
+                }
+            } catch (Throwable ignore) {}
             if (!TextUtils.isEmpty(button.text)) {
                 options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
             }
 
-            if (button instanceof TLRPC.TL_keyboardButtonUrl) {
-                final String url = ((TLRPC.TL_keyboardButtonUrl) button).url;
+            if (button instanceof TL_keyboard.TL_keyboardButtonUrl) {
+                final String url = ((TL_keyboard.TL_keyboardButtonUrl) button).url;
                 options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
                 options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, url, true, cell, cell.getMessageObject(), false));
-            } else if (button instanceof TLRPC.TL_keyboardButtonUrlAuth) {
-                final String url = ((TLRPC.TL_keyboardButtonUrlAuth) button).url;
+            } else if (button instanceof TL_keyboard.TL_keyboardButtonUrlAuth) {
+                final String url = ((TL_keyboard.TL_keyboardButtonUrlAuth) button).url;
                 options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
-            } else if (button instanceof TLRPC.TL_keyboardButtonCallback) {
-                final String callbackData = AndroidUtilities.getTextOrBase64(((TLRPC.TL_keyboardButtonCallback) button).data);
+            } else if (button instanceof TL_keyboard.TL_keyboardButtonCallback) {
+                final String callbackData = AndroidUtilities.getTextOrBase64(((TL_keyboard.TL_keyboardButtonCallback) button).data);
                 if (!TextUtils.isEmpty(callbackData)) {
                     options.add(R.drawable.msg_copy, LocaleController.getString("CopyCallback", R.string.CopyCallback), () -> copyCallback.run(callbackData));
                 }
-            } else if (button instanceof TLRPC.TL_keyboardButtonSwitchInline) {
-                final String query = ((TLRPC.TL_keyboardButtonSwitchInline) button).query;
+            } else if (button instanceof TL_keyboard.TL_keyboardButtonSwitchInline) {
+                final String query = ((TL_keyboard.TL_keyboardButtonSwitchInline) button).query;
                 if (!TextUtils.isEmpty(query)) {
                     options.add(R.drawable.msg_copy, LocaleController.getString("CopyInlineQuery", R.string.CopyInlineQuery), () -> copyCallback.run(query));
                 }
-            } else if (button instanceof TLRPC.TL_keyboardButtonUserProfile) {
-                final long userId = ((TLRPC.TL_keyboardButtonUserProfile) button).user_id;
+            } else if (button instanceof TL_keyboard.TL_keyboardButtonUserProfile) {
+                final long userId = ((TL_keyboard.TL_keyboardButtonUserProfile) button).user_id;
                 options.add(R.drawable.msg_copy, LocaleController.getString("CopyID", R.string.CopyID), () -> copyCallback.run(String.valueOf(userId)));
-            } else if (button instanceof TLRPC.TL_keyboardButtonCopy) {
-                final String copyText = ((TLRPC.TL_keyboardButtonCopy) button).copy_text;
+            } else if (button instanceof TL_keyboard.TL_keyboardButtonCopy) {
+                final String copyText = ((TL_keyboard.TL_keyboardButtonCopy) button).copy_text;
                 if (!TextUtils.isEmpty(copyText)) {
                     options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(copyText));
                 }

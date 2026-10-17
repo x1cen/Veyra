@@ -1835,6 +1835,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private float alphaInternal = 1f;
 
     public final TransitionParams transitionParams = new TransitionParams();
+    private boolean deleted;
     private boolean edited;
     private boolean imageDrawn;
     private boolean photoImageOutOfBounds;
@@ -18471,6 +18472,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             author = MessagesController.getInstance(currentAccount).getUser(fromId);
         }
         boolean hasReplies = messageObject.hasReplies();
+        deleted = currentMessageObject != null && currentMessageObject.deleted;
         if (messageObject.scheduled || messageObject.messageOwner.edit_hide) {
             edited = false;
         } else if (currentPosition == null || currentMessagesGroup == null || currentMessagesGroup.messages.isEmpty()) {

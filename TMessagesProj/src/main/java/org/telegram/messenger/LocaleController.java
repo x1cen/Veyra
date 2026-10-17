@@ -1807,10 +1807,10 @@ public class LocaleController {
                 return "WEB proxy uses an HTTPS page inside a private WebView.";
             }
         }
-        String value = BuildVars.USE_CLOUD_STRINGS ? localeValues.get(key) : null;
+        String value = BuildVars.USE_CLOUD_STRINGS ? getInstance().localizationExternal.getByResName(key) : null;
         if (value == null) {
             if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {
-                value = localeValues.get(fallback);
+                value = getInstance().localizationExternal.getByResName(fallback);
             }
             if (value == null) {
                 try {
@@ -1832,7 +1832,7 @@ public class LocaleController {
     }
 
     public static String getServerString(String key) {
-        String value = getInstance().localeValues.get(key);
+        String value = getInstance().localizationExternal.getByResName(key);
         if (value == null) {
             int resourceId = ApplicationLoader.applicationContext.getResources().getIdentifier(key, "string", ApplicationLoader.applicationContext.getPackageName());
             if (resourceId != 0) {
@@ -1843,10 +1843,10 @@ public class LocaleController {
     }
 
     public static String getString(@StringRes int res) {
-        String key = resourcesCacheMap.get(res);
-        if (key == null) {
-            resourcesCacheMap.put(res, key = ApplicationLoader.applicationContext.getResources().getResourceEntryName(res));
-        }
+        String key = null;
+        try {
+            key = ApplicationLoader.applicationContext.getResources().getResourceEntryName(res);
+        } catch (Exception ignored) {}
         return getString(key, res);
     }
 
@@ -1876,7 +1876,7 @@ public class LocaleController {
         }
         String param = getInstance().stringForQuantity(getInstance().currentPluralRules.quantityForNumber(plural));
         param = key + "_" + param;
-        return getInstance().getStringInternal(param, key + "_other", 0);
+        return getInstance().getStringInternal(param, key + "_other", 0, 0);
     }
 
     public static String formatPluralString(String key, int plural, Object... args) {

@@ -10,6 +10,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.utils.proxy.ProxySettings;
 
@@ -567,8 +568,10 @@ public class AetherController {
                     editor.commit();
 
                     ConnectionsManager.setProxySettings(true, settings);
-                    for (int a : SharedConfig.activeAccounts) {
-                        ConnectionsManager.getInstance(a).checkConnection();
+                    for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                        if (UserConfig.getInstance(a).isClientActivated()) {
+                            ConnectionsManager.getInstance(a).checkConnection();
+                        }
                     }
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
                     AetherInAppTunnelManager.apply(host, port);
@@ -584,7 +587,7 @@ public class AetherController {
         AndroidUtilities.runOnUIThread(() -> {
             try {
                 String host = AetherConfig.getSocksHost();
-                if (SharedConfig.currentProxy != null && (host.equals(SharedConfig.currentProxy.getAddress()) || "127.0.0.1".equals(SharedConfig.currentProxy.getAddress()))) {
+                if (SharedConfig.currentProxy != null && SharedConfig.currentProxy.settings != null && (host.equals(SharedConfig.currentProxy.settings.getAddress()) || "127.0.0.1".equals(SharedConfig.currentProxy.settings.getAddress()))) {
                     SharedConfig.currentProxy = null;
                     SharedPreferences preferences = MessagesController.getGlobalMainSettings();
                     preferences.edit()
