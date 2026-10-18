@@ -33,7 +33,7 @@ public class BuildVars {
     public static String BUILD_DUROV = "org.telegram.messenger.web";
     public static String BUILD_DUROV_TG = "org.telegram.messenger";
     public static String BUILD_VEYRA = "org.veyra.messenger";
-    public static final List<String> fuLabel = new ArrayList<>() {{
+    public static final List<String> fuLabel = new ArrayList<String>() {{
         add("Free");
     }};
 

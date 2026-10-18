@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- MonetHelper: required for Material You dynamic colors -->
+    <color name="monetRedLight">#FFFF5656</color>
+    <color name="monetRedDark">#FFC62828</color>
+    <color name="monetRedCall">#FFE53935</color>
+    <color name="monetGreenCall">#FF43A047</color>
     <color name="divider">#dcdcdc</color>
     <color name="widget_name">#212121</color>
     <color name="widget_badge">#ffffff</color>

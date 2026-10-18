@@ -17,7 +17,7 @@ import java.util.HashMap;
 @RequiresApi(api = Build.VERSION_CODES.S)
 public class MonetHelper {
     private static final float DARK_NAME_SOFTEN_RATIO = 0.22f;
-    private static final HashMap<String, Integer> ids = new HashMap<>() {{
+    private static final HashMap<String, Integer> ids = new HashMap<String, Integer>() {{
         put("a1_0", android.R.color.system_accent1_0);
         put("a1_10", android.R.color.system_accent1_10);
         put("a1_50", android.R.color.system_accent1_50);
@@ -88,7 +88,7 @@ public class MonetHelper {
         put("monetRedCall", R.color.monetRedCall);
         put("monetGreenCall", R.color.monetGreenCall);
     }};
-    private static final HashMap<String, Integer> avatarBaseColors = new HashMap<>() {{
+    private static final HashMap<String, Integer> avatarBaseColors = new HashMap<String, Integer>() {{
         put("monetAvatarRed", 0xffFF845E);
         put("monetAvatarOrange", 0xffFEBB5B);
         put("monetAvatarViolet", 0xffB694F9);

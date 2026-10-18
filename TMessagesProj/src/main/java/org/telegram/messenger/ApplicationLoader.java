@@ -315,8 +315,9 @@ public class ApplicationLoader extends Application {
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("app start time = " + (startTime = SystemClock.elapsedRealtime()));
             try {
+                final PackageInfo info = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
                 final String abi;
-                switch (BuildVars.BUILD_VERSION_FULL % 10) {
+                switch (info.versionCode % 10) {
                     case 1:
                     case 2:
                         abi = "store bundled " + Build.CPU_ABI + " " + Build.CPU_ABI2;
