@@ -233,6 +233,14 @@ public class SharedConfig {
     public static int badPasscodeTries;
     public static byte[] passcodeSalt = new byte[0];
     public static boolean appLocked;
+    // Veyra: duress PIN + shuffle PIN
+    public static String duressHash = "";
+    public static byte[] duressSalt = new byte[0];
+    public static int duressAction = 0;
+    public static final int DURESS_ACTION_LOCAL_WIPE = 0;
+    public static final int DURESS_ACTION_FULL_WIPE = 1;
+    public static boolean duressFallbackToLocal = true;
+    public static boolean shufflePinButtons = false;
     public static int autoLockIn = 60 * 60;
 
     public static boolean saveIncomingPhotos;
@@ -442,6 +450,11 @@ public class SharedConfig {
                 editor.putBoolean("saveIncomingPhotos", saveIncomingPhotos);
                 editor.putString("passcodeHash1", passcodeHash);
                 editor.putString("passcodeSalt", passcodeSalt.length > 0 ? Base64.encodeToString(passcodeSalt, Base64.DEFAULT) : "");
+                editor.putString("duressHash", duressHash);
+                editor.putString("duressSalt", duressSalt.length > 0 ? Base64.encodeToString(duressSalt, Base64.DEFAULT) : "");
+                editor.putInt("duressAction", duressAction);
+                editor.putBoolean("duressFallbackToLocal", duressFallbackToLocal);
+                editor.putBoolean("shufflePinButtons", shufflePinButtons);
                 editor.putBoolean("appLocked", appLocked);
                 editor.putInt("passcodeType", passcodeType);
                 editor.putLong("passcodeRetryInMs", passcodeRetryInMs);
@@ -555,6 +568,16 @@ public class SharedConfig {
             } else {
                 passcodeSalt = new byte[0];
             }
+            duressHash = preferences.getString("duressHash", "");
+            String duressSaltString = preferences.getString("duressSalt", "");
+            if (duressSaltString.length() > 0) {
+                duressSalt = Base64.decode(duressSaltString, Base64.DEFAULT);
+            } else {
+                duressSalt = new byte[0];
+            }
+            duressAction = preferences.getInt("duressAction", DURESS_ACTION_LOCAL_WIPE);
+            duressFallbackToLocal = preferences.getBoolean("duressFallbackToLocal", true);
+            shufflePinButtons = preferences.getBoolean("shufflePinButtons", false);
             lastUpdateCheckTime = preferences.getLong("appUpdateCheckTime", System.currentTimeMillis());
             try {
                 String update = preferences.getString("appUpdate", null);
@@ -866,6 +889,65 @@ public class SharedConfig {
             }
         }
         return false;
+    }
+
+    // Veyra: duress helpers
+    public static boolean checkDuress(String passcode) {
+        if (duressHash == null || duressHash.isEmpty()) return false;
+        if (duressSalt != null && duressSalt.length > 0) {
+            try {
+                byte[] passcodeBytes = passcode.getBytes("UTF-8");
+                byte[] bytes = new byte[32 + passcodeBytes.length];
+                System.arraycopy(duressSalt, 0, bytes, 0, 16);
+                System.arraycopy(passcodeBytes, 0, bytes, 16, passcodeBytes.length);
+                System.arraycopy(duressSalt, 0, bytes, passcodeBytes.length + 16, 16);
+                String hash = Utilities.bytesToHex(Utilities.computeSHA256(bytes, 0, bytes.length));
+                return duressHash.equals(hash);
+            } catch (Exception e) {
+                FileLog.e(e);
+                return false;
+            }
+        }
+        // legacy MD5 duress (migrate on success)
+        boolean result = Utilities.MD5(passcode).equals(duressHash);
+        if (result) {
+            try {
+                duressSalt = new byte[16];
+                Utilities.random.nextBytes(duressSalt);
+                byte[] passcodeBytes = passcode.getBytes("UTF-8");
+                byte[] bytes = new byte[32 + passcodeBytes.length];
+                System.arraycopy(duressSalt, 0, bytes, 0, 16);
+                System.arraycopy(passcodeBytes, 0, bytes, 16, passcodeBytes.length);
+                System.arraycopy(duressSalt, 0, bytes, passcodeBytes.length + 16, 16);
+                duressHash = Utilities.bytesToHex(Utilities.computeSHA256(bytes, 0, bytes.length));
+                saveConfig();
+            } catch (Exception e) { FileLog.e(e); }
+        }
+        return result;
+    }
+
+    public static boolean setDuressPasscode(String passcode) {
+        try {
+            duressSalt = new byte[16];
+            Utilities.random.nextBytes(duressSalt);
+            byte[] passcodeBytes = passcode.getBytes("UTF-8");
+            byte[] bytes = new byte[32 + passcodeBytes.length];
+            System.arraycopy(duressSalt, 0, bytes, 0, 16);
+            System.arraycopy(passcodeBytes, 0, bytes, 16, passcodeBytes.length);
+            System.arraycopy(duressSalt, 0, bytes, passcodeBytes.length + 16, 16);
+            duressHash = Utilities.bytesToHex(Utilities.computeSHA256(bytes, 0, bytes.length));
+            saveConfig();
+            return true;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
+        }
+    }
+
+    public static void clearDuress() {
+        duressHash = "";
+        duressSalt = new byte[0];
+        saveConfig();
     }
 
     public static void clearConfig() {
