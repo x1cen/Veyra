@@ -1807,26 +1807,28 @@ public class LocaleController {
                 return "WEB proxy uses an HTTPS page inside a private WebView.";
             }
         }
-        String value = BuildVars.USE_CLOUD_STRINGS ? getInstance().localizationExternal.getByResName(key) : null;
-        if (value == null) {
-            if (BuildVars.USE_CLOUD_STRINGS && fallback != null) {
-                value = getInstance().localizationExternal.getByResName(fallback);
-            }
-            if (value == null) {
-                try {
-                    value = ApplicationLoader.applicationContext.getString(res);
-                } catch (Exception e) {
-                    if (fallbackRes != 0) {
-                        try {
-                            value = ApplicationLoader.applicationContext.getString(fallbackRes);
-                        } catch (Exception ignored) {}
-                    }
-                    FileLog.e(e);
-                }
-            }
+        // 1. Check official Telegram getStringV2 first (handles cloud + internal localization for all 11,000+ strings):
+        String value = getStringV2(key, res, fallback);
+
+        // 2. If not found in Telegram's localization, check compiled Android resources (for Veyra XML strings):
+        if (value == null && res != 0) {
+            try {
+                value = ApplicationLoader.applicationContext.getString(res);
+            } catch (Exception ignored) {}
         }
+        if (value == null && fallbackRes != 0) {
+            try {
+                value = ApplicationLoader.applicationContext.getString(fallbackRes);
+            } catch (Exception ignored) {}
+        }
+
+        // 3. If still null, check Veyra Farsi / fallback table:
+        if (value == null && key != null) {
+            value = getVeyraFarsiString(key);
+        }
+
         if (value == null) {
-            value = "LOC_ERR:" + key;
+            value = key != null ? ("LOC_ERR:" + key) : "LOC_ERR";
         }
         return value;
     }
@@ -1843,11 +1845,7 @@ public class LocaleController {
     }
 
     public static String getString(@StringRes int res) {
-        String key = null;
-        try {
-            key = ApplicationLoader.applicationContext.getResources().getResourceEntryName(res);
-        } catch (Exception ignored) {}
-        return getString(key, res);
+        return getString(null, res);
     }
 
     // deprecated: String key is no longer necessary
@@ -2013,7 +2011,12 @@ public class LocaleController {
 
     private static String formatString(String key, String fallback, int res, Object... args) {
         try {
-            final String value = getInstance().getStringV2(key, res, fallback);
+            String value = getInstance().getStringV2(key, res, fallback);
+            if (value == null && res != 0) {
+                try {
+                    value = ApplicationLoader.applicationContext.getString(res);
+                } catch (Exception ignored) {}
+            }
             if (value == null) {
                 return "LOC_ERR: " + key;
             }
@@ -2039,7 +2042,12 @@ public class LocaleController {
 
     private static CharSequence formatSpannable(String key, String fallback, int res, Object... args) {
         try {
-            final String value = getInstance().getStringV2(key, res, fallback);
+            String value = getInstance().getStringV2(key, res, fallback);
+            if (value == null && res != 0) {
+                try {
+                    value = ApplicationLoader.applicationContext.getString(res);
+                } catch (Exception ignored) {}
+            }
             if (value == null) {
                 return "LOC_ERR: " + key;
             }
