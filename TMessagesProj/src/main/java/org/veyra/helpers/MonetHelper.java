@@ -216,7 +216,7 @@ public class MonetHelper {
      */
     public static void refreshMonetThemeIfChanged() {
         Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
-        if (activeTheme == null || !activeTheme.isMonet()) {
+        if (activeTheme == null || activeTheme.name == null || !activeTheme.name.toLowerCase().contains("monet")) {
             lastMonetColor = 0;
             return;
         }

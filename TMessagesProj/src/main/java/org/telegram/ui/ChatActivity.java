@@ -1215,6 +1215,7 @@ public class ChatActivity extends BaseFragment implements
     private float switchingFromTopicsProgress;
 
     public final static int OPTION_RETRY = 0;
+    public final static int OPTION_HIDE_CONTENT = 500;
     public final static int OPTION_DELETE = 1;
     public final static int OPTION_FORWARD = 2;
     public final static int OPTION_COPY = 3;
@@ -26973,6 +26974,7 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
                 int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
+                boolean isRemotePeerRevoke = !sent;
 
                 if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.scheduled) {
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {

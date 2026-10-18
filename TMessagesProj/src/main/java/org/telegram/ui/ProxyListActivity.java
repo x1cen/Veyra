@@ -56,6 +56,7 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BackDrawable;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.ActionBar.ThemeDescription;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
@@ -100,6 +101,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int proxyShadowRow;
     private int discoveryRow;
     private int deleteAllRow;
+    private int rotationRow = -1;
+    private int rotationTimeoutRow = -1;
     private int aetherHeaderRow = -1;
     private int aetherRow = -1;
     private int aetherShadowRow = -1;
