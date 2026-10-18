@@ -1,11 +1,16 @@
 package com.android.billingclient.api;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class Purchase {
-    public int getPurchaseState() { return 1; }
+    public static final class PurchaseState {
+        public static final int UNSPECIFIED_STATE = 0;
+        public static final int PURCHASED = 1;
+        public static final int PENDING = 2;
+    }
+
+    public int getPurchaseState() { return PurchaseState.PURCHASED; }
     public String getPurchaseToken() { return ""; }
     public String getPackageName() { return ""; }
     public List<String> getProducts() { return Collections.emptyList(); }
