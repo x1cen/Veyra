@@ -91,6 +91,9 @@ import androidx.core.view.WindowInsetsCompat;
 import org.veyra.client.VeyraSecurity;
 import com.google.android.gms.common.api.Status;
 import com.google.common.primitives.Longs;
+import com.google.firebase.appindexing.Action;
+import com.google.firebase.appindexing.FirebaseUserActions;
+import com.google.firebase.appindexing.builders.AssistActionBuilder;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
@@ -405,7 +408,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 .penaltyLog()
                 .build());
         }
-        if (BuildConfig.DEBUG_PRIVATE_VERSION) {
+        if (BuildVars.DEBUG_PRIVATE_VERSION) {
             LeakDetector.getInstance().start();
         }
 
@@ -6956,7 +6959,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         }
         FloatingDebugController.onDestroy();
         AnimatedEmojiDrawable.dropGlobalEmojiCache();
-        if (BuildConfig.DEBUG_PRIVATE_VERSION) {
+        if (BuildVars.DEBUG_PRIVATE_VERSION) {
             LeakDetector.getInstance().stop();
         }
     }
@@ -7695,7 +7698,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 ForumUtilities.switchAllFragmentsInStackToForum(chatId, actionBarLayout);
             }
         } else if (id == NotificationCenter.tlSchemeParseException) {
-            if (BuildConfig.DEBUG_PRIVATE_VERSION) {
+            if (BuildVars.DEBUG_PRIVATE_VERSION) {
                 return;
             }
             if (tlErrorAlertDialog == null) {
