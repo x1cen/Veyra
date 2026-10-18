@@ -667,7 +667,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             });
         }
 
-        if (BuildConfig.DEBUG_PRIVATE_VERSION) {
+        if (BuildVars.DEBUG_PRIVATE_VERSION) {
             o.add(R.drawable.menu_download_round, "Dump Canvas", () -> AndroidUtilities.runOnUIThread(this::dumpCanvas, 1000));
         }
 

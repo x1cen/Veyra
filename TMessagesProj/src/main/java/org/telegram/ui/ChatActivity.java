@@ -1986,7 +1986,7 @@ public class ChatActivity extends BaseFragment implements
             if (org.telegram.messenger.VeyraConfig.disableDoubleTapReaction) {
                 return;
             }
-            if (getParentActivity() == null || isSecretChat() || isInScheduleMode() || isInPreviewMode() || chatMode == MODE_QUICK_REPLIES) {
+            if (getParentActivity() == null || isSecretChat() || isInScheduleMode() || isInPreviewMode() || isQuickRepliesOrWelcomeMessagesMode()) {
                 return;
             }
             MessageObject messageObject;
@@ -40924,13 +40924,9 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
-        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButton button) {
-            if (chatMode == MODE_QUICK_REPLIES || getParentActivity() == null) return;
-            if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
-                    !(button instanceof TL_keyboard.TL_keyboardButtonSwitchInline) && !(button instanceof TL_keyboard.TL_keyboardButtonCallback) &&
-                    !(button instanceof TL_keyboard.TL_keyboardButtonGame) && !(button instanceof TL_keyboard.TL_keyboardButtonUrl) &&
-                    !(button instanceof TL_keyboard.TL_keyboardButtonBuy) && !(button instanceof TL_keyboard.TL_keyboardButtonUrlAuth) &&
-                    !(button instanceof TL_keyboard.TL_keyboardButtonUserProfile) && !(button instanceof TL_keyboard.TL_keyboardButtonCopy)) {
+        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
+            if (isQuickRepliesOrWelcomeMessagesMode() || getParentActivity() == null) return;
+            if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE) {
                 return;
             }
 
@@ -40946,42 +40942,38 @@ public class ChatActivity extends BaseFragment implements
             };
 
             ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
-            final RectF pressedButtonBounds = new RectF();
-            try {
-                if (cell.getLastLongPressedBotButtonBounds(pressedButtonBounds)) {
-                    // Anchor the popup to the pressed button instead of the whole message cell.
-                    options.setScrimBounds(pressedButtonBounds);
-                }
-            } catch (Throwable ignore) {}
-            if (!TextUtils.isEmpty(button.text)) {
-                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(button.text));
+            String buttonText = button.getText();
+            if (!TextUtils.isEmpty(buttonText)) {
+                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(buttonText));
             }
 
-            if (button instanceof TL_keyboard.TL_keyboardButtonUrl) {
-                final String url = ((TL_keyboard.TL_keyboardButtonUrl) button).url;
-                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
-                options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, url, true, cell, cell.getMessageObject(), false));
-            } else if (button instanceof TL_keyboard.TL_keyboardButtonUrlAuth) {
-                final String url = ((TL_keyboard.TL_keyboardButtonUrlAuth) button).url;
-                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(url));
-            } else if (button instanceof TL_keyboard.TL_keyboardButtonCallback) {
-                final String callbackData = AndroidUtilities.getTextOrBase64(((TL_keyboard.TL_keyboardButtonCallback) button).data);
+            final TL_keyboard.TL_inlineButtonTypeUrl buttonTypeUrl = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrl.class);
+            if (buttonTypeUrl != null) {
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(buttonTypeUrl.url));
+                options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, buttonTypeUrl.url, true, cell, cell.getMessageObject(), false));
+            }
+            final TL_keyboard.TL_inlineButtonTypeUrlAuth buttonTypeUrlAuth = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrlAuth.class);
+            if (buttonTypeUrlAuth != null) {
+                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(buttonTypeUrlAuth.url));
+            }
+            final TL_keyboard.TL_inlineButtonTypeCallback buttonTypeCallback = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCallback.class);
+            if (buttonTypeCallback != null && buttonTypeCallback.data != null) {
+                final String callbackData = AndroidUtilities.getTextOrBase64(buttonTypeCallback.data);
                 if (!TextUtils.isEmpty(callbackData)) {
                     options.add(R.drawable.msg_copy, LocaleController.getString("CopyCallback", R.string.CopyCallback), () -> copyCallback.run(callbackData));
                 }
-            } else if (button instanceof TL_keyboard.TL_keyboardButtonSwitchInline) {
-                final String query = ((TL_keyboard.TL_keyboardButtonSwitchInline) button).query;
-                if (!TextUtils.isEmpty(query)) {
-                    options.add(R.drawable.msg_copy, LocaleController.getString("CopyInlineQuery", R.string.CopyInlineQuery), () -> copyCallback.run(query));
-                }
-            } else if (button instanceof TL_keyboard.TL_keyboardButtonUserProfile) {
-                final long userId = ((TL_keyboard.TL_keyboardButtonUserProfile) button).user_id;
-                options.add(R.drawable.msg_copy, LocaleController.getString("CopyID", R.string.CopyID), () -> copyCallback.run(String.valueOf(userId)));
-            } else if (button instanceof TL_keyboard.TL_keyboardButtonCopy) {
-                final String copyText = ((TL_keyboard.TL_keyboardButtonCopy) button).copy_text;
-                if (!TextUtils.isEmpty(copyText)) {
-                    options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(copyText));
-                }
+            }
+            final TL_keyboard.TL_inlineButtonTypeSwitchInline buttonTypeSwitchInline = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeSwitchInline.class);
+            if (buttonTypeSwitchInline != null && !TextUtils.isEmpty(buttonTypeSwitchInline.query)) {
+                options.add(R.drawable.msg_copy, LocaleController.getString("CopyInlineQuery", R.string.CopyInlineQuery), () -> copyCallback.run(buttonTypeSwitchInline.query));
+            }
+            final TL_keyboard.TL_inlineButtonTypeUserProfile buttonTypeUserProfile = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class);
+            if (buttonTypeUserProfile != null) {
+                options.add(R.drawable.msg_copy, LocaleController.getString("CopyID", R.string.CopyID), () -> copyCallback.run(String.valueOf(buttonTypeUserProfile.user_id)));
+            }
+            final TL_keyboard.TL_inlineButtonTypeCopy buttonTypeCopy = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCopy.class);
+            if (buttonTypeCopy != null && !TextUtils.isEmpty(buttonTypeCopy.copy_text)) {
+                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(buttonTypeCopy.copy_text));
             }
             options.show();
         }
