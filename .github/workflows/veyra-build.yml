@@ -187,6 +187,7 @@ jobs:
                     if [ -n "$GOOGLE_API_KEY" ]; then
                         echo "Injecting Google API Key from secrets..."
                         sed -i "s/REDACTED_VEYRA_GOOGLE_SERVICES_KEY/$GOOGLE_API_KEY/g" TMessagesProj*/google-services.json
+                        sed -i "s/REDACTED_VEYRA_MAPS_KEY/$GOOGLE_API_KEY/g" TMessagesProj/config/*/*.xml
                     fi
 
             -   name: Enable Custom Keystore
