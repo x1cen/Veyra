@@ -86,7 +86,7 @@ android {
             debuggable false
             jniDebuggable false
             signingConfig signingConfigs.release
-            applicationIdSuffix ".web"
+            applicationIdSuffix ""
             minifyEnabled true
             shrinkResources true
             multiDexEnabled true
@@ -107,7 +107,14 @@ android {
     productFlavors {
         afat {
             ndk {
-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                def targetArch = System.getenv("TARGET_ARCH") ?: (project.hasProperty("targetArch") ? project.property("targetArch") : "")
+                if (targetArch == "arm64-v8a") {
+                    abiFilters "arm64-v8a"
+                } else if (targetArch && targetArch != "all" && targetArch != "auto") {
+                    abiFilters targetArch
+                } else {
+                    abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                }
             }
             ext {
                 abiVersionCode = 9
