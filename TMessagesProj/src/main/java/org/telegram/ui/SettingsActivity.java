@@ -704,6 +704,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
 
         items.add(UItem.asShadow(null));
+        boolean walletAbove = getConnectionsManager().getCurrentTime() - 1791538462 < 4 * 7 * 24 * 60 * 60;
         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
             final GramWallet wallet = GramWallet.getInstance(currentAccount);
             items.add(SettingCell.Factory.of(25, 0, 0, Theme.isCurrentThemeDark() ? R.drawable.settings_wallet_dark : R.drawable.settings_wallet, TextCell.applyNewSpanTimed(getString(R.string.WalletAttachMoney), 1790679020), null, wallet.getBalance() > 0 ? GramWallet.formatGrams(wallet.getBalance()) : null));
