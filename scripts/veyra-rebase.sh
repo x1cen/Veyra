@@ -1,29 +1,30 @@
 #!/usr/bin/env bash
 # veyra-rebase.sh — one-command upstream sync (dev-first)
-# Flow: upstream/master → master (ff) → dev (rebase on master)
+# Flow: upstream/master (DrKLO) → upstream (ff) → dev (rebase on upstream)
 # veyra is NEVER touched here — sync dev → veyra only after user approval
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 echo "== fetch upstream =="
-git fetch upstream --tags --prune
+git remote add upstream https://github.com/DrKLO/Telegram.git 2>/dev/null || true
+git fetch upstream master --tags --prune
 
 NEW_SHA=$(git rev-parse upstream/master)
-OLD_SHA=$(git rev-parse master)
-echo "master  $OLD_SHA -> $NEW_SHA"
+OLD_SHA=$(git rev-parse upstream 2>/dev/null || git rev-parse origin/upstream 2>/dev/null || echo "")
+echo "upstream  $OLD_SHA -> $NEW_SHA"
 
-if [ "$NEW_SHA" = "$OLD_SHA" ]; then
+if [ -n "$OLD_SHA" ] && [ "$NEW_SHA" = "$OLD_SHA" ]; then
   echo "already up to date — nothing to do"
   exit 0
 fi
 
-echo "== fast-forward master =="
-git checkout master
+echo "== fast-forward upstream =="
+git checkout upstream
 git reset --hard upstream/master
 
-echo "== rebase dev onto master =="
+echo "== rebase dev onto upstream =="
 git checkout dev
-if git rebase master; then
+if git rebase upstream; then
   echo "✅ rebase clean — no conflicts"
 else
   echo ""
@@ -41,7 +42,7 @@ fi
 
 echo ""
 echo "Done. branches:"
-git log --oneline --graph --all -8
+git log --oneline --graph -8
 echo ""
-echo "Push dev: git push --force-with-lease origin master dev"
+echo "Push dev: git push --force-with-lease origin upstream dev"
 echo "After approval sync to veyra: git checkout veyra && git merge dev --ff-only && git push origin veyra"

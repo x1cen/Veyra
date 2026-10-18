@@ -16,18 +16,18 @@ This repo uses a **Rebase Workflow** — never merge upstream into the feature b
 ```
 upstream/master  (DrKLO/Telegram)
       ↓  fetch + ff
-    master       — CLEAN mirror of upstream — NEVER edited manually
+    upstream     — CLEAN mirror of upstream — NEVER edited manually
       ↓  rebase
-    veyra        — FEATURE branch — all Veyra features live here
-      ↑  sync after testing
-    dev          — TESTING branch — branched from veyra, for experiments
+    dev          — TESTING branch — branched from upstream, for experiments & auto-rebase
+      ↓  sync after testing & approval
+    veyra        — FEATURE / STABLE branch (default) — all verified features live here
 ```
 
 | Branch | Purpose | Edit? | Tracks |
 |--------|---------|-------|--------|
-| `master` | Clean upstream snapshot | **NEVER** edit — only `git fetch upstream` + fast-forward | `upstream/master` |
-| `veyra` | Stable feature branch (default) | Only via approved sync from `dev` | `master` via rebase |
-| `dev` | Testing / development | All new work goes here | `veyra` |
+| `upstream` | Clean upstream snapshot | **NEVER** edit — only `git fetch upstream` + fast-forward | `upstream/master` (DrKLO) |
+| `dev` | Testing / development & auto-rebase | All new work and upstream rebases land here | `upstream` |
+| `veyra` | Stable feature branch (default) | Only via approved sync from `dev` | `dev` via fast-forward |
 
 **Global rerere is enabled:** `git config --global rerere.enabled true` — once you resolve a conflict, Git remembers it.
 
@@ -43,7 +43,7 @@ upstream/master  (DrKLO/Telegram)
   git push origin veyra
   ```
 - If `dev` was rebased, use `git checkout veyra && git reset --hard dev && git push --force-with-lease origin veyra` only with user approval.
-- `master` is never touched except by upstream sync.
+- `upstream` is never touched except by upstream sync.
 
 ## 4. Feature vs Compat Rule — CRITICAL
 
@@ -102,10 +102,10 @@ Wrap future hooks with:
 ## 6. Workflows & Scripts
 
 ### `scripts/veyra-rebase.sh`
-One-command updater: `git fetch upstream`, fast-forward `master` to `upstream/master`, rebase `veyra` on `master`, push if clean. If conflicts — resolve, `git add .`, `git rebase --continue`, then `git push --force-with-lease origin veyra`.
+One-command updater: `git fetch upstream`, fast-forward `upstream` to `upstream/master`, rebase `dev` on `upstream`, push if clean. If conflicts — resolve, `git add .`, `git rebase --continue`, then `git push --force-with-lease origin dev`.
 
 ### `.github/workflows/veyra-auto-rebase.yml`
-Daily auto-check (06:00 Asia/Tehran) — fetches upstream, rebases if clean, pushes, opens an Issue on conflict.
+Daily auto-check (06:00 UTC) — fetches upstream, fast-forwards `upstream` branch, rebases `dev` if clean and pushes. If rebase encounters conflict, opens a GitHub Issue with the conflicting files and sends a Telegram notification.
 
 ### `.github/workflows/veyra-build.yml`
 Manual `workflow_dispatch` — works on any branch (`veyra` or `dev`):
@@ -124,13 +124,13 @@ Manual `workflow_dispatch` — works on any branch (`veyra` or `dev`):
 When user says "update", "rebase", "sync with latest Telegram":
 
 1. `git fetch upstream`
-2. `git checkout master && git merge upstream/master --ff-only`
-3. `git checkout dev && git rebase master`  — resolve conflicts (feature-only, keep upstream for compat files)
+2. `git checkout upstream && git merge upstream/master --ff-only`
+3. `git checkout dev && git rebase upstream`  — resolve conflicts (feature-only, keep upstream for compat files)
    `git add <resolved>` → `git rebase --continue`
 4. Push `dev`, trigger CI build on `dev`, verify.
 5. Only after user approval: sync to `veyra` (see §3).
 
-Never edit `master` manually. Never merge `master` into `veyra`/`dev` — always rebase.
+Never edit `upstream` manually. Never merge `upstream` into `veyra`/`dev` — always rebase.
 
 ## 9. Version Notes
 
@@ -154,9 +154,9 @@ git push origin dev
 git checkout veyra && git merge dev --ff-only && git push origin veyra
 
 # update upstream (on dev first)
-git fetch upstream; git checkout master; git merge upstream/master --ff-only
-git checkout dev; git rebase master; # resolve if needed
-git push origin master dev
+git fetch upstream; git checkout upstream; git merge upstream/master --ff-only
+git checkout dev; git rebase upstream; # resolve if needed
+git push origin upstream dev
 ```
 
 ## 11. Agent Rules

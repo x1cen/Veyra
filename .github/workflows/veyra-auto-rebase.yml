@@ -1,55 +1,146 @@
 name: veyra-auto-rebase
+
 on:
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch: {}
+
 permissions:
   contents: write
   issues: write
+
 jobs:
   rebase:
+    name: Auto Rebase Upstream Telegram
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout Veyra
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: fetch upstream and check
+          submodules: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Identity
+        run: |
+          git config user.name "x1cen"
+          git config user.email "253544026+x1cen@users.noreply.github.com"
+          git config rerere.enabled true
+
+      - name: Fetch Upstream Telegram and Check Updates
+        id: check_upstream
         run: |
           git remote add upstream https://github.com/DrKLO/Telegram.git 2>/dev/null || true
           git fetch upstream master --tags
-          git fetch origin master dev
-          git checkout master
-          git checkout dev
-          echo "upstream HEAD: $(git rev-parse upstream/master | cut -c1-9)"
-          if [ "$(git rev-parse upstream/master)" = "$(git rev-parse origin/master)" ]; then echo "no update"; echo "UPDATE_AVAILABLE=0" >> $GITHUB_ENV; else echo "UPDATE_AVAILABLE=1" >> $GITHUB_ENV; fi
-      - name: attempt rebase master -> dev
-        if: env.UPDATE_AVAILABLE == '1'
-        run: |
-          git config rerere.enabled true
-          git config user.name "veyra-bot"
-          git config user.email "veyra-bot@users.noreply.github.com"
-          bash scripts/veyra-rebase.sh || true
-          if git status | grep -q "rebase in progress\|Unmerged paths"; then
-            echo "REBASE_CONFLICT=1" >> $GITHUB_ENV
-            git diff --name-only --diff-filter=U | head -n 50
-          else echo "REBASE_CONFLICT=0" >> $GITHUB_ENV
+          git fetch origin upstream dev
+
+          git checkout -B upstream origin/upstream
+          git checkout -B dev origin/dev
+
+          UPSTREAM_HEAD=$(git rev-parse upstream/master)
+          LOCAL_UPSTREAM=$(git rev-parse upstream)
+          echo "upstream/master HEAD: ${UPSTREAM_HEAD:0:9}"
+          echo "local upstream HEAD:   ${LOCAL_UPSTREAM:0:9}"
+
+          if [ "$UPSTREAM_HEAD" = "$LOCAL_UPSTREAM" ]; then
+            echo "Already up to date with upstream Telegram."
+            echo "update_available=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "Update found in upstream Telegram!"
+            echo "update_available=1" >> "$GITHUB_OUTPUT"
+            echo "upstream_sha=${UPSTREAM_HEAD}" >> "$GITHUB_OUTPUT"
           fi
-      - name: push clean rebase
-        if: env.UPDATE_AVAILABLE == '1' && env.REBASE_CONFLICT == '0'
+
+      - name: Attempt Rebase dev onto Upstream
+        id: rebase
+        if: steps.check_upstream.outputs.update_available == '1'
         run: |
-          git push origin master --force
-          git push origin dev --force
-      - name: open issue on conflict
-        if: env.UPDATE_AVAILABLE == '1' && env.REBASE_CONFLICT == '1'
+          set +e
+          bash scripts/veyra-rebase.sh
+          EC=$?
+
+          if [ $EC -eq 0 ]; then
+            echo "rebase_conflict=0" >> "$GITHUB_OUTPUT"
+            echo "Rebase succeeded without conflicts."
+          else
+            echo "rebase_conflict=1" >> "$GITHUB_OUTPUT"
+            CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+            echo "conflicting_files=$CONFLICTS" >> "$GITHUB_OUTPUT"
+            git rebase --abort 2>/dev/null || true
+            echo "Rebase conflict encountered. Cleaned up working state."
+          fi
+
+      - name: Push Clean Rebase (upstream & dev)
+        if: steps.check_upstream.outputs.update_available == '1' && steps.rebase.outputs.rebase_conflict == '0'
+        run: |
+          git push origin upstream --force-with-lease
+          git push origin dev --force-with-lease
+
+      - name: Notify Telegram - Update Applied
+        if: steps.check_upstream.outputs.update_available == '1' && steps.rebase.outputs.rebase_conflict == '0'
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BETA_CHANNEL_ID: ${{ secrets.TELEGRAM_BETA_CHANNEL_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+          TEXT="🔄 *Veyra Auto-Rebase Succeeded*
+          New Upstream SHA: \`${{ steps.check_upstream.outputs.upstream_sha }}\`
+          Branch \`dev\` successfully rebased on \`upstream\`."
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+            -d parse_mode="Markdown" \
+            --data-urlencode text="$TEXT" > /dev/null || true
+
+      - name: Open Issue on Rebase Conflict
+        if: steps.check_upstream.outputs.update_available == '1' && steps.rebase.outputs.rebase_conflict == '1'
         uses: actions/github-script@v8
         with:
           script: |
-            const files = require('child_process').execSync('git diff --name-only --diff-filter=U || true').toString().trim() || '(unknown)';
-            const upstream = require('child_process').execSync('git rev-parse --short upstream/master').toString().trim();
+            const upstreamSha = '${{ steps.check_upstream.outputs.upstream_sha }}'.substring(0, 9);
+            const conflictingFiles = '${{ steps.rebase.outputs.conflicting_files }}'.trim().split(' ').filter(Boolean).map(f => `- \`${f}\``).join('\n') || '- (check git status)';
+            const issueBody = [
+              'Auto-rebase **upstream → dev** encountered merge conflicts.',
+              '',
+              '### Conflicting Files:',
+              conflictingFiles,
+              '',
+              '### How to resolve locally:',
+              '```bash',
+              'git fetch upstream && git fetch origin',
+              'bash scripts/veyra-rebase.sh',
+              '# Fix conflicting files, then:',
+              'git add <resolved files>',
+              'git rebase --continue',
+              'git push --force-with-lease origin upstream dev',
+              '```',
+              '',
+              'After testing on `dev`, sync to `veyra` with user approval:',
+              '```bash',
+              'git checkout veyra && git merge dev --ff-only && git push origin veyra',
+              '```'
+            ].join('\n');
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Rebase conflict: upstream ${upstream} → dev`,
-              body: `Auto-rebase **master → dev** failed with conflicts.\n\n**Conflicting files:**\n\`\`\`\n${files}\n\`\`\`\n\n**Fix locally:**\n\`\`\`bash\ngit fetch upstream && git fetch origin\nbash scripts/veyra-rebase.sh\n# fix files listed above, then:\ngit add <fixed files>\ngit rebase --continue\ngit push --force-with-lease origin master dev\n\`\`\`\nAfter testing on \`dev\`, sync to \`veyra\` only after approval:\n\`\`\`bash\ngit checkout veyra && git merge dev --ff-only && git push origin veyra\n\`\`\``,
-              labels: ['rebase-conflict']
+              title: `🚨 Rebase conflict: Upstream Telegram (${upstreamSha}) → dev`,
+              body: issueBody,
+              labels: ['rebase-conflict', 'upstream-sync']
             });
+
+      - name: Notify Telegram - Rebase Conflict
+        if: steps.check_upstream.outputs.update_available == '1' && steps.rebase.outputs.rebase_conflict == '1'
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BETA_CHANNEL_ID: ${{ secrets.TELEGRAM_BETA_CHANNEL_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_BETA_CHANNEL_ID" ]; then exit 0; fi
+          TEXT="⚠️ *Veyra Auto-Rebase Conflict*
+          Upstream SHA: \`${{ steps.check_upstream.outputs.upstream_sha }}\`
+          An Issue has been opened on GitHub with conflicting files."
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_BETA_CHANNEL_ID}" \
+            -d parse_mode="Markdown" \
+            --data-urlencode text="$TEXT" > /dev/null || true
