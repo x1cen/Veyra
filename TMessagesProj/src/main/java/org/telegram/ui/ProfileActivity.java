@@ -605,7 +605,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int delete_group = 45;
     private final static int enable_no_forwards = 46;
     private final static int disable_no_forwards = 47;
-    private final static int kill_app_item = 48;
+    private final static int send_money = 48;
+    private final static int kill_app_item = 49;
     // Veyra additions
     private final static int veyra_delete_all_messages = 60;
     private final static int veyra_upgrade_to_supergroup = 61;

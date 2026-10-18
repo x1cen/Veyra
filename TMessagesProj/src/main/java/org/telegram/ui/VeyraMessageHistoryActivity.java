@@ -36,6 +36,7 @@ import org.telegram.messenger.VeyraConfig;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_keyboard;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -751,12 +752,12 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                     inlineContainer.setVisibility(View.VISIBLE);
                     Context ctx = root.getContext();
                     for (int r = 0; r < markup.rows.size(); r++) {
-                        TLRPC.TL_keyboardButtonRow row = markup.rows.get(r);
+                        TL_keyboard.KeyboardInlineButtonRow row = markup.rows.get(r);
                         if (row == null || row.buttons == null || row.buttons.isEmpty()) continue;
                         LinearLayout rowLayout = new LinearLayout(ctx);
                         rowLayout.setOrientation(LinearLayout.HORIZONTAL);
                         for (int b = 0; b < row.buttons.size(); b++) {
-                            TLRPC.KeyboardButton btn = row.buttons.get(b);
+                            TL_keyboard.KeyboardInlineButton btn = row.buttons.get(b);
                             if (btn == null) continue;
                             TextView btnView = new TextView(ctx);
                             btnView.setText(btn.text);
@@ -769,8 +770,8 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                             btnBg.setCornerRadius(AndroidUtilities.dp(8));
                             btnBg.setColor(isOut ? 0x22FFFFFF : 0x15000000);
                             btnView.setBackground(btnBg);
-                            if (btn instanceof TLRPC.TL_keyboardButtonUrl) {
-                                String url = ((TLRPC.TL_keyboardButtonUrl) btn).url;
+                            if (btn.type instanceof TL_keyboard.TL_inlineButtonTypeUrl) {
+                                String url = ((TL_keyboard.TL_inlineButtonTypeUrl) btn.type).url;
                                 btnView.setOnClickListener(v -> Browser.openUrl(ctx, url));
                             }
                             rowLayout.addView(btnView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 2, 2, 2, 2));

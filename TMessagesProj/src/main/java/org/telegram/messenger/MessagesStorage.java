@@ -10170,7 +10170,16 @@ public class MessagesStorage extends BaseController {
         updateWidgets(dids);
     }
 
-    private void updateWidgets(ArrayList<Long> dids) {
+    private void updateWidgets(List<Long> dids) {
+        if (dids.isEmpty()) {
+            return;
+        }
+        // veyra: accept List<Long> for compat (was ArrayList<Long>)
+        ArrayList<Long> arrayDids = dids instanceof ArrayList ? (ArrayList<Long>) dids : new ArrayList<>(dids);
+        updateWidgetsInternal(arrayDids);
+    }
+
+    private void updateWidgetsInternal(ArrayList<Long> dids) {
         if (dids.isEmpty()) {
             return;
         }
