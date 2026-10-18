@@ -15,11 +15,18 @@ public class BillingFlowParams {
     }
 
     public static class ProductDetailsParams {
+        private ProductDetails details;
+
         public static Builder newBuilder() { return new Builder(); }
         public static class Builder {
-            public Builder setProductDetails(ProductDetails details) { return this; }
+            private final ProductDetailsParams params = new ProductDetailsParams();
+            public Builder setProductDetails(ProductDetails details) { params.details = details; return this; }
             public Builder setOfferToken(String token) { return this; }
-            public ProductDetailsParams build() { return new ProductDetailsParams(); }
+            public ProductDetailsParams build() { return params; }
+        }
+
+        public ProductDetails zza() {
+            return details != null ? details : new ProductDetails();
         }
     }
 

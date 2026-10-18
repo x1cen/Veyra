@@ -12,6 +12,9 @@ public abstract class BillingClient {
         public static final int DISCONNECTED = 0;
     }
     public static final class BillingResponseCode {
+        public static final int SERVICE_TIMEOUT = -3;
+        public static final int FEATURE_NOT_SUPPORTED = -2;
+        public static final int SERVICE_DISCONNECTED = -1;
         public static final int OK = 0;
         public static final int USER_CANCELED = 1;
         public static final int SERVICE_UNAVAILABLE = 2;
@@ -55,7 +58,7 @@ public abstract class BillingClient {
         public boolean isReady() { return false; }
         public int getConnectionState() { return ConnectionState.DISCONNECTED; }
         public void queryProductDetailsAsync(QueryProductDetailsParams params, ProductDetailsResponseListener listener) {
-            if (listener != null) listener.onProductDetailsResponse(BillingResult.newBuilder().setResponseCode(BillingResponseCode.BILLING_UNAVAILABLE).build(), Collections.emptyList());
+            if (listener != null) listener.onProductDetailsResponse(BillingResult.newBuilder().setResponseCode(BillingResponseCode.BILLING_UNAVAILABLE).build(), new QueryProductDetailsResult());
         }
         public void queryPurchasesAsync(QueryPurchasesParams params, PurchasesResponseListener listener) {
             if (listener != null) listener.onQueryPurchasesResponse(BillingResult.newBuilder().setResponseCode(BillingResponseCode.BILLING_UNAVAILABLE).build(), Collections.emptyList());
