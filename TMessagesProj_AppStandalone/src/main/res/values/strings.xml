@@ -77,4 +77,8 @@
 
     <string name="SmsNotificationTitle">Telegram Premium for SMS</string>
     <string name="SmsNotificationSubtitle">%1$d of %2$d SMS Sent</string>
+    <string name="AppUpdate">Update Telegram</string>
+    <string name="Update">Update</string>
+    <string name="AppUpdateRemindMeLater">Remind me later</string>
+    <string name="VeyraUpdateAvailableTitle">Veyra %1$s available</string>
 </resources>
