@@ -9,7 +9,7 @@ public class LanguageDetector {
     }
 
     public static boolean hasSupport() {
-        return true;
+        return false;
     }
 
     public static void detectLanguage(String text, StringCallback onSuccess, ExceptionCallback onFail) {

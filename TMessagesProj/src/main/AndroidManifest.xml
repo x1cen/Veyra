@@ -79,12 +79,9 @@
     <uses-permission android:name="com.oppo.launcher.permission.WRITE_SETTINGS"/>
     <uses-permission android:name="me.everything.badger.permission.BADGE_COUNT_READ"/>
     <uses-permission android:name="me.everything.badger.permission.BADGE_COUNT_WRITE"/>
-    <uses-permission android:name="com.android.vending.BILLING"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="replace" />
 
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-
-    <uses-sdk tools:overrideLibrary="com.google.mlkit.vision.segmentation.subject"/>
 
     <queries>
         <package android:name="com.google.android.apps.maps"/>
@@ -296,9 +293,6 @@
             </intent-filter>
             <meta-data android:name="android.service.chooser.chooser_target_service" android:value="androidx.sharetarget.ChooserTargetServiceCompat" />
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
-            <meta-data
-                android:name="com.google.mlkit.vision.DEPENDENCIES"
-                android:value="subject_segment" />
         </activity>
         <activity-alias
             android:name="org.telegram.ui.CallsActivity"
