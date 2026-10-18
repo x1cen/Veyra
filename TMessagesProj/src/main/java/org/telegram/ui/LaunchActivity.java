@@ -106,7 +106,6 @@ import org.telegram.messenger.BetaUpdate;
 import org.telegram.messenger.BirthdayController;
 import org.telegram.messenger.BotGuardHelper;
 import org.telegram.messenger.BotWebViewVibrationEffect;
-import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChannelBoostsController;
 import org.telegram.messenger.ChatObject;

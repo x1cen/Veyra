@@ -8931,6 +8931,30 @@ public class MessagesController extends BaseController implements NotificationCe
         }));
     }
 
+    // Veyra: batch unblock for PrivacyUsersActivity (compat helper)
+    public void unblockAllUsers(boolean onlyDeleted, boolean notify) {
+        if (blockePeers.size() == 0) {
+            return;
+        }
+        ArrayList<Long> toUnblock = new ArrayList<>();
+        for (int i = 0; i < blockePeers.size(); i++) {
+            long peerId = blockePeers.keyAt(i);
+            if (onlyDeleted) {
+                TLRPC.User u = getUser(peerId);
+                if (u == null || !UserObject.isDeleted(u)) {
+                    continue;
+                }
+            }
+            toUnblock.add(peerId);
+        }
+        if (toUnblock.isEmpty()) {
+            return;
+        }
+        for (long peerId : toUnblock) {
+            unblockPeer(peerId);
+        }
+    }
+
     public void getBlockedPeers(boolean reset) {
         if (!getUserConfig().isClientActivated() || loadingBlockedPeers) {
             return;
