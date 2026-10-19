@@ -3609,6 +3609,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 req.flags |= TLObject.FLAG_18;
             }
         }
+        markEditedLocally(messageObject.getId());
         return getConnectionsManager().sendRequest(req, (response, error) -> {
             if (error == null) {
                 getMessagesController().processUpdates((TLRPC.Updates) response, false);
