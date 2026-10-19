@@ -1472,7 +1472,7 @@
     <string name="PinnedCall">Pinned Call</string>
     <string name="PreviousPinnedMessage">Previous Message</string>
     <string name="EditedMessage">edited</string>
-    <string name="ReactionMessage">reaction</string>
+    <string name="ReactionMessage">reacted</string>
     <string name="ModifiedMessage">modified</string>
     <string name="EditMessage">Edit Message</string>
     <string name="EditCaption">Edit Caption</string>

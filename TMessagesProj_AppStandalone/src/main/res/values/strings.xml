@@ -267,7 +267,7 @@
 <string name="VeyraEditHistoryTabReactions">Reactions</string>
 <string name="VeyraHistoryMessages">Message</string>
 <string name="VeyraHistoryReactions">Reaction</string>
-<string name="ReactionMessage">reaction</string>
+<string name="ReactionMessage">reacted</string>
 <string name="ModifiedMessage">modified</string>
 <string name="VeyraReactionHistoryEnable">Message Reaction History</string>
 <string name="VeyraReactionHistoryEnableDesc">Track and display reactions tab in edit history panel</string>

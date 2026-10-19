@@ -161,7 +161,7 @@ public class VeyraLocalization {
         EN.put("VeyraHideTypingDesc", "Don\'t broadcast \'typing...\' status");
         EN.put("VeyraHistoryMessages", "Message");
         EN.put("VeyraHistoryReactions", "Reaction");
-        EN.put("ReactionMessage", "reaction");
+        EN.put("ReactionMessage", "reacted");
         EN.put("ModifiedMessage", "modified");
         EN.put("VeyraImportSettings", "Import Settings from JSON");
         EN.put("VeyraImportSuccess", "Settings imported successfully");
@@ -379,7 +379,7 @@ public class VeyraLocalization {
         FA.put("VeyraHideTyping", "مخفی کردن وضعیت تایپ");
         FA.put("VeyraHideTypingDesc", "عدم ارسال وضعیت در حال نوشتن (typing...)");
         FA.put("VeyraHistoryMessages", "Message");
-        FA.put("ReactionMessage", "reaction");
+        FA.put("ReactionMessage", "reacted");
         FA.put("ModifiedMessage", "modified");
         FA.put("VeyraHistoryReactions", "Reaction");
         FA.put("VeyraImportSettings", "وارد کردن تنظیمات از JSON");
