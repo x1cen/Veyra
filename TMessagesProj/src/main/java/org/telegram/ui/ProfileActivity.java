@@ -4636,6 +4636,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 sendLogs(getParentActivity(), true);
             } else if (position == clearLogsRow) {
                 FileLog.cleanupLogs();
+                boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
+                BulletinFactory.of(this).createSimpleBulletin(
+                        R.raw.ic_delete,
+                        isFarsi ? "لاگ‌ها با موفقیت پاک شدند" : "Logs cleared successfully"
+                ).show();
             } else if (position == switchBackendRow) {
                 if (getParentActivity() == null) {
                     return;
