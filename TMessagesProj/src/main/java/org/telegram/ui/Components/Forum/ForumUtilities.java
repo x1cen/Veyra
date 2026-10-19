@@ -283,6 +283,8 @@ public class ForumUtilities {
 
         if (fromMessageId != 0) {
             args.putInt("message_id", fromMessageId);
+        } else if (topic.unread_count > 0 && topic.read_inbox_max_id != 0) {
+            args.putInt("message_id", Math.max(topic.id, topic.read_inbox_max_id));
         } else if (topic.read_inbox_max_id == 0) {
             //scroll to first message in topic
             args.putInt("message_id", topic.id);

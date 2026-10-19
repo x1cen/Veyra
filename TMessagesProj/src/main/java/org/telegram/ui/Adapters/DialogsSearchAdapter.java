@@ -1124,6 +1124,8 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
             query = null;
         }
         filterRecent(query);
+        sponsoredPeers.clear();
+        if (true) return;
         if (!TextUtils.equals(sponsoredQuery, query)) {
             sponsoredQuery = query;
             sponsoredPeers.clear();

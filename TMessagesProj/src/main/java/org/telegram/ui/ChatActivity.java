@@ -3115,13 +3115,24 @@ public class ChatActivity extends BaseFragment implements
                 getMessagesController().loadPeerSettings(currentUser, currentChat);
 
                 if (startLoadFromMessageId == 0) {
-                    SharedPreferences sharedPreferences = MessagesController.getNotificationsSettings(currentAccount);
-                    int messageId = sharedPreferences.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
-                    if (messageId != 0) {
-                        wasManualScroll = true;
-                        loadingFromOldPosition = true;
-                        startLoadFromMessageOffset = sharedPreferences.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
-                        startLoadFromMessageId = messageId;
+                    boolean isTopicChat = getTopicId() != 0 || isTopic || (currentChat != null && (ChatObject.isForum(currentChat) || ChatObject.isMonoForum(currentChat)));
+                    TLRPC.TL_forumTopic topic = null;
+                    if (isTopicChat) {
+                        try {
+                            topic = getMessagesController().getTopicsController().findTopic(dialog_id < 0 ? -dialog_id : dialog_id, getTopicId());
+                        } catch (Throwable ignore) {}
+                    }
+                    if (topic != null && topic.unread_count > 0 && topic.read_inbox_max_id > 0) {
+                        startLoadFromMessageId = Math.max(topic.id, topic.read_inbox_max_id);
+                    } else {
+                        SharedPreferences sharedPreferences = MessagesController.getNotificationsSettings(currentAccount);
+                        int messageId = sharedPreferences.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                        if (messageId != 0) {
+                            wasManualScroll = true;
+                            loadingFromOldPosition = true;
+                            startLoadFromMessageOffset = sharedPreferences.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                            startLoadFromMessageId = messageId;
+                        }
                     }
                 } else {
                     showScrollToMessageError = true;
@@ -10272,17 +10283,23 @@ public class ChatActivity extends BaseFragment implements
 
                 chatAdapter.updateRowsSafe();
             }
-            // Veyra: restore scroll position for newly selected topic
-            SharedPreferences pref = MessagesController.getNotificationsSettings(currentAccount);
-            int savedMid = pref.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
-            if (savedMid != 0) {
-                wasManualScroll = true;
-                loadingFromOldPosition = true;
-                startLoadFromMessageOffset = pref.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
-                startLoadFromMessageId = savedMid;
-            } else {
-                startLoadFromMessageId = 0;
+            // Veyra: restore scroll position or go to unread for newly selected topic
+            TLRPC.TL_forumTopic selectedTopic = topicId != 0 ? getMessagesController().getTopicsController().findTopic(-getDialogId(), topicId) : null;
+            if (selectedTopic != null && selectedTopic.unread_count > 0 && selectedTopic.read_inbox_max_id > 0) {
+                startLoadFromMessageId = Math.max(selectedTopic.id, selectedTopic.read_inbox_max_id);
                 startLoadFromMessageOffset = 0;
+            } else {
+                SharedPreferences pref = MessagesController.getNotificationsSettings(currentAccount);
+                int savedMid = pref.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                if (savedMid != 0) {
+                    wasManualScroll = true;
+                    loadingFromOldPosition = true;
+                    startLoadFromMessageOffset = pref.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                    startLoadFromMessageId = savedMid;
+                } else {
+                    startLoadFromMessageId = 0;
+                    startLoadFromMessageOffset = 0;
+                }
             }
             firstLoadMessages();
 
@@ -24694,9 +24711,8 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }
-                if (reactionsMentionCount <= 0) {
+                if (reactionsMentionCount < 0) {
                     reactionsMentionCount = 0;
-                    getMessagesController().markReactionsAsRead(dialogId, getTopicId());
                 }
                 updateReactionsMentionButton(true);
             }
