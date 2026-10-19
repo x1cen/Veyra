@@ -273,6 +273,7 @@ import org.telegram.ui.Components.Forum.ForumUtilities;
 import org.telegram.ui.Components.Premium.GiftPremiumBottomSheet;
 import org.telegram.ui.Components.Premium.LimitReachedBottomSheet;
 import org.telegram.ui.Components.Premium.PremiumFeatureBottomSheet;
+import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.ui.Components.Premium.PremiumPreviewBottomSheet;
 import org.telegram.ui.Components.Premium.boosts.BoostDialogs;
 import org.telegram.ui.Components.Premium.boosts.GiftInfoBottomSheet;
@@ -10148,10 +10149,25 @@ public class ChatActivity extends BaseFragment implements
 
         int index = 8;
         topicsTabs.setCurrentTopic(getTopicId());
+        // Veyra: restore last topic on reopen if none was explicitly requested
+        if (getTopicId() == 0) {
+            try {
+                long lastTopic = getMessagesController().getMainSettings().getLong("veyra_last_topic_" + dialog_id, 0);
+                if (lastTopic != 0) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (topicsTabs != null && getTopicId() == 0) topicsTabs.selectTopic(lastTopic, false);
+                    }, 150);
+                }
+            } catch (Throwable ignore) {}
+        }
         topicsTabs.setOnNewTopicSelected(() -> {
             presentFragment(TopicCreateFragment.create(-dialog_id, 0).setOpenInChatActivity(this));
         });
         topicsTabs.setOnTopicSelected((topicId, fromMessage) -> {
+            // Veyra: persist last selected topic so reopening the chat restores it
+            try {
+                getMessagesController().getMainSettings().edit().putLong("veyra_last_topic_" + dialog_id, topicId).apply();
+            } catch (Throwable ignore) {}
             if (topicId == getTopicId()) return;
             hasSendingMessagesInBotForum = false;
             if (updateStreamingTopic != null) {
@@ -35371,7 +35387,8 @@ public class ChatActivity extends BaseFragment implements
         } else if (chatMode == MODE_EDIT_BUSINESS_LINK && BusinessLinksActivity.closeRenameAlert(invoked)) {
             return false;
         } else if (ChatObject.isMonoForum(currentChat) && !isSubscriberSuggestions && topicsTabs != null && getTopicId() != 0) {
-            if (invoked) topicsTabs.selectTopic(0, topicChangedFromMessage);
+            // Veyra: back inside a topic exits the chat instead of switching to General
+            if (invoked) finishFragment();
             return false;
         } else if (chatMode == MODE_QUICK_REPLIES && !(QuickRepliesController.GREETING.equalsIgnoreCase(quickReplyShortcut) || QuickRepliesController.AWAY.equalsIgnoreCase(quickReplyShortcut)) && (messages.isEmpty() || threadMessageId == 0)) {
             if (invoked) showQuickRepliesRemoveAlert();
@@ -41383,15 +41400,12 @@ public class ChatActivity extends BaseFragment implements
                     .show(true);
                 return false;
             } else if (!getUserConfig().isPremium()) {
-                long send_as = ChatObject.getSendAsPeerId(currentChat, chatInfo, true);
-                MessageObject messageObject = cell.getMessageObject();
-                VeyraLocalTodoStorage.getInstance(currentAccount).saveLocalToggle(messageObject.getDialogId(), messageObject.getId(), task.id, enable, send_as);
-                if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaToDo) {
-                    MessageObject.toggleTodo(currentAccount, send_as, (TLRPC.TL_messageMediaToDo) messageObject.messageOwner.media, task.id, enable, ConnectionsManager.getInstance(currentAccount).getCurrentTime());
-                }
-                getMessagesStorage().toggleTodo(messageObject.getDialogId(), messageObject.getId(), task.id, enable, send_as);
-                cell.invalidate();
-                return true;
+                BulletinFactory.of(ChatActivity.this)
+                    .createSimpleBulletin(R.raw.star_premium_2, AndroidUtilities.premiumText(getString(R.string.TodoPremiumRequired), () -> {
+                        showDialog(new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false));
+                    }))
+                    .show(true);
+                return false;
             } else {
                 long send_as = ChatObject.getSendAsPeerId(currentChat, chatInfo, true);
                 VeyraLocalTodoStorage.getInstance(currentAccount).checkAndSyncPending(getSendMessagesHelper());

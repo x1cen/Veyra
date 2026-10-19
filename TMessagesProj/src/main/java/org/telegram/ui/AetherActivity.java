@@ -15,14 +15,11 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.veyra.client.aether.AetherConfig;
 import org.veyra.client.aether.AetherController;
-import org.veyra.client.aether.AetherDownloader;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -177,21 +174,22 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         // 3. Protocol Selection & Obfuscation
         r.add(VeyraSettingsRow.header("Protocol & Obfuscation"));
         int proto = AetherConfig.getProtocol();
+        // Consistent with reference: Smart = Smart, not a full phrase
         String protoStr;
         if (proto == AetherConfig.PROTOCOL_AUTO) {
-            protoStr = "Smart Auto (Iran Optimized)";
+            protoStr = "Smart (Auto)";
         } else if (proto == AetherConfig.PROTOCOL_WIREGUARD) {
             protoStr = "WireGuard";
         } else if (proto == AetherConfig.PROTOCOL_GOOL) {
-            protoStr = "Gool (WARP+WARP)";
+            protoStr = "WARP×2";
         } else if (proto == AetherConfig.PROTOCOL_MIM) {
-            protoStr = "MIM (MASQUE+MASQUE)";
+            protoStr = "MASQUE×2";
         } else {
             protoStr = "MASQUE";
         }
 
         r.add(VeyraSettingsRow.detail(
-                "Active Protocol",
+                "Transport Protocol",
                 () -> protoStr,
                 true,
                 this::showProtocolPicker
@@ -292,7 +290,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.toggle(
                 "Encrypted Client Hello",
-                "Hide SNI via ECH",
+                "Hide destination name (SNI) from DPI",
                 AetherConfig::isEch,
                 isChecked -> {
                     AetherConfig.setEch(isChecked);
@@ -300,6 +298,16 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 },
                 true
         ));
+
+        if (AetherConfig.isEch()) {
+            String echCfg = AetherConfig.getEchConfig();
+            r.add(VeyraSettingsRow.detail(
+                    "ECH Config (base64)",
+                    () -> TextUtils.isEmpty(echCfg) ? "Auto (fetch)" : "Custom",
+                    true,
+                    () -> promptTextInput("ECH Config (base64)", echCfg, "Leave empty for auto", AetherConfig::setEchConfig)
+            ));
+        }
 
         r.add(VeyraSettingsRow.toggle(
                 "Direct Iranian Sites",
@@ -378,12 +386,86 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                     AetherConfig.setQuickReconnect(isChecked);
                     reloadRows();
                 },
-                false
+                true
         ));
+
+        if (AetherConfig.isQuickReconnect()) {
+            r.add(VeyraSettingsRow.toggle(
+                    "Require Fast Endpoint",
+                    "Skip slow cached endpoints; rescan instead",
+                    AetherConfig::isFastEndpointOnly,
+                    isChecked -> {
+                        AetherConfig.setFastEndpointOnly(isChecked);
+                        reloadRows();
+                    },
+                    true
+            ));
+        }
 
         r.add(VeyraSettingsRow.shadow());
 
-        // 6. Manual Peers & Maintenance
+        // 6. Gool Mode (only when Gool is selected — reference core 2.3.0)
+        if (proto == AetherConfig.PROTOCOL_GOOL) {
+            r.add(VeyraSettingsRow.header("Gool Mode"));
+            int gm = AetherConfig.getGoolMode();
+            String gmStr = (gm == AetherConfig.GOOL_CLASSIC) ? "Classic (WireGuard→WireGuard)" : "Modern (WireGuard→MASQUE)";
+            r.add(VeyraSettingsRow.detail(
+                    "Transport Mode",
+                    () -> gmStr,
+                    false,
+                    this::showGoolModePicker
+            ));
+            r.add(VeyraSettingsRow.shadow());
+        }
+
+        // 7. Tor Boost / Bridges (visible when Tor is involved)
+        boolean isTorBackend = (backend == AetherConfig.BACKEND_TOR || backend == AetherConfig.BACKEND_AETHER_TOR
+                || backend == AetherConfig.BACKEND_TOR_AETHER || backend == AetherConfig.BACKEND_TOR_PSIPHON);
+        if (isTorBackend) {
+            r.add(VeyraSettingsRow.header("Tor Options"));
+            r.add(VeyraSettingsRow.detail(
+                    "Bridge Mode",
+                    () -> {
+                        int b = AetherConfig.getTorBridges();
+                        return b == 1 ? "Always use bridges" : (b == 2 ? "Never use bridges" : "Auto");
+                    },
+                    true,
+                    this::showTorBridgesPicker
+            ));
+            String tc = AetherConfig.getTorCountry().trim();
+            r.add(VeyraSettingsRow.detail(
+                    "Bridge Country",
+                    () -> TextUtils.isEmpty(tc) ? "Auto-detect" : tc.toLowerCase(),
+                    true,
+                    () -> promptTextInput("Bridge Country (2-letter)", tc, "e.g. ir", s -> AetherConfig.setTorCountry(s.trim()))
+            ));
+            String tcheck = AetherConfig.getTorCheck().trim();
+            r.add(VeyraSettingsRow.detail(
+                    "Reachability Check",
+                    () -> TextUtils.isEmpty(tcheck) ? "check.torproject.org:443" : tcheck,
+                    true,
+                    () -> promptTextInput("Reachability Check", tcheck, "check.torproject.org:443", AetherConfig::setTorCheck)
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Bootstrap Patience",
+                    () -> {
+                        int v = AetherConfig.getTorDirectSecs();
+                        return v > 0 ? v + "s" : "Auto (75s)";
+                    },
+                    true,
+                    this::showTorDirectSecsPicker
+            ));
+            String bl = AetherConfig.getTorBridgeLines().trim();
+            r.add(VeyraSettingsRow.detail(
+                    "Custom Bridges",
+                    () -> TextUtils.isEmpty(bl) ? "None" : (bl.split("\\n").length + " line(s)"),
+                    false,
+                    () -> promptTextInput("Custom Bridge Lines", bl, "obfs4 ...", AetherConfig::setTorBridgeLines)
+            ));
+            r.add(VeyraSettingsRow.shadow());
+        }
+
+        // 8. Manual Peers & Maintenance
         r.add(VeyraSettingsRow.header("Endpoints & Maintenance"));
 
         if (proto == AetherConfig.PROTOCOL_GOOL) {
@@ -410,13 +492,6 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                     () -> promptTextInput("Manual Peer", peer, "IP:Port", AetherConfig::setPeer)
             ));
         }
-
-        r.add(VeyraSettingsRow.detail(
-                "Reinstall Engine",
-                () -> "Download fresh binary",
-                false,
-                this::redownloadCore
-        ));
 
         return r;
     }
@@ -482,13 +557,13 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
     private void showProtocolPicker() {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle("Select Protocol");
+        builder.setTitle("Transport Protocol");
         String[] options = new String[]{
-                "Smart Auto (Iran Optimized)",
+                "Smart (Auto)",
                 "MASQUE",
                 "WireGuard",
-                "Gool (WARP+WARP)",
-                "MIM (MASQUE+MASQUE)"
+                "WARP×2 (Gool-like)",
+                "MASQUE×2 (MIM)"
         };
         builder.setItems(options, (d, which) -> {
             AetherConfig.setProtocol(which);
@@ -566,6 +641,46 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         showDialog(builder.create());
     }
 
+    private void showGoolModePicker() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Gool Mode");
+        String[] options = new String[]{"Modern (WireGuard over MASQUE)", "Classic (WireGuard over WireGuard)"};
+        builder.setItems(options, (d, which) -> {
+            AetherConfig.setGoolMode(which);
+            reloadRows();
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showTorBridgesPicker() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Bridge Mode");
+        String[] options = new String[]{"Auto", "Always use bridges", "Never use bridges"};
+        builder.setItems(options, (d, which) -> {
+            AetherConfig.setTorBridges(which);
+            reloadRows();
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showTorDirectSecsPicker() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Bootstrap Patience");
+        int[] secs = new int[]{0, 20, 45, 75, 120, 240};
+        String[] options = new String[]{"Auto (75s)", "20s", "45s", "75s", "120s", "240s"};
+        builder.setItems(options, (d, which) -> {
+            AetherConfig.setTorDirectSecs(secs[which]);
+            reloadRows();
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
     private void promptTextInput(String title, String currentVal, String hint, OnTextEntered callback) {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -623,36 +738,6 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
 
         builder.setView(scrollView);
         builder.setPositiveButton(LocaleController.getString("Close", R.string.Close), null);
-        showDialog(builder.create());
-    }
-
-    private void redownloadCore() {
-        if (getParentActivity() == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle("Redownload Core");
-        builder.setMessage("Fetch the latest release binary from GitHub?");
-        builder.setPositiveButton("Download", (d, which) -> {
-            BulletinFactory.of(AetherActivity.this).createSimpleBulletin(R.raw.chats_infotip, "Downloading core...").show();
-            AetherDownloader.downloadCore(new AetherDownloader.DownloadListener() {
-                @Override
-                public void onProgress(int percent, long downloadedBytes, long totalBytes) {}
-
-                @Override
-                public void onSuccess(File binaryFile) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        BulletinFactory.of(AetherActivity.this).createSimpleBulletin(R.raw.download_finish, "Core downloaded").show();
-                    });
-                }
-
-                @Override
-                public void onError(Exception error) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        BulletinFactory.of(AetherActivity.this).createSimpleBulletin(R.raw.error, "Failed: " + error.getMessage()).show();
-                    });
-                }
-            });
-        });
-        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());
     }
 

@@ -48,6 +48,21 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
+        // Top container: no header title — Aether + Auto Discovery
+        r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
+                R.drawable.msg_channel,
+                "Aether Anti-Censorship",
+                () -> presentFragment(new AetherActivity())
+        ));
+        r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom,
+                R.drawable.msg_policy,
+                "Auto Discovery",
+                () -> presentFragment(new ProxyDiscoveryActivity())
+        ));
+        r.add(VeyraSettingsRow.shadow());
+
         // Section 1: Features & Privacy
         r.add(VeyraSettingsRow.header("Features & Privacy"));
         r.add(VeyraSettingsRow.category(
@@ -104,14 +119,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        // Section 3: General & Tools
+        // Section 3: Network & Tools (Aether moved to the top container)
         r.add(VeyraSettingsRow.header("Network & Tools"));
-        r.add(VeyraSettingsRow.category(
-                IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
-                R.drawable.msg_channel,
-                "Aether Anti-Censorship",
-                () -> presentFragment(new AetherActivity())
-        ));
         r.add(VeyraSettingsRow.category(
                 IconBackgroundColors.GRAY.top, IconBackgroundColors.GRAY.bottom,
                 R.drawable.msg_settings_old,
