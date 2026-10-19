@@ -484,6 +484,28 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
+        if (object instanceof TLRPC.TL_messages_getSponsoredMessages) {
+            if (onComplete != null) {
+                TLRPC.TL_messages_sponsoredMessagesEmpty res = new TLRPC.TL_messages_sponsoredMessagesEmpty();
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
+        if (object instanceof TLRPC.TL_contacts_getSponsoredPeers) {
+            if (onComplete != null) {
+                TLRPC.TL_contacts_sponsoredPeersEmpty res = new TLRPC.TL_contacts_sponsoredPeersEmpty();
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
         if (object instanceof TLRPC.TL_messages_readReactions) {
             long peerDialogId = 0;
             try {
