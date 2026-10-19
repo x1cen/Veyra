@@ -16589,6 +16589,7 @@ public class MessagesStorage extends BaseController {
                                                 org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText, oldMessage);
                                             }
                                         }
+                                    }
                                     int send_state = cursor.intValue(5);
                                     if (send_state != 3) {
                                         if (MessageObject.getFileName(oldMessage).equals(MessageObject.getFileName(message))) {
