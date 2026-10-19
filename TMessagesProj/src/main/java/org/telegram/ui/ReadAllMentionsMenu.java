@@ -61,17 +61,24 @@ public class ReadAllMentionsMenu {
         scrimPopupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
         scrimPopupWindow.getContentView().setFocusableInTouchMode(true);
 
-        PointF pf = new PointF();
-        ViewPositionWatcher.computeCoordinatesInParent(mentionButton, contentView, pf);
+        int[] location = new int[2];
+        mentionButton.getLocationInWindow(location);
+        int popupWidth = popupWindowLayout.getMeasuredWidth();
+        int popupHeight = popupWindowLayout.getMeasuredHeight();
 
-        float x = pf.x + mentionButton.getWidth() - popupWindowLayout.getMeasuredWidth() + AndroidUtilities.dp(8);
-        float y = pf.y - popupWindowLayout.getMeasuredHeight();
-        if (AndroidUtilities.isTablet()) {
-            View v = navigationLayout.getView();
-            x += v.getX() + v.getPaddingLeft();
-            y += v.getY() + v.getPaddingTop();
+        int x;
+        if (LocaleController.isRTL) {
+            x = location[0] - AndroidUtilities.dp(8);
+        } else {
+            x = location[0] + mentionButton.getWidth() - popupWidth + AndroidUtilities.dp(8);
         }
-        scrimPopupWindow.showAtLocation(contentView, Gravity.LEFT | Gravity.TOP, (int) x, (int) y);
+        x = Math.max(AndroidUtilities.dp(8), Math.min(x, AndroidUtilities.displaySize.x - popupWidth - AndroidUtilities.dp(8)));
+
+        int y = location[1] - popupHeight - AndroidUtilities.dp(4);
+        if (y < AndroidUtilities.statusBarHeight + AndroidUtilities.dp(48)) {
+            y = location[1] + mentionButton.getHeight() + AndroidUtilities.dp(4);
+        }
+        scrimPopupWindow.showAtLocation(mentionButton, Gravity.LEFT | Gravity.TOP, x, y);
         return scrimPopupWindow;
     }
 }

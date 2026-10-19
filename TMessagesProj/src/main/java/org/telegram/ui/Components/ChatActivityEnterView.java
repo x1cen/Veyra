@@ -4905,7 +4905,14 @@ public class ChatActivityEnterView extends FrameLayout implements
             } else {
                 y = location[1] - sendPopupLayout.getMeasuredHeight() - dp(2);
             }
-            sendPopupWindow.showAtLocation(view, Gravity.LEFT | Gravity.TOP, location[0] + view.getMeasuredWidth() - sendPopupLayout.getMeasuredWidth() + dp(8), y);
+            int popupX;
+            if (LocaleController.isRTL) {
+                popupX = location[0] - dp(8);
+            } else {
+                popupX = location[0] + view.getMeasuredWidth() - sendPopupLayout.getMeasuredWidth() + dp(8);
+            }
+            popupX = Math.max(dp(8), Math.min(popupX, AndroidUtilities.displaySize.x - sendPopupLayout.getMeasuredWidth() - dp(8)));
+            sendPopupWindow.showAtLocation(view, Gravity.LEFT | Gravity.TOP, popupX, y);
             sendPopupWindow.dimBehind();
             sendButton.invalidate();
             try {
