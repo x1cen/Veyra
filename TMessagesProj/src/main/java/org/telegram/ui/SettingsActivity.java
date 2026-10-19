@@ -769,7 +769,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
             items.add(UItem.asHeader("Experimental"));
             items.add(SettingCell.Factory.of(24, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.RoundVideoSettings)));
-            items.add(SettingCell.Factory.of(25, 0xFF3390EC, 0xFF1D77C7, 0, LocaleController.getString(R.string.MicrophoneForVoiceMessages)));
             items.add(SettingCell.Factory.of(26, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.AudioRecorderSettings)));
         }
 
@@ -925,24 +924,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             case 24: {
                 presentFragment(new RoundVideoSettingsActivity());
-                break;
-            }
-            case 25: {
-                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                builder.setTitle(LocaleController.getString(R.string.MicrophoneForVoiceMessages));
-                builder.setItems(new CharSequence[]{
-                        LocaleController.getString(R.string.MicrophoneForVoiceMessagesBuiltIn),
-                        LocaleController.getString(R.string.MicrophoneForVoiceMessagesScoIfConnected)
-                }, (dialog, which) -> {
-                    SharedConfig.recordViaSco = (which == 1);
-                    android.content.SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
-                    editor.putBoolean("record_via_sco", SharedConfig.recordViaSco);
-                    editor.apply();
-                    if (listView != null && listView.adapter != null) {
-                        listView.adapter.update(true);
-                    }
-                });
-                showDialog(builder.create());
                 break;
             }
             case 26: {
