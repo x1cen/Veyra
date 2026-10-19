@@ -1633,12 +1633,12 @@ public class MessagesController extends BaseController implements NotificationCe
         youtubePipType = mainPreferences.getString("youtubePipType", "disabled");
         keepAliveService = mainPreferences.getBoolean("keepAliveService", false);
         backgroundConnection = mainPreferences.getBoolean("backgroundConnection", false);
-        promoDialogId = mainPreferences.getLong("proxy_dialog", 0);
-        nextPromoInfoCheckTime = mainPreferences.getInt("nextPromoInfoCheckTime", 0);
-        promoDialogType = mainPreferences.getInt("promo_dialog_type", 0);
-        promoPsaMessage = mainPreferences.getString("promo_psa_message", null);
-        promoPsaType = mainPreferences.getString("promo_psa_type", null);
-        proxyDialogAddress = mainPreferences.getString("proxyDialogAddress", null);
+        promoDialogId = 0;
+        nextPromoInfoCheckTime = Integer.MAX_VALUE;
+        promoDialogType = 0;
+        promoPsaMessage = null;
+        promoPsaType = null;
+        proxyDialogAddress = null;
         venueSearchBot = mainPreferences.getString("venueSearchBot", "foursquare");
         storyVenueSearchBot = mainPreferences.getString("storyVenueSearchBot", "foursquare");
         gifSearchBot = mainPreferences.getString("gifSearchBot", "gif");
@@ -10910,6 +10910,13 @@ public class MessagesController extends BaseController implements NotificationCe
     private long lastCheckPromoInfoTime;
 
     private void checkPromoInfoInternal(boolean reset) {
+        if (promoDialog != null) {
+            AndroidUtilities.runOnUIThread(this::removePromoDialog);
+        }
+        promoDialog = null;
+        promoDialogId = 0;
+        promoDialogType = 0;
+        if (true) return;
         if (reset && checkingPromoInfo) {
             checkingPromoInfo = false;
         }
@@ -11215,7 +11222,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isPromoDialog(long did, boolean checkLeft) {
-        return promoDialog != null && promoDialog.id == did && (!checkLeft || isLeftPromoChannel);
+        return false;
     }
 
     private String getUserNameForTyping(TLRPC.User user) {
