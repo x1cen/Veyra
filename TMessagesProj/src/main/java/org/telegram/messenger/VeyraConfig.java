@@ -555,16 +555,7 @@ public class VeyraConfig {
     public static Boolean getException(int category, long dialogId) {
         HashMap<Long, Boolean> map = getExceptions(category);
         synchronized (map) {
-            Boolean val = map.get(dialogId);
-            if (val != null) return val;
-            if (dialogId < 0) {
-                val = map.get(-dialogId);
-                if (val != null) return val;
-            } else if (dialogId > 0) {
-                val = map.get(-dialogId);
-                if (val != null) return val;
-            }
-            return null;
+            return map.get(dialogId);
         }
     }
 
@@ -611,7 +602,7 @@ public class VeyraConfig {
         }
     }
 
-    private static void saveExceptions(int category) {
+    public static void saveExceptions(int category) {
         HashMap<Long, Boolean> map = getExceptions(category);
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Long, Boolean> entry : map.entrySet()) {
@@ -839,10 +830,7 @@ public class VeyraConfig {
                 if (chatId < 0) chatId = -chatId;
                 org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
                 if (chat == null) {
-                    if (antiDeleteGroupsOnlyPrivate || antiDeleteChannelsOnlyPrivate) {
-                        return false;
-                    }
-                    return antiDeleteGroups;
+                    return antiDeleteGroups || antiDeleteChannels;
                 }
                 boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPublic = ChatObject.isPublic(chat);
@@ -883,7 +871,7 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
-                if (chat == null) return editHistoryGroups;
+                if (chat == null) return editHistoryGroups || editHistoryChannels;
                 boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPublic = ChatObject.isPublic(chat);
                 boolean isPrivate = !isPublic;
@@ -923,7 +911,7 @@ public class VeyraConfig {
             } else {
                 long chatId = -dialogId;
                 org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
-                if (chat == null) return reactionHistoryGroups;
+                if (chat == null) return reactionHistoryGroups || reactionHistoryChannels;
                 boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
                 boolean isPublic = ChatObject.isPublic(chat);
                 boolean isPrivate = !isPublic;

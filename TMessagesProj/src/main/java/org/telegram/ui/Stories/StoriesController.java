@@ -1295,7 +1295,7 @@ public class StoriesController {
             if (!profile) {
                 storiesStorage.updateMaxReadId(dialogId, newReadId);
             }
-            if (!org.telegram.messenger.VeyraConfig.isGhostHideStories()) {
+            if (!org.telegram.messenger.VeyraConfig.isGhostHideStories(dialogId)) {
                 TL_stories.TL_stories_readStories req = new TL_stories.TL_stories_readStories();
                 req.peer = MessagesController.getInstance(currentAccount).getInputPeer(dialogId);
                 req.max_id = storyItem.id;

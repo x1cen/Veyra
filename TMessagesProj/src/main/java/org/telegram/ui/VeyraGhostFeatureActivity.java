@@ -413,6 +413,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
             HashMap<Long, Boolean> map = VeyraConfig.getExceptions(category);
             synchronized (map) {
                 map.clear();
+                VeyraConfig.saveExceptions(category);
             }
             updateRows();
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "All exceptions removed").show();

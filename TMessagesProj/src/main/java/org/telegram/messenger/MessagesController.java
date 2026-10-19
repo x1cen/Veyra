@@ -11441,6 +11441,32 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean sendTyping(long dialogId, long threadMsgId, int action, String emojicon, int classGuid) {
+        // Defense-in-depth: block typing at controller when ghost hide typing is enabled
+        try {
+            if (org.telegram.messenger.VeyraConfig.isGhostHideTyping(dialogId)) {
+                boolean isTypingAction = action == 0 || action == 2 || action == 10 || action == 11;
+                boolean isVoiceAction = action == 1 || action == 9;
+                boolean isVideoAction = action == 5 || action == 7 || action == 8;
+                boolean isFileAction = action == 3 || action == 4;
+                boolean isGameAction = action == 6;
+                boolean drop = false;
+                if (isTypingAction && org.telegram.messenger.VeyraConfig.ghostTypingText) drop = true;
+                else if (isVoiceAction && org.telegram.messenger.VeyraConfig.ghostTypingVoice) drop = true;
+                else if (isVideoAction && org.telegram.messenger.VeyraConfig.ghostTypingVideo) drop = true;
+                else if (isFileAction && org.telegram.messenger.VeyraConfig.ghostTypingFiles) drop = true;
+                else if (isGameAction && org.telegram.messenger.VeyraConfig.isGhostHideUpload(dialogId)) drop = true;
+                else if (!isTypingAction && !isVoiceAction && !isVideoAction && !isFileAction && !isGameAction) {
+                    if (org.telegram.messenger.VeyraConfig.isGhostHideUpload(dialogId)) drop = true;
+                }
+                // For encrypted dialogs, also check secret-read hide as fallback
+                if (!drop && org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId) && org.telegram.messenger.VeyraConfig.isGhostHideSecretRead()) {
+                    drop = true;
+                }
+                if (drop) return false;
+            } else if (org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId) && org.telegram.messenger.VeyraConfig.isGhostHideSecretRead()) {
+                return false;
+            }
+        } catch (Throwable ignore) {}
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
         }
@@ -17701,7 +17727,7 @@ public class MessagesController extends BaseController implements NotificationCe
             });
             return;
         }
-        final boolean isAntiDeleteAllowed = VeyraConfig.isChatTypeAllowedForAntiDelete(dialogId);
+        final boolean isAntiDeleteAllowed = VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, dialogId);
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             AndroidUtilities.runOnUIThread(() -> {
                 boolean isRemotePeerRevoke = true;
@@ -21438,7 +21464,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 long key = deletedMessages.keyAt(a);
                 List<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
-                    boolean allowAntiDelete = VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, key);
+                    boolean allowAntiDelete = key == 0 ? VeyraConfig.antiDelete : VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, key);
                     if (allowAntiDelete) {
                         List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
                         getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);

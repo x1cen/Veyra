@@ -5302,10 +5302,7 @@ public class MessagesStorage extends BaseController {
                                     topicId = MessageObject.getSavedDialogId(selfId, message);
                                 }
                                 MessageObject.updateReactions(message, reactions);
-                                if (!org.veyra.client.VeyraEditHistoryManager.hasHistory(dialogId, msgId)) {
-                                    message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                    message.edit_date = 0;
-                                }
+                                // Do not clear edited flag on reaction updates — preserve server-set edited state.
                                 if (i == 0 && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
@@ -15239,6 +15236,9 @@ public class MessagesStorage extends BaseController {
 
                     database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
                     org.veyra.client.VeyraAntiDelete.markChatDeleted(did);
+                    if (!dialogsToUpdate.contains(did)) {
+                        dialogsToUpdate.add(did);
+                    }
                 } catch (Exception e) {
                     //we don't care, made to ignore unique key errors
                 }
@@ -16544,6 +16544,11 @@ public class MessagesStorage extends BaseController {
                             channelId = message.peer_id.channel_id;
                         }
 
+                        // Veyra edit history: this block currently runs only for load_type == -2 (single-message reload / edit update).
+                        // Normal history pagination (load_type 0=backward, 1=forward, 2=from-unread, 3=around message, 4=around date)
+                        // can also carry edited messages from the server; if edit history appears missing after scrolling/loading
+                        // older history, broaden this check to include those load types (e.g. `load_type == -2 || load_type == LOAD_BACKWARD || ...`).
+                        // Kept as -2-only for now to avoid per-message DB lookups during bulk history inserts.
                         if (load_type == -2) {
                             cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid, data, ttl, mention, read_state, send_state, custom_params FROM messages_v2 WHERE mid = %d AND uid = %d", message.id, MessageObject.getDialogId(message)));
                             boolean exist;

@@ -3977,10 +3977,8 @@ public class MessageObject {
         }
         message.reactions = reactions;
         message.flags |= 1048576;
-        if (message.edit_date == 0 || !org.veyra.client.VeyraEditHistoryManager.hasHistory(MessageObject.getDialogId(message), message.id)) {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-            message.edit_date = 0;
-        }
+        // Do not clear edited flag on reaction updates — preserve server-set edited state.
+        // Previously this block cleared MESSAGE_FLAG_EDITED when hasHistory was false, which hid legitimate server edits.
     }
 
     public boolean hasReactions() {
