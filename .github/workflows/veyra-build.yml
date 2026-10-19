@@ -98,6 +98,9 @@ jobs:
                         TMessagesProj/jni/arm64-v8a/libaether.so
                         TMessagesProj/jni/armeabi-v7a/libaether.so
                         TMessagesProj/jni/x86_64/libaether.so
+                        TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so
+                        TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a/libaether.so
+                        TMessagesProj_AppStandalone/src/main/jniLibs/x86_64/libaether.so
                     # Key on aether version only — jni source changes must NOT bust aether binary cache
                     key: aether-v2.3.0-bins
                     restore-keys: |
@@ -198,12 +201,26 @@ jobs:
 
             -   name: Setup Aether Core
                 run: |
-                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ] && [ -s "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ]; then echo "Aether cached — skip download"; ls -lh "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"; exit 0; fi
+                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ] && [ -s "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ]; then
+                      echo "Aether cached — ensure jniLibs copy..."
+                      mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a"
+                      cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so" 2>/dev/null || true
+                      if [ "${TARGET_ARCH}" = "all" ]; then
+                        mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/x86_64"
+                        cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a/libaether.so" 2>/dev/null || true
+                        cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/x86_64/libaether.so" 2>/dev/null || true
+                      fi
+                      ls -lh "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
+                      exit 0
+                    fi
                     mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a"
                     echo "Fetching Aether arm64 core..."
                     curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-arm64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a" aether
                     mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
                     chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
+                    # Bundle as jniLibs so it extracts to nativeLibraryDir (executable, not noexec files/)
+                    mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a"
+                    cp "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so"
                     if [ "${TARGET_ARCH}" = "all" ]; then
                         mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64"
                         curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-armv7.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" aether

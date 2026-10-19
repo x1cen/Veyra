@@ -29,12 +29,24 @@ public class LauncherIconController {
         PackageManager pm = ctx.getPackageManager();
         try {
             org.telegram.messenger.FileLog.d("LauncherIconController: switching icon to " + icon.key);
+            // Enable target first, then disable others — this order forces a launcher refresh on Samsung/OneUI
             pm.setComponentEnabledSetting(icon.getComponentName(ctx), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
             for (LauncherIcon i : LauncherIcon.values()) {
                 if (i != icon) {
                     pm.setComponentEnabledSetting(i.getComponentName(ctx), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
                 }
             }
+            // Samsung One UI fix: activity-alias via DONT_KILL_APP often does not invalidate the
+            // launcher icon cache until a second PACKAGE_CHANGED. Re-assert after a short tick.
+            try {
+                android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                android.content.ComponentName target = icon.getComponentName(ctx);
+                h.postDelayed(() -> {
+                    try {
+                        pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+                    } catch (Throwable ignore) {}
+                }, 600);
+            } catch (Throwable ignore) {}
             org.telegram.messenger.FileLog.d("LauncherIconController: successfully switched icon to " + icon.key);
         } catch (Exception e) {
             org.telegram.messenger.FileLog.e("LauncherIconController: failed to switch icon", e);
