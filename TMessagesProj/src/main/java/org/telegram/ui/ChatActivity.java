@@ -4683,7 +4683,6 @@ public class ChatActivity extends BaseFragment implements
         }
 
         if (headerItem != null) {
-            headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
             headerItem.lazilyAddSubItem(veyra_advanced, R.drawable.msg_settings_old, "Advanced");
         }
 
@@ -12477,17 +12476,6 @@ public class ChatActivity extends BaseFragment implements
             icons.add(R.drawable.msg_go_up);
             actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
         }
-
-        items.add(LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
-        icons.add(R.drawable.msg_copy);
-        actions.add(() -> {
-            AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
-            BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
-        });
-
-        items.add(LocaleController.getString("ViewDetails", R.string.ViewDetails));
-        icons.add(R.drawable.msg_info);
-        actions.add(this::showDetailsJson);
 
         int[] iconsArray = new int[icons.size()];
         for (int i = 0; i < icons.size(); i++) {
@@ -34601,9 +34589,7 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_EDIT_TODO:
             case OPTION_ADD_TO_TODO: {
-                if (!getUserConfig().isPremium()) {
-                    showDialog(new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false));
-                } else {
+                if (true) {
                     final MessageObject object = selectedObject;
                     final boolean adding = option == OPTION_ADD_TO_TODO;
                     final int oldAnswersCount;
@@ -41203,14 +41189,18 @@ public class ChatActivity extends BaseFragment implements
                     .show(true);
                 return false;
             } else if (!getUserConfig().isPremium()) {
-                BulletinFactory.of(ChatActivity.this)
-                    .createSimpleBulletin(R.raw.star_premium_2, AndroidUtilities.premiumText(getString(R.string.TodoPremiumRequired), () -> {
-                        showDialog(new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false));
-                    }))
-                    .show(true);
-                return false;
+                long send_as = ChatObject.getSendAsPeerId(currentChat, chatInfo, true);
+                MessageObject messageObject = cell.getMessageObject();
+                VeyraLocalTodoStorage.getInstance(currentAccount).saveLocalToggle(messageObject.getDialogId(), messageObject.getId(), task.id, enable, send_as);
+                if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaToDo) {
+                    MessageObject.toggleTodo(currentAccount, send_as, (TLRPC.TL_messageMediaToDo) messageObject.messageOwner.media, task.id, enable, ConnectionsManager.getInstance(currentAccount).getCurrentTime());
+                }
+                getMessagesStorage().toggleTodo(messageObject.getDialogId(), messageObject.getId(), task.id, enable, send_as);
+                cell.invalidate();
+                return true;
             } else {
                 long send_as = ChatObject.getSendAsPeerId(currentChat, chatInfo, true);
+                VeyraLocalTodoStorage.getInstance(currentAccount).checkAndSyncPending(getSendMessagesHelper());
                 getSendMessagesHelper().toggleTodo(send_as, cell.getMessageObject(), task, enable, null);
                 return true;
             }

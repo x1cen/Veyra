@@ -39,104 +39,9 @@ import java.util.List;
 
 public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
-    private boolean unlocked = false;
-    private FrameLayout lockContainer;
-    private EditTextBoldCursor lockEditText;
-
     @Override
     protected String getScreenTitle() {
         return LocaleController.getString("VeyraSettings", R.string.VeyraSettings);
-    }
-
-    @Override
-    public View createView(Context context) {
-        View view = super.createView(context);
-
-        if (VeyraConfig.hasSettingsLock() && !unlocked) {
-            setupLockOverlay(context);
-        }
-
-        return view;
-    }
-
-    private void setupLockOverlay(Context context) {
-        if (!(fragmentView instanceof FrameLayout)) return;
-        FrameLayout root = (FrameLayout) fragmentView;
-
-        boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-
-        lockContainer = new FrameLayout(context);
-        lockContainer.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        lockContainer.setClickable(true);
-
-        LinearLayout content = new LinearLayout(context);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER_HORIZONTAL);
-        lockContainer.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 32, 0, 32, 0));
-
-        TextView titleView = new TextView(context);
-        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        titleView.setGravity(Gravity.CENTER_HORIZONTAL);
-        titleView.setText(isFarsi ? "تنظیمات ویرا قفل است" : "Veyra Settings Locked");
-        content.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 8));
-
-        TextView descView = new TextView(context);
-        descView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        descView.setGravity(Gravity.CENTER_HORIZONTAL);
-        descView.setText(isFarsi ? "برای ورود، رمز عبور را وارد کنید" : "Enter your passcode to continue");
-        content.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 24));
-
-        lockEditText = new EditTextBoldCursor(context);
-        lockEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
-        lockEditText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        lockEditText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        lockEditText.setTransformationMethod(android.text.method.PasswordTransformationMethod.getInstance());
-        lockEditText.setSingleLine(true);
-        lockEditText.setMaxLines(1);
-        lockEditText.setGravity(Gravity.CENTER);
-        lockEditText.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        lockEditText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        lockEditText.setCursorSize(AndroidUtilities.dp(22));
-        lockEditText.setCursorWidth(1.5f);
-        lockEditText.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(24)});
-        content.addView(lockEditText, LayoutHelper.createLinear(240, 44, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
-
-        lockEditText.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                checkUnlock();
-                return true;
-            }
-            return false;
-        });
-
-        root.addView(lockContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        lockEditText.postDelayed(() -> {
-            if (lockEditText != null) {
-                lockEditText.requestFocus();
-                AndroidUtilities.showKeyboard(lockEditText);
-            }
-        }, 200);
-    }
-
-    private void checkUnlock() {
-        if (lockEditText == null) return;
-        String code = lockEditText.getText().toString();
-        if (VeyraConfig.checkSettingsLockCode(code)) {
-            unlocked = true;
-            AndroidUtilities.hideKeyboard(lockEditText);
-            if (lockContainer != null && fragmentView instanceof FrameLayout) {
-                ((FrameLayout) fragmentView).removeView(lockContainer);
-                lockContainer = null;
-            }
-        } else {
-            AndroidUtilities.shakeView(lockEditText);
-            boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
-            BulletinFactory.of(VeyraSettingsActivity.this).createErrorBulletin(isFarsi ? "رمز نادرست است" : "Wrong passcode").show();
-        }
     }
 
     @Override
@@ -200,7 +105,13 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.shadow());
 
         // Section 3: General & Tools
-        r.add(VeyraSettingsRow.header("General"));
+        r.add(VeyraSettingsRow.header("Network & Tools"));
+        r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
+                R.drawable.msg_channel,
+                "Aether Anti-Censorship",
+                () -> presentFragment(new AetherActivity())
+        ));
         r.add(VeyraSettingsRow.category(
                 IconBackgroundColors.GRAY.top, IconBackgroundColors.GRAY.bottom,
                 R.drawable.msg_settings_old,

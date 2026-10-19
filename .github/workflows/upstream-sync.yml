@@ -1,0 +1,106 @@
+name: Upstream Telegram Sync & Release Automation
+
+on:
+    schedule:
+        # Check every day at 04:00 UTC
+        - cron: '0 4 * * *'
+    workflow_dispatch:
+        inputs:
+            force-check:
+                description: 'Force check even if no new tag'
+                type: boolean
+                default: false
+
+permissions:
+    contents: write
+    issues: write
+    actions: write
+
+jobs:
+    sync:
+        name: Check & Sync Upstream Telegram
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Checkout dev branch
+                uses: actions/checkout@v6
+                with:
+                    ref: dev
+                    fetch-depth: 0
+                    token: ${{ secrets.GITHUB_TOKEN }}
+
+            -   name: Configure Git Identity
+                run: |
+                    git config --global user.name "x1cen"
+                    git config --global user.email "x1cen@users.noreply.github.com"
+
+            -   name: Setup Upstream Remote
+                run: |
+                    git remote add upstream https://github.com/DrKLO/Telegram.git || git remote set-url upstream https://github.com/DrKLO/Telegram.git
+                    git fetch upstream master --tags
+
+            -   name: Check for Upstream Updates
+                id: check_upstream
+                run: |
+                    UPSTREAM_HEAD=$(git rev-parse upstream/master)
+                    DEV_MERGE_BASE=$(git merge-base dev upstream/master || echo "")
+                    LATEST_TAG=$(git describe --tags --abbrev=0 upstream/master 2>/dev/null || echo "latest")
+                    
+                    echo "UPSTREAM_HEAD=$UPSTREAM_HEAD" >> $GITHUB_OUTPUT
+                    echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+                    if [ "$UPSTREAM_HEAD" = "$DEV_MERGE_BASE" ] && [ "${{ inputs.force-check }}" != "true" ]; then
+                        echo "STATUS=UP_TO_DATE" >> $GITHUB_OUTPUT
+                        echo "Dev branch is already up-to-date with upstream/master ($UPSTREAM_HEAD)."
+                    else
+                        echo "STATUS=NEW_COMMITS" >> $GITHUB_OUTPUT
+                        echo "New commits detected in upstream/master. Target tag: $LATEST_TAG"
+                    fi
+
+            -   name: Attempt Merge into dev
+                id: merge_attempt
+                if: steps.check_upstream.outputs.STATUS == 'NEW_COMMITS'
+                env:
+                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    LATEST_TAG: ${{ steps.check_upstream.outputs.LATEST_TAG }}
+                run: |
+                    git checkout dev
+                    echo "Attempting merge of upstream/master into dev..."
+                    if git merge --no-commit --no-ff upstream/master; then
+                        echo "HAS_CONFLICT=false" >> $GITHUB_OUTPUT
+                        git commit -m "chore(upstream): sync upstream ${LATEST_TAG}"
+                        git push origin dev
+                        echo "Successfully merged upstream into dev."
+                    else
+                        echo "HAS_CONFLICT=true" >> $GITHUB_OUTPUT
+                        CONFLICTING_FILES=$(git status --porcelain | grep '^UU\|^AA\|^DD\|^DU\|^UD' | awk '{print $2}')
+                        echo "Merge conflict detected!"
+                        git merge --abort
+                        
+                        BRANCH_NAME="sync/conflict-${LATEST_TAG}-$(date +%s)"
+                        git checkout -b "$BRANCH_NAME"
+                        git merge -s ours upstream/master -m "chore: baseline before conflict resolution for ${LATEST_TAG}"
+                        git push origin "$BRANCH_NAME"
+
+                        gh issue create \
+                            --title "⚠️ [Upstream Sync Conflict] Telegram ${LATEST_TAG}" \
+                            --body "An upstream update from Telegram (${LATEST_TAG}) was detected and attempted to be merged into dev, but encountered merge conflicts. Conflicting files:\n${CONFLICTING_FILES}\n\nPlease inspect branch: ${BRANCH_NAME}" \
+                            --label "bug" || true
+                    fi
+
+            -   name: Apply to veyra & Trigger Stable Release
+                if: steps.check_upstream.outputs.STATUS == 'NEW_COMMITS' && steps.merge_attempt.outputs.HAS_CONFLICT == 'false'
+                env:
+                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    LATEST_TAG: ${{ steps.check_upstream.outputs.LATEST_TAG }}
+                run: |
+                    echo "No conflicts! Merging dev into veyra release branch..."
+                    git checkout veyra
+                    git merge dev -m "chore(release): merge dev into veyra for ${LATEST_TAG} release"
+                    git push origin veyra
+
+                    echo "Triggering stable release build on veyra branch..."
+                    gh workflow run veyra-build.yml \
+                        --ref veyra \
+                        -f arch=all \
+                        -f prerelease=false \
+                        -f veyra-changes="Automated sync with Telegram upstream ${LATEST_TAG}"

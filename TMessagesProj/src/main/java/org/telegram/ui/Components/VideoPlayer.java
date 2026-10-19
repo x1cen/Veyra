@@ -144,6 +144,12 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         default void onSeekFinished(AnalyticsListener.EventTime eventTime) {
 
         }
+        default void onSubtitlesAvailable(boolean available) {
+
+        }
+        default void onCues(CharSequence cuesText) {
+
+        }
     }
 
     public interface AudioVisualizerDelegate {
@@ -204,6 +210,7 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         this.audioDisabled = audioDisabled;
         mediaDataSourceFactory = new ExtendedDefaultDataSourceFactory(ApplicationLoader.applicationContext, "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/47.0 (Chrome)");
         trackSelector = new DefaultTrackSelector(ApplicationLoader.applicationContext, new AdaptiveTrackSelection.Factory());
+        trackSelector.setParameters(trackSelector.getParameters().buildUpon().setSelectUndeterminedTextLanguage(true).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build());
         if (audioDisabled) {
             trackSelector.setParameters(trackSelector.getParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
         }
@@ -1983,11 +1990,72 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
         isStory = true;
     }
 
+    private boolean subtitlesEnabled = false;
+
+    public void setSubtitlesEnabled(boolean enabled) {
+        subtitlesEnabled = enabled;
+        if (trackSelector != null) {
+            try {
+                trackSelector.setParameters(trackSelector.getParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled).build());
+            } catch (Throwable ignore) {
+            }
+        }
+    }
+
+    public boolean isSubtitlesEnabled() {
+        return subtitlesEnabled;
+    }
+
+    public boolean hasSubtitles() {
+        if (trackSelector == null) return false;
+        try {
+            MappingTrackSelector.MappedTrackInfo mapTrackInfo = trackSelector.getCurrentMappedTrackInfo();
+            if (mapTrackInfo == null) return false;
+            for (int i = 0; i < mapTrackInfo.getRendererCount(); i++) {
+                if (mapTrackInfo.getRendererType(i) == C.TRACK_TYPE_TEXT) {
+                    TrackGroupArray trackGroups = mapTrackInfo.getTrackGroups(i);
+                    if (trackGroups != null && trackGroups.length > 0) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return false;
+    }
+
+    @Override
+    public void onCues(androidx.media3.common.text.CueGroup cueGroup) {
+        if (delegate != null) {
+            if (!subtitlesEnabled || cueGroup == null || cueGroup.cues == null || cueGroup.cues.isEmpty()) {
+                delegate.onCues(null);
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < cueGroup.cues.size(); i++) {
+                    CharSequence text = cueGroup.cues.get(i).text;
+                    if (!TextUtils.isEmpty(text)) {
+                        if (sb.length() > 0) sb.append("\n");
+                        sb.append(text);
+                    }
+                }
+                delegate.onCues(sb.length() > 0 ? sb.toString() : null);
+            }
+        }
+    }
+
     @Override
     public void onTracksChanged(Tracks tracks) {
         Player.Listener.super.onTracksChanged(tracks);
         if (onQualityChangeListener != null) {
             AndroidUtilities.runOnUIThread(onQualityChangeListener);
+        }
+        if (delegate != null && tracks != null) {
+            final boolean hasSub = tracks.containsType(C.TRACK_TYPE_TEXT);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (delegate != null) {
+                    delegate.onSubtitlesAvailable(hasSub);
+                }
+            });
         }
     }
 

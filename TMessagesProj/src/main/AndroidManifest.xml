@@ -114,6 +114,8 @@
             android:enabled="true"
             android:name="org.telegram.messenger.DefaultIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
+            android:icon="@mipmap/ic_launcher_sa"
+            android:roundIcon="@mipmap/ic_launcher_sa"
             android:exported="true">
 
             <intent-filter>

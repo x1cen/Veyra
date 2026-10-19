@@ -12453,6 +12453,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.hideSubItem(gallery_menu_save);
         }
 
+        if (otherItem != null) {
+            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, "View Raw");
+        }
         if (userId != 0 && !isBot && !myProfile) {
             otherItem.addSubItem(report, R.drawable.msg_report, LocaleController.getString(R.string.ReportBot)).setColors(getThemedColor(Theme.key_text_RedRegular), getThemedColor(Theme.key_text_RedRegular));
         }
@@ -12466,12 +12469,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.showSubItem(add_photo);
             otherItem.hideSubItem(edit_avatar);
             otherItem.hideSubItem(delete_avatar);
-        }
-
-
-
-        if (otherItem != null) {
-            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
         }
 
         isCallAvailable = callItemVisible;
@@ -13035,7 +13032,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null) root.add("user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(user));
                 if (uInfo != null) root.add("full_user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(uInfo));
                 return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
-            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+            }, "View Raw"));
         } else if (chatId != 0) {
             final TLRPC.Chat chat = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
             final TLRPC.ChatFull cInfo = chatInfo;
@@ -13044,14 +13041,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (chat != null) root.add("chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(chat));
                 if (cInfo != null) root.add("full_chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(cInfo));
                 return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
-            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+            }, "View Raw"));
         } else if (topicId != 0) {
             final long tid = topicId;
             presentFragment(new JsonViewerActivity(() -> {
                 com.google.gson.JsonObject root = new com.google.gson.JsonObject();
                 root.addProperty("topic_id", tid);
                 return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
-            }, LocaleController.getString("ViewDetails", R.string.ViewDetails)));
+            }, "View Raw"));
         }
     }
 

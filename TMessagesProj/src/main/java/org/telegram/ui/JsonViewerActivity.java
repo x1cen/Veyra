@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -58,18 +59,25 @@ public class JsonViewerActivity extends BaseFragment {
 
     public JsonViewerActivity(JsonProvider provider, String title) {
         this.provider = provider;
-        this.title = title != null ? title : "JSON";
+        this.title = title != null ? title : "View Raw";
     }
 
     public JsonViewerActivity(JsonProvider provider) {
-        this(provider, "JSON");
+        this(provider, "View Raw");
     }
 
     @Override
     public View createView(Context context) {
+        // Bright clean action bar
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle(title);
+        actionBar.setItemsColor(0xFF24292F, false);
+        actionBar.setItemsBackgroundColor(0x1F000000, false);
+        actionBar.setTitleColor(0xFF24292F);
+        actionBar.setBackgroundColor(0xFFFFFFFF);
+        actionBar.setCastShadows(true);
+
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(int id) {
@@ -85,7 +93,7 @@ public class JsonViewerActivity extends BaseFragment {
         menu.addItem(MENU_COPY, R.drawable.msg_copy);
 
         FrameLayout rootLayout = new FrameLayout(context);
-        rootLayout.setBackgroundColor(0xFF0F1117); // Dark code canvas
+        rootLayout.setBackgroundColor(0xFFF6F8FA); // Elegant bright light canvas (GitHub light theme)
         fragmentView = rootLayout;
 
         // Content ScrollViews
@@ -98,7 +106,7 @@ public class JsonViewerActivity extends BaseFragment {
         jsonTextView = new TextView(context);
         jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         jsonTextView.setTypeface(Typeface.MONOSPACE);
-        jsonTextView.setTextColor(0xFFD4D4D4);
+        jsonTextView.setTextColor(0xFF24292F); // Crisp dark charcoal
         jsonTextView.setTextIsSelectable(true);
         jsonTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(80)); // Bottom padding for floating bar
 
@@ -110,9 +118,9 @@ public class JsonViewerActivity extends BaseFragment {
         progressBar = new ProgressBar(context);
         rootLayout.addView(progressBar, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
 
-        // Floating Bottom Copy Bar
+        // Floating Bottom Copy Bar (Bright accent style)
         bottomBar = new FrameLayout(context);
-        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0xFF2196F3, 0xFF1976D2));
+        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0xFF0969DA, 0xFF0550AE));
         bottomBar.setElevation(AndroidUtilities.dp(4));
 
         LinearLayout buttonContent = new LinearLayout(context);
@@ -173,12 +181,12 @@ public class JsonViewerActivity extends BaseFragment {
         SpannableStringBuilder ssb = new SpannableStringBuilder(json);
         Matcher matcher = JSON_TOKEN_PATTERN.matcher(json);
 
-        // Modern Code Editor Theme Colors
-        final int COLOR_KEY = 0xFF79C0FF;     // Light Cyan/Blue for keys
-        final int COLOR_STRING = 0xFF7EE787;  // Soft Emerald Green for strings
-        final int COLOR_NUMBER = 0xFFFFAB70;  // Orange for numbers
-        final int COLOR_BOOL = 0xFF58A6FF;    // Dodger Blue for booleans
-        final int COLOR_NULL = 0xFF8B949E;    // Gray for null
+        // Modern Light Code Palette (GitHub Light style)
+        final int COLOR_KEY = 0xFF0969DA;     // Vibrant Deep Blue for keys
+        final int COLOR_STRING = 0xFF1A7F37;  // Forest Green for strings
+        final int COLOR_NUMBER = 0xFF9A6700;  // Warm Amber/Bronze for numbers
+        final int COLOR_BOOL = 0xFFCF222E;    // Crimson Red for booleans
+        final int COLOR_NULL = 0xFF6E7781;    // Slate Gray for null
 
         while (matcher.find()) {
             if (matcher.group(1) != null) {
@@ -188,6 +196,7 @@ public class JsonViewerActivity extends BaseFragment {
                 int colonIdx = json.lastIndexOf(':', end);
                 int keyEnd = colonIdx > start ? colonIdx : end;
                 ssb.setSpan(new ForegroundColorSpan(COLOR_KEY), start, keyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new StyleSpan(Typeface.BOLD), start, keyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else if (matcher.group(2) != null) {
                 // String value
                 ssb.setSpan(new ForegroundColorSpan(COLOR_STRING), matcher.start(2), matcher.end(2), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -197,9 +206,11 @@ public class JsonViewerActivity extends BaseFragment {
             } else if (matcher.group(4) != null) {
                 // Boolean
                 ssb.setSpan(new ForegroundColorSpan(COLOR_BOOL), matcher.start(4), matcher.end(4), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new StyleSpan(Typeface.BOLD), matcher.start(4), matcher.end(4), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else if (matcher.group(5) != null) {
                 // Null
                 ssb.setSpan(new ForegroundColorSpan(COLOR_NULL), matcher.start(5), matcher.end(5), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new StyleSpan(Typeface.ITALIC), matcher.start(5), matcher.end(5), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         return ssb;
