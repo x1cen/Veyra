@@ -16574,15 +16574,14 @@ public class MessagesStorage extends BaseController {
                                             if (message.edit_date == 0) {
                                                 message.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
                                             }
-                                        } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(MessageObject.getDialogId(message), message.id)) {
-                                            message.edit_date = oldMessage.edit_date;
+                                        } else if (wasEditedBefore) {
                                             message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                                        } else {
-                                            message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                            message.edit_date = 0;
+                                            if (message.edit_date == 0 && oldMessage.edit_date != 0) {
+                                                message.edit_date = oldMessage.edit_date;
+                                            }
                                         }
 
-                                        if (textChanged && !oldMessage.out && !message.out) {
+                                        if (textChanged) {
                                             long did = MessageObject.getDialogId(message);
                                             long fromId = MessageObject.getPeerId(message.from_id);
                                             if (!VeyraConfig.isDeveloperChat(did) && VeyraConfig.isChatTypeAllowedForEditHistory(did) && (fromId != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
@@ -16590,10 +16589,6 @@ public class MessagesStorage extends BaseController {
                                                 org.veyra.client.VeyraEditHistoryManager.logEdit(did, message.id, prevDate, oldText, oldMessage);
                                             }
                                         }
-                                    } else if (isReactionUpdate && !getSendMessagesHelper().isRecentlyEditedLocally(message.id)) {
-                                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                        message.edit_date = 0;
-                                    }
                                     int send_state = cursor.intValue(5);
                                     if (send_state != 3) {
                                         if (MessageObject.getFileName(oldMessage).equals(MessageObject.getFileName(message))) {

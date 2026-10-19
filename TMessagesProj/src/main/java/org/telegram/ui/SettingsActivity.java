@@ -893,6 +893,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
             case 22:
                 FileLog.cleanupLogs();
+                boolean isFarsi = "fa".equals(LocaleController.getInstance().getCurrentLocale().getLanguage());
+                BulletinFactory.of(this).createSimpleBulletin(
+                        R.raw.ic_delete,
+                        isFarsi ? "لاگ‌ها با موفقیت پاک شدند" : "Logs cleared successfully"
+                ).show();
                 break;
             case 23: {
                 if (MessagesController.getInstance(currentAccount).isFrozen()) {
