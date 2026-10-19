@@ -1496,6 +1496,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean drawStartBotTopic;
     private boolean drawContinueBotTopic;
     private int pressedBotButton;
+    public final RectF lastPressedBotButtonRect = new RectF();
 
     private SpoilerEffect spoilerPressed;
     private boolean isSpoilerRevealing;
@@ -4709,6 +4710,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 }
                                 button2.setPressed(false);
                                 if (!currentMessageObject.scheduled) {
+                                    lastPressedBotButtonRect.set(button2.x, button2.y, button2.x + button2.width, button2.y + button2.height);
                                     if (button2.buttonCustom != null) {
                                         cancelCheckLongPress();
                                         if (delegate != null) {

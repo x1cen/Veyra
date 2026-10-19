@@ -40812,6 +40812,12 @@ public class ChatActivity extends BaseFragment implements
             };
 
             ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
+            if (cell != null && cell.lastPressedBotButtonRect != null && !cell.lastPressedBotButtonRect.isEmpty()) {
+                options.setCustomScrimBounds(new RectF(cell.lastPressedBotButtonRect));
+            }
+            if (LocaleController.isRTL) {
+                options.setGravity(Gravity.LEFT);
+            }
             String buttonText = button.getText();
             if (!TextUtils.isEmpty(buttonText)) {
                 options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(buttonText));
