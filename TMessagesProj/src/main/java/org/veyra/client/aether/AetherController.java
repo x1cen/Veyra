@@ -150,6 +150,27 @@ public class AetherController {
             }
         } catch (Throwable ignore) {}
 
+        // On Android 10+/Samsung the files/ dir is often mounted noexec — try code_cache first
+        try {
+            File codeCache = context.getCodeCacheDir();
+            if (codeCache != null) {
+                File ccBin = new File(codeCache, "libaether.so");
+                if (ccBin.exists()) {
+                    try { ccBin.setExecutable(true, false); } catch (Throwable ignore) {}
+                    return ccBin;
+                }
+                // If we have a downloaded copy in files/aether, promote it to code_cache (executable)
+                File downloaded = AetherDownloader.getDownloadedBinaryFile();
+                if (downloaded != null && downloaded.exists() && downloaded.length() > 0) {
+                    try {
+                        if (copyToExecutable(downloaded, ccBin)) {
+                            return ccBin;
+                        }
+                    } catch (Throwable ignore) {}
+                }
+            }
+        } catch (Throwable ignore) {}
+
         File downloaded = AetherDownloader.getDownloadedBinaryFile();
         if (downloaded != null && downloaded.exists()) {
             try {
@@ -167,6 +188,28 @@ public class AetherController {
         }
 
         return null;
+    }
+
+    private static boolean copyToExecutable(File src, File dst) {
+        java.io.FileInputStream in = null;
+        java.io.FileOutputStream out = null;
+        try {
+            dst.getParentFile().mkdirs();
+            in = new java.io.FileInputStream(src);
+            out = new java.io.FileOutputStream(dst);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            out.flush();
+            dst.setReadable(true, false);
+            return dst.setExecutable(true, false);
+        } catch (Throwable e) {
+            try { if (dst.exists()) dst.delete(); } catch (Throwable ignore) {}
+            return false;
+        } finally {
+            try { if (in != null) in.close(); } catch (Throwable ignore) {}
+            try { if (out != null) out.close(); } catch (Throwable ignore) {}
+        }
     }
 
     public synchronized void start() {
