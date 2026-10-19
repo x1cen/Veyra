@@ -16474,7 +16474,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             createSubtitleOverlayView();
         }
         if (containerView != null) {
-            BulletinFactory.of(containerView).createSimpleBulletin(
+            BulletinFactory.of(containerView, resourcesProvider).createSimpleBulletin(
                 R.raw.chats_infotip,
                 subtitlesVisible ? "Subtitles: On" : "Subtitles: Off"
             ).show();

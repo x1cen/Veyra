@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
@@ -105,11 +106,10 @@ public class VeyraLocalTodoStorage {
             TLRPC.TL_messages_toggleTodoCompleted req = new TLRPC.TL_messages_toggleTodoCompleted();
             req.peer = MessagesController.getInstance(currentAccount).getInputPeer(item.dialogId);
             req.msg_id = item.msgId;
-            req.completed = item.enabled;
-            req.item_id = item.taskId;
-            if (item.sendAs != 0) {
-                req.flags |= 1;
-                req.send_as = MessagesController.getInstance(currentAccount).getInputPeer(item.sendAs);
+            if (item.enabled) {
+                req.completed.add(item.taskId);
+            } else {
+                req.incompleted.add(item.taskId);
             }
             ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> {
                 // Sent to server
