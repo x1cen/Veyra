@@ -18454,6 +18454,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         boolean hasReplies = messageObject.hasReplies();
         deleted = currentMessageObject != null && currentMessageObject.deleted;
+        // Veyra: dim deleted messages
+        if (deleted) {
+            alphaInternal = 0.52f;
+        } else {
+            alphaInternal = 1.0f;
+        }
         if (messageObject.scheduled || messageObject.messageOwner.edit_hide) {
             edited = false;
         } else if (currentPosition == null || currentMessagesGroup == null || currentMessagesGroup.messages.isEmpty()) {
@@ -18481,11 +18487,25 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSmallDateChat(currentMessageObject.realDate) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (currentMessageObject.realDate) * 1000);
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
-        } else if (deleted || edited) {
-            // Veyra: deleted label — plain text, colour matches theme (no red, no raw emoji)
-            timeString = (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) ?
+        } else if (deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+            boolean hasEdit = edited || (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get() && messageObject.messageOwner.edit_date != 0);
+            boolean hasReaction = org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId());
+            String label;
+            if (deleted && hasReaction) {
+                // Deleted + had reaction removed -> still deleted label (deleted takes precedence visually, but could be modified)
+                label = LocaleController.getString("DeletedMessage", R.string.DeletedMessage);
+            } else if (hasEdit && hasReaction) {
+                label = LocaleController.getString("ModifiedMessage", R.string.ModifiedMessage);
+            } else if (deleted) {
+                label = LocaleController.getString("DeletedMessage", R.string.DeletedMessage);
+            } else if (hasReaction) {
+                label = LocaleController.getString("ReactionMessage", R.string.ReactionMessage);
+            } else {
+                label = getString(R.string.EditedMessage);
+            }
+            timeString = (!deleted && !hasReaction && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) ?
                 LocaleController.formatPmEditedDate(currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date) :
-                    ((deleted ? LocaleController.getString("DeletedMessage", R.string.DeletedMessage) : getString(R.string.EditedMessage)) + " " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000));
+                    (label + " " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000));
         } else if (currentMessageObject.isSaved && currentMessageObject.messageOwner.fwd_from != null && (currentMessageObject.messageOwner.fwd_from.date != 0 || currentMessageObject.messageOwner.fwd_from.saved_date != 0)) {
             int date = currentMessageObject.messageOwner.fwd_from.saved_date;
             if (date == 0) {
