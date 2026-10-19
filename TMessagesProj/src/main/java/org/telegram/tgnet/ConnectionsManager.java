@@ -506,6 +506,18 @@ public class ConnectionsManager extends BaseController {
             }
             return;
         }
+        if (object instanceof TLRPC.TL_help_getPromoData) {
+            if (onComplete != null) {
+                TLRPC.TL_help_promoDataEmpty res = new TLRPC.TL_help_promoDataEmpty();
+                res.expires = Integer.MAX_VALUE;
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
         if (object instanceof TLRPC.TL_messages_readReactions) {
             long peerDialogId = 0;
             try {
