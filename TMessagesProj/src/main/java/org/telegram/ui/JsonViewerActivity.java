@@ -68,14 +68,16 @@ public class JsonViewerActivity extends BaseFragment {
 
     @Override
     public View createView(Context context) {
-        // Dark sleek action bar
+        final boolean isDark = Theme.isCurrentThemeDark();
+
+        // Dynamically synced with user's active theme
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle(title);
-        actionBar.setItemsColor(0xFFFFFFFF, false);
-        actionBar.setItemsBackgroundColor(0x2AFFFFFF, false);
-        actionBar.setTitleColor(0xFFFFFFFF);
-        actionBar.setBackgroundColor(0xFF161B22);
+        actionBar.setItemsColor(Theme.getColor(Theme.key_actionBarDefaultIcon), false);
+        actionBar.setItemsBackgroundColor(Theme.getColor(Theme.key_actionBarDefaultSelector), false);
+        actionBar.setTitleColor(Theme.getColor(Theme.key_actionBarDefaultTitle));
+        actionBar.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefault));
         actionBar.setCastShadows(true);
 
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
@@ -93,7 +95,9 @@ public class JsonViewerActivity extends BaseFragment {
         menu.addItem(MENU_COPY, R.drawable.msg_copy);
 
         FrameLayout rootLayout = new FrameLayout(context);
-        rootLayout.setBackgroundColor(0xFF0D1117); // Dark sleek background (GitHub Dark)
+        // Palette synced with theme mode (GitHub Dark #0D1117 vs GitHub Light #F6F8FA)
+        int bgColor = isDark ? 0xFF0D1117 : 0xFFF6F8FA;
+        rootLayout.setBackgroundColor(bgColor);
         fragmentView = rootLayout;
 
         // Content ScrollViews
@@ -106,7 +110,9 @@ public class JsonViewerActivity extends BaseFragment {
         jsonTextView = new TextView(context);
         jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
         jsonTextView.setTypeface(Typeface.MONOSPACE);
-        jsonTextView.setTextColor(0xFFE6EDF3); // Crisp bright white font for maximum readability
+        // Contrast-aware text color for light & dark
+        int textColor = isDark ? 0xFFE6EDF3 : 0xFF24292F;
+        jsonTextView.setTextColor(textColor);
         jsonTextView.setTextIsSelectable(true);
         jsonTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(80)); // Bottom padding for floating bar
 
@@ -118,9 +124,11 @@ public class JsonViewerActivity extends BaseFragment {
         progressBar = new ProgressBar(context);
         rootLayout.addView(progressBar, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
 
-        // Floating Bottom Copy Bar
+        // Floating Bottom Copy Bar (Theme accent styled)
         bottomBar = new FrameLayout(context);
-        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0xFF238636, 0xFF2EA043));
+        int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        int btnPressed = Theme.getColor(Theme.key_featuredStickers_addButtonPressed);
+        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), btnColor, btnPressed));
         bottomBar.setElevation(AndroidUtilities.dp(4));
 
         LinearLayout buttonContent = new LinearLayout(context);
@@ -181,12 +189,14 @@ public class JsonViewerActivity extends BaseFragment {
         SpannableStringBuilder ssb = new SpannableStringBuilder(json);
         Matcher matcher = JSON_TOKEN_PATTERN.matcher(json);
 
-        // Modern Vibrant Dark Code Palette (GitHub Dark / VS Code Dark)
-        final int COLOR_KEY = 0xFF79C0FF;     // Bright Electric Blue / Cyan for keys
-        final int COLOR_STRING = 0xFF7EE787;  // Bright Mint Green for strings
-        final int COLOR_NUMBER = 0xFFFFA657;  // Bright Warm Gold for numbers
-        final int COLOR_BOOL = 0xFFFF7B72;    // Bright Coral Pink for booleans
-        final int COLOR_NULL = 0xFF8B949E;    // Crisp Silver Slate for null
+        final boolean isDark = Theme.isCurrentThemeDark();
+
+        // Theme-adaptive code palette (GitHub Dark vs GitHub Light)
+        final int COLOR_KEY = isDark ? 0xFF79C0FF : 0xFF0969DA;     // Cyan in dark / Deep Blue in light
+        final int COLOR_STRING = isDark ? 0xFF7EE787 : 0xFF1A7F37;  // Mint in dark / Forest Green in light
+        final int COLOR_NUMBER = isDark ? 0xFFFFA657 : 0xFF9A6700;  // Gold in dark / Warm Amber in light
+        final int COLOR_BOOL = isDark ? 0xFFFF7B72 : 0xFFCF222E;    // Coral Pink in dark / Crimson in light
+        final int COLOR_NULL = isDark ? 0xFF8B949E : 0xFF6E7781;    // Silver Slate in dark / Charcoal Slate in light
 
         while (matcher.find()) {
             if (matcher.group(1) != null) {
