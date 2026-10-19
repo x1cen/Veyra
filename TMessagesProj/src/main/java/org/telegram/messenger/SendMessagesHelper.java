@@ -3618,6 +3618,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 req.flags |= TLObject.FLAG_18;
             }
         }
+        if (VeyraConfig.editHistoryEnabled && messageObject != null && messageObject.messageOwner != null) {
+            String prevText = messageObject.messageOwner.message;
+            if (!android.text.TextUtils.isEmpty(prevText)) {
+                org.veyra.client.VeyraEditHistoryManager.logEdit(
+                        messageObject.getDialogId(),
+                        messageObject.getId(),
+                        messageObject.messageOwner.edit_date > 0 ? messageObject.messageOwner.edit_date : messageObject.messageOwner.date,
+                        prevText,
+                        messageObject.messageOwner
+                );
+            }
+        }
         markEditedLocally(messageObject.getId());
         return getConnectionsManager().sendRequest(req, (response, error) -> {
             if (error == null) {
