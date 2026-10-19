@@ -11663,7 +11663,7 @@
 <string name="VeyraVersion">Veyra Version</string>
 <string name="VeyraHelpChannel">Help &amp; Updates Channel</string>
 <string name="VeyraUpdateAvailableTitle">Veyra %1$s available</string>
-<string name="VeyraCheckForUpdates">Check for Updates</string>
+<string name="VeyraCheckForUpdates">Update</string>
 <string name="VeyraOnlineStatus">Online Status</string>
 <string name="VeyraOnlineModeDefault">Show Online (Default)</string>
 <string name="VeyraOnlineModeHide">Hide Online</string>

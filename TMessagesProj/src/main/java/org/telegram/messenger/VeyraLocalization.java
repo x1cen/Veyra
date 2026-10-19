@@ -69,7 +69,7 @@ public class VeyraLocalization {
         EN.put("VeyraChatTypePrivate", "Private Chats");
         EN.put("VeyraChatTypePrivateDesc", "Enable for one-on-one direct messages");
         EN.put("VeyraChatTypes", "Filter Chats");
-        EN.put("VeyraCheckForUpdates", "Check for Updates");
+        EN.put("VeyraCheckForUpdates", "Update");
         EN.put("VeyraCleanUrls", "Clean Tracking Parameters on Copy");
         EN.put("VeyraCleanUrlsDesc", "Auto-strip tracking params when copying links");
         EN.put("VeyraComposingMessages", "Composing & Messages");
@@ -284,7 +284,7 @@ public class VeyraLocalization {
         FA.put("VeyraChatTypePrivate", "چت‌های خصوصی");
         FA.put("VeyraChatTypePrivateDesc", "فعال بودن در گفتگوهای دونفره خصوصی");
         FA.put("VeyraChatTypes", "نوع گفتگوها (تاریخچه ادیت)");
-        FA.put("VeyraCheckForUpdates", "بررسی به‌روزرسانی");
+        FA.put("VeyraCheckForUpdates", "به‌روزرسانی");
         FA.put("VeyraCleanUrls", "پاکسازی لینک‌ها هنگام کپی");
         FA.put("VeyraCleanUrlsDesc", "حذف خودکار کدهای ردیابی هنگام کپی کردن لینک‌ها");
         FA.put("VeyraComposingMessages", "نوشتن و پیام‌ها");
