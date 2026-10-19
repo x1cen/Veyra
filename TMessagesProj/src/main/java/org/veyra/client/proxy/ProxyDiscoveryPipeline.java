@@ -203,22 +203,103 @@ public class ProxyDiscoveryPipeline {
         notifyFinished(champion, inactiveCount);
     }
 
-    public static void clearAllInactiveProxies(Runnable onComplete) {
-        AndroidUtilities.runOnUIThread(() -> {
-            List<SharedConfig.ProxyInfo> list = new ArrayList<>(SharedConfig.proxyList);
-            List<SharedConfig.ProxyInfo> toRemove = new ArrayList<>();
-            for (SharedConfig.ProxyInfo p : list) {
-                if (p != null && (!p.available || p.ping < 0)) {
-                    toRemove.add(p);
+    public interface CleanCallback {
+        void onProgress(int checked, int total);
+        void onFinished(int removedCount, int keptCount);
+    }
+
+    public static boolean checkTcpPingStatic(SharedConfig.ProxyInfo proxy, int timeoutMs) {
+        if (proxy == null || proxy.settings == null) return false;
+        String host = proxy.settings.getAddress();
+        int port = proxy.settings.getPort();
+        if (android.text.TextUtils.isEmpty(host) || port <= 0 || port > 65535) return false;
+        long start = SystemClock.elapsedRealtime();
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeoutMs);
+            long ping = SystemClock.elapsedRealtime() - start;
+            proxy.ping = ping;
+            proxy.available = true;
+            proxy.availableCheckTime = SystemClock.elapsedRealtime();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static void cleanInactiveProxiesSmart(CleanCallback callback) {
+        new Thread(() -> {
+            List<SharedConfig.ProxyInfo> targets = new ArrayList<>(SharedConfig.proxyList);
+            if (targets.isEmpty()) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (callback != null) callback.onFinished(0, 0);
+                });
+                return;
+            }
+
+            int total = targets.size();
+            java.util.concurrent.atomic.AtomicInteger checkedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+            List<SharedConfig.ProxyInfo> deadProxies = Collections.synchronizedList(new ArrayList<>());
+            List<SharedConfig.ProxyInfo> healthyProxies = Collections.synchronizedList(new ArrayList<>());
+
+            int threadCount = Math.min(10, Math.max(2, targets.size()));
+            ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+
+            for (SharedConfig.ProxyInfo p : targets) {
+                pool.execute(() -> {
+                    boolean alive = false;
+                    if (p != null && p == SharedConfig.currentProxy) {
+                        alive = true;
+                    } else if (p != null && p.settings != null) {
+                        alive = checkTcpPingStatic(p, 2500);
+                        if (!alive) {
+                            try { Thread.sleep(250); } catch (Exception ignored) {}
+                            alive = checkTcpPingStatic(p, 3000);
+                        }
+                    }
+
+                    if (alive) {
+                        healthyProxies.add(p);
+                    } else {
+                        deadProxies.add(p);
+                    }
+
+                    int current = checkedCount.incrementAndGet();
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (callback != null) {
+                            callback.onProgress(current, total);
+                        }
+                    });
+                });
+            }
+
+            pool.shutdown();
+            try {
+                pool.awaitTermination(60, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {}
+
+            AndroidUtilities.runOnUIThread(() -> {
+                for (SharedConfig.ProxyInfo dead : deadProxies) {
+                    SharedConfig.deleteProxy(dead);
                 }
-            }
-            for (SharedConfig.ProxyInfo p : toRemove) {
-                SharedConfig.deleteProxy(p);
-            }
-            SharedConfig.saveProxyList();
-            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
-            if (onComplete != null) {
-                onComplete.run();
+                SharedConfig.saveProxyList();
+                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+                if (callback != null) {
+                    callback.onFinished(deadProxies.size(), healthyProxies.size());
+                }
+            });
+        }).start();
+    }
+
+    public static void clearAllInactiveProxies(Runnable onComplete) {
+        cleanInactiveProxiesSmart(new CleanCallback() {
+            @Override
+            public void onProgress(int checked, int total) {}
+
+            @Override
+            public void onFinished(int removedCount, int keptCount) {
+                if (onComplete != null) {
+                    onComplete.run();
+                }
             }
         });
     }
