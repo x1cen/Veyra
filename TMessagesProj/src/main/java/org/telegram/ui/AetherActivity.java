@@ -16,6 +16,7 @@ import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.EditTextBoldCursor;
+import org.telegram.ui.Components.OutlineTextContainerView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.veyra.client.aether.AetherConfig;
 import org.veyra.client.aether.AetherController;
@@ -686,23 +687,43 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(title);
 
+        // Match global Veyra input style: OutlineTextContainerView (rounded outline, same as Custom Header)
+        OutlineTextContainerView outlineView = new OutlineTextContainerView(getParentActivity());
+        outlineView.setText(hint != null ? hint : title);
+
         final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
         editText.setText(currentVal != null ? currentVal : "");
+        editText.setSelection(editText.getText().length());
         editText.setHint(hint != null ? hint : "Auto");
         editText.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
         editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
         editText.setCursorSize(AndroidUtilities.dp(20));
         editText.setCursorWidth(1.5f);
+        editText.setBackground(null);
         editText.setSingleLine(true);
+        editText.setMaxLines(1);
+        editText.setLines(1);
         editText.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
+        editText.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
         editText.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        editText.setLineColors(Theme.getColor(Theme.key_dialogInputField), Theme.getColor(Theme.key_dialogInputFieldActivated), Theme.getColor(Theme.key_text_RedRegular));
+        outlineView.attachEditText(editText);
+        outlineView.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+        boolean hasInitialText = !TextUtils.isEmpty(currentVal);
+        outlineView.animateSelection(false, hasInitialText, false);
+        editText.setOnFocusChangeListener((v, hasFocus) -> outlineView.animateSelection(hasFocus, hasFocus || editText.length() > 0));
+        editText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) { outlineView.animateSelection(editText.hasFocus(), editText.hasFocus() || s.length() > 0); }
+        });
 
         FrameLayout frame = new FrameLayout(getParentActivity());
-        frame.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(10), AndroidUtilities.dp(24), AndroidUtilities.dp(4));
-        frame.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        frame.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(12));
+        frame.addView(outlineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 58));
         builder.setView(frame);
 
         builder.setPositiveButton(LocaleController.getString("Save", R.string.Save), (d, which) -> {
@@ -710,7 +731,13 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
             reloadRows();
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-        showDialog(builder.create());
+        AlertDialog dialog = builder.create();
+        showDialog(dialog);
+        // Auto-focus and show keyboard
+        editText.requestFocus();
+        AndroidUtilities.runOnUIThread(() -> {
+            try { AndroidUtilities.showKeyboard(editText); } catch (Throwable ignore) {}
+        }, 150);
     }
 
     private void showLogsDialog() {
