@@ -2217,10 +2217,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             nameLayoutPressed = false;
             return false;
         }
-        final boolean pressed = nameLayoutSelector.getBounds().contains((int) getEventX(event), (int) getEventY(event));
+        final boolean pressed = nameLayoutSelector != null && nameLayoutSelector.getBounds().contains((int) getEventX(event), (int) getEventY(event));
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             nameLayoutPressed = pressed;
-            if (nameLayoutPressed) {
+            if (nameLayoutPressed && nameLayoutSelector != null) {
                 nameLayoutSelector.setHotspot((int) getEventX(event), (int) getEventY(event));
                 nameLayoutSelector.setState(pressedState);
             }
@@ -2253,7 +2253,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                 }
             }
-            nameLayoutSelector.setState(StateSet.NOTHING);
+            if (nameLayoutSelector != null) {
+                nameLayoutSelector.setState(StateSet.NOTHING);
+            }
             nameLayoutPressed = false;
         }
         return nameLayoutPressed;
@@ -2264,10 +2266,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             nameStatusPressed = false;
             return false;
         }
-        final boolean pressed = nameStatusSelector.getBounds().contains((int) getEventX(event), (int) getEventY(event));
+        final boolean pressed = nameStatusSelector != null && nameStatusSelector.getBounds().contains((int) getEventX(event), (int) getEventY(event));
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             nameStatusPressed = pressed;
-            if (nameStatusPressed) {
+            if (nameStatusPressed && nameStatusSelector != null) {
                 nameStatusSelector.setHotspot((int) getEventX(event), (int) getEventY(event));
                 nameStatusSelector.setState(pressedState);
             }
@@ -2423,9 +2425,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             pressedCopyCode = null;
                         } else {
                             pressedCopyCode = block;
-                            block.copySelector.setHotspot(x, y);
-                            block.copySelector.setCallback(this);
-                            block.copySelector.setState(pressedState);
+                            if (block.copySelector != null) {
+                                block.copySelector.setHotspot(x, y);
+                                block.copySelector.setCallback(this);
+                                block.copySelector.setState(pressedState);
+                            }
                         }
                         return true;
                     }
@@ -2645,9 +2649,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             pressedCopyCode = null;
                         } else {
                             pressedCopyCode = block;
-                            block.copySelector.setHotspot(x, y);
-                            block.copySelector.setCallback(this);
-                            block.copySelector.setState(pressedState);
+                            if (block.copySelector != null) {
+                                block.copySelector.setHotspot(x, y);
+                                block.copySelector.setCallback(this);
+                                block.copySelector.setState(pressedState);
+                            }
                         }
                         touchedByCaption = true;
                         return true;
@@ -3686,8 +3692,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 //                                selectorDrawable[0].setHotspot(x, y);
 //                                selectorDrawable[0].setState(pressedState);
 //                            }
-                            button.selectorDrawable.setHotspot(x, y);
-                            button.selectorDrawable.setState(pressedState);
+                            if (button.selectorDrawable != null) {
+                                button.selectorDrawable.setHotspot(x, y);
+                                button.selectorDrawable.setState(pressedState);
+                            }
                             invalidate();
                         }
                         result = true;
@@ -4681,11 +4689,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     result = true;
                     if (button.selectorDrawable == null) {
                         button.selectorDrawable = Theme.createRadSelectorDrawable(getThemedColor(Theme.key_chat_serviceBackgroundSelector), 6, 6);
-                        button.selectorDrawable.setCallback(this);
-                        button.selectorDrawable.setBounds((int) (button.x * widthForButtons) + addX, y2, (int) (button.x * widthForButtons) + addX + (int) (button.width * widthForButtons), y2 + button.height);
+                        if (button.selectorDrawable != null) {
+                            button.selectorDrawable.setCallback(this);
+                            button.selectorDrawable.setBounds((int) (button.x * widthForButtons) + addX, y2, (int) (button.x * widthForButtons) + addX + (int) (button.width * widthForButtons), y2 + button.height);
+                        }
                     }
-                    button.selectorDrawable.setHotspot(x, y);
-                    button.selectorDrawable.setState(pressedState);
+                    if (button.selectorDrawable != null) {
+                        button.selectorDrawable.setHotspot(x, y);
+                        button.selectorDrawable.setState(pressedState);
+                    }
                     button.setPressed(!button.isLocked);
                     final int longPressedBotButton = pressedBotButton;
                     postDelayed(() -> {
