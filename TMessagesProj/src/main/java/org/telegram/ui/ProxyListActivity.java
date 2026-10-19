@@ -551,6 +551,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
             } else if (position == proxyAddRow) {
                 presentFragment(new ProxySettingsActivity());
+            } else if (position == deleteInactiveRow) {
+                deleteInactiveProxies();
             } else if (position == deleteAllRow) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                 builder.setMessage(getString(R.string.DeleteAllProxiesConfirm));
@@ -758,6 +760,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             proxyEndRow = -1;
         }
         proxyAddRow = rowCount++;
+        if (!proxyList.isEmpty()) {
+            deleteInactiveRow = rowCount++;
+        } else {
+            deleteInactiveRow = -1;
+        }
         proxyShadowRow = rowCount++;
         if (proxyList.size() >= 10) {
             deleteAllRow = rowCount++;
@@ -955,7 +962,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
-                        textCell.setText(getString(R.string.AddProxy), deleteAllRow != -1);
+                        textCell.setText(getString(R.string.AddProxy), deleteInactiveRow != -1 || deleteAllRow != -1);
+                    } else if (position == deleteInactiveRow) {
+                        textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+                        textCell.setText("Clear Inactive Proxies", deleteAllRow != -1);
                     } else if (position == deleteAllRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText(getString(R.string.DeleteAllProxies), false);
@@ -1181,25 +1191,45 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     }
 
     private void deleteInactiveProxies() {
-        if (getParentActivity() == null) return;
-        int count = 0;
-        for (SharedConfig.ProxyInfo p : proxyList) {
-            if (p != null && (!p.available || p.ping < 0)) {
-                count++;
-            }
-        }
-        if (count == 0) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "No inactive proxies found").show();
-            return;
-        }
+        if (getParentActivity() == null || proxyList.isEmpty()) return;
+
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Clear Inactive Proxies");
-        builder.setMessage("Are you sure you want to delete " + count + " inactive proxies?");
+        builder.setMessage("Test and remove dead proxies? Active and responsive proxies will be safely kept.");
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-        builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (d, w) -> {
-            org.veyra.client.proxy.ProxyDiscoveryPipeline.clearAllInactiveProxies(() -> {
-                updateRows(true);
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "Inactive proxies removed").show();
+        builder.setPositiveButton("Scan & Clean", (d, w) -> {
+            final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog.setMessage("Verifying proxies (0/" + proxyList.size() + ")...");
+            progressDialog.setCanceledOnTouchOutside(false);
+            progressDialog.setCancelable(false);
+            showDialog(progressDialog);
+
+            org.veyra.client.proxy.ProxyDiscoveryPipeline.cleanInactiveProxiesSmart(new org.veyra.client.proxy.ProxyDiscoveryPipeline.CleanCallback() {
+                @Override
+                public void onProgress(int checked, int total) {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.setMessage("Verifying proxies (" + checked + "/" + total + ")...");
+                    }
+                }
+
+                @Override
+                public void onFinished(int removedCount, int keptCount) {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {}
+                    updateRows(true);
+                    if (removedCount > 0) {
+                        BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(
+                                R.raw.contact_check,
+                                "Removed " + removedCount + " dead proxies (" + keptCount + " kept)"
+                        ).show();
+                    } else {
+                        BulletinFactory.of(ProxyListActivity.this).createSimpleBulletin(
+                                R.raw.contact_check,
+                                "All " + keptCount + " proxies are healthy!"
+                        ).show();
+                    }
+                }
             });
         });
         AlertDialog dialog = builder.create();

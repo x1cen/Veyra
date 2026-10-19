@@ -160,40 +160,7 @@ public class ProxyDiscoveryActivity extends VeyraSettingsBaseActivity {
 
         r.add(VeyraSettingsRow.shadow());
 
-        // 3. Inactive Proxies Management (Manual user decision)
-        r.add(VeyraSettingsRow.header("Inactive Proxies Management"));
-
-        int inactiveCount = 0;
-        for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
-            if (p != null && (!p.available || p.ping < 0)) {
-                inactiveCount++;
-            }
-        }
-        final int finalInactiveCount = inactiveCount;
-
-        r.add(VeyraSettingsRow.detail(
-                "Clear Inactive Proxies",
-                () -> "Remove " + finalInactiveCount + " dead proxies",
-                false,
-                () -> {
-                    if (getParentActivity() == null || finalInactiveCount == 0) return;
-                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-                    builder.setTitle("Clear Inactive Proxies");
-                    builder.setMessage("Are you sure you want to delete all " + finalInactiveCount + " inactive proxies?");
-                    builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-                    builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (d, w) -> {
-                        ProxyDiscoveryPipeline.clearAllInactiveProxies(() -> {
-                            reloadRows();
-                            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "Inactive proxies removed").show();
-                        });
-                    });
-                    showDialog(builder.create());
-                }
-        ));
-
-        r.add(VeyraSettingsRow.shadow());
-
-        // 4. History & Stats
+        // 3. History & Stats
         r.add(VeyraSettingsRow.header("Statistics"));
 
         String winner = ProxyDiscoveryConfig.getLastWinner();
