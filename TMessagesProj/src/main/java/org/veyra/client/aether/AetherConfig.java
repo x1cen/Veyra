@@ -53,6 +53,9 @@ public class AetherConfig {
     public static final int NOIZE_WG_LIGHT = 2;
     public static final int NOIZE_WG_OFF = 3;
 
+    public static final int GOOL_MODERN = 0;
+    public static final int GOOL_CLASSIC = 1;
+
     private static SharedPreferences getPrefs() {
         return ApplicationLoader.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
@@ -253,6 +256,70 @@ public class AetherConfig {
         getPrefs().edit().putBoolean("block_ads", block).apply();
     }
 
+    public static int getGoolMode() {
+        return getPrefs().getInt("gool_mode", GOOL_MODERN);
+    }
+
+    public static void setGoolMode(int mode) {
+        getPrefs().edit().putInt("gool_mode", mode).apply();
+    }
+
+    public static String getEchConfig() {
+        return getPrefs().getString("ech_config", "");
+    }
+
+    public static void setEchConfig(String s) {
+        getPrefs().edit().putString("ech_config", s != null ? s.trim() : "").apply();
+    }
+
+    public static boolean isFastEndpointOnly() {
+        return getPrefs().getBoolean("fast_endpoint_only", false);
+    }
+
+    public static void setFastEndpointOnly(boolean v) {
+        getPrefs().edit().putBoolean("fast_endpoint_only", v).apply();
+    }
+
+    public static int getTorDirectSecs() {
+        return getPrefs().getInt("tor_direct_secs", 0);
+    }
+
+    public static void setTorDirectSecs(int v) {
+        getPrefs().edit().putInt("tor_direct_secs", v).apply();
+    }
+
+    public static String getTorCheck() {
+        return getPrefs().getString("tor_check", "");
+    }
+
+    public static void setTorCheck(String s) {
+        getPrefs().edit().putString("tor_check", s != null ? s.trim() : "").apply();
+    }
+
+    public static String getTorBridgeLines() {
+        return getPrefs().getString("tor_bridge_lines", "");
+    }
+
+    public static void setTorBridgeLines(String s) {
+        getPrefs().edit().putString("tor_bridge_lines", s != null ? s.trim() : "").apply();
+    }
+
+    public static String getTorCountry() {
+        return getPrefs().getString("tor_country", "");
+    }
+
+    public static void setTorCountry(String s) {
+        getPrefs().edit().putString("tor_country", s != null ? s.trim() : "").apply();
+    }
+
+    public static int getTorBridges() {
+        return getPrefs().getInt("tor_bridges", 0);
+    }
+
+    public static void setTorBridges(int v) {
+        getPrefs().edit().putInt("tor_bridges", v).apply();
+    }
+
     public static int getMtu() {
         return getPrefs().getInt("mtu", 1280);
     }
@@ -353,7 +420,11 @@ public class AetherConfig {
                 args.add(peer);
             }
         } else if (protocol == PROTOCOL_GOOL) {
-            args.add("--gool");
+            if (getGoolMode() == GOOL_CLASSIC) {
+                args.add("--gool-classic");
+            } else {
+                args.add("--gool");
+            }
             String outer = getWiwOuter();
             String inner = getWiwInner();
             if (!TextUtils.isEmpty(outer)) {
@@ -454,7 +525,12 @@ public class AetherConfig {
 
         if (isEch()) {
             args.add("--ech");
-            args.add("auto");
+            String pasted = getEchConfig().trim();
+            if (!TextUtils.isEmpty(pasted) && pasted.length() >= 8 && pasted.matches("[A-Za-z0-9+/=]+")) {
+                args.add(pasted);
+            } else {
+                args.add("auto");
+            }
         }
 
         if (isBypassIran()) {
@@ -484,6 +560,28 @@ public class AetherConfig {
         Map<String, String> env = new HashMap<>();
         env.put("AETHER_SOCKS", getSocksHost() + ":" + getSocksPort());
         env.put("RUST_LOG", "info");
+        if (isFastEndpointOnly()) {
+            boolean chained = isPsiphonBackend();
+            env.put("AETHER_QUICK_RECONNECT_MAX_RTT_MS", chained ? "1200" : "2000");
+            env.put("AETHER_QUICK_RECONNECT_MAX_HANDSHAKE_MS", chained ? "3500" : "5000");
+            env.put("AETHER_SCAN_GOOD_RTT_MS", chained ? "1200" : "2000");
+        }
+        if (getTorDirectSecs() > 0) {
+            env.put("AETHER_TOR_DIRECT_SECS", String.valueOf(Math.max(5, Math.min(600, getTorDirectSecs()))));
+        }
+        String torCheck = getTorCheck().trim();
+        if (!TextUtils.isEmpty(torCheck)) {
+            env.put("AETHER_TOR_CHECK", torCheck);
+        }
+        String torCountry = getTorCountry().trim().toLowerCase();
+        if (torCountry.length() == 2 && torCountry.matches("[a-z]{2}")) {
+            env.put("AETHER_TOR_COUNTRY", torCountry);
+        }
+        int bridges = getTorBridges();
+        if (bridges == 1) env.put("AETHER_TOR_BRIDGES", "1");
+        else if (bridges == 2) env.put("AETHER_NO_TOR_BRIDGES", "1");
+        String bl = getTorBridgeLines();
+        if (!TextUtils.isEmpty(bl)) env.put("AETHER_TOR_BRIDGES_LINES", bl);
         return env;
     }
 }

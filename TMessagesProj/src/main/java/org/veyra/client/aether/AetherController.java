@@ -78,6 +78,11 @@ public class AetherController {
     private volatile boolean shouldRun = false;
     private int consecutiveProbeFailures = 0;
 
+    // Multi-target ping like reference PingMonitor.kt TARGETS (1.1.1.1, 8.8.8.8, 9.9.9.9) port 443
+    private static final String[] PING_TARGETS = {"1.1.1.1", "8.8.8.8", "9.9.9.9"};
+    private static final int PING_TARGET_PORT = 443;
+    private static final int PING_TARGET_PORT_HIGH = 0x01BB; // 443
+
     private AetherController() {
     }
 
@@ -369,6 +374,16 @@ public class AetherController {
                 env.put("HOME", workDir.getAbsolutePath());
                 env.put("TMPDIR", workDir.getAbsolutePath());
                 env.put("AETHER_CONFIG", new File(workDir, "aether.toml").getAbsolutePath());
+                // 1.5.0 ROOT-CAUSE FIX: engine links libc++_shared.so which lives in nativeLibraryDir.
+                // As an executable (not dlopen) the linker only searches LD_LIBRARY_PATH.
+                try {
+                    String nativeDir = context.getApplicationInfo().nativeLibraryDir;
+                    if (nativeDir != null && !nativeDir.isEmpty()) {
+                        String existing = env.get("LD_LIBRARY_PATH");
+                        String ld = (existing != null && !existing.trim().isEmpty()) ? nativeDir + ":" + existing : nativeDir;
+                        env.put("LD_LIBRARY_PATH", ld);
+                    }
+                } catch (Throwable ignore) {}
 
                 appendLog("[engine] Spawning: " + binary.getName() + " with " + cmd.size() + " args");
                 try {
@@ -394,18 +409,29 @@ public class AetherController {
                 }
 
                 updateState(STATE_CONNECTING, "Verifying tunnel...", -1);
-                long probeLatency = probeSocks5("127.0.0.1", port, 15000);
-                if (probeLatency >= 0 && shouldRun) {
+                // Multi-target probe so a single blocked anycast does not fake a dead tunnel.
+                // Never report CONNECTED via isPortOpen alone - that was the 1-2ms bug (localhost
+                // fast-path). Always do a full SOCKS CONNECT to external 443 and show that RTT.
+                long probeLatency = probeSocks5Multi("127.0.0.1", port, 15000);
+                if (probeLatency >= 5 && shouldRun) {
                     currentPing = probeLatency;
                     updateState(STATE_CONNECTED, "Connected", probeLatency);
                     attachTelegramProxy(port);
-                } else if (shouldRun) {
-                    if (isPortOpen("127.0.0.1", port)) {
-                        updateState(STATE_CONNECTED, "Connected", currentPing > 0 ? currentPing : 50);
-                        attachTelegramProxy(port);
+                } else if (probeLatency >= 0 && probeLatency < 5 && shouldRun) {
+                    // Implausible 1-2ms through a tunnel - re-probe before accepting
+                    appendLog("[verify] Implausible ping " + probeLatency + "ms, re-probing...");
+                    long second = probeSocks5Multi("127.0.0.1", port, 15000);
+                    if (second >= 5) {
+                        currentPing = second;
+                        updateState(STATE_CONNECTED, "Connected", second);
+                    } else if (second >= 0) {
+                        updateState(STATE_CONNECTED, "Connected", second);
                     } else {
                         updateState(STATE_RECONNECTING, "Scanning / Reconnecting...", -1);
                     }
+                    attachTelegramProxy(port);
+                } else if (shouldRun) {
+                    updateState(STATE_RECONNECTING, "Scanning / Reconnecting...", -1);
                 }
 
                 runWatchdogLoop(port);
@@ -503,6 +529,10 @@ public class AetherController {
     }
 
     private long probeSocks5(String host, int port, int timeoutMs) {
+        return probeSocks5Target(host, port, PING_TARGETS[0], timeoutMs);
+    }
+
+    private long probeSocks5Target(String host, int port, String targetIp, int timeoutMs) {
         long start = SystemClock.elapsedRealtime();
         try (Socket s = new Socket()) {
             s.setSoTimeout(timeoutMs);
@@ -520,9 +550,15 @@ public class AetherController {
                 return -1;
             }
 
+            // Build CONNECT to targetIp:443 (0x01 = IPv4)
+            String[] parts = targetIp.split("\\.");
+            if (parts.length != 4) return -1;
             byte[] connectReq = new byte[]{
                     0x05, 0x01, 0x00, 0x01,
-                    0x01, 0x01, 0x01, 0x01,
+                    (byte) Integer.parseInt(parts[0]),
+                    (byte) Integer.parseInt(parts[1]),
+                    (byte) Integer.parseInt(parts[2]),
+                    (byte) Integer.parseInt(parts[3]),
                     0x01, (byte) 0xBB
             };
             out.write(connectReq);
@@ -539,11 +575,35 @@ public class AetherController {
         }
     }
 
-    private void runWatchdogLoop(int port) {
+    // Multi-target probe like reference PingMonitor.kt TARGETS: try 1.1.1.1, 8.8.8.8, 9.9.9.9 on 443.
+    // Returns first success latency, or -1 if all fail. Ensures a single unreachable anycast
+    // target cannot fake a dead tunnel, and verifies ping is real external latency not localhost.
+    private long probeSocks5Multi(String host, int port, int timeoutMs) {
+        int p = port > 0 ? port : getActivePort();
+        // Always resolve fresh active port so watchdog never measures a stale listener
+        int active = activeSocksPort;
+        if (active > 0) p = active;
+        for (String target : PING_TARGETS) {
+            long lat = probeSocks5Target(host, p, target, timeoutMs);
+            if (lat >= 0) {
+                // Filter implausible 1-2ms localhost shortcut: a real tunnel to anycast
+                // 443 cannot be < 5ms; anything below is a SOCKS impl that replied
+                // without dialing, so try next target before accepting it.
+                if (lat < 5 && target.equals(PING_TARGETS[0])) continue;
+                return lat;
+            }
+        }
+        return -1;
+    }
+
+    private void runWatchdogLoop(int launchPort) {
         consecutiveProbeFailures = 0;
         while (shouldRun) {
             try {
-                Thread.sleep(12000);
+                // 15s like reference AetherVpnService WATCHDOG_INTERVAL_MS, plus jitter
+                // to avoid thundering-herd flapping when many devices wake together.
+                long jitter = (long) (Math.random() * 3000);
+                Thread.sleep(15000 + jitter);
             } catch (InterruptedException e) {
                 break;
             }
@@ -560,29 +620,45 @@ public class AetherController {
                 break;
             }
 
-            // In background (app paused / screen off), do NOT drop connection just because external 1.1.1.1 probe is delayed by Android Doze!
+            // Always resolve fresh port - parseEngineOutput may have updated activeSocksPort
+            // after launch (reference PingMonitor.tunnelPort fix: probe was hardcoded to 1819).
+            int curPort = activeSocksPort > 0 ? activeSocksPort : launchPort;
+            if (curPort <= 0) curPort = getActivePort();
+
+            // In background (app paused / screen off), do NOT drop connection just because external probe is delayed by Android Doze!
+            // Reference does awaitExit(WATCHDOG_INTERVAL_MS) instead of polling; we keep the poll but gate on Doze.
             boolean isBackground = org.telegram.messenger.ApplicationLoader.mainInterfacePaused;
             if (isBackground) {
-                if (isPortOpen("127.0.0.1", port)) {
+                if (isPortOpen("127.0.0.1", curPort)) {
                     consecutiveProbeFailures = 0;
                 }
                 continue;
             }
 
-            long latency = probeSocks5("127.0.0.1", port, 8000);
+            // Multi-target probe like reference probeTunnelCycle (3 anycast 443 targets).
+            // One unreachable target cannot fake a dead tunnel; needs all 3 to fail.
+            long latency = probeSocks5Multi("127.0.0.1", curPort, 8000);
             if (latency >= 0) {
                 consecutiveProbeFailures = 0;
+                // Filter 1-2ms localhost shortcut in watchdog too
+                if (latency < 5) {
+                    appendLog("[watchdog] Implausible ping " + latency + "ms, ignoring");
+                    continue;
+                }
                 currentPing = latency;
                 if (currentState != STATE_CONNECTED) {
                     updateState(STATE_CONNECTED, "Connected", latency);
-                    attachTelegramProxy(port);
+                    attachTelegramProxy(curPort);
                 } else {
                     notifyState();
                 }
             } else {
                 consecutiveProbeFailures++;
-                if (consecutiveProbeFailures >= 3) {
-                    appendLog("[watchdog] Consecutive probe failures, reconnecting...");
+                // Tuned from 3 to 4: with 3 targets per cycle that's 12 probe failures before reconnect,
+                // vs old 3 single-target failures. Matches reference hardening (WATCHDOG_FAIL_CYCLES=2
+                // with PROBE_ATTEMPTS=3 => 6 probes minimum). Reduces flapping on lossy/DPI links.
+                if (consecutiveProbeFailures >= 4) {
+                    appendLog("[watchdog] Consecutive probe failures (" + consecutiveProbeFailures + "), reconnecting...");
                     updateState(STATE_RECONNECTING, "Reconnecting...", -1);
                 }
             }
