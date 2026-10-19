@@ -19683,12 +19683,11 @@ public class MessagesController extends BaseController implements NotificationCe
                         if (message.edit_date == 0) {
                             message.edit_date = getConnectionsManager().getCurrentTime();
                         }
-                    } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(message.dialog_id, message.id)) {
-                        message.edit_date = oldMsgOwner.edit_date;
+                    } else if (wasEditedBefore) {
                         message.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                    } else {
-                        message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        message.edit_date = 0;
+                        if (message.edit_date == 0 && oldMsgOwner.edit_date != 0) {
+                            message.edit_date = oldMsgOwner.edit_date;
+                        }
                     }
 
                     if (textChanged
@@ -19705,9 +19704,6 @@ public class MessagesController extends BaseController implements NotificationCe
                                 oldMsgOwner
                         );
                     }
-                } else if (isReactionUpdate && !getSendMessagesHelper().isRecentlyEditedLocally(message.id)) {
-                    message.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                    message.edit_date = 0;
                 }
                 AndroidUtilities.runOnUIThread(()-> getSendMessagesHelper().onMessageEdited(message));
 

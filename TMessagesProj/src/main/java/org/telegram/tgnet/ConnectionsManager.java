@@ -484,40 +484,6 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
-        if (object instanceof TLRPC.TL_messages_readReactions) {
-            long peerDialogId = 0;
-            try {
-                peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readReactions) object).peer);
-            } catch (Throwable ignore) {}
-            if (peerDialogId != 0 && org.telegram.messenger.VeyraConfig.isGhostHideRead(peerDialogId)
-                    && !org.telegram.messenger.VeyraConfig.consumeSendReadAllowed(peerDialogId)) {
-                if (onComplete != null) {
-                    TLRPC.TL_messages_affectedHistory res = new TLRPC.TL_messages_affectedHistory();
-                    res.pts = 0;
-                    res.pts_count = 0;
-                    res.offset = 0;
-                    if (onCompleteTimestamp != null) {
-                        AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
-                    } else {
-                        AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
-                    }
-                }
-                return;
-            } else if (peerDialogId == 0 && org.telegram.messenger.VeyraConfig.isGhostHideRead()) {
-                if (onComplete != null) {
-                    TLRPC.TL_messages_affectedHistory res = new TLRPC.TL_messages_affectedHistory();
-                    res.pts = 0;
-                    res.pts_count = 0;
-                    res.offset = 0;
-                    if (onCompleteTimestamp != null) {
-                        AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
-                    } else {
-                        AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
-                    }
-                }
-                return;
-            }
-        }
         if (object instanceof TLRPC.TL_messages_readPollVotes) {
             long peerDialogId = 0;
             try {
