@@ -28,14 +28,16 @@ public class LauncherIconController {
         Context ctx = ApplicationLoader.applicationContext;
         PackageManager pm = ctx.getPackageManager();
         try {
+            org.telegram.messenger.FileLog.d("LauncherIconController: switching icon to " + icon.key);
             pm.setComponentEnabledSetting(icon.getComponentName(ctx), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
             for (LauncherIcon i : LauncherIcon.values()) {
                 if (i != icon) {
                     pm.setComponentEnabledSetting(i.getComponentName(ctx), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
                 }
             }
+            org.telegram.messenger.FileLog.d("LauncherIconController: successfully switched icon to " + icon.key);
         } catch (Exception e) {
-            org.telegram.messenger.FileLog.e(e);
+            org.telegram.messenger.FileLog.e("LauncherIconController: failed to switch icon", e);
         }
     }
 
