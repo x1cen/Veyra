@@ -334,7 +334,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     private boolean checkPermissions = true;
     private boolean checkShowPermissions = true;
     private boolean newAccount;
-    private boolean syncContacts = true;
+    private boolean syncContacts = false;
     private boolean testBackend = false;
 
     @ActivityMode
@@ -707,7 +707,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
         if (savedInstanceState != null) {
             currentViewNum = savedInstanceState.getInt("currentViewNum", 0);
-            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;
+            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;
             if (currentViewNum >= VIEW_CODE_MESSAGE && currentViewNum <= VIEW_CODE_CALL) {
                 int time = savedInstanceState.getInt("open");
                 if (time != 0 && Math.abs(System.currentTimeMillis() / 1000 - time) >= 24 * 60 * 60) {
