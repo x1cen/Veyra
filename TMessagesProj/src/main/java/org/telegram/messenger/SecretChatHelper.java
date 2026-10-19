@@ -1930,7 +1930,7 @@ public class SecretChatHelper extends BaseController {
     }
 
     public void startSecretChat(Context context, TLRPC.User user) {
-        if (user == null || context == null) {
+        if (user == null || context == null || VeyraConfig.blockSecretChat) {
             return;
         }
         if (getMessagesController().isFrozen()) {

@@ -23594,12 +23594,6 @@ public class ChatActivity extends BaseFragment implements
                     MessageObject messageObject = filteredMessagesDict.get(msgId);
                     if (messageObject != null) {
                         MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
-                        // Veyra: preserve EDITED for own/recently-edited messages; reaction updates shouldn't strip the label
-                        boolean keepEdited = messageObject.isOutOwner() || org.telegram.messenger.SendMessagesHelper.getInstance(messageObject.currentAccount).isRecentlyEditedLocally(msgId) || (messageObject.messageOwner.flags & org.telegram.tgnet.TLRPC.MESSAGE_FLAG_EDITED) != 0 && messageObject.messageOwner.edit_date != 0;
-                        if (messageObject.messageOwner != null && !keepEdited && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId) && !org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(did, msgId)) {
-                            messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                            messageObject.messageOwner.edit_date = 0;
-                        }
                         messageObject.forceUpdate = true;
                         messageObject.reactionsChanged = true;
                     }
@@ -23607,11 +23601,6 @@ public class ChatActivity extends BaseFragment implements
                 MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
                 if (messageObject != null) {
                     MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
-                    boolean keepEdited2 = messageObject.isOutOwner() || org.telegram.messenger.SendMessagesHelper.getInstance(messageObject.currentAccount).isRecentlyEditedLocally(msgId) || (messageObject.messageOwner.flags & org.telegram.tgnet.TLRPC.MESSAGE_FLAG_EDITED) != 0 && messageObject.messageOwner.edit_date != 0;
-                    if (messageObject.messageOwner != null && !keepEdited2 && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId) && !org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(did, msgId)) {
-                        messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                        messageObject.messageOwner.edit_date = 0;
-                    }
                     messageObject.forceUpdate = true;
                     messageObject.reactionsChanged = true;
                     updateMessageAnimated(messageObject, true);
@@ -26841,9 +26830,9 @@ public class ChatActivity extends BaseFragment implements
                         // This is our own outgoing message being deleted/edited — do NOT mark as deleted label
                         obj.deleted = true;
                     } else {
+                        obj.isVeyraDeleted = true;
                         obj.deleted = false;
-                        // Veyra: isDeleted not in this TLRPC base; use MessageObject.deleted
-                        org.veyra.client.VeyraAntiDelete.markChatDeleted(dialog_id);
+                        org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialog_id, obj.getId());
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                         }
@@ -27177,12 +27166,11 @@ public class ChatActivity extends BaseFragment implements
                     if (messageObject.messageOwner.edit_date == 0) {
                         messageObject.messageOwner.edit_date = org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).getCurrentTime();
                     }
-                } else if (wasEditedBefore && !isReactionUpdate && org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, messageObject.getId())) {
-                    messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                } else if (wasEditedBefore) {
                     messageObject.messageOwner.flags |= TLRPC.MESSAGE_FLAG_EDITED;
-                } else {
-                    messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                    messageObject.messageOwner.edit_date = 0;
+                    if (messageObject.messageOwner.edit_date == 0 && old.messageOwner.edit_date != 0) {
+                        messageObject.messageOwner.edit_date = old.messageOwner.edit_date;
+                    }
                 }
 
                 if (textChanged && !old.isOut() && !messageObject.isOut()) {
@@ -33501,10 +33489,6 @@ public class ChatActivity extends BaseFragment implements
         ArrayList<ReactionsLayoutInBubble.VisibleReaction> visibleReactions = new ArrayList<>();
         visibleReactions.addAll(primaryMessage.getChoosenReactions());
         getSendMessagesHelper().registerLocalReaction(primaryMessage.getId());
-        if (primaryMessage.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, primaryMessage.getId())) {
-            primaryMessage.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-            primaryMessage.messageOwner.edit_date = 0;
-        }
         getSendMessagesHelper().sendReaction(primaryMessage, visibleReactions, added ? visibleReaction : null, bigEmoji, addToRecent, ChatActivity.this, updateReactionRunnable = new Runnable() {
             @Override
             public void run() {
@@ -33530,10 +33514,6 @@ public class ChatActivity extends BaseFragment implements
                             if (messageInDict != null && messageInDict != primaryMessage) {
                                 messageToUpdate = messagesDict[0].get(primaryMessage.getId());
                                 messageToUpdate.messageOwner.reactions = primaryMessage.messageOwner.reactions;
-                            }
-                            if (messageToUpdate.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(dialog_id, messageToUpdate.getId())) {
-                                messageToUpdate.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
-                                messageToUpdate.messageOwner.edit_date = 0;
                             }
 
                             updateMessageAnimated(messageToUpdate, true);

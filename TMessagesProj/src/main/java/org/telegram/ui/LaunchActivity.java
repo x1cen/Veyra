@@ -6980,6 +6980,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     @Override
     protected void onResume() {
         super.onResume();
+        org.veyra.client.VeyraSecurityGuard.applyWindowSecurity(this);
         isResumed = true;
         pipActivityHandler.onResume();
         if (onResumeStaticCallback != null) {

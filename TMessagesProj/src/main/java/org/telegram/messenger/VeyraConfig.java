@@ -62,9 +62,9 @@ public class VeyraConfig {
     public static boolean antiDelete = true;
     public static boolean antiDeletePrivate = true;
     public static boolean antiDeleteGroups = true;
-    public static boolean antiDeleteGroupsOnlyPrivate = true;
+    public static boolean antiDeleteGroupsOnlyPrivate = false;
     public static boolean antiDeleteChannels = true;
-    public static boolean antiDeleteChannelsOnlyPrivate = true;
+    public static boolean antiDeleteChannelsOnlyPrivate = false;
     public static boolean antiDeleteBots = false;
     public static boolean ghostMode = true;
     public static boolean hideTyping = true;
@@ -311,9 +311,9 @@ public class VeyraConfig {
     public static boolean editHistoryEnabled = true;
     public static boolean editHistoryPrivate = true;
     public static boolean editHistoryGroups = true;
-    public static boolean editHistoryGroupsOnlyPrivate = true;
+    public static boolean editHistoryGroupsOnlyPrivate = false;
     public static boolean editHistoryChannels = true;
-    public static boolean editHistoryChannelsOnlyPrivate = true;
+    public static boolean editHistoryChannelsOnlyPrivate = false;
     public static boolean editHistoryBots = false;
     public static int editHistoryLimit = 10;
     public static boolean editHistoryDropOldest = true;
@@ -324,25 +324,25 @@ public class VeyraConfig {
     public static boolean reactionHistoryDropOldest = true;
     public static boolean reactionHistoryPrivate = true;
     public static boolean reactionHistoryGroups = true;
-    public static boolean reactionHistoryGroupsOnlyPrivate = true;
+    public static boolean reactionHistoryGroupsOnlyPrivate = false;
     public static boolean reactionHistoryChannels = false;
-    public static boolean reactionHistoryChannelsOnlyPrivate = true;
+    public static boolean reactionHistoryChannelsOnlyPrivate = false;
     public static boolean reactionHistoryBots = false;
 
     // Ignore Owner / Admin in Groups & Channels (Recent Actions already log them)
-    public static boolean antiDeleteGroupsIgnoreOwner = true;
+    public static boolean antiDeleteGroupsIgnoreOwner = false;
     public static boolean antiDeleteGroupsIgnoreAdmin = false;
-    public static boolean antiDeleteChannelsIgnoreOwner = true;
+    public static boolean antiDeleteChannelsIgnoreOwner = false;
     public static boolean antiDeleteChannelsIgnoreAdmin = false;
 
-    public static boolean editHistoryGroupsIgnoreOwner = true;
+    public static boolean editHistoryGroupsIgnoreOwner = false;
     public static boolean editHistoryGroupsIgnoreAdmin = false;
-    public static boolean editHistoryChannelsIgnoreOwner = true;
+    public static boolean editHistoryChannelsIgnoreOwner = false;
     public static boolean editHistoryChannelsIgnoreAdmin = false;
 
-    public static boolean reactionHistoryGroupsIgnoreOwner = true;
+    public static boolean reactionHistoryGroupsIgnoreOwner = false;
     public static boolean reactionHistoryGroupsIgnoreAdmin = false;
-    public static boolean reactionHistoryChannelsIgnoreOwner = true;
+    public static boolean reactionHistoryChannelsIgnoreOwner = false;
     public static boolean reactionHistoryChannelsIgnoreAdmin = false;
 
     // ==================== Controls & Interaction ====================
@@ -407,9 +407,9 @@ public class VeyraConfig {
         antiDelete = preferences.getBoolean("antiDelete", true);
         antiDeletePrivate = preferences.getBoolean("antiDeletePrivate", true);
         antiDeleteGroups = preferences.getBoolean("antiDeleteGroups", true);
-        antiDeleteGroupsOnlyPrivate = preferences.getBoolean("antiDeleteGroupsOnlyPrivate", true);
+        antiDeleteGroupsOnlyPrivate = preferences.getBoolean("antiDeleteGroupsOnlyPrivate", false);
         antiDeleteChannels = preferences.getBoolean("antiDeleteChannels", true);
-        antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", true);
+        antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", false);
         antiDeleteBots = preferences.getBoolean("antiDeleteBots", false);
         ghostMode = preferences.getBoolean("ghostMode", true);
         ghostHideOnline = preferences.getBoolean("ghostHideOnline", true);
@@ -433,9 +433,9 @@ public class VeyraConfig {
         editHistoryEnabled = preferences.getBoolean("editHistoryEnabled", true);
         editHistoryPrivate = preferences.getBoolean("editHistoryPrivate", true);
         editHistoryGroups = preferences.getBoolean("editHistoryGroups", true);
-        editHistoryGroupsOnlyPrivate = preferences.getBoolean("editHistoryGroupsOnlyPrivate", true);
+        editHistoryGroupsOnlyPrivate = preferences.getBoolean("editHistoryGroupsOnlyPrivate", false);
         editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
-        editHistoryChannelsOnlyPrivate = preferences.getBoolean("editHistoryChannelsOnlyPrivate", true);
+        editHistoryChannelsOnlyPrivate = preferences.getBoolean("editHistoryChannelsOnlyPrivate", false);
         editHistoryBots = preferences.getBoolean("editHistoryBots", false);
         editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
         editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
@@ -446,24 +446,24 @@ public class VeyraConfig {
         reactionHistoryDropOldest = preferences.getBoolean("reactionHistoryDropOldest", true);
         reactionHistoryPrivate = preferences.getBoolean("reactionHistoryPrivate", true);
         reactionHistoryGroups = preferences.getBoolean("reactionHistoryGroups", true);
-        reactionHistoryGroupsOnlyPrivate = preferences.getBoolean("reactionHistoryGroupsOnlyPrivate", true);
+        reactionHistoryGroupsOnlyPrivate = preferences.getBoolean("reactionHistoryGroupsOnlyPrivate", false);
         reactionHistoryChannels = preferences.getBoolean("reactionHistoryChannels", false);
-        reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", true);
+        reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", false);
         reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
 
-        antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", true);
+        antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", false);
         antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", false);
-        antiDeleteChannelsIgnoreOwner = preferences.getBoolean("antiDeleteChannelsIgnoreOwner", true);
+        antiDeleteChannelsIgnoreOwner = preferences.getBoolean("antiDeleteChannelsIgnoreOwner", false);
         antiDeleteChannelsIgnoreAdmin = preferences.getBoolean("antiDeleteChannelsIgnoreAdmin", false);
 
-        editHistoryGroupsIgnoreOwner = preferences.getBoolean("editHistoryGroupsIgnoreOwner", true);
+        editHistoryGroupsIgnoreOwner = preferences.getBoolean("editHistoryGroupsIgnoreOwner", false);
         editHistoryGroupsIgnoreAdmin = preferences.getBoolean("editHistoryGroupsIgnoreAdmin", false);
-        editHistoryChannelsIgnoreOwner = preferences.getBoolean("editHistoryChannelsIgnoreOwner", true);
+        editHistoryChannelsIgnoreOwner = preferences.getBoolean("editHistoryChannelsIgnoreOwner", false);
         editHistoryChannelsIgnoreAdmin = preferences.getBoolean("editHistoryChannelsIgnoreAdmin", false);
 
-        reactionHistoryGroupsIgnoreOwner = preferences.getBoolean("reactionHistoryGroupsIgnoreOwner", true);
+        reactionHistoryGroupsIgnoreOwner = preferences.getBoolean("reactionHistoryGroupsIgnoreOwner", false);
         reactionHistoryGroupsIgnoreAdmin = preferences.getBoolean("reactionHistoryGroupsIgnoreAdmin", false);
-        reactionHistoryChannelsIgnoreOwner = preferences.getBoolean("reactionHistoryChannelsIgnoreOwner", true);
+        reactionHistoryChannelsIgnoreOwner = preferences.getBoolean("reactionHistoryChannelsIgnoreOwner", false);
         reactionHistoryChannelsIgnoreAdmin = preferences.getBoolean("reactionHistoryChannelsIgnoreAdmin", false);
 
         ghostTypingPrivate = preferences.getBoolean("ghostTypingPrivate", true);
@@ -942,6 +942,14 @@ public class VeyraConfig {
     public static void setGhostHideOnline(boolean val) {
         ghostHideOnline = val;
         save("ghostHideOnline", val);
+        int targetMode = val ? 1 : 0;
+        if (onlineMode != targetMode) {
+            onlineMode = targetMode;
+            if (preferences == null) {
+                preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
+            }
+            preferences.edit().putInt("onlineMode", targetMode).apply();
+        }
     }
     public static void setGhostHideTyping(boolean val) {
         ghostHideTyping = val;
@@ -1131,6 +1139,11 @@ public class VeyraConfig {
             preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
         }
         preferences.edit().putInt("onlineMode", val).apply();
+        boolean hide = (val == 1 || val == 2);
+        if (ghostHideOnline != hide) {
+            ghostHideOnline = hide;
+            save("ghostHideOnline", hide);
+        }
     }
     public static void setSortByUnread(boolean val) {
         sortByUnread = val;
