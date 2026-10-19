@@ -57,6 +57,16 @@ public class AetherService extends Service {
         super.onCreate();
         createNotificationChannel();
         acquireWakeLock();
+        try {
+            Notification notification = buildNotification("Aether Active", "Tunneling proxy traffic in background");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIF_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIF_ID, notification);
+            }
+        } catch (Exception e) {
+            FileLog.e("AetherService", e);
+        }
     }
 
     @Override
@@ -65,17 +75,6 @@ public class AetherService extends Service {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
-        }
-
-        Notification notification = buildNotification("Aether Active", "Tunneling proxy traffic in background");
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIF_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-            } else {
-                startForeground(NOTIF_ID, notification);
-            }
-        } catch (Exception e) {
-            FileLog.e("AetherService", e);
         }
 
         return START_STICKY;

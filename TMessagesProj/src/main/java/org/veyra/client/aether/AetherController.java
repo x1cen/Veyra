@@ -138,29 +138,32 @@ public class AetherController {
 
     public File findCoreBinary() {
         Context context = ApplicationLoader.applicationContext;
-        File nativeLib = new File(context.getApplicationInfo().nativeLibraryDir, "libaether.so");
-        if (nativeLib.exists() && nativeLib.canExecute()) {
-            return nativeLib;
-        }
+        if (context == null) return null;
+
+        try {
+            String nativeDir = context.getApplicationInfo().nativeLibraryDir;
+            if (nativeDir != null) {
+                File nativeLib = new File(nativeDir, "libaether.so");
+                if (nativeLib.exists()) {
+                    return nativeLib;
+                }
+            }
+        } catch (Throwable ignore) {}
 
         File downloaded = AetherDownloader.getDownloadedBinaryFile();
-        if (downloaded.exists()) {
-            if (!downloaded.canExecute()) {
+        if (downloaded != null && downloaded.exists()) {
+            try {
                 downloaded.setExecutable(true, false);
-            }
-            if (downloaded.canExecute()) {
-                return downloaded;
-            }
+            } catch (Throwable ignore) {}
+            return downloaded;
         }
 
         File alt = new File(context.getFilesDir(), "aether/aether");
         if (alt.exists()) {
-            if (!alt.canExecute()) {
+            try {
                 alt.setExecutable(true, false);
-            }
-            if (alt.canExecute()) {
-                return alt;
-            }
+            } catch (Throwable ignore) {}
+            return alt;
         }
 
         return null;
@@ -325,7 +328,15 @@ public class AetherController {
                 env.put("AETHER_CONFIG", new File(workDir, "aether.toml").getAbsolutePath());
 
                 appendLog("[engine] Spawning: " + binary.getName() + " with " + cmd.size() + " args");
-                process = pb.start();
+                try {
+                    process = pb.start();
+                } catch (Exception e) {
+                    FileLog.e("AetherController", e);
+                    appendLog("[error] Failed to launch binary: " + e.getMessage());
+                    updateState(STATE_ERROR, "Cannot execute binary: " + e.getMessage(), -1);
+                    stop();
+                    return;
+                }
 
                 startLogReader(process.getInputStream());
 
