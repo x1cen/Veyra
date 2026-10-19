@@ -107,6 +107,7 @@
         tools:replace="android:supportsRtl"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true"
+        android:extractNativeLibs="true"
     >
         <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 

@@ -68,14 +68,14 @@ public class JsonViewerActivity extends BaseFragment {
 
     @Override
     public View createView(Context context) {
-        // Bright clean action bar
+        // Dark sleek action bar
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle(title);
-        actionBar.setItemsColor(0xFF24292F, false);
-        actionBar.setItemsBackgroundColor(0x1F000000, false);
-        actionBar.setTitleColor(0xFF24292F);
-        actionBar.setBackgroundColor(0xFFFFFFFF);
+        actionBar.setItemsColor(0xFFFFFFFF, false);
+        actionBar.setItemsBackgroundColor(0x2AFFFFFF, false);
+        actionBar.setTitleColor(0xFFFFFFFF);
+        actionBar.setBackgroundColor(0xFF161B22);
         actionBar.setCastShadows(true);
 
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
@@ -93,7 +93,7 @@ public class JsonViewerActivity extends BaseFragment {
         menu.addItem(MENU_COPY, R.drawable.msg_copy);
 
         FrameLayout rootLayout = new FrameLayout(context);
-        rootLayout.setBackgroundColor(0xFFF6F8FA); // Elegant bright light canvas (GitHub light theme)
+        rootLayout.setBackgroundColor(0xFF0D1117); // Dark sleek background (GitHub Dark)
         fragmentView = rootLayout;
 
         // Content ScrollViews
@@ -104,9 +104,9 @@ public class JsonViewerActivity extends BaseFragment {
         horizontalScrollView.setFillViewport(true);
 
         jsonTextView = new TextView(context);
-        jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
         jsonTextView.setTypeface(Typeface.MONOSPACE);
-        jsonTextView.setTextColor(0xFF24292F); // Crisp dark charcoal
+        jsonTextView.setTextColor(0xFFE6EDF3); // Crisp bright white font for maximum readability
         jsonTextView.setTextIsSelectable(true);
         jsonTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(80)); // Bottom padding for floating bar
 
@@ -118,9 +118,9 @@ public class JsonViewerActivity extends BaseFragment {
         progressBar = new ProgressBar(context);
         rootLayout.addView(progressBar, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
 
-        // Floating Bottom Copy Bar (Bright accent style)
+        // Floating Bottom Copy Bar
         bottomBar = new FrameLayout(context);
-        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0xFF0969DA, 0xFF0550AE));
+        bottomBar.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0xFF238636, 0xFF2EA043));
         bottomBar.setElevation(AndroidUtilities.dp(4));
 
         LinearLayout buttonContent = new LinearLayout(context);
@@ -181,12 +181,12 @@ public class JsonViewerActivity extends BaseFragment {
         SpannableStringBuilder ssb = new SpannableStringBuilder(json);
         Matcher matcher = JSON_TOKEN_PATTERN.matcher(json);
 
-        // Modern Light Code Palette (GitHub Light style)
-        final int COLOR_KEY = 0xFF0969DA;     // Vibrant Deep Blue for keys
-        final int COLOR_STRING = 0xFF1A7F37;  // Forest Green for strings
-        final int COLOR_NUMBER = 0xFF9A6700;  // Warm Amber/Bronze for numbers
-        final int COLOR_BOOL = 0xFFCF222E;    // Crimson Red for booleans
-        final int COLOR_NULL = 0xFF6E7781;    // Slate Gray for null
+        // Modern Vibrant Dark Code Palette (GitHub Dark / VS Code Dark)
+        final int COLOR_KEY = 0xFF79C0FF;     // Bright Electric Blue / Cyan for keys
+        final int COLOR_STRING = 0xFF7EE787;  // Bright Mint Green for strings
+        final int COLOR_NUMBER = 0xFFFFA657;  // Bright Warm Gold for numbers
+        final int COLOR_BOOL = 0xFFFF7B72;    // Bright Coral Pink for booleans
+        final int COLOR_NULL = 0xFF8B949E;    // Crisp Silver Slate for null
 
         while (matcher.find()) {
             if (matcher.group(1) != null) {

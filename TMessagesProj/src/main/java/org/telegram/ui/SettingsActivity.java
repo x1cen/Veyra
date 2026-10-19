@@ -1827,6 +1827,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             } else if (which == 42) {
                 SharedSettings.experimentalSettingsAllowed.toggle();
                 listView.adapter.update(true);
+                BulletinFactory.of(SettingsActivity.this).createSimpleBulletin(
+                    R.raw.contact_check,
+                    SharedSettings.experimentalSettingsAllowed.get() ? "Experimental settings shown" : "Experimental settings hidden"
+                ).show();
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
