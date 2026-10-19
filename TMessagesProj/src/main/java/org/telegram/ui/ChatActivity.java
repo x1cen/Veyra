@@ -23759,7 +23759,9 @@ public class ChatActivity extends BaseFragment implements
                     MessageObject messageObject = filteredMessagesDict.get(msgId);
                     if (messageObject != null) {
                         MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
-                        if (messageObject.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId)) {
+                        // Veyra: preserve EDITED for own/recently-edited messages; reaction updates shouldn't strip the label
+                        boolean keepEdited = messageObject.isOutOwner() || org.telegram.messenger.SendMessagesHelper.getInstance(messageObject.currentAccount).isRecentlyEditedLocally(msgId) || (messageObject.messageOwner.flags & org.telegram.tgnet.TLRPC.MESSAGE_FLAG_EDITED) != 0 && messageObject.messageOwner.edit_date != 0;
+                        if (messageObject.messageOwner != null && !keepEdited && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId) && !org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(did, msgId)) {
                             messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                             messageObject.messageOwner.edit_date = 0;
                         }
@@ -23770,7 +23772,8 @@ public class ChatActivity extends BaseFragment implements
                 MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
                 if (messageObject != null) {
                     MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
-                    if (messageObject.messageOwner != null && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId)) {
+                    boolean keepEdited2 = messageObject.isOutOwner() || org.telegram.messenger.SendMessagesHelper.getInstance(messageObject.currentAccount).isRecentlyEditedLocally(msgId) || (messageObject.messageOwner.flags & org.telegram.tgnet.TLRPC.MESSAGE_FLAG_EDITED) != 0 && messageObject.messageOwner.edit_date != 0;
+                    if (messageObject.messageOwner != null && !keepEdited2 && !org.veyra.client.VeyraEditHistoryManager.hasHistory(did, msgId) && !org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(did, msgId)) {
                         messageObject.messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_EDITED;
                         messageObject.messageOwner.edit_date = 0;
                     }
