@@ -48,7 +48,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
-        // Top container: no header title — Aether + Auto Discovery
+        r.add(VeyraSettingsRow.header(""));
         r.add(VeyraSettingsRow.category(
                 IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
                 R.drawable.msg_channel,

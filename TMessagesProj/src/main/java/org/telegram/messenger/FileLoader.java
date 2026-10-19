@@ -963,7 +963,7 @@ public class FileLoader extends BaseController {
                             storeDir = newDir;
                             saveCustomPath = true;
                         }
-                    } else if (!TextUtils.isEmpty(getDocumentFileName(document)) && canSaveAsFile(parentObject)) {
+                    } else if (org.telegram.messenger.VeyraConfig.keepOriginalFilename && !TextUtils.isEmpty(getDocumentFileName(document)) && canSaveAsFile(parentObject)) {
                         storeFileName = getDocumentFileName(document);
                         File newDir = getDirectory(MEDIA_DIR_FILES);
                         if (newDir != null) {

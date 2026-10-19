@@ -499,7 +499,7 @@ public class VeyraConfig {
         disableLinkPreviewByDefault = preferences.getBoolean("disableLinkPreviewByDefault", false);
         ignoreContentRestrictions = preferences.getBoolean("ignoreContentRestrictions", true);
         blockSecretChat = preferences.getBoolean("blockSecretChat", false);
-        onlineMode = preferences.getInt("onlineMode", 0);
+        onlineMode = preferences.getInt("onlineMode", 1);
         sortByUnread = preferences.getBoolean("sortByUnread", false);
         sortByUnmuted = preferences.getBoolean("sortByUnmuted", false);
         disableTrending = preferences.getBoolean("disableTrending", false);

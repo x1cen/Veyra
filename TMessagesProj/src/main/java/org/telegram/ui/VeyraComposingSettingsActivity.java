@@ -36,6 +36,14 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
         ));
 
         r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraDisableQuickReaction", R.string.VeyraDisableQuickReaction),
+                LocaleController.getString("VeyraDisableQuickReactionDesc", R.string.VeyraDisableQuickReactionDesc),
+                () -> VeyraConfig.disableQuickReaction,
+                v -> VeyraConfig.setDisableQuickReaction(v),
+                true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraFormatTimeWithSeconds", R.string.VeyraFormatTimeWithSeconds),
                 LocaleController.getString("VeyraFormatTimeWithSecondsDesc", R.string.VeyraFormatTimeWithSecondsDesc),
                 () -> VeyraConfig.formatTimeWithSeconds,
@@ -73,6 +81,14 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.jumpToFirstMessage,
                 v -> VeyraConfig.setJumpToFirstMessage(v),
                 true
+        ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraCopyDialogId", R.string.VeyraCopyDialogId),
+                LocaleController.getString("VeyraCopyDialogIdDesc", R.string.VeyraCopyDialogIdDesc),
+                () -> VeyraConfig.copyDialogId,
+                v -> VeyraConfig.setCopyDialogId(v),
+                false
         ));
 
         r.add(VeyraSettingsRow.shadow());
