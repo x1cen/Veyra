@@ -111,6 +111,24 @@ public class VeyraAntiDelete {
     }
 
     private static final java.util.Set<Long> peerDeletedChats = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+    private static final java.util.Map<Long, java.util.Set<Integer>> deletedMessagesByDialog = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void addDeletedMessage(long dialogId, int messageId) {
+        if (dialogId > 0) {
+            peerDeletedChats.add(dialogId);
+        }
+        java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
+        if (set == null) {
+            set = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+            deletedMessagesByDialog.put(dialogId, set);
+        }
+        set.add(messageId);
+    }
+
+    public static boolean isMessageDeleted(long dialogId, int messageId) {
+        java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
+        return set != null && set.contains(messageId);
+    }
 
     public static void markChatDeleted(long dialogId) {
         if (dialogId > 0) {
@@ -120,14 +138,17 @@ public class VeyraAntiDelete {
 
     public static void removeChatDeleted(long dialogId) {
         peerDeletedChats.remove(dialogId);
+        deletedMessagesByDialog.remove(dialogId);
     }
 
     public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {
         if (db == null) return;
         try {
-            org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT DISTINCT uid FROM veyra_message_deletions WHERE uid > 0");
+            org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
             while (cursor.next()) {
-                peerDeletedChats.add(cursor.longValue(0));
+                int mid = cursor.intValue(0);
+                long uid = cursor.longValue(1);
+                addDeletedMessage(uid, mid);
             }
             cursor.dispose();
         } catch (Throwable ignored) {}
@@ -145,6 +166,7 @@ public class VeyraAntiDelete {
 
     public static void clearAll() {
         peerDeletedChats.clear();
+        deletedMessagesByDialog.clear();
         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
             .getStorageQueue().postRunnable(() -> {
                 try {

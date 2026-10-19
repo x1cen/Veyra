@@ -48,7 +48,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
-        r.add(VeyraSettingsRow.header(""));
+        r.add(VeyraSettingsRow.header("Anti-Censorship & Proxy"));
         r.add(VeyraSettingsRow.category(
                 IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
                 R.drawable.msg_channel,

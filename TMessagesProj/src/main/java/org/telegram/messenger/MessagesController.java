@@ -14672,7 +14672,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private void completeReadTask(ReadTask task) {
         if (task.fromSendReply) {
             VeyraConfig.allowSendReadOnce(task.dialogId);
-        } else if (VeyraConfig.isGhostReadOnReply(task.dialogId) && DialogObject.isUserDialog(task.dialogId)) {
+        } else if (VeyraConfig.isGhostReadOnReply(task.dialogId)) {
             pendingReadOnReply.put(task.dialogId, task);
             return;
         }

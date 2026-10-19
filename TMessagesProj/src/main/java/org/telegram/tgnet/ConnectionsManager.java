@@ -649,7 +649,11 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
-        if ((org.telegram.messenger.VeyraConfig.isGhostHideOnline() || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2) && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
+        boolean hideOnline = (org.telegram.messenger.VeyraConfig.isGhostHideOnline() || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2);
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 0 || org.telegram.messenger.VeyraConfig.onlineMode == 3) {
+            hideOnline = false;
+        }
+        if (hideOnline && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
             org.telegram.tgnet.tl.TL_account.updateStatus statusReq = (org.telegram.tgnet.tl.TL_account.updateStatus) object;
             if (!statusReq.offline) {
                 if (onComplete != null) {

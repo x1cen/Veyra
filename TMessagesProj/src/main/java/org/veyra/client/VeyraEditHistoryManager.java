@@ -516,9 +516,21 @@ public final class VeyraEditHistoryManager {
             values.put("user_id", userId);
             values.put("action", "remove");
             db.insert(REACTION_TABLE_NAME, null, values);
+            markReactionRemoved(dialogId, messageId);
         } catch (Exception e) {
             FileLog.e(e);
         }
+    }
+
+    private static final java.util.Map<Long, java.util.Set<Integer>> removedReactionMessages = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void markReactionRemoved(long dialogId, int messageId) {
+        java.util.Set<Integer> set = removedReactionMessages.get(dialogId);
+        if (set == null) {
+            set = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+            removedReactionMessages.put(dialogId, set);
+        }
+        set.add(messageId);
     }
 
     public static List<ReactionEntry> getReactionHistory(long dialogId, int messageId) {
@@ -552,13 +564,20 @@ public final class VeyraEditHistoryManager {
         if (!VeyraConfig.reactionHistoryEnabled) {
             return false;
         }
+        java.util.Set<Integer> set = removedReactionMessages.get(dialogId);
+        if (set != null && set.contains(messageId)) {
+            return true;
+        }
         try {
             SQLiteDatabase db = getHelper().getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME +
-                    " WHERE dialog_id = ? AND message_id = ? LIMIT 1",
+                    " WHERE dialog_id = ? AND message_id = ? AND action = 'remove' LIMIT 1",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
             boolean exists = cursor != null && cursor.moveToFirst();
             if (cursor != null) cursor.close();
+            if (exists) {
+                markReactionRemoved(dialogId, messageId);
+            }
             return exists;
         } catch (Exception e) {
             FileLog.e(e);

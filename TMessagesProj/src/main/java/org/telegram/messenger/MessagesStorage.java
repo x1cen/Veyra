@@ -5303,7 +5303,7 @@ public class MessagesStorage extends BaseController {
                                 }
                                 MessageObject.updateReactions(message, reactions);
                                 // Do not clear edited flag on reaction updates — preserve server-set edited state.
-                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !message.out && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
+                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
                                     if (pastReactions != null && pastReactions.recent_reactions != null && !pastReactions.recent_reactions.isEmpty()) {
@@ -15235,7 +15235,7 @@ public class MessagesStorage extends BaseController {
                     }
 
                     database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
-                    org.veyra.client.VeyraAntiDelete.markChatDeleted(did);
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, mid);
                     if (!dialogsToUpdate.contains(did)) {
                         dialogsToUpdate.add(did);
                     }

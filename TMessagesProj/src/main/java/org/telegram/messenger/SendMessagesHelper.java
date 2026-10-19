@@ -2246,6 +2246,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
+        if (VeyraConfig.anonymousForwardNoQuote) {
+            forwardFromMyName = true;
+        }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
         boolean isChannel = false;
@@ -4482,6 +4485,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (sendMessageChatArguments.welcomeMessageChatId != 0) {
             peer = -sendMessageChatArguments.welcomeMessageChatId;
             user = null;
+        }
+
+        if (peer != 0) {
+            getMessagesController().sendPendingReadOnReply(peer);
         }
 
         if (user != null && user.phone == null) {
