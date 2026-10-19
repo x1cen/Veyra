@@ -65,6 +65,14 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> presentFragment(new VeyraGhostFeatureActivity(VeyraConfig.CATEGORY_GHOST_READ))
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions),
+                LocaleController.getString("VeyraGhostHideReadReactionsDesc", R.string.VeyraGhostHideReadReactionsDesc),
+                () -> VeyraConfig.ghostHideReadReactions,
+                v -> VeyraConfig.setGhostHideReadReactions(v),
+                false
+        ));
+
         r.add(VeyraSettingsRow.toggleWithAction(
                 "Anonymous Channel Browsing",
                 VeyraConfig.getExceptions(VeyraConfig.CATEGORY_GHOST_CHANNEL_VIEWS).isEmpty()

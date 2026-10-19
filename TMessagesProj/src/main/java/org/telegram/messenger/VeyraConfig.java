@@ -79,6 +79,7 @@ public class VeyraConfig {
     public static boolean ghostHideUpload = true;
     public static boolean ghostHideRead = true;
     public static boolean ghostHideReadContents = true;
+    public static boolean ghostHideReadReactions = false;
     public static boolean ghostHideStories = true;
     public static boolean ghostReadOnReply = true;
     public static boolean ghostHideChannelViews = false;
@@ -246,6 +247,16 @@ public class VeyraConfig {
 
     public static boolean isGhostHideReadContents() {
         return ghostMode && ghostHideReadContents;
+    }
+
+    public static boolean isGhostHideReadReactions(long dialogId) {
+        if (!ghostMode || !ghostHideReadReactions) return false;
+        if (dialogId != 0) {
+            Boolean exc = getException(CATEGORY_GHOST_READ, dialogId);
+            if (exc != null) return exc;
+            if (isGhostExceptionDialog(dialogId)) return false;
+        }
+        return true;
     }
 
     public static boolean isGhostHideStories() {
@@ -417,6 +428,7 @@ public class VeyraConfig {
         ghostHideUpload = preferences.getBoolean("ghostHideUpload", true);
         ghostHideRead = preferences.getBoolean("ghostHideRead", true);
         ghostHideReadContents = preferences.getBoolean("ghostHideReadContents", true);
+        ghostHideReadReactions = preferences.getBoolean("ghostHideReadReactions", false);
         ghostHideStories = preferences.getBoolean("ghostHideStories", true);
         ghostReadOnReply = preferences.getBoolean("ghostReadOnReply", true);
         readOnReply = ghostReadOnReply;
@@ -968,6 +980,10 @@ public class VeyraConfig {
     public static void setGhostHideReadContents(boolean val) {
         ghostHideReadContents = val;
         save("ghostHideReadContents", val);
+    }
+    public static void setGhostHideReadReactions(boolean val) {
+        ghostHideReadReactions = val;
+        save("ghostHideReadReactions", val);
     }
     public static void setGhostHideStories(boolean val) {
         ghostHideStories = val;

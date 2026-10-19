@@ -70,6 +70,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
     private int typingFilesRow = -1;
     private int readOnReplyRow = -1;
     private int readContentsRow = -1;
+    private int readReactionsRow = -1;
     private int secretReadRow = -1;
     private int optionsDividerRow = -1;
 
@@ -123,6 +124,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         typingFilesRow = -1;
         readOnReplyRow = -1;
         readContentsRow = -1;
+        readReactionsRow = -1;
         secretReadRow = -1;
         optionsDividerRow = -1;
 
@@ -164,6 +166,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
             optionsHeaderRow = rowCount++;
             readOnReplyRow = rowCount++;
             readContentsRow = rowCount++;
+            readReactionsRow = rowCount++;
             secretReadRow = rowCount++;
             optionsDividerRow = rowCount++;
         }
@@ -299,6 +302,9 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                 updateRows();
             } else if (position == readContentsRow) {
                 VeyraConfig.setGhostHideReadContents(!VeyraConfig.ghostHideReadContents);
+                updateRows();
+            } else if (position == readReactionsRow) {
+                VeyraConfig.setGhostHideReadReactions(!VeyraConfig.ghostHideReadReactions);
                 updateRows();
             } else if (position == secretReadRow) {
                 VeyraConfig.setGhostHideSecretRead(!VeyraConfig.ghostHideSecretRead);
@@ -574,6 +580,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                         checkCell.setTextAndCheck("Read on Reply", VeyraConfig.ghostReadOnReply, true);
                     } else if (position == readContentsRow) {
                         checkCell.setTextAndCheck("Hide Media Receipts (Audio/Video)", VeyraConfig.ghostHideReadContents, true);
+                    } else if (position == readReactionsRow) {
+                        checkCell.setTextAndCheck(LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions), VeyraConfig.ghostHideReadReactions, true);
                     } else if (position == secretReadRow) {
                         checkCell.setTextAndCheck("Hide Secret Chat Receipts", VeyraConfig.ghostHideSecretRead, false);
                     }
