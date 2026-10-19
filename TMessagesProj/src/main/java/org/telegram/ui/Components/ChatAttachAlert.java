@@ -4607,10 +4607,6 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             currentAttachLayout.scrollToTop();
             return;
         }
-        if (layout == todoLayout && !UserConfig.getInstance(currentAccount).isPremium()) {
-            new PremiumFeatureBottomSheet(baseFragment, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false).show();
-            return;
-        }
 
         animatorToggleCaptionSupported.setValue(newId == LAYOUT_TYPE_PHOTO, animated);
         animatorCurrentVisibleLayout.replace(newId, animated);

@@ -44,30 +44,6 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                 }, false
         ));
         r.add(VeyraSettingsRow.shadow());
-
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraSettingsLock", R.string.VeyraSettingsLock)));
-        r.add(VeyraSettingsRow.detail(
-                VeyraConfig.hasSettingsLock()
-                        ? LocaleController.getString("VeyraSettingsLockChange", R.string.VeyraSettingsLockChange)
-                        : LocaleController.getString("VeyraSettingsLockSet", R.string.VeyraSettingsLockSet),
-                () -> VeyraConfig.hasSettingsLock()
-                        ? LocaleController.getString("VeyraSettingsLockOn", R.string.VeyraSettingsLockOn)
-                        : LocaleController.getString("VeyraSettingsLockOff", R.string.VeyraSettingsLockOff),
-                !VeyraConfig.hasSettingsLock(),
-                () -> presentFragment(new VeyraSettingsLockActivity())
-        ));
-        if (VeyraConfig.hasSettingsLock()) {
-            r.add(VeyraSettingsRow.button(
-                    LocaleController.getString("VeyraSettingsLockRemove", R.string.VeyraSettingsLockRemove),
-                    true, false,
-                    () -> {
-                        VeyraConfig.clearSettingsLock();
-                        reloadRows();
-                        BulletinFactory.of(VeyraPrivacySettingsActivity.this).createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString("VeyraSettingsLockRemoved", R.string.VeyraSettingsLockRemoved)).show();
-                    }
-            ));
-        }
-        r.add(VeyraSettingsRow.shadow());
         return r;
     }
 

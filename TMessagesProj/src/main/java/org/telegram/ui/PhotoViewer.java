@@ -899,6 +899,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private TextView docInfoTextView;
     private TextView doneButtonFullWidth;
     private ActionBarMenuItem menuItem;
+    private ActionBarMenuItem subtitleItem;
+    private TextView videoSubtitleOverlayView;
+    private boolean subtitlesVisible = false;
     private ActionBarMenuItem videoItem;
     private ActionBarMenuSubItem allMediaItem;
     private ActionBarMenuSlider.SpeedSlider speedItem;
@@ -5855,6 +5858,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         videoItem.redrawPopup(0xf9222222);
         videoItem.setOnMenuDismiss(byClick -> checkProgress(0, false, false));
 
+        subtitleItem = menu.addItem(155, R.drawable.msg_text_outlined);
+        subtitleItem.setContentDescription("Subtitles");
+        subtitleItem.setVisibility(View.GONE);
+        subtitleItem.setOnClickListener(v -> toggleSubtitles());
+
         menuItem = menu.addItem(0, R.drawable.media_more);
         menuItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
         menuItem.setOnClickListener(v -> {
@@ -5865,6 +5873,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
         });
         menuItem.setOnMenuDismiss(byClick -> checkProgress(0, false, false));
+
+        subtitleItem.setAlpha(0.45f);
 
         menuItem.getPopupLayout().setSwipeBackForegroundColor(0xff222222);
         menuItem.getPopupLayout().swipeBackGravityRight = true;
@@ -10626,6 +10636,32 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
 
                 @Override
+                public void onSubtitlesAvailable(boolean available) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (subtitleItem != null) {
+                            subtitleItem.setVisibility(available ? View.VISIBLE : View.GONE);
+                            if (available) {
+                                subtitleItem.setAlpha(subtitlesVisible ? 1.0f : 0.45f);
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                public void onCues(CharSequence cuesText) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (videoSubtitleOverlayView != null) {
+                            if (!subtitlesVisible || TextUtils.isEmpty(cuesText)) {
+                                videoSubtitleOverlayView.setVisibility(View.GONE);
+                            } else {
+                                videoSubtitleOverlayView.setText(cuesText);
+                                videoSubtitleOverlayView.setVisibility(View.VISIBLE);
+                            }
+                        }
+                    });
+                }
+
+                @Override
                 public void onRenderedFirstFrame(AnalyticsListener.EventTime eventTime) {
                     if (pipFirstFrameCallback != null) {
                         pipFirstFrameCallback.run();
@@ -10987,6 +11023,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
     private void releasePlayer(boolean onClose) {
         usedSurfaceView = false;
+        if (subtitleItem != null) {
+            subtitleItem.setVisibility(View.GONE);
+        }
+        if (videoSubtitleOverlayView != null) {
+            videoSubtitleOverlayView.setVisibility(View.GONE);
+        }
         if (pipSource != null) {
             pipSource.destroy();
             pipSource = null;
@@ -16415,6 +16457,67 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             captionTextViewSwitcher.getCurrentView().setLayerType(View.LAYER_TYPE_HARDWARE, null);
             captionTextViewSwitcher.getNextView().setLayerType(View.LAYER_TYPE_HARDWARE, null);
         }
+    }
+
+    private void toggleSubtitles() {
+        subtitlesVisible = !subtitlesVisible;
+        if (videoPlayer != null) {
+            videoPlayer.setSubtitlesEnabled(subtitlesVisible);
+        }
+        if (videoSubtitleOverlayView != null && !subtitlesVisible) {
+            videoSubtitleOverlayView.setVisibility(View.GONE);
+        }
+        if (subtitleItem != null) {
+            subtitleItem.setAlpha(subtitlesVisible ? 1.0f : 0.45f);
+        }
+        if (subtitlesVisible && videoSubtitleOverlayView == null && containerView != null) {
+            createSubtitleOverlayView();
+        }
+        if (containerView != null) {
+            BulletinFactory.of(containerView).createSimpleBulletin(
+                R.raw.chats_infotip,
+                subtitlesVisible ? "Subtitles: On" : "Subtitles: Off"
+            ).show();
+        }
+    }
+
+    private void createSubtitleOverlayView() {
+        if (videoSubtitleOverlayView != null || containerView == null) return;
+        videoSubtitleOverlayView = new TextView(containerView.getContext());
+        videoSubtitleOverlayView.setTextColor(0xFFFFFFFF);
+        videoSubtitleOverlayView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        videoSubtitleOverlayView.setTypeface(AndroidUtilities.bold());
+        videoSubtitleOverlayView.setGravity(Gravity.CENTER);
+        videoSubtitleOverlayView.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(6), 0xB0000000));
+        videoSubtitleOverlayView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+        videoSubtitleOverlayView.setVisibility(View.GONE);
+        videoSubtitleOverlayView.setShadowLayer(AndroidUtilities.dpf2(2), 0, 1, 0xFF000000);
+
+        videoSubtitleOverlayView.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+            private boolean isDragging;
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dX = view.getX() - event.getRawX();
+                        dY = view.getY() - event.getRawY();
+                        isDragging = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+                        view.animate().x(newX).y(newY).setDuration(0).start();
+                        isDragging = true;
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        return isDragging;
+                }
+                return false;
+            }
+        });
+        containerView.addView(videoSubtitleOverlayView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 24, 0, 24, 80));
     }
 
     private void checkProgress(int a, boolean scroll, boolean animated) {
