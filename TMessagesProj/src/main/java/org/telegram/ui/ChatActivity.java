@@ -33663,6 +33663,12 @@ public class ChatActivity extends BaseFragment implements
             if (!fromDoubleTap) {
                 ReactionsEffectOverlay.show(ChatActivity.this, reactionsLayout, cell, fromView, x, y, visibleReaction, currentAccount, reactionsLayout != null ? (bigEmoji ? ReactionsEffectOverlay.LONG_ANIMATION : ReactionsEffectOverlay.ONLY_MOVE_ANIMATION) : ReactionsEffectOverlay.SHORT_ANIMATION);
             }
+        } else if (visibleReaction != null) {
+            String removedEmoji = visibleReaction.emojicon != null ? visibleReaction.emojicon : (visibleReaction.documentId != 0 ? "emoji_" + visibleReaction.documentId : "");
+            if (!TextUtils.isEmpty(removedEmoji) && VeyraConfig.reactionHistoryEnabled && VeyraConfig.reactionHistoryIncludeSelf) {
+                long myId = getUserConfig().getClientUserId();
+                org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialog_id, primaryMessage.getId(), (int) (System.currentTimeMillis() / 1000), removedEmoji, myId, myId);
+            }
         }
         if (added && visibleReaction != null && visibleReaction.emojicon != null) {
             AndroidUtilities.makeAccessibilityAnnouncement(LocaleController.formatString(R.string.AccDescrYouReactedWith, visibleReaction.emojicon));
