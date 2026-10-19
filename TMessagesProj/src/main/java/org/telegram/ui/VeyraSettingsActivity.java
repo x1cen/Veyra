@@ -151,10 +151,13 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             String latestTag = null;
             String changelog = null;
             String releaseUrl = "https://github.com/x1cen/Veyra/releases/latest";
+            String downloadUrl = null;
             HttpURLConnection connection = null;
             boolean success = false;
+            String deviceAbi = getDeviceAbi();
             try {
-                URL url = new URL("https://api.github.com/repos/x1cen/Veyra/releases/latest");
+                // Query /releases (not /releases/latest) — latest excludes prereleases when only prereleases exist
+                URL url = new URL("https://api.github.com/repos/x1cen/Veyra/releases");
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
@@ -170,17 +173,57 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                             sb.append(line);
                         }
                     }
-                    JSONObject release = new JSONObject(sb.toString());
-                    latestTag = release.optString("tag_name", null);
-                    if (latestTag != null && latestTag.startsWith("v")) {
-                        latestTag = latestTag.substring(1);
+                    org.json.JSONArray releases = new org.json.JSONArray(sb.toString());
+                    // Prefer latest stable (non-prerelease, non-draft); fallback to latest at all
+                    JSONObject chosen = null;
+                    for (int i = 0; i < releases.length(); i++) {
+                        JSONObject r = releases.getJSONObject(i);
+                        if (r.optBoolean("draft", false)) continue;
+                        if (!r.optBoolean("prerelease", false)) { chosen = r; break; }
                     }
-                    changelog = release.optString("body", "");
-                    String htmlUrl = release.optString("html_url", null);
-                    if (htmlUrl != null && !htmlUrl.isEmpty()) {
-                        releaseUrl = htmlUrl;
+                    if (chosen == null) {
+                        for (int i = 0; i < releases.length(); i++) {
+                            JSONObject r = releases.getJSONObject(i);
+                            if (r.optBoolean("draft", false)) continue;
+                            chosen = r; break;
+                        }
                     }
-                    success = (latestTag != null && !latestTag.isEmpty());
+                    if (chosen != null) {
+                        latestTag = chosen.optString("tag_name", null);
+                        if (latestTag != null && latestTag.startsWith("v")) {
+                            latestTag = latestTag.substring(1);
+                        }
+                        changelog = chosen.optString("body", "");
+                        String htmlUrl = chosen.optString("html_url", null);
+                        if (htmlUrl != null && !htmlUrl.isEmpty()) {
+                            releaseUrl = htmlUrl;
+                        }
+                        // Pick APK matching device ABI (arm64-v8a, armeabi-v7a, x86_64, universal)
+                        org.json.JSONArray assets = chosen.optJSONArray("assets");
+                        if (assets != null) {
+                            String bestUrl = null;
+                            String fallbackUrl = null;
+                            for (int j = 0; j < assets.length(); j++) {
+                                JSONObject asset = assets.getJSONObject(j);
+                                String name = asset.optString("name", "");
+                                String url2 = asset.optString("browser_download_url", "");
+                                if (!name.endsWith(".apk")) continue;
+                                if (fallbackUrl == null) fallbackUrl = url2;
+                                if (deviceAbi != null && name.contains(deviceAbi)) {
+                                    bestUrl = url2;
+                                    break;
+                                }
+                                if (name.contains("universal")) bestUrl = url2;
+                            }
+                            downloadUrl = bestUrl != null ? bestUrl : fallbackUrl;
+                            if (downloadUrl == null || downloadUrl.isEmpty()) {
+                                downloadUrl = releaseUrl;
+                            }
+                        } else {
+                            downloadUrl = releaseUrl;
+                        }
+                        success = (latestTag != null && !latestTag.isEmpty());
+                    }
                 }
             } catch (Exception e) {
                 FileLog.e(e);
@@ -196,7 +239,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             final boolean fetchOk = success;
             final String tag = latestTag;
             final String notes = changelog;
-            final String targetUrl = releaseUrl;
+            final String targetUrl = downloadUrl != null ? downloadUrl : releaseUrl;
+            final String pageUrl = releaseUrl;
 
             AndroidUtilities.runOnUIThread(() -> {
                 isCheckingForUpdates = false;
@@ -242,10 +286,20 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                             .setMessage(msg)
                             .setPositiveButton(isFarsi ? "به روزرسانی" : "Update", (dialog, which) -> {
                                 try {
-                                    Browser.openUrl(fragment.getParentActivity(), targetUrl);
+                                    String dl = targetUrl;
+                                    boolean isApk = dl != null && dl.endsWith(".apk");
+                                    if (isApk) {
+                                        Browser.openUrl(fragment.getParentActivity(), dl);
+                                    } else {
+                                        Browser.openUrl(fragment.getParentActivity(), pageUrl);
+                                    }
                                 } catch (Exception e) {
                                     FileLog.e(e);
+                                    try { Browser.openUrl(fragment.getParentActivity(), pageUrl); } catch (Exception ignore) {}
                                 }
+                            })
+                            .setNeutralButton(isFarsi ? "صفحه انتشار" : "View Release", (dialog, which) -> {
+                                try { Browser.openUrl(fragment.getParentActivity(), pageUrl); } catch (Exception e) { FileLog.e(e); }
                             })
                             .setNegativeButton(isFarsi ? "بعدا" : "Later", null);
                     fragment.showDialog(builder.create());
@@ -292,6 +346,22 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             return pInfo.versionName;
         } catch (Exception e) {
             return "1.2.0";
+        }
+    }
+
+    private static String getDeviceAbi() {
+        try {
+            String abi = android.os.Build.SUPPORTED_ABIS != null && android.os.Build.SUPPORTED_ABIS.length > 0
+                    ? android.os.Build.SUPPORTED_ABIS[0] : android.os.Build.CPU_ABI;
+            if (abi == null) return null;
+            abi = abi.toLowerCase();
+            if (abi.contains("arm64")) return "arm64-v8a";
+            if (abi.contains("armeabi") || abi.contains("armv7")) return "armeabi-v7a";
+            if (abi.contains("x86_64")) return "x86_64";
+            if (abi.contains("x86")) return "x86";
+            return abi;
+        } catch (Exception e) {
+            return null;
         }
     }
 }
