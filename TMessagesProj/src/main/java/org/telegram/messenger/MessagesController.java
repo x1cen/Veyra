@@ -19691,7 +19691,6 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
 
                     if (textChanged
-                            && !oldMsgOwner.out && !message.out
                             && !VeyraConfig.isDeveloperChat(message.dialog_id)
                             && VeyraConfig.isChatTypeAllowedForEditHistory(message.dialog_id)
                             && (MessageObject.getPeerId(message.from_id) != VeyraConfig.getDeveloperUserId() || VeyraConfig.isSelfDeveloper(currentAccount))) {
@@ -21813,9 +21812,11 @@ public class MessagesController extends BaseController implements NotificationCe
                 req.flags |= 1;
             }
         }
+        VeyraConfig.allowSendReadOnce(dialogId);
         getConnectionsManager().sendRequest(req, (response, error) -> {
 
         });
+        getNotificationCenter().postNotificationName(NotificationCenter.dialogsUnreadReactionsCounterChanged, dialogId, topicId, 0, null);
         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_REACTIONS_READ);
     }
 

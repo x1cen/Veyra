@@ -10209,8 +10209,8 @@ public class ChatActivity extends BaseFragment implements
                 if (firstPos != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
                     androidx.recyclerview.widget.RecyclerView.ViewHolder holder = chatListView.findViewHolderForAdapterPosition(firstPos);
                     int prevMid = 0;
-                    if (holder instanceof org.telegram.ui.Cells.ChatMessageCell) {
-                        MessageObject mo = ((org.telegram.ui.Cells.ChatMessageCell) holder).getMessageObject();
+                    if (holder != null && holder.itemView instanceof org.telegram.ui.Cells.ChatMessageCell) {
+                        MessageObject mo = ((org.telegram.ui.Cells.ChatMessageCell) holder.itemView).getMessageObject();
                         if (mo != null) prevMid = mo.getId();
                     }
                     if (prevMid != 0 && holder != null) {
@@ -47583,6 +47583,7 @@ public class ChatActivity extends BaseFragment implements
                 reactionsMentionCount = 0;
                 updateReactionsMentionButton(true);
                 getMessagesController().markReactionsAsRead(dialog_id, getTopicId());
+                updateVisibleRows(false);
                 if (scrimPopupWindow != null) {
                     scrimPopupWindow.dismiss();
                 }
