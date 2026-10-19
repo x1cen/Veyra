@@ -143,6 +143,13 @@ public class ItemOptions {
         return this;
     }
 
+    private RectF customScrimBounds;
+
+    public ItemOptions setCustomScrimBounds(RectF bounds) {
+        this.customScrimBounds = bounds;
+        return this;
+    }
+
     public ActionBarPopupWindow actionBarPopupWindow;
     private BlurredBackgroundSourceBitmap scrimBlur3SourceBitmap;
     private final float[] point = new float[2];
@@ -1294,7 +1301,9 @@ public class ItemOptions {
             }
         }
         RectF scrimViewBounds = new RectF();
-        if (scrimView instanceof ScrimView) {
+        if (customScrimBounds != null) {
+            scrimViewBounds.set(customScrimBounds);
+        } else if (scrimView instanceof ScrimView) {
             ((ScrimView) scrimView).getBounds(scrimViewBounds);
         } else if (animateToWidth != 0 && animateToHeight != 0) {
             scrimViewBounds.set(0, 0, animateToWidth, animateToHeight);
@@ -1610,7 +1619,9 @@ public class ItemOptions {
             y += p[1];
         }
         RectF scrimViewBounds = new RectF();
-        if (scrimView instanceof ScrimView) {
+        if (customScrimBounds != null) {
+            scrimViewBounds.set(customScrimBounds);
+        } else if (scrimView instanceof ScrimView) {
             ((ScrimView) scrimView).getBounds(scrimViewBounds);
         } else if (animateToWidth != 0 && animateToHeight != 0) {
             scrimViewBounds.set(0, 0, animateToWidth, animateToHeight);
