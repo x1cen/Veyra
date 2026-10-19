@@ -4683,6 +4683,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         if (headerItem != null) {
+            headerItem.lazilyAddSubItem(veyra_view_details, R.drawable.msg_info, LocaleController.getString("ViewDetails", R.string.ViewDetails));
             headerItem.lazilyAddSubItem(veyra_advanced, R.drawable.msg_settings_old, "Advanced");
         }
 

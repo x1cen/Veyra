@@ -513,7 +513,7 @@ public class ContactAddActivity extends BaseFragment implements NotificationCent
         actionBar.setAdaptiveBackground(listView);
 
         if (addContact && needAddException) {
-            checkShare = true;
+            checkShare = false;
         }
         listView.adapter.update(false);
 

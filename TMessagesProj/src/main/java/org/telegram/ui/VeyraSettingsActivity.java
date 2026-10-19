@@ -215,35 +215,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        // About section
-        r.add(VeyraSettingsRow.header(LocaleController.getString("VeyraAbout", R.string.VeyraAbout)));
-
-        r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraUnlockedLimits", R.string.VeyraUnlockedLimits),
-                LocaleController.getString("VeyraUnlockedLimitsDesc", R.string.VeyraUnlockedLimitsDesc),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraAdFree", R.string.VeyraAdFree),
-                LocaleController.getString("VeyraAdFreeDesc", R.string.VeyraAdFreeDesc),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.detail(
-                LocaleController.getString("VeyraVersion", R.string.VeyraVersion),
-                getAppVersionName(),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.button(
-                LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates),
-                false, false,
-                this::checkForUpdates
-        ));
-
-        r.add(VeyraSettingsRow.shadow());
-
         return r;
     }
 
