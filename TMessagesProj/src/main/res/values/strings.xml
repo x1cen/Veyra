@@ -11714,6 +11714,8 @@
 <string name="VeyraGhostHideReadDesc">Do not mark incoming messages as read/seen</string>
 <string name="VeyraGhostHideReadContents">Hide Playing Voice &amp; Video Notes</string>
 <string name="VeyraGhostHideReadContentsDesc">Do not send played/listened status for voice and video notes</string>
+<string name="VeyraGhostHideReadReactions">Hide Reaction Receipts</string>
+<string name="VeyraGhostHideReadReactionsDesc">Do not mark reactions on your messages as seen until you reply</string>
 <string name="VeyraGhostHideStories">Hide Viewing Stories</string>
 <string name="VeyraGhostHideStoriesDesc">Watch stories anonymously without appearing in viewers list</string>
 <string name="VeyraEditHistory">Message Edit History</string>

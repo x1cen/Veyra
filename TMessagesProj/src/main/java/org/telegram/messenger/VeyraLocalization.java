@@ -143,6 +143,8 @@ public class VeyraLocalization {
         EN.put("VeyraGhostHideReadContents", "Hide Playing Voice & Video Notes");
         EN.put("VeyraGhostHideReadContentsDesc", "Do not send played/listened status for voice and video notes");
         EN.put("VeyraGhostHideReadDesc", "Do not mark incoming messages as read/seen");
+        EN.put("VeyraGhostHideReadReactions", "Hide Reaction Receipts");
+        EN.put("VeyraGhostHideReadReactionsDesc", "Do not mark reactions on your messages as seen until you reply");
         EN.put("VeyraGhostHideStories", "Hide Viewing Stories");
         EN.put("VeyraGhostHideStoriesDesc", "Watch stories anonymously without appearing in viewers list");
         EN.put("VeyraGhostHideTyping", "Hide Typing & Actions");
@@ -360,6 +362,8 @@ public class VeyraLocalization {
         FA.put("VeyraGhostHideReadContents", "مخفی کردن شنیده شدن ویس و ویدیو");
         FA.put("VeyraGhostHideReadContentsDesc", "عدم ارسال وضعیت شنیده شدن ویس و دیدن پیام ویدیویی");
         FA.put("VeyraGhostHideReadDesc", "عدم ارسال تیک دوم و وضعیت خوانده شدن برای پیام‌ها");
+        FA.put("VeyraGhostHideReadReactions", "پنهان کردن سین ری‌اکشن‌ها");
+        FA.put("VeyraGhostHideReadReactionsDesc", "علامت‌گذاری ری‌اکشن‌های دریافتی به عنوان دیده شده تا زمان ارسال پاسخ به تعویق می‌افتد");
         FA.put("VeyraGhostHideStories", "مشاهده مخفیانه استوری‌ها");
         FA.put("VeyraGhostHideStoriesDesc", "تماشای ناشناس استوری‌ها بدون ثبت در لیست بازدیدها");
         FA.put("VeyraGhostHideTyping", "مخفی کردن وضعیت تایپ و نوشتن");

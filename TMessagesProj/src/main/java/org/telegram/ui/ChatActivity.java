@@ -3098,6 +3098,17 @@ public class ChatActivity extends BaseFragment implements
         } else {
             getMessagesController().setLastCreatedDialogId(dialog_id, chatMode == MODE_SCHEDULED, true);
             if (chatMode == 0 || chatMode == MODE_SAVED) {
+                if (getTopicId() == 0 && (currentChat != null && (ChatObject.isForum(currentChat) || ChatObject.isMonoForum(currentChat)))) {
+                    try {
+                        long lastTopic = getMessagesController().getMainSettings().getLong("veyra_last_topic_" + dialog_id, 0);
+                        if (lastTopic != 0) {
+                            TLRPC.TL_forumTopic topicLocal = getMessagesController().getTopicsController().findTopic(dialog_id < 0 ? -dialog_id : dialog_id, lastTopic);
+                            if (topicLocal != null) {
+                                ForumUtilities.applyTopic(this, MessagesStorage.TopicKey.of(dialog_id, lastTopic));
+                            }
+                        }
+                    } catch (Throwable ignore) {}
+                }
                 if (currentEncryptedChat == null) {
                     getMediaDataController().loadBotKeyboard(MessagesStorage.TopicKey.of(dialog_id, getTopicId()));
                 }
@@ -3107,24 +3118,10 @@ public class ChatActivity extends BaseFragment implements
                     SharedPreferences sharedPreferences = MessagesController.getNotificationsSettings(currentAccount);
                     int messageId = sharedPreferences.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
                     if (messageId != 0) {
-                        // Veyra: for topic chats, if all messages were already seen (no unread),
-                        // open at latest instead of restoring mid-position.
-                        boolean isTopicChat = getTopicId() != 0 || isTopic || (currentChat != null && (ChatObject.isForum(currentChat) || ChatObject.isMonoForum(currentChat)));
-                        boolean hasUnread = false;
-                        if (isTopicChat) {
-                            try {
-                                TLRPC.TL_forumTopic topic = MessagesController.getInstance(currentAccount).getTopicsController().findTopic(dialog_id < 0 ? -dialog_id : dialog_id, getTopicId());
-                                hasUnread = topic != null && topic.unread_count > 0;
-                            } catch (Throwable ignored) {}
-                        } else {
-                            hasUnread = true;
-                        }
-                        if (hasUnread) {
-                            wasManualScroll = true;
-                            loadingFromOldPosition = true;
-                            startLoadFromMessageOffset = sharedPreferences.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
-                            startLoadFromMessageId = messageId;
-                        } // else: all seen -> open at latest (keep startLoadFromMessageId == 0)
+                        wasManualScroll = true;
+                        loadingFromOldPosition = true;
+                        startLoadFromMessageOffset = sharedPreferences.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                        startLoadFromMessageId = messageId;
                     }
                 } else {
                     showScrollToMessageError = true;
@@ -10207,6 +10204,24 @@ public class ChatActivity extends BaseFragment implements
 
             lastSwitchTopicTime = SystemClock.uptimeMillis();
             topicChangedFromMessage = fromMessage;
+            if (chatListView != null && chatLayoutManager != null) {
+                int firstPos = chatLayoutManager.findFirstVisibleItemPosition();
+                if (firstPos != androidx.recyclerview.widget.RecyclerView.NO_POSITION) {
+                    androidx.recyclerview.widget.RecyclerView.ViewHolder holder = chatListView.findViewHolderForAdapterPosition(firstPos);
+                    int prevMid = 0;
+                    if (holder instanceof org.telegram.ui.Cells.ChatMessageCell) {
+                        MessageObject mo = ((org.telegram.ui.Cells.ChatMessageCell) holder).getMessageObject();
+                        if (mo != null) prevMid = mo.getId();
+                    }
+                    if (prevMid != 0 && holder != null) {
+                        int offset = holder.itemView.getBottom() - chatListView.getMeasuredHeight();
+                        MessagesController.getNotificationsSettings(currentAccount).edit()
+                                .putInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), prevMid)
+                                .putInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), offset)
+                                .apply();
+                    }
+                }
+            }
             if (fromMessage || true) {
                 if (topicId == 0) {
                     savePositionForTopicChange(getTopicId());
@@ -10256,6 +10271,18 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 chatAdapter.updateRowsSafe();
+            }
+            // Veyra: restore scroll position for newly selected topic
+            SharedPreferences pref = MessagesController.getNotificationsSettings(currentAccount);
+            int savedMid = pref.getInt("diditem" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+            if (savedMid != 0) {
+                wasManualScroll = true;
+                loadingFromOldPosition = true;
+                startLoadFromMessageOffset = pref.getInt("diditemo" + NotificationsController.getSharedPrefKey(dialog_id, getTopicId()), 0);
+                startLoadFromMessageId = savedMid;
+            } else {
+                startLoadFromMessageId = 0;
+                startLoadFromMessageOffset = 0;
             }
             firstLoadMessages();
 
