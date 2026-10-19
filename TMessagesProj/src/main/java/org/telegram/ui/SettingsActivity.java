@@ -690,9 +690,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, LocaleController.getString("VeyraSettings", R.string.VeyraSettings)));
-        items.add(UItem.asShadow(null));
-
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
         items.add(SettingCell.Factory.of(3, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_privacy, getString(R.string.SettingsPrivacySecurity), getString(R.string.SettingsPrivacySecurityInfo)));
@@ -735,16 +732,18 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (items.get(items.size() - 1).viewType != UniversalAdapter.VIEW_TYPE_SHADOW)
             items.add(UItem.asShadow(null));
 
+        items.add(UItem.asHeader("Veyra"));
+        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, "Settings"));
+        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "GitHub"));
+        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates)));
+        items.add(UItem.asShadow(null));
+
         items.add(UItem.asHeader(getString(R.string.SettingsHelp)));
         items.add(SettingCell.Factory.of(17, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_ask, getString(R.string.AskAQuestion)));
         items.add(SettingCell.Factory.of(18, IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom, R.drawable.settings_faq, getString(R.string.TelegramFAQ)));
         items.add(SettingCell.Factory.of(23, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, getString(R.string.TelegramFeatures)));
         items.add(SettingCell.Factory.of(19, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_policy, getString(R.string.PrivacyPolicy)));
         items.add(UItem.asShadow(null));
-
-        items.add(UItem.asHeader("Veyra"));
-        items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "GitHub"));
-        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates)));
 
         if (SharedSettings.experimentalSettingsAllowed.get()) {
             items.add(UItem.asShadow(null));
