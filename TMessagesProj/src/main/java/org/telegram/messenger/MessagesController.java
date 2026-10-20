@@ -403,7 +403,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private long lastStatusUpdateTime;
     private int statusRequest;
     private int statusSettingState;
-    private boolean offlineSent;
+    public boolean offlineSent;
     private String uploadingAvatar;
     private final LongSparseArray<ArrayList<MessageObject>> welcomeMessages = new LongSparseArray<>();
 
