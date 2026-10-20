@@ -11799,6 +11799,8 @@
 <string name="VeyraReactionHistoryLimitDesc">Maximum number of reaction entries saved per message (5 to 100)</string>
 <string name="VeyraNoEditHistory">No edit history recorded for this message.</string>
 <string name="VeyraNoReactionHistory">No reactions recorded for this message.</string>
+<string name="VeyraReactionHistory">Message Reaction History</string>
+<string name="VeyraReactionHistoryDesc">Track reactions and changes on messages</string>
 <string name="VeyraGhostOfflineAfterMsg">Offline After Sending Message</string>
 <string name="VeyraGhostOfflineAfterMsgDesc">Send offline status to Telegram immediately after sending any message</string>
 </resources>

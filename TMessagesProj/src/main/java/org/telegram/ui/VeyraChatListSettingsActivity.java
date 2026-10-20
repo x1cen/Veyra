@@ -42,9 +42,8 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.disableThumbsInDialogList,
                 v -> {
                     VeyraConfig.setDisableThumbsInDialogList(v);
-                    if (listView != null) {
-                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
-                    }
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 },
                 true
         ));
@@ -55,9 +54,8 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.enableLastSeenDots,
                 v -> {
                     VeyraConfig.setEnableLastSeenDots(v);
-                    if (listView != null) {
-                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
-                    }
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 },
                 true
         ));
@@ -69,6 +67,8 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 v -> {
                     VeyraConfig.setSortByUnread(v);
                     MessagesController.getInstance(currentAccount).sortDialogs(null);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 },
                 true
         ));
@@ -80,6 +80,8 @@ public class VeyraChatListSettingsActivity extends VeyraSettingsBaseActivity {
                 v -> {
                     VeyraConfig.setSortByUnmuted(v);
                     MessagesController.getInstance(currentAccount).sortDialogs(null);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 },
                 false
         ));

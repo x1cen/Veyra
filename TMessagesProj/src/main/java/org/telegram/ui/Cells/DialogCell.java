@@ -829,31 +829,30 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
         return false;
     }
 
-    // Veyra: colored last-seen dots (forkgram port) — yellow <=15m, orange <=30m, red <=60m, default otherwise
+    // Veyra: colored last-seen dots (forkgram port) — yellow <=15m, orange <=60m, red <=24h
     private int veyraLastSeenDotColor() {
-        int defaultColor = Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider);
         if (!VeyraConfig.enableLastSeenDots || user == null || user.status == null) {
-            return defaultColor;
+            return 0;
         }
         if (!(user.status instanceof TLRPC.TL_userStatusOffline)) {
-            return defaultColor;
+            return 0;
         }
         int wasOnline = user.status.expires;
         if (wasOnline <= 0) {
-            return defaultColor;
+            return 0;
         }
         int now = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
         int diffMinutes = (now - wasOnline) / 60;
         if (diffMinutes < 0) {
-            return defaultColor;
+            return 0;
         } else if (diffMinutes <= 15) {
-            return 0xFFFFC107; // yellow
-        } else if (diffMinutes <= 30) {
-            return 0xFFFF9800; // orange
+            return 0xFFFFC107; // yellow (<= 15m)
         } else if (diffMinutes <= 60) {
-            return 0xFFF44336; // red
+            return 0xFFFF9800; // orange (<= 1h)
+        } else if (diffMinutes <= 24 * 60) {
+            return 0xFFF44336; // red (<= 24h)
         }
-        return defaultColor;
+        return 0;
     }
 
     private void checkGroupCall() {
@@ -5143,8 +5142,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             }
             if (user != null && !MessagesController.isSupportUser(user) && !user.bot) {
                 boolean isOnline = isOnline();
-                wasDrawnOnline = isOnline;
-                if (isOnline || onlineProgress != 0) {
+                int lastSeenColor = veyraLastSeenDotColor();
+                boolean showDot = isOnline || lastSeenColor != 0;
+                wasDrawnOnline = showDot;
+                if (showDot || onlineProgress != 0) {
                     int top = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 6 : 8));
                     int left;
                     if (LocaleController.isRTL) {
@@ -5155,9 +5156,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
                     Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
                     canvas.drawCircle(left, top, dp(7) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    Theme.dialogs_onlineCirclePaint.setColor(veyraLastSeenDotColor());
+                    int dotColor = isOnline ? Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider) : lastSeenColor;
+                    Theme.dialogs_onlineCirclePaint.setColor(dotColor);
                     canvas.drawCircle(left, top, dp(5) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    if (isOnline) {
+                    if (showDot) {
                         if (onlineProgress < 1.0f) {
                             onlineProgress += 16f / 150.0f;
                             if (onlineProgress > 1.0f) {
@@ -5722,6 +5724,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             return;
         }
         if (VeyraConfig.disableThumbsInDialogList) {
+            for (int i = 0; i < thumbImage.length; ++i) {
+                thumbImage[i].setImageBitmap((android.graphics.drawable.BitmapDrawable) null);
+                thumbImageSeen[i] = false;
+            }
             thumbsCount = 0;
             hasVideoThumb = false;
             return;

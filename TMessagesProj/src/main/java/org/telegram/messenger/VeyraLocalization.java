@@ -205,6 +205,8 @@ public class VeyraLocalization {
         EN.put("VeyraPersianCalendarDesc", "Display dates in Persian Solar Hijri calendar");
         EN.put("VeyraPrivacySecurity", "Privacy & Security");
         EN.put("VeyraPrivacySecurityDesc", "Online status, ghost mode, anti-delete, settings lock");
+        EN.put("VeyraReactionHistory", "Message Reaction History");
+        EN.put("VeyraReactionHistoryDesc", "Track reactions and changes on messages");
         EN.put("VeyraReactionChatTypes", "Filter Chats");
         EN.put("VeyraReactionHistoryClear", "Clear All Reaction History");
         EN.put("VeyraReactionHistoryCleared", "All reaction history cleared");
@@ -453,6 +455,8 @@ public class VeyraLocalization {
         FA.put("VeyraPersianCalendarDesc", "نمایش تاریخ‌ها به صورت گاه‌شماری شمسی");
         FA.put("VeyraPrivacySecurity", "حریم خصوصی و امنیت");
         FA.put("VeyraPrivacySecurityDesc", "وضعیت آنلاین، قفل تنظیمات، مسدودسازی نشست‌ها");
+        FA.put("VeyraReactionHistory", "تاریخچه واکنش‌ها");
+        FA.put("VeyraReactionHistoryDesc", "ثبت واکنش‌ها و تغییرات ری‌اکشن روی پیام‌ها");
         FA.put("VeyraReactionChatTypes", "نوع گفتگوها (تاریخچه ری اکشن)");
         FA.put("VeyraReactionHistoryClear", "حذف تمام تاریخچه ری اکشن");
         FA.put("VeyraReactionHistoryCleared", "تمام تاریخچه ری اکشن حذف شد");

@@ -1401,6 +1401,43 @@ public class MessagesController extends BaseController implements NotificationCe
         }
     }
 
+    private int compareUnreadAndMuted(TLRPC.Dialog dialog1, TLRPC.Dialog dialog2) {
+        if (org.telegram.messenger.VeyraConfig.sortByUnread) {
+            boolean u1 = dialog1.unread_count > 0 || dialog1.unread_mark;
+            boolean u2 = dialog2.unread_count > 0 || dialog2.unread_mark;
+            if (!u1 && u2) {
+                return 1;
+            } else if (u1 && !u2) {
+                return -1;
+            } else if (u1 && u2) {
+                if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+                    boolean m1 = isDialogMuted(dialog1.id, 0);
+                    boolean m2 = isDialogMuted(dialog2.id, 0);
+                    if (m1 && !m2) {
+                        return 1;
+                    } else if (!m1 && m2) {
+                        return -1;
+                    }
+                }
+            }
+        } else if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
+            boolean u1 = dialog1.unread_count > 0 || dialog1.unread_mark;
+            boolean u2 = dialog2.unread_count > 0 || dialog2.unread_mark;
+            boolean m1 = isDialogMuted(dialog1.id, 0);
+            boolean m2 = isDialogMuted(dialog2.id, 0);
+            if (!u1 && u2 && m1 && !m2) {
+                return 1;
+            } else if (u1 && !u2 && !m1 && m2) {
+                return -1;
+            } else if (m1 && !m2) {
+                return 1;
+            } else if (!m1 && m2) {
+                return -1;
+            }
+        }
+        return 0;
+    }
+
     private DialogFilter sortingDialogFilter;
     private final Comparator<TLRPC.Dialog> dialogDateComparator = (dialog1, dialog2) -> {
         int pinnedNum1 = sortingDialogFilter == null ? Integer.MIN_VALUE : sortingDialogFilter.pinnedDialogs.get(dialog1.id, Integer.MIN_VALUE);
@@ -1421,6 +1458,10 @@ public class MessagesController extends BaseController implements NotificationCe
             } else {
                 return 0;
             }
+        }
+        int unreadSort = compareUnreadAndMuted(dialog1, dialog2);
+        if (unreadSort != 0) {
+            return unreadSort;
         }
         MediaDataController mediaDataController = getMediaDataController();
         long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
@@ -1458,33 +1499,11 @@ public class MessagesController extends BaseController implements NotificationCe
                 return 0;
             }
         }
-        MediaDataController mediaDataController = getMediaDataController();
-        long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
-        long date2 = DialogObject.getLastMessageOrDraftDate(dialog2, mediaDataController.getDraft(dialog2.id, 0));
-        // Veyra: optional sort by unread/unmuted priority matching Nagram logic
-        if (org.telegram.messenger.VeyraConfig.sortByUnread) {
-            if (dialog1.unread_count == 0 && dialog2.unread_count > 0) {
-                return 1;
-            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0) {
-                return -1;
-            } else if (dialog1.unread_count > 0 && dialog2.unread_count > 0) {
-                if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
-                    boolean m1 = isDialogMuted(dialog1.id, 0);
-                    boolean m2 = isDialogMuted(dialog2.id, 0);
-                    if (m1 && !m2) {
-                        return 1;
-                    } else if (!m1 && m2) {
-                        return -1;
-                    }
-                }
-            }
-        } else if (org.telegram.messenger.VeyraConfig.sortByUnmuted) {
-            if (dialog1.unread_count == 0 && dialog2.unread_count > 0 && isDialogMuted(dialog1.id, 0) && !isDialogMuted(dialog2.id, 0)) {
-                return 1;
-            } else if (dialog1.unread_count > 0 && dialog2.unread_count == 0 && !isDialogMuted(dialog1.id, 0) && isDialogMuted(dialog2.id, 0)) {
-                return -1;
-            }
+        int unreadSort = compareUnreadAndMuted(dialog1, dialog2);
+        if (unreadSort != 0) {
+            return unreadSort;
         }
+        MediaDataController mediaDataController = getMediaDataController();
         if (date1 < date2) {
             return 1;
         } else if (date1 > date2) {
