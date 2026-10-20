@@ -693,7 +693,7 @@ public class ConnectionsManager extends BaseController {
             }
         }
         final RequestDelegate finalOnComplete;
-        if (org.telegram.messenger.VeyraConfig.onlineMode == 2 && (object instanceof TLRPC.TL_messages_sendMessage || object instanceof TLRPC.TL_messages_sendMedia || object instanceof TLRPC.TL_messages_sendMultiMedia)) {
+        if ((org.telegram.messenger.VeyraConfig.ghostOfflineAfterMessage || org.telegram.messenger.VeyraConfig.onlineMode == 2) && (object instanceof TLRPC.TL_messages_sendMessage || object instanceof TLRPC.TL_messages_sendMedia || object instanceof TLRPC.TL_messages_sendMultiMedia)) {
             final RequestDelegate origDelegate = onComplete;
             finalOnComplete = (response, error) -> {
                 if (origDelegate != null) {
