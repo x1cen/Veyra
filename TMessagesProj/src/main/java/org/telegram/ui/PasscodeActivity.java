@@ -170,6 +170,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     private final Runnable hidePasscodesDoNotMatch = () -> {
         postedHidePasscodesDoNotMatch = false;
         AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, false);
+        passcodesDoNotMatchTextView.postDelayed(() -> passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch)), 300);
     };
 
     private Runnable onShowKeyboardCallback;
@@ -1038,13 +1039,43 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             return;
         }
 
+        String entered = isPinCode() ? codeFieldContainer.getCode() : passwordEditText.getText().toString();
+        if (type == TYPE_SETUP_CODE && SharedConfig.checkDuress(entered)) {
+            passcodesDoNotMatchTextView.setText(LocaleController.getString("VeyraPasscodeSameAsDuress", R.string.VeyraPasscodeSameAsDuress));
+            AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
+            for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
+            if (isPinCode()) codeFieldContainer.codeField[0].requestFocus();
+            passwordEditText.setText("");
+            onPasscodeError();
+            codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
+            codeFieldContainer.post(() -> {
+                codeFieldContainer.postDelayed(hidePasscodesDoNotMatch, 3000);
+                postedHidePasscodesDoNotMatch = true;
+            });
+            return;
+        }
+        if (type == TYPE_SETUP_DURESS && SharedConfig.checkPasscode(entered)) {
+            passcodesDoNotMatchTextView.setText(LocaleController.getString("VeyraDuressSameAsPasscode", R.string.VeyraDuressSameAsPasscode));
+            AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
+            for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
+            if (isPinCode()) codeFieldContainer.codeField[0].requestFocus();
+            passwordEditText.setText("");
+            onPasscodeError();
+            codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
+            codeFieldContainer.post(() -> {
+                codeFieldContainer.postDelayed(hidePasscodesDoNotMatch, 3000);
+                postedHidePasscodesDoNotMatch = true;
+            });
+            return;
+        }
+
         if (otherItem != null) {
             otherItem.setVisibility(View.GONE);
         }
 
         titleTextView.setText(LocaleController.getString(R.string.ConfirmCreatePasscode));
         descriptionTextSwitcher.setText(AndroidUtilities.replaceTags(LocaleController.getString(R.string.PasscodeReinstallNotice)));
-        firstPassword = isPinCode() ? codeFieldContainer.getCode() : passwordEditText.getText().toString();
+        firstPassword = entered;
         passwordEditText.setText("");
         passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
@@ -1071,7 +1102,27 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         }
         String password = isPinCode() ? codeFieldContainer.getCode() : passwordEditText.getText().toString();
         if (type == TYPE_SETUP_CODE) {
+            if (SharedConfig.checkDuress(firstPassword)) {
+                passcodesDoNotMatchTextView.setText(LocaleController.getString("VeyraPasscodeSameAsDuress", R.string.VeyraPasscodeSameAsDuress));
+                AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
+                for (CodeNumberField f : codeFieldContainer.codeField) {
+                    f.setText("");
+                }
+                if (isPinCode()) {
+                    codeFieldContainer.codeField[0].requestFocus();
+                }
+                passwordEditText.setText("");
+                onPasscodeError();
+
+                codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
+                codeFieldContainer.post(()->{
+                    codeFieldContainer.postDelayed(hidePasscodesDoNotMatch, 3000);
+                    postedHidePasscodesDoNotMatch = true;
+                });
+                return;
+            }
             if (!firstPassword.equals(password)) {
+                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch));
                 AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setText("");
@@ -1182,7 +1233,22 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 });
             }
         } else if (type == TYPE_SETUP_DURESS) {
+            if (SharedConfig.checkPasscode(firstPassword)) {
+                passcodesDoNotMatchTextView.setText(LocaleController.getString("VeyraDuressSameAsPasscode", R.string.VeyraDuressSameAsPasscode));
+                AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
+                for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
+                if (isPinCode()) codeFieldContainer.codeField[0].requestFocus();
+                passwordEditText.setText("");
+                onPasscodeError();
+                codeFieldContainer.removeCallbacks(hidePasscodesDoNotMatch);
+                codeFieldContainer.post(() -> {
+                    codeFieldContainer.postDelayed(hidePasscodesDoNotMatch, 3000);
+                    postedHidePasscodesDoNotMatch = true;
+                });
+                return;
+            }
             if (!firstPassword.equals(password)) {
+                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch));
                 AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
                 for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
                 if (isPinCode()) codeFieldContainer.codeField[0].requestFocus();

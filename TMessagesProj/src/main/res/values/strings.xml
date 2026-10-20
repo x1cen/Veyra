@@ -11803,5 +11803,17 @@
 <string name="VeyraReactionHistoryDesc">Track reactions and changes on messages</string>
 <string name="VeyraGhostOfflineAfterMsg">Offline After Sending Message</string>
 <string name="VeyraGhostOfflineAfterMsgDesc">Send offline status to Telegram immediately after sending any message</string>
+<string name="VeyraDeleteAllMessages">Delete All Messages</string>
+<string name="VeyraDeleteAllMessagesAdmin">Delete All Messages (Admin Wipe)</string>
+<string name="VeyraDeleteAllMessagesAdminDesc">Use administrator permissions to delete all messages in this group for everyone.</string>
+<string name="VeyraDeleteAllMyMessages">Delete All My Messages</string>
+<string name="VeyraDeleteAllMyMessagesDesc">Delete all your messages in this group in batches of 100 with automatic FloodWait handling.</string>
+<string name="VeyraDeletingMessages">Deleting messages...</string>
+<string name="VeyraFloodWaitWaiting">FloodWait limit reached. Waiting %d seconds...</string>
+<string name="VeyraDeleteAllFinished">All messages deleted successfully (%d messages)</string>
+<string name="VeyraDeleteAllConfirm">Are you sure you want to delete all your messages in this group? They will be deleted in batches of 100 with FloodWait protection.</string>
+<string name="VeyraDeleteAllAdminConfirm">Are you sure you want to delete all messages in this group for everyone? This action cannot be undone.</string>
+<string name="VeyraPasscodeSameAsDuress">Passcode cannot be the same as Duress code</string>
+<string name="VeyraDuressSameAsPasscode">Duress code cannot be the same as Passcode</string>
 </resources>
 

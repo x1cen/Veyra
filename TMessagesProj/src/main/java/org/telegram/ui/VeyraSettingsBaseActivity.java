@@ -327,7 +327,7 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
 
         public void set(int iconColorTop, int iconColorBottom, int icon, CharSequence title, CharSequence subtitle, boolean divider) {
             GradientDrawable gd = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{iconColorTop, iconColorBottom});
-            gd.setCornerRadius(AndroidUtilities.dp(10));
+            gd.setShape(GradientDrawable.OVAL);
             iconLayout.setBackground(gd);
             iconView.setImageResource(icon);
             titleView.setText(title);

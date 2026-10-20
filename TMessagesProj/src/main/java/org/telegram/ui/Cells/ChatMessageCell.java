@@ -9662,7 +9662,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     additionHeight -= dp(17);
                 } else if (messageObject.isAnyKindOfSticker()) {
 
-                    drawBackground = false;
+                    drawBackground = !TextUtils.isEmpty(messageObject.caption);
                     boolean isWebpSticker = messageObject.type == MessageObject.TYPE_STICKER;
                     TLRPC.Document stickerDocument = messageObject.getDocument();
                     if (stickerDocument != null) {
@@ -10590,7 +10590,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 invalidate();
             }
 
-            if ((currentPosition == null || currentMessageObject.isMusic() || currentMessageObject.type == MessageObject.TYPE_PAID_MEDIA || currentMessageObject.isDocument()) && !messageObject.isSponsored() && !messageObject.isAnyKindOfSticker() && addedCaptionHeight == 0 && !messageObject.isExpiredStory() && !messageObject.isUnsupported()) {
+            if ((currentPosition == null || currentMessageObject.isMusic() || currentMessageObject.type == MessageObject.TYPE_PAID_MEDIA || currentMessageObject.isDocument() || currentMessageObject.isAnyKindOfSticker()) && !messageObject.isSponsored() && (!messageObject.isAnyKindOfSticker() || !TextUtils.isEmpty(messageObject.caption)) && addedCaptionHeight == 0 && !messageObject.isExpiredStory() && !messageObject.isUnsupported()) {
                 int addCaptionLayoutWidth = 0;
                 int width = backgroundWidth;
                 if ((currentMessageObject.type == MessageObject.TYPE_VOICE || isRoundVideo) && messageObject.isVoiceTranscriptionOpen() && messageObject.getFactCheck() == null) {
@@ -17167,7 +17167,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentMessageObject.type == MessageObject.TYPE_EXTENDED_MEDIA_PREVIEW ||
             documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO ||
             currentMessageObject.type == MessageObject.TYPE_GIF ||
-            currentMessageObject.type == MessageObject.TYPE_STORY
+            currentMessageObject.type == MessageObject.TYPE_STORY ||
+            (documentAttachType == DOCUMENT_ATTACH_TYPE_STICKER && !TextUtils.isEmpty(currentMessageObject.caption))
         ) {
             float x, y, h;
             if (transitionParams.imageChangeBoundsTransition) {
@@ -23750,7 +23751,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     currentMessageObject.type == MessageObject.TYPE_EXTENDED_MEDIA_PREVIEW ||
                     documentAttachType == DOCUMENT_ATTACH_TYPE_VIDEO ||
                     currentMessageObject.type == MessageObject.TYPE_GIF ||
-                    currentMessageObject.type == MessageObject.TYPE_STORY
+                    currentMessageObject.type == MessageObject.TYPE_STORY ||
+                    (documentAttachType == DOCUMENT_ATTACH_TYPE_STICKER && !TextUtils.isEmpty(currentMessageObject.caption))
                 ) {
                     float y, h;
                     y = photoImage.getImageY();
