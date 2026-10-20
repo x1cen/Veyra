@@ -695,11 +695,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         }
                     }
                 };
-                codeFieldContainer.setNumbersCount(4, CodeFieldContainer.TYPE_PASSCODE);
+                codeFieldContainer.setNumbersCount(8, CodeFieldContainer.TYPE_PASSCODE);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
                     f.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                    f.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24);
+                    f.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
                     f.addTextChangedListener(new TextWatcher() {
                         @Override
                         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -720,7 +720,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         keyboardView.setDispatchBackWhenEmpty(true);
                     });
                 }
-                codeContainer.addView(codeFieldContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 40, 10, 40, 0));
+                codeContainer.addView(codeFieldContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 10, 16, 0));
 
                 innerLinearLayout.addView(codeContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 32, 0, 72));
 
@@ -1010,7 +1010,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void processNext() {
-        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 4) {
+        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 8) {
             onPasscodeError();
             return;
         }

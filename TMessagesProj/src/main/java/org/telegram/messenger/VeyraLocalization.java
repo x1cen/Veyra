@@ -225,8 +225,8 @@ public class VeyraLocalization {
         EN.put("VideoSavedToDownloadsHintLinked", "Video saved to **downloads**.");
         EN.put("AppName", "Veyra");
         EN.put("AppNameBeta", "Veyra");
-        EN.put("CreatePasscodeInfoPIN", "Please enter 6 digits that you will use to unlock Veyra.");
-        EN.put("CreateDuressInfoPIN", "Please enter 6 digits for the duress code.");
+        EN.put("CreatePasscodeInfoPIN", "Please enter 8 digits that you will use to unlock Veyra.");
+        EN.put("CreateDuressInfoPIN", "Please enter 8 digits for the duress code.");
         EN.put("ViewDetails", "View Details");
 
         FA.put("ConfirmCallTitle", "تأیید تماس");
@@ -445,8 +445,8 @@ public class VeyraLocalization {
         FA.put("VideoSavedToDownloadsHintLinked", "ویدیو در **Documents** ذخیره شد.");
         FA.put("AppName", "ویرا");
         FA.put("AppNameBeta", "ویرا");
-        FA.put("CreatePasscodeInfoPIN", "لطفاً یک رمز ۶ رقمی برای بازگشایی ویرا وارد کنید.");
-        FA.put("CreateDuressInfoPIN", "لطفاً یک کد اضطراری ۶ رقمی وارد کنید.");
+        FA.put("CreatePasscodeInfoPIN", "لطفاً یک رمز ۸ رقمی برای بازگشایی ویرا وارد کنید.");
+        FA.put("CreateDuressInfoPIN", "لطفاً یک کد اضطراری ۸ رقمی وارد کنید.");
         FA.put("ViewDetails", "مشاهده جزئیات (JSON)");
         FA.put("fil", "tl");
         FA.put("he", "iw");
