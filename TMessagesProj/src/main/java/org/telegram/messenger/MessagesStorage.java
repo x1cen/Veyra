@@ -411,17 +411,6 @@ public class MessagesStorage extends BaseController {
         loadPendingTasks();
         try {
             org.veyra.client.VeyraAntiDelete.initFromDb(database);
-            try {
-                database.executeFast(
-                    "UPDATE dialogs SET (last_mid, last_mid_group) = (" +
-                    "  SELECT mid, group_id FROM messages_v2 WHERE uid = dialogs.did ORDER BY date DESC, mid DESC LIMIT 1" +
-                    ") WHERE did IN (" +
-                    "  SELECT d.did FROM dialogs as d JOIN messages_v2 as m ON d.did = m.uid " +
-                    "  GROUP BY d.did HAVING d.last_mid IS NULL OR d.last_mid = 0 OR d.last_mid < max(m.mid)" +
-                    ")"
-                ).stepThis().dispose();
-            } catch (Throwable ignore) {
-            }
             openSync.countDown();
         } catch (Throwable ignore) {
 

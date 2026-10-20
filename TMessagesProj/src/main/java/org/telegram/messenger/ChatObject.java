@@ -1954,22 +1954,18 @@ public class ChatObject {
     }
 
     public static boolean isLeftFromChat(TLRPC.Chat chat) {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) return false;
         return chat == null || chat instanceof TLRPC.TL_chatEmpty || isForbidden(chat) || chat.left || chat.deactivated;
     }
 
     public static boolean isKickedFromChat(TLRPC.Chat chat) {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) return false;
         return chat == null || chat instanceof TLRPC.TL_chatEmpty || isForbidden(chat) || chat.kicked || chat.deactivated || chat.banned_rights != null && chat.banned_rights.view_messages;
     }
 
     public static boolean isNotInChat(TLRPC.Chat chat) {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) return false;
         return chat == null || chat instanceof TLRPC.TL_chatEmpty || isForbidden(chat) || chat.left || chat.kicked || chat.deactivated;
     }
 
     public static boolean isInChat(TLRPC.Chat chat) {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) return true;
         if (chat == null || chat instanceof TLRPC.TL_chatEmpty || isForbidden(chat)) {
             return false;
         }
