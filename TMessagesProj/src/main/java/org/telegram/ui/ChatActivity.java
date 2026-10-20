@@ -12598,7 +12598,7 @@ public class ChatActivity extends BaseFragment implements
                         progressDialog.setCancelable(false);
                         showDialog(progressDialog);
 
-                        getMessagesController().deleteDialog(dialog_id, 0, 1, Integer.MAX_VALUE, true, getMessagesController().getInputPeer(dialog_id), 0);
+                        getMessagesController().deleteDialog(dialog_id, 1, true);
                         AndroidUtilities.runOnUIThread(() -> {
                             try {
                                 progressDialog.dismiss();
