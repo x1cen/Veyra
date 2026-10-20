@@ -670,8 +670,8 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         }
-        boolean hideOnline = (org.telegram.messenger.VeyraConfig.isGhostHideOnline() || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2);
-        if (org.telegram.messenger.VeyraConfig.onlineMode == 0 || org.telegram.messenger.VeyraConfig.onlineMode == 3) {
+        boolean hideOnline = (org.telegram.messenger.VeyraConfig.isGhostHideOnline() || org.telegram.messenger.VeyraConfig.onlineMode == 1 || org.telegram.messenger.VeyraConfig.onlineMode == 2 || org.telegram.messenger.VeyraConfig.ghostOfflineAfterMessage);
+        if (org.telegram.messenger.VeyraConfig.onlineMode == 3) {
             hideOnline = false;
         }
         if (hideOnline && object instanceof org.telegram.tgnet.tl.TL_account.updateStatus) {
@@ -775,7 +775,9 @@ public class ConnectionsManager extends BaseController {
                     final TLObject finalResponse = resp;
                     final TLRPC.TL_error finalError = error;
                     Utilities.stageQueue.postRunnable(() -> {
-                        if (onComplete != null) {
+                        if (finalOnComplete != null) {
+                            finalOnComplete.run(finalResponse, finalError);
+                        } else if (onComplete != null) {
                             onComplete.run(finalResponse, finalError);
                         } else if (onCompleteTimestamp != null) {
                             onCompleteTimestamp.run(finalResponse, finalError, timestamp);
