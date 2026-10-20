@@ -1272,6 +1272,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_WELCOME_REVERT = 116;
     public final static int OPTION_SEND_MONEY = 117;
     public final static int OPTION_VIEW_EDIT_HISTORY = 118;
+    public final static int OPTION_VIEW_RAW = 119;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -34197,6 +34198,16 @@ public class ChatActivity extends BaseFragment implements
                 selectedObjectGroup = null;
                 break;
             }
+            case OPTION_VIEW_RAW: {
+                if (selectedObject != null) {
+                    final MessageObject msgObj = selectedObject;
+                    presentFragment(new MessageDetailsActivity(msgObj));
+                }
+                selectedObject = null;
+                selectedObjectToEditCaption = null;
+                selectedObjectGroup = null;
+                break;
+            }
             case OPTION_FORWARD: {
                 if (getMessagesController().isFrozen()) {
                     AccountFrozenAlert.show(currentAccount);
@@ -47157,6 +47168,11 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                     options.add(OPTION_DELETE);
                     icons.add(deleteIconRes);
+                }
+                if (org.telegram.messenger.VeyraConfig.viewRawEnabled && selectedObject != null && selectedObject.messageOwner != null) {
+                    items.add("View Raw");
+                    options.add(OPTION_VIEW_RAW);
+                    icons.add(R.drawable.msg_info);
                 }
             } else {
                 if ((allowChatActions || isEphemeralFromBot) && (primaryMessage == null || !primaryMessage.isWelcomeMessage()) && !isInsideContainer && chatMode != MODE_WELCOME_MESSAGES) {

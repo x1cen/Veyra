@@ -395,6 +395,7 @@ public class VeyraConfig {
     public static boolean anonymousForwardNoQuote = false;
     public static boolean jumpToFirstMessage = true;
     public static boolean copyDialogId = true;
+    public static boolean viewRawEnabled = false;
 
     // ==================== Media & Camera (forkgram port) ====================
     public static boolean rearCameraVideoMessages = false;
@@ -533,6 +534,7 @@ public class VeyraConfig {
         anonymousForwardNoQuote = preferences.getBoolean("anonymousForwardNoQuote", false);
         jumpToFirstMessage = preferences.getBoolean("jumpToFirstMessage", true);
         copyDialogId = preferences.getBoolean("copyDialogId", true);
+        viewRawEnabled = preferences.getBoolean("viewRawEnabled", false);
 
         rearCameraVideoMessages = preferences.getBoolean("rearCameraVideoMessages", false);
 
@@ -1232,6 +1234,11 @@ public class VeyraConfig {
     public static void setCopyDialogId(boolean val) {
         copyDialogId = val;
         save("copyDialogId", val);
+    }
+
+    public static void setViewRawEnabled(boolean val) {
+        viewRawEnabled = val;
+        save("viewRawEnabled", val);
     }
 
     public static void setRearCameraVideoMessages(boolean val) {
