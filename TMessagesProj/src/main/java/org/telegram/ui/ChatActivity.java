@@ -5171,7 +5171,8 @@ public class ChatActivity extends BaseFragment implements
                             currentEncryptedChat == null && message.getId() < 0 ||
                             currentChat != null && ChatObject.isForum(currentChat) && !allowReplyOnOpenTopic ||
                             hasTextSelection() ||
-                            message.isEphemeral() && message.isOut()
+                            message.isEphemeral() && message.isOut() ||
+                            message.isVeyraOrAntiDeleted()
                         ) {
                             slidingViewSetOffset(0);
                             slidingView = null;
@@ -12930,12 +12931,14 @@ public class ChatActivity extends BaseFragment implements
         for (int a = 0; a < 2; a++) {
             for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
                 MessageObject messageObject = selectedMessagesIds[a].valueAt(b);
-                if (messageObject != null && messageObject.deleted) {
+                if (messageObject != null && (messageObject.deleted || messageObject.isVeyraOrAntiDeleted())) {
                     return;
                 }
             }
         }
         if (isPeerNoForwards() || hasSelectedNoforwardsMessage()) {
+            return;
+        }
             // We should update text if user changed locale without re-opening chat activity
             String str;
             if (isPeerNoForwards()) {
@@ -15448,6 +15451,9 @@ public class ChatActivity extends BaseFragment implements
         final int oldFieldPanelShown = fieldPanelShown;
         boolean showHint = false;
         if (show) {
+            if (messageObjectToReply != null && messageObjectToReply.isVeyraOrAntiDeleted()) {
+                return;
+            }
             if (messageObjectToReply == null && messageObjectsToForward == null && messageObjectToEdit == null && webPage == null && suggestionParams == null) {
                 messagePreviewParams = null;
                 return;
@@ -19925,21 +19931,22 @@ public class ChatActivity extends BaseFragment implements
                 ActionBarMenuItem shareItem = actionBar.createActionMode().getItem(share);
 
                 boolean noforwards = isPeerNoForwards() || hasSelectedNoforwardsMessage();
+                boolean allowForward = cantForwardMessagesCount == 0 && !noforwards;
                 if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
                     forwardButtonAnimation = new AnimatorSet();
                     ArrayList<Animator> animators = new ArrayList<>();
                     if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0 || noforwards);
-                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, cantForwardMessagesCount == 0 ? 1.0f : 0.5f));
+                        forwardItem.setEnabled(allowForward);
+                        animators.add(ObjectAnimator.ofFloat(forwardItem, View.ALPHA, allowForward ? 1.0f : 0.4f));
 
-                        if (noforwards && forwardItem.getBackground() != null) {
+                        if (!allowForward && forwardItem.getBackground() != null) {
                             forwardItem.setBackground(null);
-                        } else if (forwardItem.getBackground() == null) {
+                        } else if (allowForward && forwardItem.getBackground() == null) {
                             forwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5));
                         }
                     }
                     if (actionsButtonsLayout != null) {
-                        actionsButtonsLayout.setForwardButtonEnabled(cantForwardMessagesCount == 0 || noforwards, true);
+                        actionsButtonsLayout.setForwardButtonEnabled(allowForward, true);
                     }
                     forwardButtonAnimation.playTogether(animators);
                     forwardButtonAnimation.setDuration(100);
@@ -19952,15 +19959,18 @@ public class ChatActivity extends BaseFragment implements
                     forwardButtonAnimation.start();
                 } else {
                     if (forwardItem != null) {
-                        forwardItem.setEnabled(cantForwardMessagesCount == 0 || noforwards);
-                        forwardItem.setAlpha(cantForwardMessagesCount == 0 ? 1.0f : 0.5f);
-                        if (noforwards) {
+                        forwardItem.setEnabled(allowForward);
+                        forwardItem.setAlpha(allowForward ? 1.0f : 0.4f);
+                        if (!allowForward) {
+                            if (forwardItem.getBackground() != null) {
+                                forwardItem.setBackground(null);
+                            }
                         } else if (forwardItem.getBackground() == null) {
                             forwardItem.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 3));
                         }
                     }
                     if (actionsButtonsLayout != null) {
-                        actionsButtonsLayout.setForwardButtonEnabled(cantForwardMessagesCount == 0 || noforwards, false);
+                        actionsButtonsLayout.setForwardButtonEnabled(allowForward, false);
                     }
                 }
                 if (saveItem != null) {
@@ -46685,8 +46695,8 @@ public class ChatActivity extends BaseFragment implements
             allowPin = false;
         }
         allowPin = allowPin && message.getId() > 0 && (message.messageOwner.action == null || message.messageOwner.action instanceof TLRPC.TL_messageActionEmpty) && !message.isExpiredStory() && message.type != MessageObject.TYPE_STORY_MENTION;
-        boolean noforwards = (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && (isPeerNoForwards() || message.messageOwner.noforwards || getDialogId() == UserObject.VERIFY));
-        boolean noforwardsOrPaidMedia = noforwards || (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && message.type == MessageObject.TYPE_PAID_MEDIA);
+        boolean noforwards = isPeerNoForwards() || (message != null && message.messageOwner != null && message.messageOwner.noforwards) || (currentChat != null && currentChat.noforwards) || getDialogId() == UserObject.VERIFY;
+        boolean noforwardsOrPaidMedia = noforwards || message.type == MessageObject.TYPE_PAID_MEDIA;
         boolean allowUnpin = !isEphemeral && message.getDialogId() != mergeDialogId && allowPin && (pinnedMessageObjects.containsKey(message.getId()) || groupedMessages != null && !groupedMessages.messages.isEmpty() && pinnedMessageObjects.containsKey(groupedMessages.messages.get(0).getId())) && !message.isExpiredStory();
         boolean allowEdit = !isEphemeral && message.canEditMessage(currentChat) && !chatActivityEnterView.hasAudioToSend() && message.getDialogId() != mergeDialogId && message.type != MessageObject.TYPE_STORY && message.type != MessageObject.TYPE_POLL;
         if (allowEdit && groupedMessages != null) {
@@ -46707,6 +46717,7 @@ public class ChatActivity extends BaseFragment implements
             message.messageOwner.action instanceof TLRPC.TL_messageActionSecureValuesSent ||
             isEphemeral ||
             currentEncryptedChat == null && message.getId() < 0 ||
+            (message != null && message.isVeyraOrAntiDeleted()) ||
             bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE && !(bottomOverlayChatWaitsReply && selectedObject != null && (MessageObject.getTopicId(currentAccount, selectedObject.messageOwner, ChatObject.isForum(currentChat)) != 0 || selectedObject.wasJustSent))) {
             allowChatActions = false;
         }
@@ -47323,6 +47334,27 @@ public class ChatActivity extends BaseFragment implements
             items.add(getString(R.string.WelcomeMessageRevert));
             options.add(OPTION_WELCOME_REVERT);
             icons.add(R.drawable.outline_revert_24);
+        }
+
+        if (noforwards || (message != null && message.isVeyraOrAntiDeleted())) {
+            for (int i = 0; i < options.size(); i++) {
+                if (options.get(i) == OPTION_FORWARD) {
+                    options.remove(i);
+                    items.remove(i);
+                    icons.remove(i);
+                    i--;
+                }
+            }
+        }
+        if (message != null && message.isVeyraOrAntiDeleted()) {
+            for (int i = 0; i < options.size(); i++) {
+                if (options.get(i) == OPTION_REPLY) {
+                    options.remove(i);
+                    items.remove(i);
+                    icons.remove(i);
+                    i--;
+                }
+            }
         }
     }
 

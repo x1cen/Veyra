@@ -831,7 +831,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
     // Veyra: colored last-seen dots (forkgram port) — yellow <=15m, orange <=60m, red <=24h
     private int veyraLastSeenDotColor() {
-        if (!VeyraConfig.enableLastSeenDots || user == null || user.status == null) {
+        if (!VeyraConfig.enableLastSeenDots || user == null || user.self || user.status == null) {
             return 0;
         }
         if (!(user.status instanceof TLRPC.TL_userStatusOffline)) {
@@ -5140,7 +5140,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 canvas.restore();
                 canvas.restore();
             }
-            if (user != null && !MessagesController.isSupportUser(user) && !user.bot) {
+            if (user != null && !user.self && !MessagesController.isSupportUser(user) && !user.bot) {
                 boolean isOnline = isOnline();
                 int lastSeenColor = veyraLastSeenDotColor();
                 boolean showDot = isOnline || lastSeenColor != 0;

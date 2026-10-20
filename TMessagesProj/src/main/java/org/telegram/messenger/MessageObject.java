@@ -11652,12 +11652,18 @@ public class MessageObject {
     }
 
     public boolean canForwardMessage() {
+        if (isVeyraOrAntiDeleted()) {
+            return false;
+        }
+        if (messageOwner != null && messageOwner.noforwards) {
+            return false;
+        }
         if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
             return true;
         }
         if (isQuickReply()) return false;
         if (type == TYPE_GIFT_STARS || type == TYPE_GIFT_THEME_UPDATE || type == TYPE_SUGGEST_BIRTHDAY || type == TYPE_GIFT_OFFER || type == TYPE_SHARING_OFFER || type == TYPE_COMMUNITY_CHANGED) return false;
-        return !(messageOwner instanceof TLRPC.TL_message_secret) && !needDrawBluredPreview() && !isLiveLocation() && type != MessageObject.TYPE_PHONE_CALL && !isSponsored() && !messageOwner.noforwards;
+        return !(messageOwner instanceof TLRPC.TL_message_secret) && !needDrawBluredPreview() && !isLiveLocation() && type != MessageObject.TYPE_PHONE_CALL && !isSponsored() && (messageOwner == null || !messageOwner.noforwards);
     }
 
     public boolean canEditMedia() {
