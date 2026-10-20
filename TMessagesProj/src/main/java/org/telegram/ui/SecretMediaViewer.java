@@ -334,8 +334,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
     private VideoPlayer videoPlayer;
     private boolean isPlaying;
     private ActionBar actionBar;
-    private final static int MENU_SAVE_DOWNLOADS = 1;
-    private final static int MENU_SAVE_GALLERY = 2;
     private AnimatorSet currentActionBarAnimation;
     private boolean videoWatchedOneTime;
     private boolean closeVideoAfterWatch;

@@ -47925,7 +47925,7 @@ public class ChatActivity extends BaseFragment implements
             }
             return currentChat.noforwards;
         }
-        return userInfo != null && userInfo.noforwards;
+        return getMessagesController().isUserNoForwards(userInfo);
     }
 
     public boolean isPeerNoForwards() {
