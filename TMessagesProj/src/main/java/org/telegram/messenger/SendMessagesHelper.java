@@ -1785,6 +1785,15 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (prevSize != 0 && unsentMessages.size() == 0) {
             checkUnsentMessages();
         }
+        if (org.telegram.messenger.VeyraConfig.ghostOfflineAfterMessage || org.telegram.messenger.VeyraConfig.onlineMode == 2) {
+            AndroidUtilities.runOnUIThread(() -> {
+                org.telegram.tgnet.tl.TL_account.updateStatus offlineReq = new org.telegram.tgnet.tl.TL_account.updateStatus();
+                offlineReq.offline = true;
+                ConnectionsManager.getInstance(currentAccount).sendRequest(offlineReq, (response, error) -> {
+                    MessagesController.getInstance(currentAccount).offlineSent = true;
+                });
+            }, 300);
+        }
     }
 
     public void processForwardFromMyName(MessageObject messageObject, long did, long payStars, long monoForumPeerId, MessageSuggestionParams suggestionParams) {

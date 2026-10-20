@@ -12948,52 +12948,6 @@ public class ChatActivity extends BaseFragment implements
         if (isPeerNoForwards() || hasSelectedNoforwardsMessage()) {
             return;
         }
-            // We should update text if user changed locale without re-opening chat activity
-            String str;
-            if (isPeerNoForwards()) {
-                if (getDialogId() > 0) {
-                    str = LocaleController.getString(R.string.ForwardsRestrictedInfoUser);
-                } else if (ChatObject.isChannel(currentChat) && !currentChat.megagroup) {
-                    str = LocaleController.getString(R.string.ForwardsRestrictedInfoChannel);
-                } else {
-                    str = LocaleController.getString(R.string.ForwardsRestrictedInfoGroup);
-                }
-            } else {
-                str = LocaleController.getString(R.string.ForwardsRestrictedInfoBot);
-            }
-            if (fromActionBar) {
-                if (fwdRestrictedTopHint == null) {
-                    SizeNotifierFrameLayout frameLayout = contentView;
-                    int index = frameLayout.indexOfChild(chatInputViewsContainer);
-                    if (index == -1) {
-                        return;
-                    }
-                    fwdRestrictedTopHint = new HintView(getParentActivity(), 7, true);
-                    frameLayout.addView(fwdRestrictedTopHint, index + 1, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 12, 0, 12, 0));
-                    fwdRestrictedTopHint.setAlpha(0.0f);
-                    fwdRestrictedTopHint.setVisibility(View.INVISIBLE);
-                }
-
-                fwdRestrictedTopHint.setText(str);
-                fwdRestrictedTopHint.showForView(actionBar.getActionMode().getItem(forward), true);
-            } else {
-                if (fwdRestrictedBottomHint == null) {
-                    SizeNotifierFrameLayout frameLayout = contentView;
-                    int index = frameLayout.indexOfChild(chatInputViewsContainer);
-                    if (index == -1) {
-                        return;
-                    }
-                    fwdRestrictedBottomHint = new HintView(getParentActivity(), 9);
-                    frameLayout.addView(fwdRestrictedBottomHint, index + 1, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 12, 0, 12, 0));
-                    fwdRestrictedBottomHint.setAlpha(0.0f);
-                    fwdRestrictedBottomHint.setVisibility(View.INVISIBLE);
-                }
-
-                fwdRestrictedBottomHint.setText(str);
-                fwdRestrictedBottomHint.showForView(actionsButtonsLayout.getForwardButton(), true);
-            }
-            return;
-        }
         int hasPoll = 0;
         boolean hasInvoice = false;
         for (int a = 0; a < 2; a++) {
