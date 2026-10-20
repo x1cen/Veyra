@@ -11815,5 +11815,7 @@
 <string name="VeyraDeleteAllAdminConfirm">Are you sure you want to delete all messages in this group for everyone? This action cannot be undone.</string>
 <string name="VeyraPasscodeSameAsDuress">Passcode cannot be the same as Duress code</string>
 <string name="VeyraDuressSameAsPasscode">Duress code cannot be the same as Passcode</string>
+<string name="VeyraGhostBlockPeriodicOnline">Block Periodic Online Status</string>
+<string name="VeyraGhostBlockPeriodicOnlineDesc">Prevent Telegram from periodically updating your status to online while the app is in use</string>
 </resources>
 

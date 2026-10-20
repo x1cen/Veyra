@@ -76,6 +76,7 @@ public class VeyraConfig {
     // Ghost Mode (Granular)
     public static boolean ghostHideOnline = true;
     public static boolean ghostOfflineAfterMessage = false;
+    public static boolean ghostBlockPeriodicOnline = true;
     public static boolean ghostHideTyping = true;
     public static boolean ghostHideUpload = true;
     public static boolean ghostHideRead = true;
@@ -448,6 +449,7 @@ public class VeyraConfig {
         ghostMode = preferences.getBoolean("ghostMode", true);
         ghostHideOnline = preferences.getBoolean("ghostHideOnline", true);
         ghostOfflineAfterMessage = preferences.getBoolean("ghostOfflineAfterMessage", false);
+        ghostBlockPeriodicOnline = preferences.getBoolean("ghostBlockPeriodicOnline", true);
         ghostHideTyping = preferences.getBoolean("ghostHideTyping", true);
         ghostHideUpload = preferences.getBoolean("ghostHideUpload", true);
         ghostHideRead = preferences.getBoolean("ghostHideRead", true);
@@ -991,6 +993,10 @@ public class VeyraConfig {
     public static void setGhostOfflineAfterMessage(boolean val) {
         ghostOfflineAfterMessage = val;
         save("ghostOfflineAfterMessage", val);
+    }
+    public static void setGhostBlockPeriodicOnline(boolean val) {
+        ghostBlockPeriodicOnline = val;
+        save("ghostBlockPeriodicOnline", val);
     }
     public static void setGhostHideTyping(boolean val) {
         ghostHideTyping = val;

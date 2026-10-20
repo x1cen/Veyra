@@ -45,6 +45,13 @@ public class VeyraGhostModeSettingsActivity extends VeyraSettingsBaseActivity {
                 v -> VeyraConfig.setGhostOfflineAfterMessage(v),
                 false
         ));
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraGhostBlockPeriodicOnline", R.string.VeyraGhostBlockPeriodicOnline),
+                LocaleController.getString("VeyraGhostBlockPeriodicOnlineDesc", R.string.VeyraGhostBlockPeriodicOnlineDesc),
+                () -> VeyraConfig.ghostBlockPeriodicOnline,
+                v -> VeyraConfig.setGhostBlockPeriodicOnline(v),
+                false
+        ));
         r.add(VeyraSettingsRow.shadow());
 
         // Section 3: Stealth Features
