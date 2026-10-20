@@ -16238,67 +16238,29 @@ public class ChatActivity extends BaseFragment implements
         if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia()) {
             return null;
         }
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
-            if (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0) {
-                return null;
-            }
-            final Runnable pepe = () -> {
-                messageObject.messageOwner.media_unread = false;
-                if (currentEncryptedChat != null) {
-                    getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, Integer.MIN_VALUE);
-                } else {
-                    getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, 0, 0, false);
-                }
-            };
-            if (readNow) {
-                pepe.run();
-                return null;
-            }
-            return pepe;
-        }
-        if (messageObject.messageOwner.destroyTime != 0 || messageObject.messageOwner.ttl <= 0) {
+        if (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0) {
             return null;
         }
-        if (readNow) {
-            final boolean delete = messageObject.messageOwner.ttl != 0x7FFFFFFF;
-            final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
-            messageObject.messageOwner.destroyTime = ttl + getConnectionsManager().getCurrentTime();
-            if (currentEncryptedChat != null) {
-                getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl);
-            } else {
-                getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, delete);
-            }
-            return null;
-        } else {
-            return () -> {
-                final boolean delete = messageObject.messageOwner.ttl != 0x7FFFFFFF;
+        final Runnable notifySender = () -> {
+            messageObject.messageOwner.media_unread = false;
+            if (org.telegram.messenger.VeyraConfig.ttlBurnForSender) {
                 final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
-                messageObject.messageOwner.destroyTime = ttl + getConnectionsManager().getCurrentTime();
-                messageObject.messageOwner.destroyTimeMillis = ttl * 1000L + getConnectionsManager().getCurrentTimeMillis();
                 if (currentEncryptedChat != null) {
                     getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl);
                 } else {
-                    getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, delete);
+                    getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
                 }
-            };
+            }
+        };
+        if (readNow) {
+            notifySender.run();
+            return null;
         }
+        return notifySender;
     }
 
     private Runnable sendSecretMediaDelete(MessageObject messageObject) {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
-            return null;
-        }
-        if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia() || messageObject.messageOwner.ttl != 0x7FFFFFFF) {
-            return null;
-        }
-        final long taskId = getMessagesController().createDeleteShowOnceTask(dialog_id, messageObject.getId());
-        messageObject.forceExpired = true;
-        if (messageObject.isOutOwner() || !messageObject.isRoundOnce() && !messageObject.isVoiceOnce()) {
-            ArrayList<MessageObject> msgs = new ArrayList<>();
-            msgs.add(messageObject);
-            updateMessages(msgs, true);
-        }
-        return () -> getMessagesController().doDeleteShowOnceTask(taskId, dialog_id, messageObject.getId());
+        return null;
     }
 
     private void clearChatData(boolean full) {
@@ -47201,6 +47163,15 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.ViewInTopic));
                     options.add(OPTION_VIEW_IN_TOPIC);
                     icons.add(R.drawable.msg_viewintopic);
+                }
+                if (selectedObject != null && selectedObject.isSecretMedia()) {
+                    items.add(LocaleController.getString(R.string.SaveToGallery));
+                    options.add(OPTION_SAVE_TO_GALLERY);
+                    icons.add(R.drawable.msg_gallery);
+
+                    items.add(LocaleController.getString(R.string.SaveToDownloads));
+                    options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
+                    icons.add(R.drawable.msg_download);
                 }
                 if (type == 4 && VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
                     int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);

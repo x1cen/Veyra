@@ -57,6 +57,7 @@ public class VeyraConfig {
     public static final int PEER_GROUP = 2;
     public static final int PEER_CHANNEL = 3;
     public static final int PEER_BOT = 4;
+    public static final int PEER_SECRET = 5;
 
     // ==================== Privacy & Stealth ====================
     public static boolean antiDelete = true;
@@ -66,6 +67,7 @@ public class VeyraConfig {
     public static boolean antiDeleteChannels = true;
     public static boolean antiDeleteChannelsOnlyPrivate = true;
     public static boolean antiDeleteBots = false;
+    public static boolean antiDeleteSecret = true;
     public static boolean ghostMode = true;
     public static boolean hideTyping = true;
     public static boolean readOnReply = true;
@@ -328,6 +330,7 @@ public class VeyraConfig {
     public static boolean editHistoryChannels = true;
     public static boolean editHistoryChannelsOnlyPrivate = true;
     public static boolean editHistoryBots = false;
+    public static boolean editHistorySecret = true;
     public static int editHistoryLimit = 10;
     public static boolean editHistoryDropOldest = true;
 
@@ -341,6 +344,9 @@ public class VeyraConfig {
     public static boolean reactionHistoryChannels = false;
     public static boolean reactionHistoryChannelsOnlyPrivate = false;
     public static boolean reactionHistoryBots = false;
+    public static boolean reactionHistorySecret = true;
+
+    public static boolean ttlBurnForSender = false;
 
     // Ignore Owner / Admin in Groups & Channels (Recent Actions already log them)
     public static boolean antiDeleteGroupsIgnoreOwner = true;
@@ -446,6 +452,7 @@ public class VeyraConfig {
         antiDeleteChannels = preferences.getBoolean("antiDeleteChannels", true);
         antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", true);
         antiDeleteBots = preferences.getBoolean("antiDeleteBots", false);
+        antiDeleteSecret = preferences.getBoolean("antiDeleteSecret", true);
         ghostMode = preferences.getBoolean("ghostMode", true);
         ghostHideOnline = preferences.getBoolean("ghostHideOnline", true);
         ghostOfflineAfterMessage = preferences.getBoolean("ghostOfflineAfterMessage", false);
@@ -475,6 +482,7 @@ public class VeyraConfig {
         editHistoryChannels = preferences.getBoolean("editHistoryChannels", true);
         editHistoryChannelsOnlyPrivate = preferences.getBoolean("editHistoryChannelsOnlyPrivate", true);
         editHistoryBots = preferences.getBoolean("editHistoryBots", false);
+        editHistorySecret = preferences.getBoolean("editHistorySecret", true);
         editHistoryLimit = preferences.getInt("editHistoryLimit", 10);
         editHistoryDropOldest = preferences.getBoolean("editHistoryDropOldest", true);
 
@@ -488,6 +496,8 @@ public class VeyraConfig {
         reactionHistoryChannels = preferences.getBoolean("reactionHistoryChannels", false);
         reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", false);
         reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
+        reactionHistorySecret = preferences.getBoolean("reactionHistorySecret", true);
+        ttlBurnForSender = preferences.getBoolean("ttlBurnForSender", false);
 
         antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", true);
         antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", true);
@@ -681,16 +691,19 @@ public class VeyraConfig {
             if (peerType == PEER_GROUP) return antiDeleteGroups;
             if (peerType == PEER_CHANNEL) return antiDeleteChannels;
             if (peerType == PEER_BOT) return antiDeleteBots;
+            if (peerType == PEER_SECRET) return antiDeleteSecret;
         } else if (category == CATEGORY_EDIT_HISTORY) {
             if (peerType == PEER_PRIVATE) return editHistoryPrivate;
             if (peerType == PEER_GROUP) return editHistoryGroups;
             if (peerType == PEER_CHANNEL) return editHistoryChannels;
             if (peerType == PEER_BOT) return editHistoryBots;
+            if (peerType == PEER_SECRET) return editHistorySecret;
         } else if (category == CATEGORY_REACTION_HISTORY) {
             if (peerType == PEER_PRIVATE) return reactionHistoryPrivate;
             if (peerType == PEER_GROUP) return reactionHistoryGroups;
             if (peerType == PEER_CHANNEL) return reactionHistoryChannels;
             if (peerType == PEER_BOT) return reactionHistoryBots;
+            if (peerType == PEER_SECRET) return reactionHistorySecret;
         }
         return false;
     }
@@ -701,16 +714,19 @@ public class VeyraConfig {
             else if (peerType == PEER_GROUP) { antiDeleteGroups = val; save("antiDeleteGroups", val); }
             else if (peerType == PEER_CHANNEL) { antiDeleteChannels = val; save("antiDeleteChannels", val); }
             else if (peerType == PEER_BOT) { antiDeleteBots = val; save("antiDeleteBots", val); }
+            else if (peerType == PEER_SECRET) { antiDeleteSecret = val; save("antiDeleteSecret", val); }
         } else if (category == CATEGORY_EDIT_HISTORY) {
             if (peerType == PEER_PRIVATE) { editHistoryPrivate = val; save("editHistoryPrivate", val); }
             else if (peerType == PEER_GROUP) { editHistoryGroups = val; save("editHistoryGroups", val); }
             else if (peerType == PEER_CHANNEL) { editHistoryChannels = val; save("editHistoryChannels", val); }
             else if (peerType == PEER_BOT) { editHistoryBots = val; save("editHistoryBots", val); }
+            else if (peerType == PEER_SECRET) { editHistorySecret = val; save("editHistorySecret", val); }
         } else if (category == CATEGORY_REACTION_HISTORY) {
             if (peerType == PEER_PRIVATE) { reactionHistoryPrivate = val; save("reactionHistoryPrivate", val); }
             else if (peerType == PEER_GROUP) { reactionHistoryGroups = val; save("reactionHistoryGroups", val); }
             else if (peerType == PEER_CHANNEL) { reactionHistoryChannels = val; save("reactionHistoryChannels", val); }
             else if (peerType == PEER_BOT) { reactionHistoryBots = val; save("reactionHistoryBots", val); }
+            else if (peerType == PEER_SECRET) { reactionHistorySecret = val; save("reactionHistorySecret", val); }
         }
     }
 
@@ -845,6 +861,9 @@ public class VeyraConfig {
         Boolean exc = getException(CATEGORY_ANTI_DELETE, dialogId);
         if (exc != null) return exc;
         if (!antiDelete) return false;
+        if (org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
+            return antiDeleteSecret;
+        }
         try {
             if (dialogId > 0) {
                 org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
@@ -899,6 +918,9 @@ public class VeyraConfig {
         Boolean exc = getException(CATEGORY_EDIT_HISTORY, dialogId);
         if (exc != null) return exc;
         if (!editHistoryEnabled) return false;
+        if (org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
+            return editHistorySecret;
+        }
         try {
             int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
@@ -939,6 +961,9 @@ public class VeyraConfig {
         Boolean exc = getException(CATEGORY_REACTION_HISTORY, dialogId);
         if (exc != null) return exc;
         if (!reactionHistoryEnabled) return false;
+        if (org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
+            return reactionHistorySecret;
+        }
         try {
             int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
@@ -1055,6 +1080,11 @@ public class VeyraConfig {
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
         save("blockScreenCapture", val);
+    }
+
+    public static void setTtlBurnForSender(boolean val) {
+        ttlBurnForSender = val;
+        save("ttlBurnForSender", val);
     }
     public static void setCustomHeaderTitle(String title) {
         customHeaderTitle = title != null ? title.trim() : "";

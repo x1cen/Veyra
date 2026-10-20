@@ -68,6 +68,10 @@ public class VeyraLocalization {
         EN.put("VeyraChatTypeGroupsDesc", "Manage policy, group filter and included chats");
         EN.put("VeyraChatTypePrivate", "Direct Messages");
         EN.put("VeyraChatTypePrivateDesc", "Manage policy and included direct messages");
+        EN.put("VeyraChatTypeSecret", "Secret Chats");
+        EN.put("VeyraChatTypeSecretDesc", "Enable or disable for encrypted secret chats");
+        EN.put("VeyraTtlBurnForSender", "Burn Timed Media for Sender");
+        EN.put("VeyraTtlBurnForSenderDesc", "Notify sender upon viewing so it deletes on their side, while keeping it permanently for you");
         EN.put("VeyraChatTypes", "Scope & Inclusion Policies");
         EN.put("VeyraChatsActiveCount", "%1$d of %2$d active");
         EN.put("VeyraExplicitlyExcluded", "Manually Excluded");
@@ -346,6 +350,10 @@ public class VeyraLocalization {
         FA.put("VeyraChatTypeGroupsDesc", "مدیریت سیاست، فیلتر گروه و چت‌های فعال");
         FA.put("VeyraChatTypePrivate", "گفتگوهای خصوصی");
         FA.put("VeyraChatTypePrivateDesc", "مدیریت سیاست و چت‌های خصوصی فعال");
+        FA.put("VeyraChatTypeSecret", "گفتگوهای محرمانه");
+        FA.put("VeyraChatTypeSecretDesc", "فعال یا غیرفعال‌سازی در چت‌های محرمانه (Secret Chat)");
+        FA.put("VeyraTtlBurnForSender", "سوزاندن رسانه زمان‌دار برای فرستنده");
+        FA.put("VeyraTtlBurnForSenderDesc", "هنگام مشاهده، به فرستنده اعلام می‌شود و پیام برای او حذف می‌گردد، اما برای شما باقی می‌ماند");
         FA.put("VeyraChatTypes", "سیاست‌های اعمال و چت‌های فعال");
         FA.put("VeyraChatsActiveCount", "%1$d از %2$d فعال");
         FA.put("VeyraExplicitlyExcluded", "مستثنی شده دستی");

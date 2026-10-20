@@ -99,6 +99,14 @@ public class VeyraReactionHistorySettingsActivity extends VeyraSettingsBaseActiv
                     presentFragment(new VeyraScopeSettingsActivity(b));
                 }
         ));
+
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeSecret", R.string.VeyraChatTypeSecret),
+                LocaleController.getString("VeyraChatTypeSecretDesc", R.string.VeyraChatTypeSecretDesc),
+                () -> VeyraConfig.reactionHistorySecret,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_REACTION_HISTORY, VeyraConfig.PEER_SECRET, v),
+                true
+        ));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Settings & Actions"));

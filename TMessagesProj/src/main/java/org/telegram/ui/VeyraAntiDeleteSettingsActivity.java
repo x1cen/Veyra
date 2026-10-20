@@ -95,6 +95,14 @@ public class VeyraAntiDeleteSettingsActivity extends VeyraSettingsBaseActivity {
                 }
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeSecret", R.string.VeyraChatTypeSecret),
+                LocaleController.getString("VeyraChatTypeSecretDesc", R.string.VeyraChatTypeSecretDesc),
+                () -> VeyraConfig.antiDeleteSecret,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_ANTI_DELETE, VeyraConfig.PEER_SECRET, v),
+                true
+        ));
+
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Actions"));

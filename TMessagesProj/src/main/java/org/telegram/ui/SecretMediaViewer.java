@@ -334,6 +334,8 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
     private VideoPlayer videoPlayer;
     private boolean isPlaying;
     private ActionBar actionBar;
+    private final static int MENU_SAVE_DOWNLOADS = 1;
+    private final static int MENU_SAVE_GALLERY = 2;
     private AnimatorSet currentActionBarAnimation;
     private boolean videoWatchedOneTime;
     private boolean closeVideoAfterWatch;
@@ -995,13 +997,21 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         actionBar.setItemsBackgroundColor(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR, false);
         actionBar.setItemsColor(Color.WHITE, false);
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitleRightMargin(dp(70));
+        actionBar.setTitleRightMargin(dp(8));
+        ActionBarMenu menu = actionBar.createMenu();
+        menu.addItem(MENU_SAVE_DOWNLOADS, R.drawable.msg_download);
+        menu.addItem(MENU_SAVE_GALLERY, R.drawable.msg_gallery);
+
         containerView.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(int id) {
                 if (id == -1) {
                     closePhoto(true, false);
+                } else if (id == MENU_SAVE_DOWNLOADS) {
+                    saveCurrentMedia(false);
+                } else if (id == MENU_SAVE_GALLERY) {
+                    saveCurrentMedia(true);
                 }
             }
         });
@@ -1517,7 +1527,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
 
         //messageObject.messageOwner.destroyTime = (int) (System.currentTimeMillis() / 1000 + ConnectionsManager.getInstance().getTimeDifference()) + 4;
 
-        ignoreDelete = messageObject.messageOwner.ttl == 0x7FFFFFFF;
+        ignoreDelete = true;
         this.onClose = onClose;
 
         currentProvider = provider;

@@ -11826,10 +11826,13 @@
 <string name="VeyraEditedMessages">Edited Messages</string>
 <string name="VeyraConfirmClearEdits">Are you sure you want to clear edit history for this chat?</string>
 <string name="VeyraEditsCleared">Edit history cleared</string>
-<string name="VeyraReactionHistory">Reaction History</string>
 <string name="VeyraConfirmClearReactions">Are you sure you want to clear reaction history for this chat?</string>
 <string name="VeyraReactionsCleared">Reaction history cleared</string>
 <string name="VeyraDownloadedMediaCache">Downloaded Media Cache</string>
 <string name="VeyraConfirmClearMedia">Are you sure you want to clear cached media for this chat?</string>
+<string name="VeyraChatTypeSecret">Secret Chats</string>
+<string name="VeyraChatTypeSecretDesc">Enable or disable for encrypted secret chats</string>
+<string name="VeyraTtlBurnForSender">Burn Timed Media for Sender</string>
+<string name="VeyraTtlBurnForSenderDesc">Notify sender upon viewing so it deletes on their side, while keeping it permanently for you</string>
 </resources>
 
