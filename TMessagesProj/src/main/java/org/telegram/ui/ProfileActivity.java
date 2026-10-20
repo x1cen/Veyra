@@ -2776,6 +2776,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     showProfileQrCode();
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
+                } else if (id == kill_app_item) {
+                    killThatApp();
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -12461,6 +12463,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         if (otherItem != null) {
             otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, "View Raw");
+            if (myProfile) {
+                otherItem.addSubItem(kill_app_item, R.drawable.msg_report_drugs, LocaleController.getString("THKillTheAPP", R.string.THKillTheAPP));
+            }
         }
         if (userId != 0 && !isBot && !myProfile) {
             otherItem.addSubItem(report, R.drawable.msg_report, LocaleController.getString(R.string.ReportBot)).setColors(getThemedColor(Theme.key_text_RedRegular), getThemedColor(Theme.key_text_RedRegular));
@@ -13056,6 +13061,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
             }, "View Raw"));
         }
+    }
+
+    private void killThatApp() {
+        if (getParentActivity() != null) {
+            getParentActivity().finishAndRemoveTask();
+        }
+        System.exit(0);
     }
 
     private void showProfileQrCode() {

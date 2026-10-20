@@ -14851,15 +14851,25 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 setItemVisible(sendItem, false, false);
             }
             if (isEmbedVideo || newMessageObject.messageOwner.ttl != 0 && newMessageObject.messageOwner.ttl < 60 * 60 || noforwards) {
-                allowShare = false;
-                galleryButton.setVisibility(View.GONE);
-                galleryGap.setVisibility(View.GONE);
-                menuItem.hideSubItem(gallery_menu_share);
-                setItemVisible(editItem, false, animated);
+                if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+                    allowShare = true;
+                    galleryButton.setVisibility(View.VISIBLE);
+                    galleryGap.setVisibility(View.VISIBLE);
+                    menuItem.showSubItem(gallery_menu_save);
+                    menuItem.showSubItem(gallery_menu_share);
+                    setItemVisible(editItem, false, animated);
+                } else {
+                    allowShare = false;
+                    galleryButton.setVisibility(View.GONE);
+                    galleryGap.setVisibility(View.GONE);
+                    menuItem.hideSubItem(gallery_menu_share);
+                    setItemVisible(editItem, false, animated);
+                }
             } else {
                 allowShare = true;
                 galleryButton.setVisibility(View.VISIBLE);
                 galleryGap.setVisibility(View.VISIBLE);
+                menuItem.showSubItem(gallery_menu_save);
                 menuItem.showSubItem(gallery_menu_share);
             }
             groupedPhotosListView.fillList();
@@ -17581,12 +17591,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                 WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM |
                 WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS;
-            if (org.telegram.messenger.VeyraConfig.blockScreenCapture
-                || chatActivity != null && chatActivity.getCurrentEncryptedChat() != null ||
+            if (org.telegram.messenger.VeyraConfig.blockScreenCapture) {
+                windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+                AndroidUtilities.logFlagSecure();
+            } else if (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && (
+                chatActivity != null && chatActivity.getCurrentEncryptedChat() != null ||
                 avatarsDialogId != 0 && MessagesController.getInstance(currentAccount).isPeerNoForwards(avatarsDialogId) ||
                 messageObject != null && (MessagesController.getInstance(currentAccount).isPeerNoForwards(messageObject.getDialogId()) ||
                 (messageObject.messageOwner != null && messageObject.messageOwner.noforwards)) || messageObject != null && messageObject.hasRevealedExtendedMedia()
-            ) {
+            )) {
                 windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
                 AndroidUtilities.logFlagSecure();
             } else {

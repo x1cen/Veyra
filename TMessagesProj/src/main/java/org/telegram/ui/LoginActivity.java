@@ -3055,6 +3055,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 return;
             }
             String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
+            /*
             if (activityMode == MODE_LOGIN) {
                 if (getParentActivity() instanceof LaunchActivity) {
                     for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -3082,6 +3083,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     }
                 }
             }
+            */
 
             TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
             settings.allow_flashcall = simcardAvailable && allowCall && allowCancelCall && allowReadCallLog;
@@ -3435,6 +3437,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     }
                     return;
                 }
+                /*
                 if (userId != 0 && getParentActivity() instanceof LaunchActivity) {
                     for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                         UserConfig userConfig = UserConfig.getInstance(a);
@@ -3451,6 +3454,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }
                     }
                 }
+                */
                 if (err != null && err.contains("SESSION_PASSWORD_NEEDED")) {
                     final TL_account.getPassword req2 = new TL_account.getPassword();
                     ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {

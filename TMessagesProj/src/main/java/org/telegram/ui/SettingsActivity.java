@@ -315,6 +315,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                     finishFragment();
                 } else if (id == 2) {
                     presentSettingFragment(new LogoutActivity());
+                } else if (id == 3) {
+                    if (getParentActivity() != null) {
+                        getParentActivity().finishAndRemoveTask();
+                    }
+                    System.exit(0);
                 }
             }
         });
@@ -351,6 +356,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         otherItem = menu.addItem(1, R.drawable.ic_ab_other);
         otherItem.setContentDescription(getString(R.string.AccDescrMoreOptions));
         otherItem.addSubItem(2, R.drawable.msg_leave, getString(R.string.LogOut));
+        otherItem.addSubItem(3, R.drawable.msg_report_drugs, LocaleController.getString("THKillTheAPP", R.string.THKillTheAPP));
 
         search = new ProfileActivity.SearchAdapter(this, context) {
             @Override
