@@ -10620,7 +10620,8 @@ public class MessagesController extends BaseController implements NotificationCe
         if (getUserConfig().isClientActivated()) {
             // Veyra: online visibility control (0=normal, 1=hide, 2=hide+offline after message, 3=always online)
             final int onlineMode = VeyraConfig.onlineMode;
-            if (!ignoreSetOnline && onlineMode != 1 && onlineMode != 2 && !VeyraConfig.ghostOfflineAfterMessage && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
+            boolean blockPeriodic = (VeyraConfig.isGhostModeActive() && VeyraConfig.ghostBlockPeriodicOnline) || VeyraConfig.ghostOfflineAfterMessage;
+            if (!ignoreSetOnline && onlineMode != 1 && onlineMode != 2 && !blockPeriodic && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
                     if (statusSettingState != 1 && (lastStatusUpdateTime == 0 || Math.abs(System.currentTimeMillis() - lastStatusUpdateTime) >= 55000 || offlineSent)) {
                         statusSettingState = 1;

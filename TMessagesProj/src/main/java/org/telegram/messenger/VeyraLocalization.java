@@ -172,6 +172,8 @@ public class VeyraLocalization {
         EN.put("VeyraGhostHideOnlineDesc", "Never broadcast online status to Telegram servers");
         EN.put("VeyraGhostOfflineAfterMsg", "Offline After Sending Message");
         EN.put("VeyraGhostOfflineAfterMsgDesc", "Send offline status to Telegram immediately after sending any message");
+        EN.put("VeyraGhostBlockPeriodicOnline", "Block Periodic Online Updates");
+        EN.put("VeyraGhostBlockPeriodicOnlineDesc", "Prevent Telegram from automatically updating your status to online while using the app");
         EN.put("VeyraGhostHideRead", "Hide Read Receipts");
         EN.put("VeyraGhostHideReadContents", "Hide Playing Voice & Video Notes");
         EN.put("VeyraGhostHideReadContentsDesc", "Do not send played/listened status for voice and video notes");
@@ -434,6 +436,8 @@ public class VeyraLocalization {
         FA.put("VeyraGhostHideOnlineDesc", "عدم ارسال وضعیت آنلاین به سرورهای تلگرام");
         FA.put("VeyraGhostOfflineAfterMsg", "آفلاین شدن پس از ارسال پیام");
         FA.put("VeyraGhostOfflineAfterMsgDesc", "بلافاصله پس از ارسال پیام، درخواست وضعیت آفلاین به سرور تلگرام ارسال می‌شود");
+        FA.put("VeyraGhostBlockPeriodicOnline", "مسدودسازی آنلاین شدن دوره‌ای");
+        FA.put("VeyraGhostBlockPeriodicOnlineDesc", "از ارسال خودکار وضعیت آنلاین توسط تایمر دوره‌ای تلگرام هنگام باز بودن برنامه جلوگیری می‌کند");
         FA.put("VeyraGhostHideRead", "مخفی کردن رسید خواندن (تیک دوم)");
         FA.put("VeyraGhostHideReadContents", "مخفی کردن شنیده شدن ویس و ویدیو");
         FA.put("VeyraGhostHideReadContentsDesc", "عدم ارسال وضعیت شنیده شدن ویس و دیدن پیام ویدیویی");
