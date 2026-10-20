@@ -260,6 +260,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             }
         });
         fragmentView = contentView;
+        contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         contentView.addView(fragmentContentView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 0, 1f));
 
         keyboardView = new CustomPhoneKeyboardView(context);
@@ -269,6 +270,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         switch (type) {
             case TYPE_MANAGE_CODE_SETTINGS: {
                 actionBar.setTitle(LocaleController.getString(R.string.Passcode));
+                contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
                 frameLayout.setTag(Theme.key_windowBackgroundGray);
                 frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
                 listView = new RecyclerListView(context);
@@ -458,6 +460,13 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             case TYPE_ENTER_CODE_TO_GRAM_WALLET:
             case TYPE_ENTER_DURESS_TO_MANAGE_SETTINGS: {
                 if (actionBar != null) {
+                    if (type == TYPE_SETUP_CODE) {
+                        actionBar.setTitle(LocaleController.getString(R.string.CreatePasscode));
+                    } else if (type == TYPE_SETUP_DURESS) {
+                        actionBar.setTitle(LocaleController.getString(R.string.CreateDuress));
+                    } else {
+                        actionBar.setTitle(LocaleController.getString(R.string.EnterYourPasscode));
+                    }
                     actionBar.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
 
                     actionBar.setBackButtonImage(R.drawable.ic_ab_back);
@@ -762,7 +771,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
     @Override
     public boolean hasForceLightStatusBar() {
-        return type != TYPE_MANAGE_CODE_SETTINGS;
+        return !Theme.getCurrentTheme().isDark() && type != TYPE_MANAGE_CODE_SETTINGS;
     }
 
     /**
@@ -912,6 +921,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         } catch (Throwable e) {
             FileLog.e(e);
         }
+        shufflePinButtons = rowCount++;
         autoLockRow = rowCount++;
         autoLockDetailRow = rowCount++;
 
@@ -928,14 +938,22 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         captureRow = rowCount++;
         captureDetailRow = rowCount++;
         disablePasscodeRow = rowCount++;
-        // Veyra: duress + shuffle (keep shuffle in CHECK section near fingerprint/capture)
-        shufflePinButtons = rowCount++;
+
+        // Veyra: duress emergency section (distinct & clearly separated)
         duressHeaderRow = rowCount++;
         changeDuressCodeRow = rowCount++;
-        duressActionRow = rowCount++;
-        duressFallbackRow = rowCount++;
-        duressFallbackDetailRow = rowCount++;
-        disableDuressRow = rowCount++;
+        boolean hasDuress = !android.text.TextUtils.isEmpty(SharedConfig.duressHash);
+        if (hasDuress) {
+            duressActionRow = rowCount++;
+            duressFallbackRow = rowCount++;
+            duressFallbackDetailRow = rowCount++;
+            disableDuressRow = rowCount++;
+        } else {
+            duressActionRow = -1;
+            duressFallbackRow = -1;
+            duressFallbackDetailRow = -1;
+            disableDuressRow = -1;
+        }
         duressInfoRow = rowCount++;
     }
 
@@ -948,6 +966,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
     private void showKeyboard() {
         if (isPinCode()) {
+            if (keyboardView != null) {
+                keyboardView.shuffle();
+            }
             codeFieldContainer.codeField[0].requestFocus();
             if (!isCustomKeyboardVisible()) {
                 AndroidUtilities.showKeyboard(codeFieldContainer.codeField[0]);
@@ -1236,7 +1257,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
             return position == fingerprintRow || position == shufflePinButtons || position == autoLockRow || position == captureRow ||
-                    position == changePasscodeRow || position == changeDuressCodeRow || position == duressActionRow || position == duressFallbackRow || position == disablePasscodeRow || position == disableDuressRow || position == walletPasscodeRow || position == walletFingerprintRow;
+                    position == changePasscodeRow || position == changeDuressCodeRow || (position == duressActionRow && duressActionRow != -1) || (position == duressFallbackRow && duressFallbackRow != -1) || position == disablePasscodeRow || (position == disableDuressRow && disableDuressRow != -1) || position == walletPasscodeRow || position == walletFingerprintRow;
         }
 
         @Override
@@ -1298,14 +1319,14 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                             textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                         }
                     } else if (position == changeDuressCodeRow) {
-                        textCell.setText(LocaleController.getString(R.string.ChangeDuress), true);
-                        if (SharedConfig.duressHash.isEmpty()) {
-                            textCell.setTag(Theme.key_windowBackgroundWhiteGrayText7);
-                            textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText7));
-                        } else {
-                            textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
-                            textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-                        }
+                        boolean hasDuress = !android.text.TextUtils.isEmpty(SharedConfig.duressHash);
+                        textCell.setTextAndValue(
+                            LocaleController.getString(hasDuress ? R.string.ChangeDuress : R.string.EnableDuress),
+                            hasDuress ? LocaleController.getString(R.string.PasscodeEnabled) : LocaleController.getString(R.string.NotSet),
+                            hasDuress
+                        );
+                        textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);
+                        textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     } else if (position == duressActionRow) {
                         String actionText = SharedConfig.duressAction == SharedConfig.DURESS_ACTION_FULL_WIPE
                                 ? LocaleController.getString("VeyraEmergencyFullWipe", R.string.VeyraEmergencyFullWipe)
@@ -1382,11 +1403,11 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
         @Override
         public int getItemViewType(int position) {
-            if (position == fingerprintRow || position == captureRow || position == walletFingerprintRow || position == walletPasscodeRow || position == shufflePinButtons || position == duressFallbackRow) {
+            if (position == fingerprintRow || position == captureRow || position == walletFingerprintRow || position == walletPasscodeRow || position == shufflePinButtons || (position == duressFallbackRow && duressFallbackRow != -1)) {
                 return VIEW_TYPE_CHECK;
-            } else if (position == changePasscodeRow || position == changeDuressCodeRow || position == autoLockRow || position == duressActionRow || position == disablePasscodeRow || position == disableDuressRow) {
+            } else if (position == changePasscodeRow || position == changeDuressCodeRow || position == autoLockRow || (position == duressActionRow && duressActionRow != -1) || position == disablePasscodeRow || (position == disableDuressRow && disableDuressRow != -1)) {
                 return VIEW_TYPE_SETTING;
-            } else if (position == autoLockDetailRow || position == captureDetailRow || position == duressFallbackDetailRow || position == duressInfoRow || position == hintRow || position == walletInfoRow) {
+            } else if (position == autoLockDetailRow || position == captureDetailRow || (position == duressFallbackDetailRow && duressFallbackDetailRow != -1) || position == duressInfoRow || position == hintRow || position == walletInfoRow) {
                 return VIEW_TYPE_INFO;
             } else if (position == captureHeaderRow || position == duressHeaderRow || position == walletHeaderRow) {
                 return VIEW_TYPE_HEADER;

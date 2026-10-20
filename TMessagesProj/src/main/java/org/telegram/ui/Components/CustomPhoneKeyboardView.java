@@ -36,6 +36,23 @@ public class CustomPhoneKeyboardView extends ViewGroup {
     private final ImageView backButton;
     private EditText editText;
     private final View[] views = new View[12];
+    private int[] shuffledIndices = null;
+
+    public void shuffle() {
+        if (org.telegram.messenger.SharedConfig.shufflePinButtons) {
+            shuffledIndices = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
+            java.util.Random rnd = new java.util.Random();
+            for (int i = shuffledIndices.length - 1; i > 0; i--) {
+                int index = rnd.nextInt(i + 1);
+                int tmp = shuffledIndices[index];
+                shuffledIndices[index] = shuffledIndices[i];
+                shuffledIndices[i] = tmp;
+            }
+        } else {
+            shuffledIndices = null;
+        }
+        requestLayout();
+    }
 
     private View viewToFindFocus;
 
@@ -226,12 +243,19 @@ public class CustomPhoneKeyboardView extends ViewGroup {
         int btnHeight = (getHeight() - dp(SIDE_PADDING * 3 + BUTTON_PADDING * 2)) / 4;
 
         for (int i = 0; i < views.length; i++) {
-            int rowX = i % 3, rowY = i / 3;
+            if (views[i] == null) continue;
+            int slot = i;
+            if (shuffledIndices != null && org.telegram.messenger.SharedConfig.shufflePinButtons) {
+                if (i <= 8) {
+                    slot = shuffledIndices[i];
+                } else if (i == 10) {
+                    slot = shuffledIndices[9];
+                }
+            }
+            int rowX = slot % 3, rowY = slot / 3;
             int left = rowX * (btnWidth + dp(BUTTON_PADDING)) + dp(SIDE_PADDING);
             int top = rowY * (btnHeight + dp(BUTTON_PADDING)) + dp(SIDE_PADDING);
-            if (views[i] != null) {
-                views[i].layout(left, top, left + btnWidth, top + btnHeight);
-            }
+            views[i].layout(left, top, left + btnWidth, top + btnHeight);
         }
     }
 

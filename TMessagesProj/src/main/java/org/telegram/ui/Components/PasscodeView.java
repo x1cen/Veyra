@@ -472,6 +472,22 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
     private int imageY;
 
     private RLottieImageView imageView;
+    private int[] shuffledPositions = null;
+
+    private void shuffleButtonsIfNeeded() {
+        if (SharedConfig.shufflePinButtons) {
+            shuffledPositions = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 10};
+            java.util.Random rnd = new java.util.Random();
+            for (int i = shuffledPositions.length - 1; i > 0; i--) {
+                int index = rnd.nextInt(i + 1);
+                int a = shuffledPositions[index];
+                shuffledPositions[index] = shuffledPositions[i];
+                shuffledPositions[i] = a;
+            }
+        } else {
+            shuffledPositions = null;
+        }
+    }
 
     private Rect rect = new Rect();
 
@@ -1321,6 +1337,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
     public void onShow(boolean fingerprint, boolean animated, int x, int y, Runnable onShow, Runnable onStart) {
         if (getVisibility() != VISIBLE) dismissing = false;
+        shuffleButtonsIfNeeded();
         checkFingerprintButton();
         checkRetryTextView();
         Activity parentActivity = AndroidUtilities.findActivity(getContext());
@@ -1679,13 +1696,13 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             LayoutParams layoutParams1;
             int num;
             if (a == 0) {
-                num = 10;
+                num = (SharedConfig.shufflePinButtons && shuffledPositions != null) ? shuffledPositions[0] : 10;
             } else if (a == 10) {
                 num = 11;
             } else if (a == 11) {
                 num = 9;
             } else {
-                num = a - 1;
+                num = (SharedConfig.shufflePinButtons && shuffledPositions != null) ? shuffledPositions[a] : a - 1;
             }
             int row = num / 3;
             int col = num % 3;

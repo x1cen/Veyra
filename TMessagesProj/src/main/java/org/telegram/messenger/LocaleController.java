@@ -4492,6 +4492,23 @@ public class LocaleController {
         final Context context = ApplicationLoader.applicationContext;
         String value;
 
+        String langCode = currentLocale != null && currentLocale.getLanguage() != null ? currentLocale.getLanguage() : "en";
+        String veyraVal = VeyraLocalization.get(langCode, key);
+        if (veyraVal != null) {
+            return veyraVal;
+        }
+        if (stringRes != 0 && context != null) {
+            try {
+                String entryName = context.getResources().getResourceEntryName(stringRes);
+                if (entryName != null) {
+                    veyraVal = VeyraLocalization.get(langCode, entryName);
+                    if (veyraVal != null) {
+                        return veyraVal;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
         if (BuildVars.USE_CLOUD_STRINGS) {
             value = localizationExternal.getByResNameOrResId(context, key, stringRes);
             if (value != null) {
