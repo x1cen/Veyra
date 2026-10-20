@@ -100,12 +100,9 @@ public class JsonViewerActivity extends BaseFragment {
         rootLayout.setBackgroundColor(bgColor);
         fragmentView = rootLayout;
 
-        // Content ScrollViews
+        // Content ScrollView with word wrapping (no horizontal overflow)
         ScrollView verticalScrollView = new ScrollView(context);
         verticalScrollView.setFillViewport(true);
-
-        HorizontalScrollView horizontalScrollView = new HorizontalScrollView(context);
-        horizontalScrollView.setFillViewport(true);
 
         jsonTextView = new TextView(context);
         jsonTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
@@ -114,10 +111,16 @@ public class JsonViewerActivity extends BaseFragment {
         int textColor = isDark ? 0xFFE6EDF3 : 0xFF24292F;
         jsonTextView.setTextColor(textColor);
         jsonTextView.setTextIsSelectable(true);
+        jsonTextView.setGravity(Gravity.LEFT | Gravity.TOP);
+        jsonTextView.setTextDirection(View.TEXT_DIRECTION_LTR);
+        jsonTextView.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            jsonTextView.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
+            jsonTextView.setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NONE);
+        }
         jsonTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(80)); // Bottom padding for floating bar
 
-        horizontalScrollView.addView(jsonTextView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        verticalScrollView.addView(horizontalScrollView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        verticalScrollView.addView(jsonTextView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         rootLayout.addView(verticalScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         // Loading spinner
