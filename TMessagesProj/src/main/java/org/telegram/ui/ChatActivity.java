@@ -12456,6 +12456,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private boolean hasSelectedNoforwardsMessage() {
+        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+            return false;
+        }
         try {
             for (int i = 0; i < selectedMessagesIds.length; ++i) {
                 for (int j = 0; j < selectedMessagesIds[i].size(); ++j) {
@@ -16148,7 +16151,28 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private Runnable sendSecretMessageRead(MessageObject messageObject, boolean readNow) {
-        if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia() || messageObject.messageOwner.destroyTime != 0 || messageObject.messageOwner.ttl <= 0) {
+        if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia()) {
+            return null;
+        }
+        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+            if (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0) {
+                return null;
+            }
+            final Runnable pepe = () -> {
+                messageObject.messageOwner.media_unread = false;
+                if (currentEncryptedChat != null) {
+                    getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, Integer.MIN_VALUE);
+                } else {
+                    getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, 0, 0, false);
+                }
+            };
+            if (readNow) {
+                pepe.run();
+                return null;
+            }
+            return pepe;
+        }
+        if (messageObject.messageOwner.destroyTime != 0 || messageObject.messageOwner.ttl <= 0) {
             return null;
         }
         if (readNow) {
@@ -16177,6 +16201,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private Runnable sendSecretMediaDelete(MessageObject messageObject) {
+        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+            return null;
+        }
         if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia() || messageObject.messageOwner.ttl != 0x7FFFFFFF) {
             return null;
         }
@@ -31602,8 +31629,8 @@ public class ChatActivity extends BaseFragment implements
             allowPin = false;
         }
         allowPin = allowPin && message.getId() > 0 && (message.messageOwner.action == null || message.messageOwner.action instanceof TLRPC.TL_messageActionEmpty) && !message.isExpiredStory() && message.type != MessageObject.TYPE_STORY_MENTION;
-        boolean noforwards = isPeerNoForwards() || message.messageOwner.noforwards || getDialogId() == UserObject.VERIFY;
-        boolean noforwardsOrPaidMedia = noforwards || message.type == MessageObject.TYPE_PAID_MEDIA;
+        boolean noforwards = (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && (isPeerNoForwards() || message.messageOwner.noforwards || getDialogId() == UserObject.VERIFY));
+        boolean noforwardsOrPaidMedia = noforwards || (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && message.type == MessageObject.TYPE_PAID_MEDIA);
         boolean allowUnpin = message.getDialogId() != mergeDialogId && allowPin && (pinnedMessageObjects.containsKey(message.getId()) || groupedMessages != null && !groupedMessages.messages.isEmpty() && pinnedMessageObjects.containsKey(groupedMessages.messages.get(0).getId())) && !message.isExpiredStory();
         boolean allowEdit = message.canEditMessage(currentChat) && !chatActivityEnterView.hasAudioToSend() && message.getDialogId() != mergeDialogId && message.type != MessageObject.TYPE_STORY && message.type != MessageObject.TYPE_POLL;
         if (allowEdit && groupedMessages != null) {
@@ -46642,8 +46669,8 @@ public class ChatActivity extends BaseFragment implements
             allowPin = false;
         }
         allowPin = allowPin && message.getId() > 0 && (message.messageOwner.action == null || message.messageOwner.action instanceof TLRPC.TL_messageActionEmpty) && !message.isExpiredStory() && message.type != MessageObject.TYPE_STORY_MENTION;
-        boolean noforwards = isPeerNoForwards() || message.messageOwner.noforwards || getDialogId() == UserObject.VERIFY;
-        boolean noforwardsOrPaidMedia = noforwards || message.type == MessageObject.TYPE_PAID_MEDIA;
+        boolean noforwards = (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && (isPeerNoForwards() || message.messageOwner.noforwards || getDialogId() == UserObject.VERIFY));
+        boolean noforwardsOrPaidMedia = noforwards || (!org.telegram.messenger.VeyraConfig.ignoreContentRestrictions && message.type == MessageObject.TYPE_PAID_MEDIA);
         boolean allowUnpin = !isEphemeral && message.getDialogId() != mergeDialogId && allowPin && (pinnedMessageObjects.containsKey(message.getId()) || groupedMessages != null && !groupedMessages.messages.isEmpty() && pinnedMessageObjects.containsKey(groupedMessages.messages.get(0).getId())) && !message.isExpiredStory();
         boolean allowEdit = !isEphemeral && message.canEditMessage(currentChat) && !chatActivityEnterView.hasAudioToSend() && message.getDialogId() != mergeDialogId && message.type != MessageObject.TYPE_STORY && message.type != MessageObject.TYPE_POLL;
         if (allowEdit && groupedMessages != null) {
@@ -47909,6 +47936,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public boolean isPeerNoForwards() {
+        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+            return false;
+        }
         return currentChat != null ?
             getMessagesController().isChatNoForwards(currentChat) :
             getMessagesController().isUserNoForwards(userInfo);
