@@ -1037,7 +1037,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             } else {
                 dropFragmentAtPosition(POSITION_CALLS_OR_SETTINGS);
             }
-        } else if (id == NotificationCenter.mainUserInfoChanged || id == NotificationCenter.reloadDialogPhotos || id == NotificationCenter.userPhotosLoaded) {
+        } else if (id == NotificationCenter.mainUserInfoChanged || id == NotificationCenter.reloadDialogPhotos || id == NotificationCenter.dialogPhotosLoaded) {
             if (tabs != null && tabs[INDEX_PROFILE] != null) {
                 tabs[INDEX_PROFILE].updateUserAvatar(currentAccount);
             }
@@ -1060,7 +1060,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .add(NotificationCenter.callTabsVisibleToggled)
             .add(NotificationCenter.mainUserInfoChanged)
             .add(NotificationCenter.reloadDialogPhotos)
-            .add(NotificationCenter.userPhotosLoaded)
+            .add(NotificationCenter.dialogPhotosLoaded)
             .add(NotificationCenter.contactsPermissionBadgeCheck)
             .addGlobal(NotificationCenter.appUpdateAvailable)
             .addGlobal(NotificationCenter.appUpdateLoading)
