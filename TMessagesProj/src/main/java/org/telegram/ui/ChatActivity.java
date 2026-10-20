@@ -12547,21 +12547,10 @@ public class ChatActivity extends BaseFragment implements
         ArrayList<Integer> icons = new ArrayList<>();
         ArrayList<Runnable> actions = new ArrayList<>();
 
-        if (!isSecretChat() && org.telegram.messenger.VeyraConfig.jumpToFirstMessage) {
+        if (!isSecretChat()) {
             items.add(LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
             icons.add(R.drawable.msg_go_up);
             actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
-        }
-        if (org.telegram.messenger.VeyraConfig.copyDialogId) {
-            items.add(LocaleController.getString("CopyDialogId", R.string.CopyDialogId));
-            icons.add(R.drawable.msg_copy);
-            actions.add(() -> {
-                AndroidUtilities.addToClipboard(String.valueOf(dialog_id));
-                BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("DialogIdCopied", R.string.DialogIdCopied)).show();
-            });
-            items.add(LocaleController.getString("ViewDetails", R.string.ViewDetails));
-            icons.add(R.drawable.msg_info);
-            actions.add(this::showDetailsJson);
         }
 
         int[] iconsArray = new int[icons.size()];
