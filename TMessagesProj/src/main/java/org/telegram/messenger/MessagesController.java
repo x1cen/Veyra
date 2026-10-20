@@ -13589,18 +13589,26 @@ public class MessagesController extends BaseController implements NotificationCe
                 boolean allowCheck = true;
                 if (DialogObject.isChannel(d)) {
                     TLRPC.Chat chat = chatsDict.get(-d.id);
+                    if (chat == null) {
+                        chat = getChat(-d.id);
+                    }
                     if (chat != null) {
                         if (!chat.megagroup) {
                             allowCheck = false;
                         }
                         if (ChatObject.isNotInChat(chat) && (promoDialogId == 0 || promoDialogId != d.id)) {
+                            getMessagesStorage().deleteDialog(d.id, 0);
                             continue;
                         }
                     }
                     channelsPts.put(-d.id, d.pts);
                 } else if (DialogObject.isChatDialog(d.id)) {
                     TLRPC.Chat chat = chatsDict.get(-d.id);
+                    if (chat == null) {
+                        chat = getChat(-d.id);
+                    }
                     if (chat != null && (chat.migrated_to != null || ChatObject.isNotInChat(chat))) {
+                        getMessagesStorage().deleteDialog(d.id, 0);
                         continue;
                     }
                 }
