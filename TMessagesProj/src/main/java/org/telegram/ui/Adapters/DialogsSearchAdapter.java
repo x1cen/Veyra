@@ -547,6 +547,15 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
             return;
         }
 
+        if (org.telegram.messenger.VeyraConfig.disableGlobalSearch) {
+            waitingResponseCount--;
+            if (delegate != null) {
+                delegate.searchStateChanged(waitingResponseCount > 0, true);
+                delegate.runResultsEnterAnimation();
+            }
+            return;
+        }
+
         final TLRPC.TL_messages_searchGlobal req = new TLRPC.TL_messages_searchGlobal();
         req.broadcasts_only = (currentMessagesFilter.flags & 2) != 0;
         req.groups_only = (currentMessagesFilter.flags & 4) != 0;
