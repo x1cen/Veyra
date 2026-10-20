@@ -130,6 +130,13 @@ public class VeyraAntiDelete {
         return set != null && set.contains(messageId);
     }
 
+    public static void removeDeletedMessage(long dialogId, int messageId) {
+        java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
+        if (set != null) {
+            set.remove(messageId);
+        }
+    }
+
     public static void markChatDeleted(long dialogId) {
         if (dialogId > 0) {
             peerDeletedChats.add(dialogId);

@@ -31620,7 +31620,7 @@ public class ChatActivity extends BaseFragment implements
             } else if (userInfo != null) {
                 allowPin = userInfo.can_pin_message;
             } else {
-                allowPin = false;
+                allowPin = true;
             }
         } else {
             allowPin = false;
@@ -34172,7 +34172,8 @@ public class ChatActivity extends BaseFragment implements
                     selectedObjectGroup = null;
                     return;
                 }
-                if (selectedObject != null && selectedObject.deleted) {
+                boolean isMsgDeleted = selectedObject != null && selectedObject.isVeyraOrAntiDeleted();
+                if (isMsgDeleted) {
                     ArrayList<Integer> mids = new ArrayList<>();
                     if (selectedObjectGroup != null && selectedObjectGroup.messages != null) {
                         for (int a = 0; a < selectedObjectGroup.messages.size(); a++) {
@@ -34184,8 +34185,7 @@ public class ChatActivity extends BaseFragment implements
                         mids.add(selectedObject.getId());
                         removeMessageWithThanos(selectedObject);
                     }
-                    getMessagesController().deleteMessages(mids, null, currentEncryptedChat, dialog_id, (int) getTopicId(), false, chatMode, true);
-                    getMessagesStorage().markMessagesAsDeleted(dialog_id, mids, true, false, chatMode, (int) getTopicId());
+                    getMessagesStorage().deleteRetainedDeletedMessages(dialog_id, mids);
                     VeyraEditHistoryManager.deleteHistoryBatch(dialog_id, mids);
                     selectedObject = null;
                     selectedObjectToEditCaption = null;
@@ -46660,7 +46660,7 @@ public class ChatActivity extends BaseFragment implements
             } else if (userInfo != null) {
                 allowPin = userInfo.can_pin_message;
             } else {
-                allowPin = false;
+                allowPin = true;
             }
         } else {
             allowPin = false;
