@@ -69,6 +69,7 @@ public class DialogCellTags {
         public static Tag fromFilter(View view, int currentAccount, MessagesController.DialogFilter filter) {
             Tag tag = new Tag();
             tag.filterId = filter.id;
+            int colorIdx = filter.color >= 0 ? filter.color : Math.abs(filter.id);
             tag.colorId = filter.color;
 
             CharSequence text = new SpannableStringBuilder((filter.name == null ? "" : filter.name).toUpperCase());
@@ -80,7 +81,7 @@ public class DialogCellTags {
             tag.width = dp(2 * padDp) + (int) tag.text.getCurrentWidth();
             tag.textHeight = (int) tag.text.getHeight();
 
-            tag.color = Theme.getColor(Theme.keys_avatar_nameInMessage[filter.color % Theme.keys_avatar_nameInMessage.length]);
+            tag.color = Theme.getColor(Theme.keys_avatar_nameInMessage[colorIdx % Theme.keys_avatar_nameInMessage.length]);
 
             return tag;
         }
@@ -115,11 +116,15 @@ public class DialogCellTags {
         if (
             dialogsType == DialogsActivity.DIALOGS_TYPE_DEFAULT ||
             dialogsType == DialogsActivity.DIALOGS_TYPE_FOLDER1 ||
-            dialogsType == DialogsActivity.DIALOGS_TYPE_FOLDER2
+            dialogsType == DialogsActivity.DIALOGS_TYPE_FOLDER2 ||
+            dialogsType == DialogsActivity.DIALOGS_TYPE_FORWARD ||
+            dialogsType == DialogsActivity.DIALOGS_TYPE_USERS_ONLY ||
+            dialogsType == DialogsActivity.DIALOGS_TYPE_CHANNELS_ONLY ||
+            dialogsType == DialogsActivity.DIALOGS_TYPE_GROUPS_ONLY
         ) {
             for (int i = 0; i < allFilters.size(); ++i) {
                 MessagesController.DialogFilter filter = allFilters.get(i);
-                if (filter == null || filter == currentFilter || filter.color < 0)
+                if (filter == null || filter == currentFilter)
                     continue;
                 if (filter.includesDialog(account, dialogId)) {
                     filters.add(filter);
