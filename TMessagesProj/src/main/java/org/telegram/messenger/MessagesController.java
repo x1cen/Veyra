@@ -1504,6 +1504,8 @@ public class MessagesController extends BaseController implements NotificationCe
             return unreadSort;
         }
         MediaDataController mediaDataController = getMediaDataController();
+        long date1 = DialogObject.getLastMessageOrDraftDate(dialog1, mediaDataController.getDraft(dialog1.id, 0));
+        long date2 = DialogObject.getLastMessageOrDraftDate(dialog2, mediaDataController.getDraft(dialog2.id, 0));
         if (date1 < date2) {
             return 1;
         } else if (date1 > date2) {
