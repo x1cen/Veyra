@@ -4711,7 +4711,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 }
                                 button2.setPressed(false);
                                 if (!currentMessageObject.scheduled) {
-                                    lastPressedBotButtonRect.set(button2.x, button2.y, button2.x + button2.width, button2.y + button2.height);
+                                    final int wfb = getWidthForButtons();
+                                    final int ax = currentMessageObject.isOutOwner() ? getMeasuredWidth() - wfb - dp(10) : backgroundDrawableLeft + dp(mediaBackground ? 1 : 7);
+                                    final int by = button2.y + layoutHeight - dp(2);
+                                    lastPressedBotButtonRect.set(button2.x * wfb + ax, by, button2.x * wfb + ax + button2.width * wfb, by + button2.height);
                                     if (button2.buttonCustom != null) {
                                         cancelCheckLongPress();
                                         if (delegate != null) {
