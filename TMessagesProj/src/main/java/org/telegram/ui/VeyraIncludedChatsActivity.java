@@ -315,7 +315,7 @@ public class VeyraIncludedChatsActivity extends BaseFragment {
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        ActionBarMenuItem searchItem = menu.addItem(1, R.drawable.ic_ab_search).setIsSearchField(true, false);
+        ActionBarMenuItem searchItem = menu.addItem(1, R.drawable.outline_header_search).setIsSearchField(true, false);
         searchItem.setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
             @Override
             public void onSearchExpand() {
