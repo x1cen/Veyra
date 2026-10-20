@@ -277,6 +277,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         blur3_updateColors();
         checkContactsTabBadge();
         checkUnreadCount(true);
+        if (tabs != null && tabs[INDEX_PROFILE] != null) {
+            tabs[INDEX_PROFILE].updateUserAvatar(currentAccount);
+        }
 
         showAccountChangeHint();
     }
@@ -985,6 +988,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.notificationsCountUpdated || id == NotificationCenter.updateInterfaces) {
             checkUnreadCount(fragmentView != null && fragmentView.isAttachedToWindow());
+            if (id == NotificationCenter.updateInterfaces && args != null && args.length > 0) {
+                int mask = (Integer) args[0];
+                if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 || (mask & MessagesController.UPDATE_MASK_ALL) != 0 || (mask & MessagesController.UPDATE_MASK_NAME) != 0) {
+                    if (tabs != null && tabs[INDEX_PROFILE] != null) {
+                        tabs[INDEX_PROFILE].updateUserAvatar(currentAccount);
+                    }
+                }
+            }
         } else if (id == NotificationCenter.appUpdateLoading) {
             if (updateLayout != null) {
                 updateLayout.updateFileProgress(null);
@@ -1026,7 +1037,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             } else {
                 dropFragmentAtPosition(POSITION_CALLS_OR_SETTINGS);
             }
-        } else if (id == NotificationCenter.mainUserInfoChanged) {
+        } else if (id == NotificationCenter.mainUserInfoChanged || id == NotificationCenter.reloadDialogPhotos || id == NotificationCenter.userPhotosLoaded) {
             if (tabs != null && tabs[INDEX_PROFILE] != null) {
                 tabs[INDEX_PROFILE].updateUserAvatar(currentAccount);
             }
@@ -1048,6 +1059,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .add(NotificationCenter.updateInterfaces)
             .add(NotificationCenter.callTabsVisibleToggled)
             .add(NotificationCenter.mainUserInfoChanged)
+            .add(NotificationCenter.reloadDialogPhotos)
+            .add(NotificationCenter.userPhotosLoaded)
             .add(NotificationCenter.contactsPermissionBadgeCheck)
             .addGlobal(NotificationCenter.appUpdateAvailable)
             .addGlobal(NotificationCenter.appUpdateLoading)

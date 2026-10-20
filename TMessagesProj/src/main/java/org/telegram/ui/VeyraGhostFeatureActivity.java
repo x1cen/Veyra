@@ -557,31 +557,31 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                         }
                     } else if (position == scopePrivateRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingPrivate : VeyraConfig.ghostReadPrivate;
-                        checkCell.setTextAndCheck("Private Chats (PV)", val, true);
+                        checkCell.setTextAndCheck("Private Chats (PV)", val, false);
                     } else if (position == scopeGroupsRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingGroups : VeyraConfig.ghostReadGroups;
-                        checkCell.setTextAndCheck("Groups & Supergroups", val, true);
+                        checkCell.setTextAndCheck("Groups & Supergroups", val, false);
                     } else if (position == scopeBotsRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingBots : VeyraConfig.ghostReadBots;
                         checkCell.setTextAndCheck("Bots", val, false);
                     } else if (position == scopePublicChannelsRow) {
-                        checkCell.setTextAndCheck("Public Channels", VeyraConfig.ghostChannelPublic, true);
+                        checkCell.setTextAndCheck("Public Channels", VeyraConfig.ghostChannelPublic, false);
                     } else if (position == scopePrivateChannelsRow) {
                         checkCell.setTextAndCheck("Private Channels", VeyraConfig.ghostChannelPrivate, false);
                     } else if (position == typingTextRow) {
-                        checkCell.setTextAndCheck("Text Typing Indicator", VeyraConfig.ghostTypingText, true);
+                        checkCell.setTextAndCheck("Text Typing Indicator", VeyraConfig.ghostTypingText, false);
                     } else if (position == typingVoiceRow) {
-                        checkCell.setTextAndCheck("Voice Recording Indicator", VeyraConfig.ghostTypingVoice, true);
+                        checkCell.setTextAndCheck("Voice Recording Indicator", VeyraConfig.ghostTypingVoice, false);
                     } else if (position == typingVideoRow) {
-                        checkCell.setTextAndCheck("Video Recording Indicator", VeyraConfig.ghostTypingVideo, true);
+                        checkCell.setTextAndCheck("Video Recording Indicator", VeyraConfig.ghostTypingVideo, false);
                     } else if (position == typingFilesRow) {
                         checkCell.setTextAndCheck("File Uploading Indicator", VeyraConfig.ghostTypingFiles, false);
                     } else if (position == readOnReplyRow) {
-                        checkCell.setTextAndCheck("Read on Reply", VeyraConfig.ghostReadOnReply, true);
+                        checkCell.setTextAndCheck("Read on Reply", VeyraConfig.ghostReadOnReply, false);
                     } else if (position == readContentsRow) {
-                        checkCell.setTextAndCheck("Hide Media Receipts (Audio/Video)", VeyraConfig.ghostHideReadContents, true);
+                        checkCell.setTextAndCheck("Hide Media Receipts (Audio/Video)", VeyraConfig.ghostHideReadContents, false);
                     } else if (position == readReactionsRow) {
-                        checkCell.setTextAndCheck(LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions), VeyraConfig.ghostHideReadReactions, true);
+                        checkCell.setTextAndCheck(LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions), VeyraConfig.ghostHideReadReactions, false);
                     } else if (position == secretReadRow) {
                         checkCell.setTextAndCheck("Hide Secret Chat Receipts", VeyraConfig.ghostHideSecretRead, false);
                     }
@@ -618,7 +618,7 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                 case 3: {
                     TextCell textCell = (TextCell) holder.itemView;
                     if (position == addExceptionRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("NotificationsAddAnException", R.string.NotificationsAddAnException), R.drawable.msg_contact_add, !exceptionsList.isEmpty());
+                        textCell.setTextAndIcon(LocaleController.getString("NotificationsAddAnException", R.string.NotificationsAddAnException), R.drawable.msg_contact_add, false);
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
                     } else if (position == deleteAllExceptionsRow) {
                         textCell.setText(LocaleController.getString("NotificationsDeleteAllException", R.string.NotificationsDeleteAllException), false);

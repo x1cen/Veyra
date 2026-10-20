@@ -378,7 +378,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         @Override
         protected void onDraw(Canvas canvas) {
-            canvas.drawLine(LocaleController.isRTL ? 0 : AndroidUtilities.dp(20), getMeasuredHeight() - 1, getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(20) : 0), getMeasuredHeight() - 1, Theme.dividerPaint);
         }
     }
 
@@ -962,10 +961,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
-                        textCell.setText(getString(R.string.AddProxy), deleteInactiveRow != -1 || deleteAllRow != -1);
+                        textCell.setText(getString(R.string.AddProxy), false);
                     } else if (position == deleteInactiveRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
-                        textCell.setText("Clear Inactive Proxies", deleteAllRow != -1);
+                        textCell.setText("Clear Inactive Proxies", false);
                     } else if (position == deleteAllRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText(getString(R.string.DeleteAllProxies), false);
@@ -984,7 +983,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 case VIEW_TYPE_TEXT_CHECK: {
                     TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                     if (position == useProxyRow) {
-                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, true);
+                        checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, false);
                     } else if (position == discoveryRow) {
                         boolean enabled = org.veyra.client.proxy.ProxyDiscoveryConfig.isEnabled();
                         int interval = org.veyra.client.proxy.ProxyDiscoveryConfig.getIntervalMinutes();
