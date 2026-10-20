@@ -151,6 +151,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
 
     @Keep
     private int disablePasscodeRow;
+    private int disablePasscodeDetailRow;
     // Veyra: duress + shuffle rows
     private int changeDuressCodeRow;
     private int disableDuressRow;
@@ -938,9 +939,10 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
         captureRow = rowCount++;
         captureDetailRow = rowCount++;
         disablePasscodeRow = rowCount++;
+        disablePasscodeDetailRow = rowCount++;
 
-        // Veyra: duress emergency section (distinct & clearly separated)
-        duressHeaderRow = rowCount++;
+        // Veyra: duress emergency section (in separate container, header removed per user request)
+        duressHeaderRow = -1;
         changeDuressCodeRow = rowCount++;
         boolean hasDuress = !android.text.TextUtils.isEmpty(SharedConfig.duressHash);
         if (hasDuress) {
@@ -1363,7 +1365,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     cell.setHeight(46);
                     if (position == captureHeaderRow) {
                         cell.setText(LocaleController.getString(R.string.ScreenCaptureHeader));
-                    } else if (position == duressHeaderRow) {
+                    } else if (position == duressHeaderRow && duressHeaderRow != -1) {
                         cell.setText(LocaleController.getString("VeyraDuress", R.string.DuressCode));
                     } else if (position == walletHeaderRow) {
                         cell.setText(LocaleController.getString(R.string.WalletLock));
@@ -1378,6 +1380,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 }
                 case VIEW_TYPE_INFO: {
                     TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
+                    cell.setFixedSize(0);
                     if (position == hintRow) {
                         cell.setText(LocaleController.getString(R.string.PasscodeScreenHint));
                         cell.setBackground(null);
@@ -1388,6 +1391,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     } else if (position == captureDetailRow) {
                         cell.setText(LocaleController.getString(R.string.ScreenCaptureInfo));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+                    } else if (position == disablePasscodeDetailRow) {
+                        cell.setFixedSize(12);
+                        cell.setText(null);
                     } else if (position == duressFallbackDetailRow) {
                         cell.setText(LocaleController.getString("VeyraDuressFallbackDetail", R.string.VeyraDuressFallbackDetail));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
@@ -1406,9 +1412,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 return VIEW_TYPE_CHECK;
             } else if (position == changePasscodeRow || position == changeDuressCodeRow || position == autoLockRow || (position == duressActionRow && duressActionRow != -1) || position == disablePasscodeRow || (position == disableDuressRow && disableDuressRow != -1)) {
                 return VIEW_TYPE_SETTING;
-            } else if (position == autoLockDetailRow || position == captureDetailRow || (position == duressFallbackDetailRow && duressFallbackDetailRow != -1) || position == duressInfoRow || position == hintRow || position == walletInfoRow) {
+            } else if (position == autoLockDetailRow || position == captureDetailRow || position == disablePasscodeDetailRow || (position == duressFallbackDetailRow && duressFallbackDetailRow != -1) || position == duressInfoRow || position == hintRow || position == walletInfoRow) {
                 return VIEW_TYPE_INFO;
-            } else if (position == captureHeaderRow || position == duressHeaderRow || position == walletHeaderRow) {
+            } else if (position == captureHeaderRow || (position == duressHeaderRow && duressHeaderRow != -1) || position == walletHeaderRow) {
                 return VIEW_TYPE_HEADER;
             } else if (position == utyanRow) {
                 return VIEW_TYPE_UTYAN;
