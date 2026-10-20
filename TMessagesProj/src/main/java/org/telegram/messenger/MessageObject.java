@@ -11203,7 +11203,7 @@ public class MessageObject {
     }
 
     public boolean shouldDrawWithoutBackground() {
-        return !isSponsored() && (type == TYPE_STICKER || type == TYPE_ANIMATED_STICKER || type == TYPE_ROUND_VIDEO || type == TYPE_EMOJIS || isExpiredStory());
+        return !isSponsored() && (type == TYPE_STICKER || type == TYPE_ANIMATED_STICKER || type == TYPE_ROUND_VIDEO || type == TYPE_EMOJIS || isExpiredStory()) && TextUtils.isEmpty(caption);
     }
 
     public boolean isAnimatedEmojiStickers() {

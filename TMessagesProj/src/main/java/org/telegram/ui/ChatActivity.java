@@ -12565,6 +12565,12 @@ public class ChatActivity extends BaseFragment implements
             actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
         }
 
+        if (currentChat != null || !isSecretChat()) {
+            items.add(LocaleController.getString("VeyraDeleteAllMessages", R.string.VeyraDeleteAllMessages));
+            icons.add(R.drawable.msg_delete);
+            actions.add(this::showDeleteAllMessagesDialog);
+        }
+
         int[] iconsArray = new int[icons.size()];
         for (int i = 0; i < icons.size(); i++) {
             iconsArray[i] = icons.get(i);
@@ -12576,6 +12582,230 @@ public class ChatActivity extends BaseFragment implements
             }
         });
         showDialog(builder.create());
+    }
+
+    private void showDeleteAllMessagesDialog() {
+        if (getParentActivity() == null) return;
+        final boolean isAdmin = currentChat != null && org.telegram.messenger.ChatObject.canDeleteMessages(currentChat);
+
+        if (isAdmin) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(LocaleController.getString("VeyraDeleteAllMessages", R.string.VeyraDeleteAllMessages));
+            CharSequence[] items = new CharSequence[]{
+                LocaleController.getString("VeyraDeleteAllMessagesAdmin", R.string.VeyraDeleteAllMessagesAdmin),
+                LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages)
+            };
+            builder.setItems(items, (dialog, which) -> {
+                if (which == 0) {
+                    AlertDialog.Builder confirm = new AlertDialog.Builder(getParentActivity());
+                    confirm.setTitle(LocaleController.getString("VeyraDeleteAllMessagesAdmin", R.string.VeyraDeleteAllMessagesAdmin));
+                    confirm.setMessage(LocaleController.getString("VeyraDeleteAllAdminConfirm", R.string.VeyraDeleteAllAdminConfirm));
+                    confirm.setPositiveButton(LocaleController.getString(R.string.Delete), (d, w) -> {
+                        final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+                        progressDialog.setMessage(LocaleController.getString("VeyraDeletingMessages", R.string.VeyraDeletingMessages));
+                        progressDialog.setCanceledOnTouchOutside(false);
+                        progressDialog.setCancelable(false);
+                        showDialog(progressDialog);
+
+                        getMessagesController().deleteDialog(dialog_id, 0, 1, Integer.MAX_VALUE, true, getMessagesController().getInputPeer(dialog_id), 0);
+                        AndroidUtilities.runOnUIThread(() -> {
+                            try {
+                                progressDialog.dismiss();
+                            } catch (Exception ignore) {}
+                            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString(R.string.ClearHistory)).show();
+                        }, 1200);
+                    });
+                    confirm.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                    showDialog(confirm.create());
+                } else {
+                    startBatchDeleteMyMessages();
+                }
+            });
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(builder.create());
+        } else {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages));
+            builder.setMessage(LocaleController.getString("VeyraDeleteAllConfirm", R.string.VeyraDeleteAllConfirm));
+            builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialog, which) -> {
+                startBatchDeleteMyMessages();
+            });
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(builder.create());
+        }
+    }
+
+    private void startBatchDeleteMyMessages() {
+        if (getParentActivity() == null) return;
+
+        final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.setMessage(LocaleController.getString("VeyraDeletingMessages", R.string.VeyraDeletingMessages));
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setCancelable(true);
+
+        final boolean[] isCancelled = new boolean[]{false};
+        progressDialog.setButton(android.content.DialogInterface.BUTTON_NEGATIVE, LocaleController.getString(R.string.Cancel), (dialog, which) -> {
+            isCancelled[0] = true;
+            try {
+                progressDialog.dismiss();
+            } catch (Exception ignore) {}
+        });
+        progressDialog.setOnCancelListener(dialog -> {
+            isCancelled[0] = true;
+        });
+        showDialog(progressDialog);
+
+        final int[] totalDeleted = new int[]{0};
+        final int[] offsetId = new int[]{0};
+        final int[] consecutiveFails = new int[]{0};
+        final long selfUserId = getUserConfig().getClientUserId();
+
+        final Runnable[] loopStep = new Runnable[1];
+        loopStep[0] = new Runnable() {
+            @Override
+            public void run() {
+                if (isCancelled[0] || getParentActivity() == null) {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignore) {}
+                    return;
+                }
+
+                TLRPC.TL_messages_search req = new TLRPC.TL_messages_search();
+                req.peer = getMessagesController().getInputPeer(dialog_id);
+                req.q = "";
+                req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+                req.from_id = getMessagesController().getInputPeer(getUserConfig().getCurrentUser());
+                req.limit = 100;
+                req.offset_id = offsetId[0];
+                int currentTopic = (int) getTopicId();
+                if (isTopic && currentTopic != 0) {
+                    req.top_msg_id = currentTopic;
+                    req.flags |= 2;
+                }
+
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (isCancelled[0]) return;
+                    if (error != null) {
+                        if (error.text != null && error.text.startsWith("FLOOD_WAIT_")) {
+                            int waitSec = Utilities.parseInt(error.text);
+                            if (waitSec <= 0) waitSec = 5;
+                            final int finalWait = waitSec;
+                            AndroidUtilities.runOnUIThread(() -> {
+                                if (isCancelled[0]) return;
+                                progressDialog.setMessage(String.format(java.util.Locale.getDefault(), LocaleController.getString("VeyraFloodWaitWaiting", R.string.VeyraFloodWaitWaiting), finalWait));
+                                AndroidUtilities.runOnUIThread(loopStep[0], finalWait * 1000L);
+                            });
+                            return;
+                        } else {
+                            AndroidUtilities.runOnUIThread(() -> {
+                                try {
+                                    progressDialog.dismiss();
+                                } catch (Exception ignore) {}
+                                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.error, error.text != null ? error.text : "Error").show();
+                            });
+                            return;
+                        }
+                    }
+
+                    if (response instanceof TLRPC.messages_Messages) {
+                        TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
+                        ArrayList<Integer> ids = new ArrayList<>();
+                        int minId = Integer.MAX_VALUE;
+                        for (int i = 0; i < res.messages.size(); i++) {
+                            TLRPC.Message m = res.messages.get(i);
+                            if (m != null && m.id > 0) {
+                                if (m.id < minId) {
+                                    minId = m.id;
+                                }
+                                if (m.out || (m.from_id != null && m.from_id.user_id == selfUserId)) {
+                                    ids.add(m.id);
+                                }
+                            }
+                        }
+
+                        if (ids.isEmpty()) {
+                            if (res.messages.isEmpty() || minId == Integer.MAX_VALUE || offsetId[0] == minId) {
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    try {
+                                        progressDialog.dismiss();
+                                    } catch (Exception ignore) {}
+                                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, String.format(java.util.Locale.getDefault(), LocaleController.getString("VeyraDeleteAllFinished", R.string.VeyraDeleteAllFinished), totalDeleted[0])).show();
+                                });
+                                return;
+                            } else {
+                                offsetId[0] = minId;
+                                AndroidUtilities.runOnUIThread(loopStep[0], 200);
+                                return;
+                            }
+                        }
+
+                        // Send delete request
+                        TLObject deleteReq;
+                        final long channelId = (currentChat != null && ChatObject.isChannel(currentChat)) ? currentChat.id : 0;
+                        if (channelId != 0) {
+                            TLRPC.TL_channels_deleteMessages cReq = new TLRPC.TL_channels_deleteMessages();
+                            cReq.channel = getMessagesController().getInputChannel(currentChat);
+                            cReq.id = ids;
+                            deleteReq = cReq;
+                        } else {
+                            TLRPC.TL_messages_deleteMessages mReq = new TLRPC.TL_messages_deleteMessages();
+                            mReq.id = ids;
+                            mReq.revoke = true;
+                            deleteReq = mReq;
+                        }
+
+                        getConnectionsManager().sendRequest(deleteReq, (delResponse, delError) -> {
+                            if (isCancelled[0]) return;
+                            if (delError != null) {
+                                if (delError.text != null && delError.text.startsWith("FLOOD_WAIT_")) {
+                                    int waitSec = Utilities.parseInt(delError.text);
+                                    if (waitSec <= 0) waitSec = 5;
+                                    final int finalWait = waitSec;
+                                    AndroidUtilities.runOnUIThread(() -> {
+                                        if (isCancelled[0]) return;
+                                        progressDialog.setMessage(String.format(java.util.Locale.getDefault(), LocaleController.getString("VeyraFloodWaitWaiting", R.string.VeyraFloodWaitWaiting), finalWait));
+                                        AndroidUtilities.runOnUIThread(loopStep[0], finalWait * 1000L);
+                                    });
+                                    return;
+                                } else {
+                                    consecutiveFails[0]++;
+                                    if (consecutiveFails[0] > 3) {
+                                        AndroidUtilities.runOnUIThread(() -> {
+                                            try {
+                                                progressDialog.dismiss();
+                                            } catch (Exception ignore) {}
+                                            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.error, delError.text != null ? delError.text : "Error").show();
+                                        });
+                                        return;
+                                    }
+                                    offsetId[0] = ids.get(ids.size() - 1);
+                                    AndroidUtilities.runOnUIThread(loopStep[0], 500);
+                                    return;
+                                }
+                            }
+
+                            consecutiveFails[0] = 0;
+                            totalDeleted[0] += ids.size();
+                            AndroidUtilities.runOnUIThread(() -> {
+                                if (isCancelled[0]) return;
+                                getMessagesController().deleteMessages(ids, null, null, dialog_id, (int) getTopicId(), true, 0, true);
+                                progressDialog.setMessage(String.format(java.util.Locale.getDefault(), LocaleController.getString("VeyraDeletingMessages", R.string.VeyraDeletingMessages) + " (%d)", totalDeleted[0]));
+                                AndroidUtilities.runOnUIThread(loopStep[0], 350);
+                            });
+                        });
+                    } else {
+                        AndroidUtilities.runOnUIThread(() -> {
+                            try {
+                                progressDialog.dismiss();
+                            } catch (Exception ignore) {}
+                        });
+                    }
+                });
+            }
+        };
+
+        AndroidUtilities.runOnUIThread(loopStep[0]);
     }
 
     private void showClearActionsMenu() {
