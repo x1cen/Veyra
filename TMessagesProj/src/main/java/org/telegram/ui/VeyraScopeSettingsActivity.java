@@ -2,10 +2,7 @@ package org.telegram.ui;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -20,9 +17,9 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
-import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.VeyraConfig;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
@@ -31,7 +28,6 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
-import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
@@ -41,7 +37,6 @@ import org.telegram.ui.Components.RecyclerListView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class VeyraScopeSettingsActivity extends BaseFragment {
 
@@ -56,11 +51,16 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
     private int ignoreOwnerRow = -1;
     private int ignoreAdminRow = -1;
     private int onlyPrivateInfoRow = -1;
-    private int exceptionsHeaderRow = -1;
-    private int addExceptionRow = -1;
-    private int exceptionsStartRow = -1;
-    private int exceptionsEndRow = -1;
-    private int deleteAllExceptionsRow = -1;
+
+    private int inclusionHeaderRow = -1;
+    private int includedChatsRow = -1;
+    private int resetRow = -1;
+
+    private int customizedHeaderRow = -1;
+    private int customizedStartRow = -1;
+    private int customizedEndRow = -1;
+    private int clearAllCustomizedRow = -1;
+
     private int lastDividerRow = -1;
     private int rowCount = 0;
 
@@ -81,6 +81,12 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         return true;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateRows();
+    }
+
     private void updateRows() {
         rowCount = 0;
         optionsHeaderRow = -1;
@@ -88,11 +94,15 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         ignoreOwnerRow = -1;
         ignoreAdminRow = -1;
         onlyPrivateInfoRow = -1;
-        exceptionsHeaderRow = -1;
-        addExceptionRow = -1;
-        exceptionsStartRow = -1;
-        exceptionsEndRow = -1;
-        deleteAllExceptionsRow = -1;
+
+        inclusionHeaderRow = -1;
+        includedChatsRow = -1;
+        resetRow = -1;
+
+        customizedHeaderRow = -1;
+        customizedStartRow = -1;
+        customizedEndRow = -1;
+        clearAllCustomizedRow = -1;
         lastDividerRow = -1;
 
         if (peerType == VeyraConfig.PEER_GROUP || peerType == VeyraConfig.PEER_CHANNEL) {
@@ -103,8 +113,9 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
             onlyPrivateInfoRow = rowCount++;
         }
 
-        exceptionsHeaderRow = rowCount++;
-        addExceptionRow = rowCount++;
+        inclusionHeaderRow = rowCount++;
+        includedChatsRow = rowCount++;
+        resetRow = rowCount++;
 
         exceptionsList.clear();
         HashMap<Long, Boolean> map = VeyraConfig.getExceptions(category);
@@ -125,10 +136,11 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         }
 
         if (!exceptionsList.isEmpty()) {
-            exceptionsStartRow = rowCount;
+            customizedHeaderRow = rowCount++;
+            customizedStartRow = rowCount;
             rowCount += exceptionsList.size();
-            exceptionsEndRow = rowCount;
-            deleteAllExceptionsRow = rowCount++;
+            customizedEndRow = rowCount;
+            clearAllCustomizedRow = rowCount++;
         }
 
         lastDividerRow = rowCount++;
@@ -145,13 +157,13 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
 
         String title;
         if (peerType == VeyraConfig.PEER_PRIVATE) {
-            title = LocaleController.getString("SaveToGalleryPrivate", R.string.SaveToGalleryPrivate);
+            title = LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate);
         } else if (peerType == VeyraConfig.PEER_GROUP) {
-            title = LocaleController.getString("SaveToGalleryGroups", R.string.SaveToGalleryGroups);
+            title = LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups);
         } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-            title = LocaleController.getString("SaveToGalleryChannels", R.string.SaveToGalleryChannels);
+            title = LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels);
         } else {
-            title = LocaleController.getString("ChannelBots", R.string.ChannelBots);
+            title = LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots);
         }
         actionBar.setTitle(title);
 
@@ -195,16 +207,16 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(val);
                 }
-            } else if (position == addExceptionRow) {
-                openAddExceptionDialog();
-            } else if (position >= exceptionsStartRow && position < exceptionsEndRow) {
-                int index = position - exceptionsStartRow;
+            } else if (position == includedChatsRow) {
+                presentFragment(new VeyraIncludedChatsActivity(category, peerType));
+            } else if (position == resetRow || position == clearAllCustomizedRow) {
+                showResetAlert();
+            } else if (position >= customizedStartRow && position < customizedEndRow) {
+                int index = position - customizedStartRow;
                 if (index >= 0 && index < exceptionsList.size()) {
                     long did = exceptionsList.get(index);
-                    showDeleteExceptionAlert(did);
+                    showRemoveCustomizationAlert(did);
                 }
-            } else if (position == deleteAllExceptionsRow) {
-                showDeleteAllExceptionsAlert();
             }
         });
 
@@ -212,48 +224,11 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         return fragmentView;
     }
 
-    private void openAddExceptionDialog() {
-        Bundle args = new Bundle();
-        args.putBoolean("onlySelect", true);
-        args.putBoolean("checkCanWrite", false);
-        args.putBoolean("allowGlobalSearch", false);
-
-        if (peerType == VeyraConfig.PEER_GROUP) {
-            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_GROUPS_ONLY);
-            if (VeyraConfig.isOnlyPrivate(category, peerType)) {
-                args.putBoolean("onlyPrivateGroups", true);
-            }
-        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_CHANNELS_ONLY);
-            if (VeyraConfig.isOnlyPrivate(category, peerType)) {
-                args.putBoolean("onlyPrivateChannels", true);
-            }
-        } else if (peerType == VeyraConfig.PEER_BOT) {
-            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_USERS_ONLY);
-            args.putBoolean("onlyBots", true);
-        } else {
-            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_USERS_ONLY);
-            args.putBoolean("onlyUsers", true);
-        }
-
-        DialogsActivity activity = new DialogsActivity(args);
-        activity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
-            if (dids != null && !dids.isEmpty()) {
-                long did = dids.get(0).dialogId;
-                boolean currentDefault = VeyraConfig.isPeerEnabled(category, peerType);
-                VeyraConfig.addException(category, did, !currentDefault);
-                updateRows();
-            }
-            return true;
-        });
-        presentFragment(activity);
-    }
-
-    private void showDeleteExceptionAlert(long dialogId) {
+    private void showRemoveCustomizationAlert(long dialogId) {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString("Delete", R.string.Delete));
-        builder.setMessage("Are you sure you want to delete this exception?");
+        builder.setTitle(LocaleController.getString("VeyraRemoveCustomizationTitle", R.string.VeyraRemoveCustomizationTitle));
+        builder.setMessage(LocaleController.getString("VeyraRemoveCustomizationDesc", R.string.VeyraRemoveCustomizationDesc));
         builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
             VeyraConfig.removeException(category, dialogId);
             updateRows();
@@ -267,12 +242,12 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         }
     }
 
-    private void showDeleteAllExceptionsAlert() {
+    private void showResetAlert() {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString("NotificationsDeleteAllExceptionTitle", R.string.NotificationsDeleteAllExceptionTitle));
-        builder.setMessage(LocaleController.getString("NotificationsDeleteAllExceptionAlert", R.string.NotificationsDeleteAllExceptionAlert));
-        builder.setPositiveButton(LocaleController.getString("Delete", R.string.Delete), (dialog, which) -> {
+        builder.setTitle(LocaleController.getString("VeyraResetAlertTitle", R.string.VeyraResetAlertTitle));
+        builder.setMessage(LocaleController.getString("VeyraResetAlertDesc", R.string.VeyraResetAlertDesc));
+        builder.setPositiveButton(LocaleController.getString("Reset", R.string.Reset), (dialog, which) -> {
             VeyraConfig.clearExceptions(category, peerType);
             updateRows();
         });
@@ -300,7 +275,10 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int pos = holder.getAdapterPosition();
-            return pos == onlyPrivateRow || pos == ignoreOwnerRow || pos == ignoreAdminRow || pos == addExceptionRow || (pos >= exceptionsStartRow && pos < exceptionsEndRow) || pos == deleteAllExceptionsRow;
+            return pos == onlyPrivateRow || pos == ignoreOwnerRow || pos == ignoreAdminRow
+                    || pos == includedChatsRow || pos == resetRow
+                    || (pos >= customizedStartRow && pos < customizedEndRow)
+                    || pos == clearAllCustomizedRow;
         }
 
         @NonNull
@@ -339,6 +317,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
             int topRad = 0;
             int bottomRad = 0;
             boolean isCardItem = false;
+
             if (position == onlyPrivateRow) {
                 topRad = 14;
                 bottomRad = 0;
@@ -351,15 +330,19 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 topRad = 0;
                 bottomRad = 14;
                 isCardItem = true;
-            } else if (position == addExceptionRow) {
+            } else if (position == includedChatsRow) {
                 topRad = 14;
-                bottomRad = (exceptionsList.isEmpty() && deleteAllExceptionsRow == -1) ? 14 : 0;
+                bottomRad = 0;
                 isCardItem = true;
-            } else if (position >= exceptionsStartRow && position < exceptionsEndRow) {
+            } else if (position == resetRow) {
                 topRad = 0;
-                bottomRad = (position == exceptionsEndRow - 1 && deleteAllExceptionsRow == -1) ? 14 : 0;
+                bottomRad = 14;
                 isCardItem = true;
-            } else if (position == deleteAllExceptionsRow) {
+            } else if (position >= customizedStartRow && position < customizedEndRow) {
+                topRad = (position == customizedStartRow) ? 14 : 0;
+                bottomRad = 0;
+                isCardItem = true;
+            } else if (position == clearAllCustomizedRow) {
                 topRad = 0;
                 bottomRad = 14;
                 isCardItem = true;
@@ -376,45 +359,42 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                     TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                     if (position == onlyPrivateRow) {
                         if (peerType == VeyraConfig.PEER_GROUP) {
-                            checkCell.setTextAndCheck("Only Private Groups", VeyraConfig.isOnlyPrivate(category, peerType), true);
+                            checkCell.setTextAndCheck(LocaleController.getString("VeyraOnlyPrivateGroups", R.string.VeyraOnlyPrivateGroups), VeyraConfig.isOnlyPrivate(category, peerType), false);
                         } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-                            checkCell.setTextAndCheck("Only Private Channels", VeyraConfig.isOnlyPrivate(category, peerType), true);
+                            checkCell.setTextAndCheck(LocaleController.getString("VeyraOnlyPrivateChannels", R.string.VeyraOnlyPrivateChannels), VeyraConfig.isOnlyPrivate(category, peerType), false);
                         }
                     } else if (position == ignoreOwnerRow) {
-                        if (peerType == VeyraConfig.PEER_GROUP) {
-                            checkCell.setTextAndCheck("Ignore Groups I Own", VeyraConfig.isIgnoreOwner(category, peerType), true);
-                        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-                            checkCell.setTextAndCheck("Ignore Channels I Own", VeyraConfig.isIgnoreOwner(category, peerType), true);
-                        }
+                        checkCell.setTextAndCheck(LocaleController.getString("VeyraIgnoreOwners", R.string.VeyraIgnoreOwners), VeyraConfig.isIgnoreOwner(category, peerType), false);
                     } else if (position == ignoreAdminRow) {
-                        if (peerType == VeyraConfig.PEER_GROUP) {
-                            checkCell.setTextAndCheck("Ignore Groups Where I Am Admin", VeyraConfig.isIgnoreAdmin(category, peerType), false);
-                        } else if (peerType == VeyraConfig.PEER_CHANNEL) {
-                            checkCell.setTextAndCheck("Ignore Channels Where I Am Admin", VeyraConfig.isIgnoreAdmin(category, peerType), false);
-                        }
+                        checkCell.setTextAndCheck(LocaleController.getString("VeyraIgnoreAdmins", R.string.VeyraIgnoreAdmins), VeyraConfig.isIgnoreAdmin(category, peerType), false);
                     }
                     break;
                 }
                 case 1: {
                     TextInfoPrivacyCell infoCell = (TextInfoPrivacyCell) holder.itemView;
-                    infoCell.setText("Admins and owners can already view deleted and edited messages in Recent Actions.");
+                    infoCell.setText(LocaleController.getString("VeyraScopePolicyDesc", R.string.VeyraScopePolicyDesc));
                     break;
                 }
                 case 2: {
                     HeaderCell headerCell = (HeaderCell) holder.itemView;
                     if (position == optionsHeaderRow) {
-                        headerCell.setText(LocaleController.getString("VeyraFilterOptions", R.string.VeyraFilterOptions));
-                    } else if (position == exceptionsHeaderRow) {
-                        headerCell.setText(LocaleController.getString("NotificationsExceptions", R.string.NotificationsExceptions));
+                        headerCell.setText(LocaleController.getString("VeyraScopePolicy", R.string.VeyraScopePolicy));
+                    } else if (position == inclusionHeaderRow) {
+                        headerCell.setText(LocaleController.getString("VeyraIncludedChatsTitle", R.string.VeyraIncludedChatsTitle));
+                    } else if (position == customizedHeaderRow) {
+                        headerCell.setText(LocaleController.getString("VeyraManualCustomizations", R.string.VeyraManualCustomizations));
                     }
                     break;
                 }
                 case 3: {
                     TextCell textCell = (TextCell) holder.itemView;
-                    if (position == addExceptionRow) {
-                        textCell.setTextAndIcon(LocaleController.getString("NotificationsAddAnException", R.string.NotificationsAddAnException), R.drawable.msg_contact_add, !exceptionsList.isEmpty());
+                    if (position == includedChatsRow) {
+                        textCell.setTextAndIcon(LocaleController.getString("VeyraIncludedChats", R.string.VeyraIncludedChats), R.drawable.msg_select, false);
                         textCell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueButton);
-                    } else if (position == deleteAllExceptionsRow) {
+                    } else if (position == resetRow) {
+                        textCell.setTextAndIcon(LocaleController.getString("VeyraResetToDefault", R.string.VeyraResetToDefault), R.drawable.msg_retry, false);
+                        textCell.setColors(Theme.key_text_RedBold, Theme.key_text_RedBold);
+                    } else if (position == clearAllCustomizedRow) {
                         textCell.setText(LocaleController.getString("NotificationsDeleteAllException", R.string.NotificationsDeleteAllException), false);
                         textCell.setColors(Theme.key_text_RedBold, Theme.key_text_RedBold);
                     }
@@ -422,7 +402,7 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 }
                 case 4: {
                     UserCell userCell = (UserCell) holder.itemView;
-                    int index = position - exceptionsStartRow;
+                    int index = position - customizedStartRow;
                     if (index >= 0 && index < exceptionsList.size()) {
                         long did = exceptionsList.get(index);
                         TLObject object;
@@ -432,7 +412,9 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                             object = MessagesController.getInstance(currentAccount).getChat(-did);
                         }
                         Boolean excVal = VeyraConfig.getException(category, did);
-                        String statusStr = (excVal != null && excVal) ? "Always Enabled" : "Always Disabled";
+                        String statusStr = (excVal != null && excVal)
+                                ? LocaleController.getString("VeyraExplicitlyIncluded", R.string.VeyraExplicitlyIncluded)
+                                : LocaleController.getString("VeyraExplicitlyExcluded", R.string.VeyraExplicitlyExcluded);
                         userCell.setData(object, null, statusStr, 0);
                     }
                     break;
@@ -446,11 +428,11 @@ public class VeyraScopeSettingsActivity extends BaseFragment {
                 return 0;
             } else if (position == onlyPrivateInfoRow) {
                 return 1;
-            } else if (position == optionsHeaderRow || position == exceptionsHeaderRow) {
+            } else if (position == optionsHeaderRow || position == inclusionHeaderRow || position == customizedHeaderRow) {
                 return 2;
-            } else if (position == addExceptionRow || position == deleteAllExceptionsRow) {
+            } else if (position == includedChatsRow || position == resetRow || position == clearAllCustomizedRow) {
                 return 3;
-            } else if (position >= exceptionsStartRow && position < exceptionsEndRow) {
+            } else if (position >= customizedStartRow && position < customizedEndRow) {
                 return 4;
             }
             return 5;

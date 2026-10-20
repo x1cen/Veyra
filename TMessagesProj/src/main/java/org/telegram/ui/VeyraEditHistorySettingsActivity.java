@@ -41,7 +41,7 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypePrivate", R.string.VeyraChatTypePrivate),
-                "Tap to configure exceptions",
+                LocaleController.getString("VeyraChatTypePrivateDesc", R.string.VeyraChatTypePrivateDesc),
                 () -> VeyraConfig.editHistoryPrivate,
                 v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_PRIVATE, v),
                 true,
@@ -55,7 +55,7 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeGroups", R.string.VeyraChatTypeGroups),
-                "Tap to configure exceptions and private group filter",
+                LocaleController.getString("VeyraChatTypeGroupsDesc", R.string.VeyraChatTypeGroupsDesc),
                 () -> VeyraConfig.editHistoryGroups,
                 v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_GROUP, v),
                 true,
@@ -69,7 +69,7 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeChannels", R.string.VeyraChatTypeChannels),
-                "Tap to configure exceptions and private channel filter",
+                LocaleController.getString("VeyraChatTypeChannelsDesc", R.string.VeyraChatTypeChannelsDesc),
                 () -> VeyraConfig.editHistoryChannels,
                 v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_CHANNEL, v),
                 true,
@@ -83,7 +83,7 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
 
         r.add(VeyraSettingsRow.toggleWithAction(
                 LocaleController.getString("VeyraChatTypeBots", R.string.VeyraChatTypeBots),
-                "Tap to configure exceptions",
+                LocaleController.getString("VeyraChatTypeBotsDesc", R.string.VeyraChatTypeBotsDesc),
                 () -> VeyraConfig.editHistoryBots,
                 v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_BOT, v),
                 true,
