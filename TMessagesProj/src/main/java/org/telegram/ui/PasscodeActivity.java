@@ -1320,9 +1320,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         }
                     } else if (position == changeDuressCodeRow) {
                         boolean hasDuress = !android.text.TextUtils.isEmpty(SharedConfig.duressHash);
-                        textCell.setTextAndValue(
+                        textCell.setText(
                             LocaleController.getString(hasDuress ? R.string.ChangeDuress : R.string.EnableDuress),
-                            hasDuress ? LocaleController.getString(R.string.PasscodeEnabled) : LocaleController.getString(R.string.NotSet),
                             hasDuress
                         );
                         textCell.setTag(Theme.key_windowBackgroundWhiteBlackText);

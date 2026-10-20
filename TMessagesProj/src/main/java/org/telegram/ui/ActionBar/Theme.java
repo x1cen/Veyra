@@ -1648,14 +1648,14 @@ public class Theme {
             if (isDark != UNKNOWN) {
                 return isDark == DARK;
             }
-            if ("Dark Blue".equals(name) || "Night".equals(name)) {
+            if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name) || "Monet AMOLED".equals(name)) {
                 isDark = DARK;
-            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name)) {
+            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name)) {
                 isDark = LIGHT;
             }
             if (isDark == UNKNOWN) {
                 String[] wallpaperLink = new String[1];
-                SparseIntArray colors = getThemeFileValues(new File(pathToFile), null, wallpaperLink);
+                SparseIntArray colors = getThemeFileValues(pathToFile != null ? new File(pathToFile) : null, assetName, wallpaperLink);
                 checkIsDark(colors, this);
             }
             return isDark == DARK;
@@ -4021,6 +4021,7 @@ public class Theme {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet Light";
+            themeInfo.isDark = ThemeInfo.LIGHT;
             themeInfo.assetName = "monet_light.attheme";
             themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_50");
             themeInfo.previewInColor = MonetHelper.getColor("a2_50");
@@ -4031,6 +4032,7 @@ public class Theme {
 
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet Dark";
+            themeInfo.isDark = ThemeInfo.DARK;
             themeInfo.assetName = "monet_dark.attheme";
             themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_900");
             themeInfo.previewInColor = MonetHelper.getColor("n2_800");
@@ -4041,6 +4043,7 @@ public class Theme {
 
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet AMOLED";
+            themeInfo.isDark = ThemeInfo.DARK;
             themeInfo.assetName = "monet_amoled.attheme";
             themeInfo.previewBackgroundColor = MonetHelper.getColor("n1_1000");
             themeInfo.previewInColor = MonetHelper.getColor("n2_800");
@@ -7281,7 +7284,7 @@ public class Theme {
     public static String createThemePreviewImage(String pathToFile, String wallpaperPath, Theme.ThemeAccent accent) {
         try {
             String[] wallpaperLink = new String[1];
-            SparseIntArray colors = getThemeFileValues(new File(pathToFile), null, wallpaperLink);
+            SparseIntArray colors = getThemeFileValues(pathToFile != null ? new File(pathToFile) : null, null, wallpaperLink);
             if (accent != null) {
                 checkIsDark(colors, accent.parentTheme);
             }
