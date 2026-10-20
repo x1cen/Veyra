@@ -245,8 +245,16 @@ public class VeyraLocalization {
         EN.put("AppName", "Veyra");
         EN.put("AppNameBeta", "Veyra");
         EN.put("CreatePasscodeInfoPIN", "Please enter 8 digits that you will use to unlock Veyra.");
-        EN.put("CreateDuressInfoPIN", "Please enter 8 digits for the duress code.");
+        EN.put("CreateDuressInfoPIN", "Please enter 8 digits for the duress emergency code.");
         EN.put("ViewDetails", "View Details");
+        EN.put("DuressCode", "Duress Code (Emergency)");
+        EN.put("EnableDuress", "Set Duress Code");
+        EN.put("ChangeDuress", "Change Duress Code");
+        EN.put("DisableDuress", "Turn Off Duress Code");
+        EN.put("ChangeDuressInfoShort", "A Duress Code is a decoy emergency code. If forced to unlock your phone, entering this code at the lock screen will immediately trigger the emergency wipe protocol instead of unlocking your account.");
+        EN.put("ShufflePinButton", "Scramble PIN keypad layout");
+        EN.put("PasscodeEnabled", "Enabled");
+        EN.put("NotSet", "Not Set");
 
         FA.put("ConfirmCallTitle", "تأیید تماس");
         FA.put("ConfirmCallUser", "آیا از برقراری تماس با %s اطمینان دارید؟");
@@ -483,9 +491,17 @@ public class VeyraLocalization {
         FA.put("VideoSavedToDownloadsHintLinked", "ویدیو در **Documents** ذخیره شد.");
         FA.put("AppName", "ویرا");
         FA.put("AppNameBeta", "ویرا");
-        FA.put("CreatePasscodeInfoPIN", "لطفاً یک رمز ۸ رقمی برای بازگشایی ویرا وارد کنید.");
-        FA.put("CreateDuressInfoPIN", "لطفاً یک کد اضطراری ۸ رقمی وارد کنید.");
+        FA.put("CreatePasscodeInfoPIN", "لطفاً ۸ رقمی را که برای باز کردن قفل ویرا استفاده می‌کنید وارد کنید.");
+        FA.put("CreateDuressInfoPIN", "لطفاً ۸ رقمی را که به عنوان کد اضطراری استفاده می‌کنید وارد کنید.");
         FA.put("ViewDetails", "مشاهده جزئیات (JSON)");
+        FA.put("DuressCode", "کد وضعیت اضطراری (دورِس)");
+        FA.put("EnableDuress", "تنظیم کد اضطراری");
+        FA.put("ChangeDuress", "تغییر کد اضطراری");
+        FA.put("DisableDuress", "خاموش کردن کد اضطراری");
+        FA.put("ChangeDuressInfoShort", "کد اضطراری (Duress) یک کد مجزا برای شرایط خطر و اجبار است. در صورت وارد کردن این کد در صفحه قفل، به جای باز شدن حساب، پروتکل پاکسازی امنیتی انتخاب‌شده بلافاصله اجرا می‌شود.");
+        FA.put("ShufflePinButton", "چیدمان تصادفی صفحه کلید (Scramble PIN)");
+        FA.put("PasscodeEnabled", "فعال");
+        FA.put("NotSet", "تنظیم نشده");
         FA.put("fil", "tl");
         FA.put("he", "iw");
         FA.put("id", "in");
@@ -514,6 +530,24 @@ public class VeyraLocalization {
         AR.put("VeyraSettings", "إعدادات فيرا");
         AR.put("VeyraGhostMode", "وضع الشبح");
         AR.put("VeyraAntiDelete", "مكافحة حذف الرسائل");
+    }
+
+    public static String get(String langCode, String key) {
+        if (key == null) return null;
+        if (langCode != null) {
+            String code = langCode.toLowerCase();
+            if (code.startsWith("fa")) {
+                String val = FA.get(key);
+                if (val != null) return val;
+            } else if (code.startsWith("ru")) {
+                String val = RU.get(key);
+                if (val != null) return val;
+            } else if (code.startsWith("ar")) {
+                String val = AR.get(key);
+                if (val != null) return val;
+            }
+        }
+        return EN.get(key);
     }
 
     public static HashMap<String, String> getStrings(String langCode) {
