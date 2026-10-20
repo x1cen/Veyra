@@ -91,6 +91,14 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraViewRaw", R.string.VeyraViewRaw),
+                LocaleController.getString("VeyraViewRawDesc", R.string.VeyraViewRawDesc),
+                () -> VeyraConfig.viewRawEnabled,
+                v -> VeyraConfig.setViewRawEnabled(v),
+                false
+        ));
+
         r.add(VeyraSettingsRow.shadow());
         return r;
     }

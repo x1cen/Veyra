@@ -11651,6 +11651,8 @@
 <string name="VeyraJumpToFirstMessageDesc">Show \'Jump to First Message\' in chat 3-dot menu</string>
 <string name="VeyraCopyDialogId">Copy Dialog ID in Header</string>
 <string name="VeyraCopyDialogIdDesc">Show \'Copy Dialog ID\' in chat 3-dot menu</string>
+<string name="VeyraViewRaw">View Raw in Message Menu</string>
+<string name="VeyraViewRawDesc">Show \'View Raw\' in long-press message context menu to inspect raw TL payload with theming</string>
 <string name="VeyraRearCameraVideoMessages">Rear Camera for Video Messages</string>
 <string name="VeyraRearCameraVideoMessagesDesc">Start video round messages with rear camera instead of front</string>
 <string name="VeyraSendCaptionWithSticker">Send Typed Text with Stickers</string>
