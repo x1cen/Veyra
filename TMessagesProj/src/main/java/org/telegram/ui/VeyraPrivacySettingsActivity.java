@@ -53,6 +53,13 @@ public class VeyraPrivacySettingsActivity extends VeyraSettingsBaseActivity {
                     org.veyra.client.VeyraSecurityGuard.applyWindowSecurity(getParentActivity());
                 }, true
         ));
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraTtlBurnForSender", R.string.VeyraTtlBurnForSender),
+                LocaleController.getString("VeyraTtlBurnForSenderDesc", R.string.VeyraTtlBurnForSenderDesc),
+                () -> VeyraConfig.ttlBurnForSender,
+                v -> VeyraConfig.setTtlBurnForSender(v),
+                false
+        ));
         r.add(VeyraSettingsRow.shadow());
         return r;
     }

@@ -95,6 +95,14 @@ public class VeyraEditHistorySettingsActivity extends VeyraSettingsBaseActivity 
                 }
         ));
 
+        r.add(VeyraSettingsRow.toggle(
+                LocaleController.getString("VeyraChatTypeSecret", R.string.VeyraChatTypeSecret),
+                LocaleController.getString("VeyraChatTypeSecretDesc", R.string.VeyraChatTypeSecretDesc),
+                () -> VeyraConfig.editHistorySecret,
+                v -> VeyraConfig.setPeerEnabled(VeyraConfig.CATEGORY_EDIT_HISTORY, VeyraConfig.PEER_SECRET, v),
+                true
+        ));
+
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Limits"));
