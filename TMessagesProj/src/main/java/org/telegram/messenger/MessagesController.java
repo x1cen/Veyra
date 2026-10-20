@@ -1302,28 +1302,31 @@ public class MessagesController extends BaseController implements NotificationCe
         public boolean includesDialog(AccountInstance accountInstance, long dialogId) {
             MessagesController messagesController = accountInstance.getMessagesController();
             TLRPC.Dialog dialog = messagesController.dialogs_dict.get(dialogId);
-            if (dialog == null) {
-                return false;
-            }
             return includesDialog(accountInstance, dialogId, dialog);
         }
 
         public boolean includesDialog(AccountInstance accountInstance, long dialogId, TLRPC.Dialog d) {
+            MessagesController messagesController = accountInstance.getMessagesController();
+            if (DialogObject.isEncryptedDialog(dialogId)) {
+                TLRPC.EncryptedChat encryptedChat = messagesController.getEncryptedChat(DialogObject.getEncryptedChatId(dialogId));
+                if (encryptedChat != null) {
+                    dialogId = encryptedChat.user_id;
+                }
+            }
             if (neverShow.contains(dialogId)) {
                 return false;
             }
-            if (alwaysShow.contains(dialogId)) {
+            if (alwaysShow.contains(dialogId) || (pinnedDialogs != null && pinnedDialogs.indexOfKey(dialogId) >= 0)) {
                 return true;
             }
-            if (d.folder_id != 0 && (flags & DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED) != 0) {
+            if (d != null && d.folder_id != 0 && (flags & DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED) != 0) {
                 return false;
             }
-            MessagesController messagesController = accountInstance.getMessagesController();
             ContactsController contactsController = accountInstance.getContactsController();
             boolean skip = false;
 
-            if ((flags & DIALOG_FILTER_FLAG_EXCLUDE_MUTED) != 0 && messagesController.isDialogMuted(d.id, 0) && d.unread_mentions_count == 0 ||
-                    (flags & DIALOG_FILTER_FLAG_EXCLUDE_READ) != 0 && messagesController.getDialogUnreadCount(d) == 0 && !d.unread_mark && d.unread_mentions_count == 0) {
+            if (d != null && ((flags & DIALOG_FILTER_FLAG_EXCLUDE_MUTED) != 0 && messagesController.isDialogMuted(d.id, 0) && d.unread_mentions_count == 0 ||
+                    (flags & DIALOG_FILTER_FLAG_EXCLUDE_READ) != 0 && messagesController.getDialogUnreadCount(d) == 0 && !d.unread_mark && d.unread_mentions_count == 0)) {
                 return false;
             }
             if (dialogId > 0) {
