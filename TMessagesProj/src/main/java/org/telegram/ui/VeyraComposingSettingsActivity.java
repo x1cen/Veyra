@@ -36,26 +36,10 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
         ));
 
         r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraDisableQuickReaction", R.string.VeyraDisableQuickReaction),
-                LocaleController.getString("VeyraDisableQuickReactionDesc", R.string.VeyraDisableQuickReactionDesc),
-                () -> VeyraConfig.disableQuickReaction,
-                v -> VeyraConfig.setDisableQuickReaction(v),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.toggle(
                 LocaleController.getString("VeyraFormatTimeWithSeconds", R.string.VeyraFormatTimeWithSeconds),
                 LocaleController.getString("VeyraFormatTimeWithSecondsDesc", R.string.VeyraFormatTimeWithSecondsDesc),
                 () -> VeyraConfig.formatTimeWithSeconds,
                 v -> VeyraConfig.setFormatTimeWithSeconds(v),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraStripBotLinkParams", R.string.VeyraStripBotLinkParams),
-                LocaleController.getString("VeyraStripBotLinkParamsDesc", R.string.VeyraStripBotLinkParamsDesc),
-                () -> VeyraConfig.stripBotLinkParams,
-                v -> VeyraConfig.setStripBotLinkParams(v),
                 true
         ));
 
@@ -73,22 +57,6 @@ public class VeyraComposingSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraConfig.disableBigEmoji,
                 v -> VeyraConfig.setDisableBigEmoji(v),
                 true
-        ));
-
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraJumpToFirstMessage", R.string.VeyraJumpToFirstMessage),
-                LocaleController.getString("VeyraJumpToFirstMessageDesc", R.string.VeyraJumpToFirstMessageDesc),
-                () -> VeyraConfig.jumpToFirstMessage,
-                v -> VeyraConfig.setJumpToFirstMessage(v),
-                true
-        ));
-
-        r.add(VeyraSettingsRow.toggle(
-                LocaleController.getString("VeyraCopyDialogId", R.string.VeyraCopyDialogId),
-                LocaleController.getString("VeyraCopyDialogIdDesc", R.string.VeyraCopyDialogIdDesc),
-                () -> VeyraConfig.copyDialogId,
-                v -> VeyraConfig.setCopyDialogId(v),
-                false
         ));
 
         r.add(VeyraSettingsRow.toggle(
