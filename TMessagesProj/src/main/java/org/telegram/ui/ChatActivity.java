@@ -12566,8 +12566,8 @@ public class ChatActivity extends BaseFragment implements
             actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
         }
 
-        if (currentChat != null || !isSecretChat()) {
-            items.add(LocaleController.getString("VeyraDeleteAllMessages", R.string.VeyraDeleteAllMessages));
+        if (currentChat != null && (!ChatObject.isChannel(currentChat) || currentChat.megagroup)) {
+            items.add(LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages));
             icons.add(R.drawable.msg_delete);
             actions.add(this::showDeleteAllMessagesDialog);
         }
@@ -12587,53 +12587,31 @@ public class ChatActivity extends BaseFragment implements
 
     private void showDeleteAllMessagesDialog() {
         if (getParentActivity() == null) return;
-        final boolean isAdmin = currentChat != null && org.telegram.messenger.ChatObject.canDeleteMessages(currentChat);
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages));
+        builder.setMessage(LocaleController.getString("VeyraDeleteAllConfirm", R.string.VeyraDeleteAllConfirm));
+        builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialog, which) -> {
+            final boolean isAdminChannel = currentChat != null && org.telegram.messenger.ChatObject.isChannel(currentChat) && org.telegram.messenger.ChatObject.canDeleteMessages(currentChat);
+            if (isAdminChannel) {
+                final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+                progressDialog.setMessage(LocaleController.getString("VeyraDeletingMessages", R.string.VeyraDeletingMessages));
+                progressDialog.setCanceledOnTouchOutside(false);
+                progressDialog.setCancelable(false);
+                showDialog(progressDialog);
 
-        if (isAdmin) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-            builder.setTitle(LocaleController.getString("VeyraDeleteAllMessages", R.string.VeyraDeleteAllMessages));
-            CharSequence[] items = new CharSequence[]{
-                LocaleController.getString("VeyraDeleteAllMessagesAdmin", R.string.VeyraDeleteAllMessagesAdmin),
-                LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages)
-            };
-            builder.setItems(items, (dialog, which) -> {
-                if (which == 0) {
-                    AlertDialog.Builder confirm = new AlertDialog.Builder(getParentActivity());
-                    confirm.setTitle(LocaleController.getString("VeyraDeleteAllMessagesAdmin", R.string.VeyraDeleteAllMessagesAdmin));
-                    confirm.setMessage(LocaleController.getString("VeyraDeleteAllAdminConfirm", R.string.VeyraDeleteAllAdminConfirm));
-                    confirm.setPositiveButton(LocaleController.getString(R.string.Delete), (d, w) -> {
-                        final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
-                        progressDialog.setMessage(LocaleController.getString("VeyraDeletingMessages", R.string.VeyraDeletingMessages));
-                        progressDialog.setCanceledOnTouchOutside(false);
-                        progressDialog.setCancelable(false);
-                        showDialog(progressDialog);
-
-                        getMessagesController().deleteDialog(dialog_id, 1, true);
-                        AndroidUtilities.runOnUIThread(() -> {
-                            try {
-                                progressDialog.dismiss();
-                            } catch (Exception ignore) {}
-                            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString(R.string.ClearHistory)).show();
-                        }, 1200);
-                    });
-                    confirm.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-                    showDialog(confirm.create());
-                } else {
-                    startBatchDeleteMyMessages();
-                }
-            });
-            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-            showDialog(builder.create());
-        } else {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-            builder.setTitle(LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages));
-            builder.setMessage(LocaleController.getString("VeyraDeleteAllConfirm", R.string.VeyraDeleteAllConfirm));
-            builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialog, which) -> {
+                getMessagesController().deleteUserChannelHistory(currentChat, getUserConfig().getCurrentUser(), null, 0);
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignore) {}
+                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraDeleteAllFinished", R.string.VeyraDeleteAllFinished)).show();
+                }, 1000);
+            } else {
                 startBatchDeleteMyMessages();
-            });
-            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-            showDialog(builder.create());
-        }
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        showDialog(builder.create());
     }
 
     private void startBatchDeleteMyMessages() {
@@ -36562,6 +36540,10 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void sendTodo(TLRPC.TL_messageMediaToDo todo, boolean notify, int scheduleDate, long payStars) {
+        if (!getUserConfig().isPremium()) {
+            showDialog(new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false));
+            return;
+        }
         if (checkSlowModeAlert()) {
             final SendMessagesHelper.SendMessageParams params2 = SendMessagesHelper.SendMessageParams.of((TLRPC.TL_messageMediaPoll) null, dialog_id, replyingMessageObject, getThreadMessage(), null, null, notify, scheduleDate, 0);
             params2.todo = todo;
