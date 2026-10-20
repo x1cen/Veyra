@@ -170,7 +170,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     private final Runnable hidePasscodesDoNotMatch = () -> {
         postedHidePasscodesDoNotMatch = false;
         AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, false);
-        passcodesDoNotMatchTextView.postDelayed(() -> passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch)), 300);
+        passcodesDoNotMatchTextView.postDelayed(() -> passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodesDoNotMatchTryAgain)), 300);
     };
 
     private Runnable onShowKeyboardCallback;
@@ -1122,7 +1122,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 return;
             }
             if (!firstPassword.equals(password)) {
-                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch));
+                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodesDoNotMatchTryAgain));
                 AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setText("");
@@ -1248,7 +1248,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                 return;
             }
             if (!firstPassword.equals(password)) {
-                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodeDoNotMatch));
+                passcodesDoNotMatchTextView.setText(LocaleController.getString(R.string.PasscodesDoNotMatchTryAgain));
                 AndroidUtilities.updateViewVisibilityAnimated(passcodesDoNotMatchTextView, true);
                 for (CodeNumberField f : codeFieldContainer.codeField) f.setText("");
                 if (isPinCode()) codeFieldContainer.codeField[0].requestFocus();
