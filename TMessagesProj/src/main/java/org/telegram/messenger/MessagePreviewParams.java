@@ -210,6 +210,9 @@ public class MessagePreviewParams {
             replyQuote = null;
         }
         hasSecretMessages = replyMessageObject != null && (replyMessageObject.isVoiceOnce() || replyMessageObject.isRoundOnce() || replyMessageObject.type == MessageObject.TYPE_GIFT_STARS);
+        if (replyMessageObject != null && (replyMessageObject.isVeyraOrAntiDeleted() || (replyMessageObject.messageOwner != null && replyMessageObject.messageOwner.noforwards))) {
+            this.noforwards = true;
+        }
         if (replyMessageObject != null || replyQuote != null) {
             if (group != null) {
                 replyMessage = new Messages(null, 1, group.messages, dialogId, null);
