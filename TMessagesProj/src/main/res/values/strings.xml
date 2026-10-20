@@ -11817,5 +11817,19 @@
 <string name="VeyraDuressSameAsPasscode">Duress code cannot be the same as Passcode</string>
 <string name="VeyraGhostBlockPeriodicOnline">Block Periodic Online Status</string>
 <string name="VeyraGhostBlockPeriodicOnlineDesc">Prevent Telegram from periodically updating your status to online while the app is in use</string>
+<string name="VeyraClearActions">Clean Actions</string>
+<string name="VeyraSentMessages">Sent Messages</string>
+<string name="VeyraChatHistory">Chat History</string>
+<string name="VeyraDeletedMessages">Deleted Messages</string>
+<string name="VeyraConfirmClearDeleted">Are you sure you want to clear saved deleted messages for this chat?</string>
+<string name="VeyraDeletedMessagesCleared">Deleted messages cleared</string>
+<string name="VeyraEditedMessages">Edited Messages</string>
+<string name="VeyraConfirmClearEdits">Are you sure you want to clear edit history for this chat?</string>
+<string name="VeyraEditsCleared">Edit history cleared</string>
+<string name="VeyraReactionHistory">Reaction History</string>
+<string name="VeyraConfirmClearReactions">Are you sure you want to clear reaction history for this chat?</string>
+<string name="VeyraReactionsCleared">Reaction history cleared</string>
+<string name="VeyraDownloadedMediaCache">Downloaded Media Cache</string>
+<string name="VeyraConfirmClearMedia">Are you sure you want to clear cached media for this chat?</string>
 </resources>
 

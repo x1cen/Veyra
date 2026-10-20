@@ -49,7 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class AppIconsSelectorCell extends RecyclerListView implements NotificationCenter.NotificationCenterDelegate {
-    public final static float ICONS_ROUND_RADIUS = 18;
+    public final static float ICONS_ROUND_RADIUS = 29;
 
     private List<LauncherIconController.LauncherIcon> availableIcons = new ArrayList<>();
     private LinearLayoutManager linearLayoutManager;
@@ -235,11 +235,12 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
         public void draw(Canvas canvas) {
             float stroke = outlinePaint.getStrokeWidth();
             AndroidUtilities.rectTmp.set(iconView.getLeft() + stroke, iconView.getTop() + stroke, iconView.getRight() - stroke, iconView.getBottom() - stroke);
-            canvas.drawRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(ICONS_ROUND_RADIUS), AndroidUtilities.dp(ICONS_ROUND_RADIUS), fillPaint);
+            float radius = AndroidUtilities.rectTmp.width() / 2f;
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, radius, radius, fillPaint);
 
             super.draw(canvas);
 
-            canvas.drawRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(ICONS_ROUND_RADIUS), AndroidUtilities.dp(ICONS_ROUND_RADIUS), outlinePaint);
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, radius, radius, outlinePaint);
         }
 
         private void setProgress(float progress) {

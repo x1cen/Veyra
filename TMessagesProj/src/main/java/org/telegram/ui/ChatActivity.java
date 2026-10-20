@@ -4605,7 +4605,7 @@ public class ChatActivity extends BaseFragment implements
                 headerItem.lazilyAddSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
             }
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
-                clearHistoryItem = headerItem.lazilyAddSubItem(veyra_clear_actions, R.drawable.msg_clearcache, "Clear Actions");
+                clearHistoryItem = headerItem.lazilyAddSubItem(veyra_clear_actions, R.drawable.msg_clearcache, LocaleController.getString("VeyraClearActions", R.string.VeyraClearActions));
             }
             if (!isTopic && (currentUser != null && !currentUser.bot && !currentUser.self || (currentChat != null && (!ChatObject.isChannel(currentChat) || (chatInfo != null && chatInfo.can_delete_channel))))) {
                 headerItem.lazilyAddSubItem(auto_delete_timer, R.drawable.msg_autodelete, LocaleController.getString(R.string.AutoDeletePopupTitle));
@@ -11343,6 +11343,10 @@ public class ChatActivity extends BaseFragment implements
 
             @Override
             protected void selectAnotherChat(boolean forward) {
+                if (isChatOrPeerStrictNoForwards() || (messagePreviewParams != null && messagePreviewParams.noforwards)) {
+                    dismiss(false);
+                    return;
+                }
                 dismiss(false);
                 if (messagePreviewParams != null) {
                     if (!forward) {
@@ -12448,14 +12452,11 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private boolean hasSelectedNoforwardsMessage() {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
-            return false;
-        }
         try {
             for (int i = 0; i < selectedMessagesIds.length; ++i) {
                 for (int j = 0; j < selectedMessagesIds[i].size(); ++j) {
                     MessageObject msg = selectedMessagesIds[i].valueAt(j);
-                    if (msg != null && msg.messageOwner != null && msg.messageOwner.noforwards) {
+                    if (msg != null && ((msg.messageOwner != null && msg.messageOwner.noforwards) || msg.isVeyraOrAntiDeleted())) {
                         return true;
                     }
                 }
@@ -12555,12 +12556,6 @@ public class ChatActivity extends BaseFragment implements
             items.add(LocaleController.getString("JumpToFirstMessage", R.string.JumpToFirstMessage));
             icons.add(R.drawable.msg_go_up);
             actions.add(() -> scrollToMessageId(1, 0, true, 0, true, 0));
-        }
-
-        if (currentChat != null && (!ChatObject.isChannel(currentChat) || currentChat.megagroup)) {
-            items.add(LocaleController.getString("VeyraDeleteAllMyMessages", R.string.VeyraDeleteAllMyMessages));
-            icons.add(R.drawable.msg_delete);
-            actions.add(this::showDeleteAllMessagesDialog);
         }
 
         int[] iconsArray = new int[icons.size()];
@@ -12781,49 +12776,73 @@ public class ChatActivity extends BaseFragment implements
     private void showClearActionsMenu() {
         if (getParentActivity() == null) return;
         BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
-        builder.setTitle("Clear Actions", true);
+        builder.setTitle(LocaleController.getString("VeyraClearActions", R.string.VeyraClearActions), true);
 
-        CharSequence[] items = new CharSequence[]{
-            "Deleted Messages",
-            "Edited Messages",
-            "Reaction History",
-            "Chat History",
-            "Media"
-        };
-        int[] icons = new int[]{
-            R.drawable.msg_delete,
-            R.drawable.msg_edit,
-            R.drawable.msg_reactions,
-            R.drawable.msg_clear,
-            R.drawable.msg_media
-        };
+        ArrayList<CharSequence> items = new ArrayList<>();
+        ArrayList<Integer> icons = new ArrayList<>();
+        ArrayList<Runnable> actions = new ArrayList<>();
 
-        builder.setItems(items, icons, (dialog, which) -> {
-            switch (which) {
-                case 0:
-                    showClearConfirmation("Clear Deleted Messages", "Are you sure you want to clear saved deleted messages for this chat?", () -> {
-                        getMessagesStorage().clearDeletedMessagesForDialog(dialog_id);
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Deleted messages cleared").show();
-                    });
-                    break;
-                case 1:
-                    showClearConfirmation("Clear Edit History", "Are you sure you want to clear edit history for this chat?", () -> {
-                        org.veyra.client.VeyraEditHistoryManager.clearDialogEdits(dialog_id);
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Edit history cleared").show();
-                    });
-                    break;
-                case 2:
-                    showClearConfirmation("Clear Reaction History", "Are you sure you want to clear reaction history for this chat?", () -> {
-                        org.veyra.client.VeyraEditHistoryManager.clearDialogReactions(dialog_id);
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, "Reaction history cleared").show();
-                    });
-                    break;
-                case 3:
-                    showTelegramClearHistory();
-                    break;
-                case 4:
-                    showClearMediaSubMenu();
-                    break;
+        if (currentChat != null || (!isSecretChat() && currentUser != null && !currentUser.bot)) {
+            items.add(LocaleController.getString("VeyraSentMessages", R.string.VeyraSentMessages));
+            icons.add(R.drawable.msg_delete);
+            actions.add(this::showDeleteAllMessagesDialog);
+        }
+
+        boolean canClearHistory = false;
+        if (currentUser != null) {
+            canClearHistory = true;
+        } else if (currentChat != null) {
+            if (!ChatObject.isChannel(currentChat)) {
+                canClearHistory = true;
+            } else if (currentChat.creator || (chatInfo != null && chatInfo.can_delete_channel) || ChatObject.canDeleteMessages(currentChat)) {
+                canClearHistory = true;
+            }
+        }
+        if (canClearHistory) {
+            items.add(LocaleController.getString("VeyraChatHistory", R.string.VeyraChatHistory));
+            icons.add(R.drawable.msg_clear);
+            actions.add(this::showTelegramClearHistory);
+        }
+
+        items.add(LocaleController.getString("VeyraDeletedMessages", R.string.VeyraDeletedMessages));
+        icons.add(R.drawable.msg_delete);
+        actions.add(() -> {
+            showClearConfirmation(LocaleController.getString("VeyraDeletedMessages", R.string.VeyraDeletedMessages), LocaleController.getString("VeyraConfirmClearDeleted", R.string.VeyraConfirmClearDeleted), () -> {
+                getMessagesStorage().clearDeletedMessagesForDialog(dialog_id);
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraDeletedMessagesCleared", R.string.VeyraDeletedMessagesCleared)).show();
+            });
+        });
+
+        items.add(LocaleController.getString("VeyraEditedMessages", R.string.VeyraEditedMessages));
+        icons.add(R.drawable.msg_edit);
+        actions.add(() -> {
+            showClearConfirmation(LocaleController.getString("VeyraEditedMessages", R.string.VeyraEditedMessages), LocaleController.getString("VeyraConfirmClearEdits", R.string.VeyraConfirmClearEdits), () -> {
+                org.veyra.client.VeyraEditHistoryManager.clearDialogEdits(dialog_id);
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraEditsCleared", R.string.VeyraEditsCleared)).show();
+            });
+        });
+
+        items.add(LocaleController.getString("VeyraReactionHistory", R.string.VeyraReactionHistory));
+        icons.add(R.drawable.msg_reactions);
+        actions.add(() -> {
+            showClearConfirmation(LocaleController.getString("VeyraReactionHistory", R.string.VeyraReactionHistory), LocaleController.getString("VeyraConfirmClearReactions", R.string.VeyraConfirmClearReactions), () -> {
+                org.veyra.client.VeyraEditHistoryManager.clearDialogReactions(dialog_id);
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraReactionsCleared", R.string.VeyraReactionsCleared)).show();
+            });
+        });
+
+        items.add(LocaleController.getString("VeyraDownloadedMediaCache", R.string.VeyraDownloadedMediaCache));
+        icons.add(R.drawable.msg_media);
+        actions.add(this::showClearMediaSubMenu);
+
+        int[] iconsArray = new int[icons.size()];
+        for (int i = 0; i < icons.size(); i++) {
+            iconsArray[i] = icons.get(i);
+        }
+
+        builder.setItems(items.toArray(new CharSequence[0]), iconsArray, (dialog, which) -> {
+            if (which >= 0 && which < actions.size()) {
+                actions.get(which).run();
             }
         });
         showDialog(builder.create());
@@ -12843,7 +12862,7 @@ public class ChatActivity extends BaseFragment implements
     private void showClearMediaSubMenu() {
         if (getParentActivity() == null) return;
         BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
-        builder.setTitle("Clear Media Cache", true);
+        builder.setTitle(LocaleController.getString("VeyraDownloadedMediaCache", R.string.VeyraDownloadedMediaCache), true);
 
         CharSequence[] items = new CharSequence[]{
             "Photos",
@@ -15347,11 +15366,17 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void showFieldPanelForReply(MessageObject messageObjectToReply) {
+        if (messageObjectToReply != null && messageObjectToReply.isVeyraOrAntiDeleted()) {
+            return;
+        }
         showFieldPanel(true, messageObjectToReply, null, null, null, true, 0, null, false, 0, true);
     }
 
     private Runnable onHideFieldPanelRunnable;
     public void showFieldPanelForReplyQuote(MessageObject messageObjectToReply, ReplyQuote quote) {
+        if (messageObjectToReply != null && messageObjectToReply.isVeyraOrAntiDeleted()) {
+            return;
+        }
         showFieldPanel(true, messageObjectToReply, null, null, null, true, 0, quote, false, 0, true);
     }
 
@@ -19604,9 +19629,8 @@ public class ChatActivity extends BaseFragment implements
                 avatarContainer.setTime(chatInfo.ttl_period, animated);
             }
         }
-        if (clearHistoryItem != null && chatInfo != null) {
-            boolean visible = chatInfo.can_delete_channel || !ChatObject.isChannel(currentChat) || currentChat.megagroup && !ChatObject.isPublic(currentChat);
-            clearHistoryItem.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (clearHistoryItem != null) {
+            clearHistoryItem.setVisibility(View.VISIBLE);
         }
         checkAndUpdateAvatar();
     }
@@ -19862,7 +19886,7 @@ public class ChatActivity extends BaseFragment implements
                 ActionBarMenuItem tagItem = actionBar.createActionMode().getItem(tag_message);
                 ActionBarMenuItem shareItem = actionBar.createActionMode().getItem(share);
 
-                boolean noforwards = isPeerNoForwards() || hasSelectedNoforwardsMessage();
+                boolean noforwards = isChatOrPeerStrictNoForwards() || isPeerNoForwards() || hasSelectedNoforwardsMessage();
                 boolean allowForward = cantForwardMessagesCount == 0 && !noforwards;
                 if (prevCantForwardCount == 0 && cantForwardMessagesCount != 0 || prevCantForwardCount != 0 && cantForwardMessagesCount == 0) {
                     forwardButtonAnimation = new AnimatorSet();
@@ -47272,7 +47296,8 @@ public class ChatActivity extends BaseFragment implements
             icons.add(R.drawable.outline_revert_24);
         }
 
-        if (noforwards || (message != null && message.isVeyraOrAntiDeleted())) {
+        final boolean isChatStrictNoForwards = isChatOrPeerStrictNoForwards();
+        if (noforwards || isChatStrictNoForwards || (message != null && (message.isVeyraOrAntiDeleted() || (message.messageOwner != null && message.messageOwner.noforwards)))) {
             for (int i = 0; i < options.size(); i++) {
                 if (options.get(i) == OPTION_FORWARD) {
                     options.remove(i);
@@ -47917,6 +47942,19 @@ public class ChatActivity extends BaseFragment implements
         sponsoredAbout.addView(infoText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL));
 
         return sponsoredAbout;
+    }
+
+    public boolean isChatOrPeerStrictNoForwards() {
+        if (currentChat != null) {
+            if (currentChat.migrated_to != null) {
+                TLRPC.Chat migratedTo = getMessagesController().getChat(currentChat.migrated_to.channel_id);
+                if (migratedTo != null && migratedTo.noforwards) {
+                    return true;
+                }
+            }
+            return currentChat.noforwards;
+        }
+        return userInfo != null && userInfo.noforwards;
     }
 
     public boolean isPeerNoForwards() {
