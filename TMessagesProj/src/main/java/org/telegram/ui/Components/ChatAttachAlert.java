@@ -2877,6 +2877,12 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 } else if (num == 11) {
                     openQuickRepliesLayout();
                 } else if (num == 12) {
+                    if (!UserConfig.getInstance(currentAccount).isPremium()) {
+                        if (baseFragment != null) {
+                            new PremiumFeatureBottomSheet(baseFragment, getContext(), currentAccount, false, PremiumPreviewFragment.PREMIUM_FEATURE_TODO, false, null).show();
+                        }
+                        return;
+                    }
                     if (!todoEnabled && checkCanRemoveRestrictionsByBoosts()) {
                         return;
                     }

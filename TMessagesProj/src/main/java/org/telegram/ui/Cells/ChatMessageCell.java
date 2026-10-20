@@ -17181,8 +17181,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 h = photoImage.getImageHeight();
             }
             captionX = x + dp(5) + captionOffsetX;
-            captionYBelow = y + h + dp(6);
-            captionY = y + AndroidUtilities.lerp(h + dp(6), (captionLayout == null ? 0 : -captionLayout.textHeight()) - dp(4), mediaAbove());
+            if (currentMessageObject.isAnyKindOfSticker()) {
+                captionYBelow = y + h + dp(2);
+                captionY = y + h + dp(2);
+            } else {
+                captionYBelow = y + h + dp(6);
+                captionY = y + AndroidUtilities.lerp(h + dp(6), (captionLayout == null ? 0 : -captionLayout.textHeight()) - dp(4), mediaAbove());
+            }
         } else if (hasOldCaptionPreview) {
             captionX = backgroundDrawableLeft + dp(currentMessageObject.isOutOwner() ? 11 : 17) + captionOffsetX;
             captionYBelow = totalHeight - captionHeight - dp(drawPinnedTop ? 9 : 10) - linkPreviewHeight - dp(17) - dp(drawCommentButton && drawSideButton != 3 ? (shouldDrawTimeOnMedia() ? 41.3f : 43) : 0);
@@ -20587,9 +20592,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 offsetBottom = dp(2);
             }
-            backgroundDrawableTop = additionalTop + (drawPinnedTop ? 0 : dp(1));
-            int backgroundHeight = layoutHeight - offsetBottom + additionalBottom;
-            backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            int backgroundHeight;
+            if (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() && !TextUtils.isEmpty(currentMessageObject.caption)) {
+                int stickerBottom = (int) (photoImage.getImageY() + photoImage.getImageHeight());
+                backgroundDrawableTop = stickerBottom - dp(4);
+                backgroundHeight = layoutHeight - backgroundDrawableTop - offsetBottom + additionalBottom;
+                backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            } else {
+                backgroundDrawableTop = additionalTop + (drawPinnedTop ? 0 : dp(1));
+                backgroundHeight = layoutHeight - offsetBottom + additionalBottom;
+                backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            }
 
             if (!mediaBackground) {
                 if (drawPinnedTop) {
@@ -20670,9 +20683,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 offsetBottom = dp(2);
             }
-            backgroundDrawableTop = additionalTop + (drawPinnedTop ? 0 : dp(1));
-            int backgroundHeight = layoutHeight - offsetBottom + additionalBottom;
-            backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            int backgroundHeight;
+            if (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() && !TextUtils.isEmpty(currentMessageObject.caption)) {
+                int stickerBottom = (int) (photoImage.getImageY() + photoImage.getImageHeight());
+                backgroundDrawableTop = stickerBottom - dp(4);
+                backgroundHeight = layoutHeight - backgroundDrawableTop - offsetBottom + additionalBottom;
+                backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            } else {
+                backgroundDrawableTop = additionalTop + (drawPinnedTop ? 0 : dp(1));
+                backgroundHeight = layoutHeight - offsetBottom + additionalBottom;
+                backgroundDrawableBottom = backgroundDrawableTop + backgroundHeight;
+            }
 
             if (!mediaBackground) {
                 if (drawPinnedTop) {
@@ -23757,7 +23778,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     float y, h;
                     y = photoImage.getImageY();
                     h = photoImage.getImageHeight();
-                    captionYBottom = y + h + dp(6);
+                    captionYBottom = y + h + (currentMessageObject.isAnyKindOfSticker() ? dp(2) : dp(6));
                     captionYTop = y + (captionLayout == null ? 0 : -captionLayout.textHeight(transitionParams)) - dp(4);
                 } else if (hasOldCaptionPreview) {
                     captionYBottom = totalHeight - dp(drawPinnedTop ? 9 : 10) - linkPreviewHeight - dp(17) - dp(drawCommentButton && drawSideButton != 3 ? (shouldDrawTimeOnMedia() ? 41.3f : 43) : 0) - captionHeight;
