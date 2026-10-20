@@ -240,9 +240,6 @@ public class VeyraGroupInfoSheet extends BottomSheet {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
 
-        GradientDrawable divider = new GradientDrawable();
-        divider.setColor(Theme.getColor(Theme.key_divider));
-
         TextView keyTv = new TextView(ctx);
         keyTv.setText(key);
         keyTv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
@@ -260,11 +257,6 @@ public class VeyraGroupInfoSheet extends BottomSheet {
         row.addView(valTv, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 0.58f));
 
         parent.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        // divider line
-        View line = new View(ctx);
-        line.setBackgroundColor(Theme.getColor(Theme.key_divider));
-        parent.addView(line, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1));
     }
 
     private void addMultilineRow(LinearLayout parent, Context ctx, String text) {

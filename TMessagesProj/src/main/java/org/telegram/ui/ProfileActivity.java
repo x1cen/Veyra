@@ -13807,7 +13807,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             value = "";
                             usernames = new ArrayList<>();
                         }
-                        detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0);
+                        detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), false);
                     } else if (position == idRow) {
                         long displayId = 0;
                         int dc = 0;
@@ -13850,16 +13850,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                         String text = String.valueOf(displayId);
                         String value = dc > 0 ? label + " (DC " + dc + ")" : label;
-                        boolean needDivider = myProfile ? false : (position < infoEndRow);
+                        boolean needDivider = false;
                         detailCell.setTextAndValue(text, value, needDivider);
                     } else if (position == veyra_mutualContactRow) {
-                        detailCell.setTextAndValue("Mutual Contact", "Yes — they have saved your number too", position < infoEndRow);
+                        detailCell.setTextAndValue("Mutual Contact", "Yes — they have saved your number too", false);
                     } else if (position == veyra_premiumStatusRow) {
                         TLRPC.User profileUser = getMessagesController().getUser(userId);
                         boolean hasPremium = profileUser != null && profileUser.premium;
-                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active" : "Not active", position < infoEndRow);
+                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active" : "Not active", false);
                     } else if (position == veyra_verifiedRow) {
-                        detailCell.setTextAndValue("Verified", "Yes - verified by Telegram", position < infoEndRow);
+                        detailCell.setTextAndValue("Verified", "Yes - verified by Telegram", false);
                     } else if (position == locationRow) {
                         if (chatInfo != null && chatInfo.location instanceof TLRPC.TL_channelLocation) {
                             TLRPC.TL_channelLocation location = (TLRPC.TL_channelLocation) chatInfo.location;
@@ -13873,7 +13873,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         } else {
                             value = LocaleController.getString(R.string.NumberUnknown);
                         }
-                        detailCell.setTextAndValue(value, LocaleController.getString(R.string.TapToChangePhone), true);
+                        detailCell.setTextAndValue(value, LocaleController.getString(R.string.TapToChangePhone), false);
                         detailCell.setContentDescriptionValueFirst(false);
                     } else if (position == setUsernameRow) {
                         TLRPC.User user = UserConfig.getInstance(currentAccount).getCurrentUser();
@@ -13905,7 +13905,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 text = LocaleController.getString(R.string.UsernameEmpty);
                             }
                         }
-                        detailCell.setTextAndValue(text, value, true);
+                        detailCell.setTextAndValue(text, value, false);
                         detailCell.setContentDescriptionValueFirst(true);
                     }
                     if (containsGift) {
