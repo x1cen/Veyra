@@ -695,7 +695,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         }
                     }
                 };
-                codeFieldContainer.setNumbersCount(6, CodeFieldContainer.TYPE_PASSCODE);
+                codeFieldContainer.setNumbersCount(4, CodeFieldContainer.TYPE_PASSCODE);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
                     f.setTransformationMethod(PasswordTransformationMethod.getInstance());
@@ -1010,7 +1010,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void processNext() {
-        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 6) {
+        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 4) {
             onPasscodeError();
             return;
         }

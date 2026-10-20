@@ -227,6 +227,10 @@ public class MessageObject {
     public boolean deleted;
     public boolean deletedByThanos;
     public boolean isVeyraDeleted;
+
+    public boolean isVeyraOrAntiDeleted() {
+        return deleted || isVeyraDeleted || (messageOwner != null && messageOwner.isDeleted) || org.veyra.client.VeyraAntiDelete.isMessageDeleted(getDialogId(), getId());
+    }
     public float audioProgress;
     public float forceSeekTo = -1;
     public int audioProgressMs;
@@ -11791,6 +11795,9 @@ public class MessageObject {
     }
 
     public boolean canDeleteMessage(boolean inScheduleMode, TLRPC.Chat chat) {
+        if (isVeyraOrAntiDeleted() || org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+            return true;
+        }
         return (
             isStory() && messageOwner != null && messageOwner.dialog_id == UserConfig.getInstance(currentAccount).getClientUserId() ||
             eventId == 0 && sponsoredId == null && canDeleteMessage(currentAccount, inScheduleMode, messageOwner, chat) || isEphemeral()

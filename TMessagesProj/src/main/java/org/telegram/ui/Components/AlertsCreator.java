@@ -8160,6 +8160,9 @@ public class AlertsCreator {
                 if (mergeDialogId != 0 && selectedMessage.messageOwner.peer_id != null && selectedMessage.messageOwner.peer_id.chat_id == -mergeDialogId) {
                     thisDialogId = mergeDialogId;
                 }
+                if (selectedMessage != null && selectedMessage.isVeyraOrAntiDeleted()) {
+                    MessagesStorage.getInstance(currentAccount).deleteRetainedDeletedMessages(thisDialogId, ids);
+                }
                 if (!ids.isEmpty()) {
                     MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, thisDialogId, topicId, deleteForAll[0], mode);
                 }
@@ -8169,8 +8172,18 @@ public class AlertsCreator {
             } else {
                 for (int a = 1; a >= 0; a--) {
                     ids = new ArrayList<>();
+                    ArrayList<Integer> retainedDeletedIds = new ArrayList<>();
                     for (int b = 0; b < selectedMessages[a].size(); b++) {
-                        ids.add(selectedMessages[a].keyAt(b));
+                        int mid = selectedMessages[a].keyAt(b);
+                        MessageObject msg = selectedMessages[a].valueAt(b);
+                        if (msg != null && msg.isVeyraOrAntiDeleted()) {
+                            retainedDeletedIds.add(mid);
+                        }
+                        ids.add(mid);
+                    }
+                    long targetDialogId = (a == 1 && mergeDialogId != 0) ? mergeDialogId : thisDialogId;
+                    if (!retainedDeletedIds.isEmpty()) {
+                        MessagesStorage.getInstance(currentAccount).deleteRetainedDeletedMessages(targetDialogId, retainedDeletedIds);
                     }
                     ArrayList<Long> random_ids = null;
                     if (encryptedChat != null) {
@@ -8182,7 +8195,7 @@ public class AlertsCreator {
                             }
                         }
                     }
-                    MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, (a == 1 && mergeDialogId != 0) ? mergeDialogId : thisDialogId, topicId, deleteForAll[0], mode);
+                    MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, targetDialogId, topicId, deleteForAll[0], mode);
                     selectedMessages[a].clear();
                 }
             }

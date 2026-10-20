@@ -18458,7 +18458,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             author = MessagesController.getInstance(currentAccount).getUser(fromId);
         }
         boolean hasReplies = messageObject.hasReplies();
-        deleted = currentMessageObject != null && (currentMessageObject.isVeyraDeleted || currentMessageObject.deleted || org.veyra.client.VeyraAntiDelete.isMessageDeleted(currentMessageObject.getDialogId(), currentMessageObject.getId()));
+        deleted = currentMessageObject != null && currentMessageObject.isVeyraOrAntiDeleted();
         // Veyra: dim deleted messages
         if (deleted) {
             alphaInternal = 0.52f;

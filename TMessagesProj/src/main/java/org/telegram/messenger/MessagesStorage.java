@@ -15272,6 +15272,7 @@ public class MessagesStorage extends BaseController {
     }
 
     public void clearAllAntiDelete() {
+        org.veyra.client.VeyraAntiDelete.clearAll();
         storageQueue.postRunnable(() -> {
             try {
                 SQLiteCursor cursor = database.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
@@ -15302,7 +15303,34 @@ public class MessagesStorage extends BaseController {
         });
     }
 
+    public void deleteRetainedDeletedMessages(long dialogId, ArrayList<Integer> mids) {
+        if (mids == null || mids.isEmpty()) {
+            return;
+        }
+        for (int a = 0; a < mids.size(); a++) {
+            org.veyra.client.VeyraAntiDelete.removeDeletedMessage(dialogId, mids.get(a));
+        }
+        storageQueue.postRunnable(() -> {
+            try {
+                String ids = TextUtils.join(",", mids);
+                if (dialogId != 0) {
+                    database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d AND mid IN(%s)", dialogId, ids)).stepThis().dispose();
+                } else {
+                    database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE mid IN(%s)", ids)).stepThis().dispose();
+                }
+                markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                AndroidUtilities.runOnUIThread(() -> {
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
     public void clearDeletedMessagesForDialog(long dialogId) {
+        org.veyra.client.VeyraAntiDelete.clearDialog(dialogId);
         storageQueue.postRunnable(() -> {
             try {
                 SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_message_deletions WHERE uid = %d", dialogId));
