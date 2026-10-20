@@ -47033,6 +47033,12 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
+        if (selectedObject != null && selectedObject.getId() > 0 && !selectedObject.isSponsored() && !selectedObject.isEphemeral() && selectedObject.messageOwner.action == null) {
+            items.add(LocaleController.getString(R.string.HideContent));
+            options.add(OPTION_HIDE_CONTENT);
+            icons.add(R.drawable.msg_archive_hide);
+        }
+
         if (getMessagesController().config.walletAvailable.get() &&
                 selectedObject.messageOwner.action instanceof TLRPC.TL_messageActionGramTransfer
                 && selectedObject.getDialogId() > 0

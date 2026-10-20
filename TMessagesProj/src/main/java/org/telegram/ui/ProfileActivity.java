@@ -2289,8 +2289,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public int getBottomOffset(int tag) {
+                int base = navigationBarHeight + additionFloatingButtonOffset;
                 if (bottomButtonsContainer == null) {
-                    return navigationBarHeight + additionFloatingButtonOffset;
+                    return base;
                 }
                 final float stories = sharedMediaLayout.getTabVisibility(SharedMediaLayout.TAB_STORIES, true);
                 final float archivedStories = sharedMediaLayout.getTabVisibility(SharedMediaLayout.TAB_ARCHIVED_STORIES, false);
