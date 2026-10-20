@@ -208,7 +208,7 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
 
                 int topRad = isTop ? 14 : 0;
                 int bottomRad = isBottom ? 14 : 0;
-                boolean needDivider = !isBottom && row.needDivider;
+                boolean needDivider = false;
 
                 int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
                 int selColor = Theme.getColor(Theme.key_listSelector);
@@ -352,11 +352,6 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            if (needDivider) {
-                int left = LocaleController.isRTL ? 0 : AndroidUtilities.dp(60);
-                int right = LocaleController.isRTL ? getMeasuredWidth() - AndroidUtilities.dp(60) : getMeasuredWidth();
-                canvas.drawLine(left, getMeasuredHeight() - 1, right, getMeasuredHeight() - 1, Theme.dividerPaint);
-            }
         }
     }
 }
