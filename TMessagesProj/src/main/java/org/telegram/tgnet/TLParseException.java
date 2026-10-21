@@ -24,6 +24,9 @@ public class TLParseException extends RuntimeException {
         }
 
         if (throwEnabled) {
+            if (constructorId == 0xcd78e586 || constructorId == 0xd18be2ef || constructorId == 0xf35c6d01) {
+                return;
+            }
             throw tlParseException;
         }
     }

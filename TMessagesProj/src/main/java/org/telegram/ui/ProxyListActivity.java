@@ -97,6 +97,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int proxyEndRow;
     @Keep
     private int proxyAddRow;
+    private int addFromClipboardRow = -1;
+    private int removeDuplicatesRow = -1;
     private int deleteInactiveRow = -1;
     private int proxyShadowRow;
     private int discoveryRow;
@@ -168,7 +170,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             checkImageView.setScaleType(ImageView.ScaleType.CENTER);
             checkImageView.setContentDescription(getString(R.string.Edit));
             addView(checkImageView, LayoutHelper.createFrame(48, 48, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP, 8, 8, 8, 0));
-            checkImageView.setOnClickListener(v -> presentFragment(new ProxySettingsActivity(currentInfo)));
+            checkImageView.setOnClickListener(v -> {
+                if (isAetherProxy(currentInfo)) {
+                    presentFragment(new AetherActivity());
+                } else {
+                    presentFragment(new ProxySettingsActivity(currentInfo));
+                }
+            });
 
             checkBox = new CheckBox2(context, 21);
             checkBox.setColor(Theme.key_checkbox, Theme.key_radioBackground, Theme.key_checkboxCheck);
@@ -185,14 +193,15 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
 
         public void setProxy(SharedConfig.ProxyInfo proxyInfo) {
-            boolean isAether = (org.veyra.client.aether.AetherConfig.getSocksHost().equals(proxyInfo.settings.getAddress()) || "127.0.0.1".equals(proxyInfo.settings.getAddress())) &&
-                    (proxyInfo.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
-                     proxyInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+            boolean isAether = isAetherProxy(proxyInfo);
             if (isAether) {
-                textView.setText("Aether");
-                boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
-                setAlpha(aetherEnabled ? 1.0f : 0.45f);
+                textView.setText("Aether (WARP×2)");
+                checkImageView.setImageResource(R.drawable.msg_settings);
+                checkImageView.setContentDescription("Aether Settings");
+                setAlpha(1.0f);
             } else {
+                checkImageView.setImageResource(R.drawable.msg_info);
+                checkImageView.setContentDescription(getString(R.string.Edit));
                 setAlpha(1.0f);
                 textView.setText(proxyInfo.settings.getType() == ProxySettings.Type.WEB
                         ? proxyInfo.settings.getAddress() + " (WEB)"
@@ -203,36 +212,38 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         public void updateStatus() {
             int colorKey;
-            boolean isAether = currentInfo != null && currentInfo.settings != null &&
-                    (org.veyra.client.aether.AetherConfig.getSocksHost().equals(currentInfo.settings.getAddress()) || "127.0.0.1".equals(currentInfo.settings.getAddress())) &&
-                    (currentInfo.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
-                     currentInfo.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
+            boolean isAether = isAetherProxy(currentInfo);
 
             if (isAether) {
                 boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
-                if (!aetherEnabled) {
-                    setAlpha(0.45f);
-                    valueTextView.setText("Disabled (Turn on Aether)");
-                    colorKey = Theme.key_windowBackgroundWhiteGrayText2;
-                    valueTextView.setTextColor(Theme.getColor(colorKey));
-                    return;
+                org.veyra.client.aether.AetherController ctrl = org.veyra.client.aether.AetherController.getInstance();
+                if (!aetherEnabled || ctrl.getState() == org.veyra.client.aether.AetherController.STATE_DISCONNECTED) {
+                    setAlpha(0.6f);
+                    valueTextView.setText("Disabled (Tap to start)");
+                    colorKey = Theme.key_text_RedRegular;
+                } else if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
+                    setAlpha(1.0f);
+                    long ping = ctrl.getPing();
+                    String pingStr = ping > 0 ? ", " + LocaleController.formatString("Ping", R.string.Ping, ping) : "";
+                    if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
+                        valueTextView.setText(getString(R.string.Connected) + pingStr);
+                        colorKey = Theme.key_windowBackgroundWhiteBlueText6;
+                    } else {
+                        valueTextView.setText(getString(R.string.Available) + pingStr);
+                        colorKey = Theme.key_windowBackgroundWhiteGreenText;
+                    }
                 } else {
                     setAlpha(1.0f);
-                    if (SharedConfig.currentProxy != currentInfo || !useProxySettings) {
-                        org.veyra.client.aether.AetherController ctrl = org.veyra.client.aether.AetherController.getInstance();
-                        if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
-                            valueTextView.setText("Available (" + ctrl.getPing() + "ms)");
-                            valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGreenText));
-                            return;
-                        } else if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTING ||
-                                   ctrl.getState() == org.veyra.client.aether.AetherController.STATE_RECONNECTING ||
-                                   ctrl.getState() == org.veyra.client.aether.AetherController.STATE_PREPARING) {
-                            valueTextView.setText(ctrl.getStatusText());
-                            valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
-                            return;
-                        }
-                    }
+                    valueTextView.setText(ctrl.getStatusText());
+                    colorKey = Theme.key_windowBackgroundWhiteGrayText2;
                 }
+                color = Theme.getColor(colorKey);
+                valueTextView.setTag(colorKey);
+                valueTextView.setTextColor(color);
+                if (checkDrawable != null) {
+                    checkDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY));
+                }
+                return;
             }
             if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
                 if (currentConnectionState == ConnectionsManager.ConnectionStateConnected || currentConnectionState == ConnectionsManager.ConnectionStateUpdating) {
@@ -447,8 +458,45 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener((view, position) -> {
             if (position == aetherRow) {
-                presentFragment(new AetherActivity());
+                if (!selectedItems.isEmpty()) {
+                    return;
+                }
+                SharedConfig.ProxyInfo aether = getAetherProxy();
+                if (aether == null || aether.settings == null) {
+                    return;
+                }
+                useProxySettings = true;
+                SharedConfig.currentProxy = aether;
+                SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
+                aether.settings.toSharedPreferences(editor);
+                editor.putBoolean("proxy_enabled", true);
+                editor.commit();
+
+                if (!org.veyra.client.aether.AetherConfig.isEnabled()) {
+                    org.veyra.client.aether.AetherConfig.setEnabled(true);
+                    org.veyra.client.aether.AetherController.getInstance().start();
+                } else if (org.veyra.client.aether.AetherController.getInstance().getState() != org.veyra.client.aether.AetherController.STATE_CONNECTED) {
+                    org.veyra.client.aether.AetherController.getInstance().start();
+                }
+
+                ConnectionsManager.setProxySettings(true, aether.settings);
+                updateRows(false);
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
+                }
+                RecyclerListView.Holder h = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(useProxyRow);
+                if (h != null && h.itemView instanceof TextCheckCell) {
+                    ((TextCheckCell) h.itemView).setChecked(true);
+                }
             } else if (position == discoveryRow) {
+                if (isAetherProxy(SharedConfig.currentProxy)) {
+                    new AlertDialog.Builder(getParentActivity())
+                            .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                            .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
+                            .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                            .show();
+                    return;
+                }
                 presentFragment(new ProxyDiscoveryActivity());
             } else if (position == useProxyRow) {
                 if (SharedConfig.currentProxy == null) {
@@ -499,8 +547,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                         cell.updateStatus();
                     }
                 }
-            } else if (position == discoveryRow) {
-                presentFragment(new ProxyDiscoveryActivity());
             } else if (position >= proxyStartRow && position < proxyEndRow) {
                 if (!selectedItems.isEmpty()) {
                     listAdapter.toggleSelected(position);
@@ -514,19 +560,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 if (info == null || info.settings == null) {
                     return;
                 }
-                boolean isAether = (org.veyra.client.aether.AetherConfig.getSocksHost().equals(info.settings.getAddress()) || "127.0.0.1".equals(info.settings.getAddress())) &&
-                        (info.settings.getPort() == org.veyra.client.aether.AetherConfig.getSocksPort() ||
-                         info.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort());
-                if (isAether) {
-                    boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
-                    if (!aetherEnabled) {
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Turn on Aether to use this proxy").show();
-                        return;
-                    }
-                    if (org.veyra.client.aether.AetherController.getInstance().getState() != org.veyra.client.aether.AetherController.STATE_CONNECTED) {
-                        org.veyra.client.aether.AetherController.getInstance().start();
-                    }
-                }
                 useProxySettings = true;
                 SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
                 info.settings.toSharedPreferences(editor);
@@ -535,21 +568,28 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 SharedConfig.currentProxy = info;
                 for (int a = proxyStartRow; a < proxyEndRow; a++) {
                     RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(a);
-                    if (holder != null) {
+                    if (holder != null && holder.itemView instanceof TextDetailProxyCell) {
                         TextDetailProxyCell cell = (TextDetailProxyCell) holder.itemView;
                         cell.setChecked(cell.currentInfo == info);
                         cell.updateStatus();
                     }
                 }
                 updateRows(false);
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
+                }
                 RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(useProxyRow);
-                if (holder != null) {
+                if (holder != null && holder.itemView instanceof TextCheckCell) {
                     TextCheckCell textCheckCell = (TextCheckCell) holder.itemView;
                     textCheckCell.setChecked(true);
                 }
                 ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
             } else if (position == proxyAddRow) {
                 presentFragment(new ProxySettingsActivity());
+            } else if (position == addFromClipboardRow) {
+                importFromClipboard();
+            } else if (position == removeDuplicatesRow) {
+                removeDuplicateProxies();
             } else if (position == deleteInactiveRow) {
                 deleteInactiveProxies();
             } else if (position == deleteAllRow) {
@@ -677,30 +717,50 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         return super.onBackPressed(invoked);
     }
 
-    private void ensureAetherProxyInList() {
+    public static boolean isAetherProxy(SharedConfig.ProxyInfo p) {
+        if (p == null || p.settings == null) {
+            return false;
+        }
         String host = org.veyra.client.aether.AetherConfig.getSocksHost();
         int port = org.veyra.client.aether.AetherConfig.getSocksPort();
-        boolean found = false;
+        int activePort = org.veyra.client.aether.AetherController.getInstance().getActivePort();
+        String addr = p.settings.getAddress();
+        int pPort = p.settings.getPort();
+        return (host.equals(addr) || "127.0.0.1".equals(addr)) && (pPort == port || pPort == activePort);
+    }
+
+    public static SharedConfig.ProxyInfo getAetherProxy() {
+        String host = org.veyra.client.aether.AetherConfig.getSocksHost();
+        int port = org.veyra.client.aether.AetherConfig.getSocksPort();
         for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
-            if (p.settings != null && (host.equals(p.settings.getAddress()) || "127.0.0.1".equals(p.settings.getAddress())) &&
-                    (p.settings.getPort() == port || p.settings.getPort() == org.veyra.client.aether.AetherController.getInstance().getActivePort())) {
-                found = true;
-                break;
+            if (isAetherProxy(p)) {
+                if (p.settings != null && (!host.equals(p.settings.getAddress()) || p.settings.getPort() != port)) {
+                    p.settings = ProxySettings.builder()
+                            .setAddress(host)
+                            .setPort(port)
+                            .setType(ProxySettings.Type.SOCKS5)
+                            .build();
+                    SharedConfig.saveProxyList();
+                }
+                return p;
             }
         }
-        if (!found) {
-            ProxySettings settings = ProxySettings.builder()
-                    .setAddress(host)
-                    .setPort(port)
-                    .setType(ProxySettings.Type.SOCKS5)
-                    .build();
-            SharedConfig.ProxyInfo info = new SharedConfig.ProxyInfo(settings);
-            SharedConfig.addProxy(info);
-        }
+        ProxySettings settings = ProxySettings.builder()
+                .setAddress(host)
+                .setPort(port)
+                .setType(ProxySettings.Type.SOCKS5)
+                .build();
+        SharedConfig.ProxyInfo info = new SharedConfig.ProxyInfo(settings);
+        SharedConfig.addProxy(info);
+        return info;
+    }
+
+    public static void syncAetherProxySettings() {
+        getAetherProxy();
     }
 
     private void updateRows(boolean notify) {
-        ensureAetherProxyInList();
+        getAetherProxy();
 
         rowCount = 0;
         useProxyRow = rowCount++;
@@ -720,7 +780,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         if (notify) {
             proxyList.clear();
-            proxyList.addAll(SharedConfig.proxyList);
+            for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
+                if (!isAetherProxy(p)) {
+                    proxyList.add(p);
+                }
+            }
 
             boolean checking = false;
             if (!wasCheckedAllList) {
@@ -759,9 +823,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             proxyEndRow = -1;
         }
         proxyAddRow = rowCount++;
+        addFromClipboardRow = rowCount++;
         if (!proxyList.isEmpty()) {
+            removeDuplicatesRow = rowCount++;
             deleteInactiveRow = rowCount++;
         } else {
+            removeDuplicatesRow = -1;
             deleteInactiveRow = -1;
         }
         proxyShadowRow = rowCount++;
@@ -961,7 +1028,11 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
-                        textCell.setText(getString(R.string.AddProxy), false);
+                        textCell.setText(getString(R.string.AddProxy), true);
+                    } else if (position == addFromClipboardRow) {
+                        textCell.setText("Add from Clipboard", removeDuplicatesRow != -1 || deleteInactiveRow != -1);
+                    } else if (position == removeDuplicatesRow) {
+                        textCell.setText("Remove Duplicate Proxies", deleteInactiveRow != -1);
                     } else if (position == deleteInactiveRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText("Clear Inactive Proxies", false);
@@ -976,7 +1047,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     if (position == connectionsHeaderRow) {
                         headerCell.setText(getString(R.string.ProxyConnections));
                     } else if (position == aetherHeaderRow) {
-                        headerCell.setText("Aether");
+                        headerCell.setText("Aether Tunnel");
                     }
                     break;
                 }
@@ -989,25 +1060,6 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                         int interval = org.veyra.client.proxy.ProxyDiscoveryConfig.getIntervalMinutes();
                         String sub = enabled ? "Active • " + interval + "m interval" : "P2C tournament & health pipeline";
                         checkCell.setTextAndValueAndCheck("Auto Discovery", sub, enabled, false, false);
-                    } else if (position == aetherRow) {
-                        org.veyra.client.aether.AetherController ac = org.veyra.client.aether.AetherController.getInstance();
-                        boolean enabled = org.veyra.client.aether.AetherConfig.isEnabled();
-                        String sub;
-                        if (ac.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
-                            long ping = ac.getPing();
-                            sub = "Connected" + (ping > 0 ? " • " + ping + " ms" : "");
-                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_DISCONNECTED) {
-                            sub = "Tap to configure";
-                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTING) {
-                            sub = "Connecting...";
-                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_SCANNING) {
-                            sub = "Scanning...";
-                        } else if (ac.getState() == org.veyra.client.aether.AetherController.STATE_RECONNECTING) {
-                            sub = "Reconnecting...";
-                        } else {
-                            sub = ac.getStatusText();
-                        }
-                        checkCell.setTextAndValueAndCheck("Aether", sub, enabled, true, false);
                     }
                     break;
                 }
@@ -1016,11 +1068,20 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 }
                 case VIEW_TYPE_PROXY_DETAIL: {
                     TextDetailProxyCell cell = (TextDetailProxyCell) holder.itemView;
-                    SharedConfig.ProxyInfo info = proxyList.get(position - proxyStartRow);
-                    cell.setProxy(info);
-                    cell.setChecked(SharedConfig.currentProxy == info);
-                    cell.setItemSelected(selectedItems.contains(proxyList.get(position - proxyStartRow)), false);
-                    cell.setSelectionEnabled(!selectedItems.isEmpty(), false);
+                    if (position == aetherRow) {
+                        SharedConfig.ProxyInfo info = getAetherProxy();
+                        cell.setProxy(info);
+                        cell.setChecked(SharedConfig.currentProxy == info && useProxySettings);
+                        cell.setItemSelected(false, false);
+                        cell.setSelectionEnabled(false, false);
+                    } else if (position >= proxyStartRow && position < proxyEndRow) {
+                        SharedConfig.ProxyInfo info = proxyList.get(position - proxyStartRow);
+                        cell.setProxy(info);
+                        cell.setChecked(SharedConfig.currentProxy == info && useProxySettings);
+                        cell.setItemSelected(selectedItems.contains(info), false);
+                        cell.setSelectionEnabled(!selectedItems.isEmpty(), false);
+                    }
+                    cell.updateStatus();
                     break;
                 }
                 case VIEW_TYPE_SLIDE_CHOOSER: {
@@ -1082,7 +1143,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == discoveryRow || position == aetherRow || position == proxyAddRow || position == deleteInactiveRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
+            return position == useProxyRow || position == discoveryRow || position == aetherRow || position == proxyAddRow || position == addFromClipboardRow || position == removeDuplicatesRow || position == deleteInactiveRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
         }
 
         @Override
@@ -1130,6 +1191,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -2;
             } else if (position == proxyAddRow) {
                 return -3;
+            } else if (position == addFromClipboardRow) {
+                return -16;
+            } else if (position == removeDuplicatesRow) {
+                return -17;
             } else if (position == deleteInactiveRow) {
                 return -15;
             } else if (position == useProxyRow) {
@@ -1157,18 +1222,54 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         public int getItemViewType(int position) {
             if (position == useProxyShadowRow || position == proxyShadowRow || position == aetherShadowRow) {
                 return VIEW_TYPE_SHADOW;
-            } else if (position == proxyAddRow || position == deleteInactiveRow || position == deleteAllRow) {
+            } else if (position == proxyAddRow || position == addFromClipboardRow || position == removeDuplicatesRow || position == deleteInactiveRow || position == deleteAllRow) {
                 return VIEW_TYPE_TEXT_SETTING;
-            } else if (position == useProxyRow || position == discoveryRow || position == aetherRow) {
+            } else if (position == useProxyRow || position == discoveryRow) {
                 return VIEW_TYPE_TEXT_CHECK;
             } else if (position == connectionsHeaderRow || position == aetherHeaderRow) {
                 return VIEW_TYPE_HEADER;
-            } else if (position >= proxyStartRow && position < proxyEndRow) {
+            } else if (position == aetherRow || (position >= proxyStartRow && position < proxyEndRow)) {
                 return VIEW_TYPE_PROXY_DETAIL;
             } else {
                 return VIEW_TYPE_INFO;
             }
         }
+    }
+
+    private void importFromClipboard() {
+        importFromClipboardDirectly();
+    }
+
+    private void removeDuplicateProxies() {
+        Set<String> seen = new HashSet<>();
+        List<SharedConfig.ProxyInfo> toRemove = new ArrayList<>();
+        for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
+            if (isAetherProxy(p) || p.settings == null) {
+                continue;
+            }
+            String key = p.settings.getType() + ":" + p.settings.getAddress().toLowerCase().trim() + ":" + p.settings.getPort() + ":" +
+                    (p.settings.getSecret() != null ? p.settings.getSecret().trim() : "") + ":" +
+                    (p.settings.getUsername() != null ? p.settings.getUsername().trim() : "");
+            if (seen.contains(key)) {
+                if (p != SharedConfig.currentProxy) {
+                    toRemove.add(p);
+                }
+            } else {
+                seen.add(key);
+            }
+        }
+        if (toRemove.isEmpty()) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "No duplicate proxies found").show();
+            return;
+        }
+        for (SharedConfig.ProxyInfo p : toRemove) {
+            SharedConfig.deleteProxy(p);
+        }
+        updateRows(true);
+        if (listAdapter != null) {
+            listAdapter.notifyDataSetChanged();
+        }
+        BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "Removed " + toRemove.size() + " duplicate proxies").show();
     }
 
     private void showAddProxyMenu(View view) {

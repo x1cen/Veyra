@@ -76,6 +76,15 @@ public class ProxyDiscoveryActivity extends VeyraSettingsBaseActivity {
                 sub,
                 ProxyDiscoveryConfig::isEnabled,
                 isChecked -> {
+                    if (isChecked && (SharedConfig.currentProxy == null || org.telegram.ui.ProxyListActivity.isAetherProxy(SharedConfig.currentProxy))) {
+                        new AlertDialog.Builder(getParentActivity())
+                                .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                                .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
+                                .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                                .show();
+                        reloadRows();
+                        return;
+                    }
                     ProxyDiscoveryConfig.setEnabled(isChecked);
                     if (isChecked) {
                         ProxyDiscoveryPipeline.getInstance().runTournament(false);
@@ -90,6 +99,14 @@ public class ProxyDiscoveryActivity extends VeyraSettingsBaseActivity {
                 () -> isRunning ? "In Progress..." : "Start P2C Selection",
                 false,
                 () -> {
+                    if (SharedConfig.currentProxy == null || org.telegram.ui.ProxyListActivity.isAetherProxy(SharedConfig.currentProxy)) {
+                        new AlertDialog.Builder(getParentActivity())
+                                .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                                .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
+                                .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                                .show();
+                        return;
+                    }
                     if (!isRunning) {
                         ProxyDiscoveryPipeline.getInstance().runTournament(true);
                         BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "Starting P2C tournament...").show();
