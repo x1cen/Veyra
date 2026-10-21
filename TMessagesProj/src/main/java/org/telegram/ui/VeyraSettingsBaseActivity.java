@@ -118,7 +118,9 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                     if (isRightSide) {
                         boolean newVal = !row.getter.getAsBoolean();
                         row.setter.accept(newVal);
-                        ((TextCheckCell) view).setChecked(newVal);
+                        if (view instanceof TextCheckCell) {
+                            ((TextCheckCell) view).setChecked(row.getter.getAsBoolean());
+                        }
                         if (row.onToggled != null) {
                             row.onToggled.run();
                         }
@@ -128,7 +130,9 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                 } else {
                     boolean newVal = !row.getter.getAsBoolean();
                     row.setter.accept(newVal);
-                    ((TextCheckCell) view).setChecked(newVal);
+                    if (view instanceof TextCheckCell) {
+                        ((TextCheckCell) view).setChecked(row.getter.getAsBoolean());
+                    }
                     if (row.onToggled != null) {
                         row.onToggled.run();
                     }

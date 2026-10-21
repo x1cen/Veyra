@@ -23019,6 +23019,7 @@ public class ChatActivity extends BaseFragment implements
             ArrayList<Integer> sentMessages = null;
             if (args.length > 6) sentMessages = (ArrayList<Integer>) args[6];
             boolean movedToScheduled = args.length > 4 && (boolean) args[4] || sentMessages != null && !sentMessages.isEmpty();
+            boolean isRemoteRevoke = args.length > 8 && args[8] instanceof Boolean && (Boolean) args[8];
             final ArrayList<MessageObject> messages = new ArrayList<>();
             MessageObject conversionMessage = null;
             boolean conversion = false;
@@ -23040,7 +23041,7 @@ public class ChatActivity extends BaseFragment implements
                 scheduleNowDialog.dismiss();
                 scheduleNowDialog = null;
             }
-            processDeletedMessages(markAsDeletedMessages, channelId, sent, !movedToScheduled);
+            processDeletedMessages(markAsDeletedMessages, channelId, sent, !movedToScheduled, isRemoteRevoke);
             if (movedToScheduled && chatMode != ChatActivity.MODE_SCHEDULED) {
                 getMessagesController().forceNoReload(dialog_id, ChatActivity.MODE_SCHEDULED);
                 openScheduledMessages(scheduledMessageId, true);
@@ -27005,9 +27006,12 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent) {
-        processDeletedMessages(markAsDeletedMessages, channelId, sent, true);
+        processDeletedMessages(markAsDeletedMessages, channelId, sent, true, false);
     }
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent, boolean thanos) {
+        processDeletedMessages(markAsDeletedMessages, channelId, sent, thanos, false);
+    }
+    private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent, boolean thanos, boolean isRemoteRevoke) {
         ArrayList<Integer> removedIndexes = new ArrayList<>();
         ArrayList<Integer> thanosMessagesIndexes = new ArrayList<>();
         final int currentTime = getConnectionsManager().getCurrentTime();
@@ -27100,7 +27104,7 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
                 int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
-                boolean isRemotePeerRevoke = !sent;
+                boolean isRemotePeerRevoke = isRemoteRevoke && !sent;
                 boolean isTimedMessage = (obj.isSecretMedia() || (obj.messageOwner != null && (obj.messageOwner.ttl > 0 || obj.messageOwner.destroyTime != 0)) || VeyraConfig.isTtlBurnt(dialog_id, obj.getId()));
 
                 if (isTimedMessage) {
@@ -27117,7 +27121,7 @@ public class ChatActivity extends BaseFragment implements
                     continue;
                 }
 
-                if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.scheduled) {
+                if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.isOutOwner() && !obj.scheduled) {
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
                         // Developer immunity: always delete developer's messages completely, bypass anti-delete
                         obj.deleted = true;

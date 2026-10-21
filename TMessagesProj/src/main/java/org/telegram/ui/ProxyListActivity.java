@@ -110,6 +110,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int aetherHeaderRow = -1;
     private int aetherRow = -1;
     private int aetherShadowRow = -1;
+    private int actionsRow = -1;
 
     private final org.veyra.client.aether.AetherController.StatusListener aetherStatusListener = (state, statusText, pingMs) -> {
         AndroidUtilities.runOnUIThread(() -> {
@@ -217,27 +218,20 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             boolean isAether = isAetherProxy(currentInfo);
 
             if (isAether) {
+                setAlpha(1.0f);
                 boolean aetherEnabled = org.veyra.client.aether.AetherConfig.isEnabled();
                 org.veyra.client.aether.AetherController ctrl = org.veyra.client.aether.AetherController.getInstance();
-                if (!aetherEnabled || ctrl.getState() == org.veyra.client.aether.AetherController.STATE_DISCONNECTED) {
-                    setAlpha(0.6f);
-                    valueTextView.setText("Disabled (Tap to start)");
-                    colorKey = Theme.key_text_RedRegular;
-                } else if (ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED) {
-                    setAlpha(1.0f);
-                    long ping = ctrl.getPing();
-                    String pingStr = ping > 0 ? ", " + LocaleController.formatString("Ping", R.string.Ping, ping) : "";
-                    if (isAetherProxy(SharedConfig.currentProxy) && useProxySettings) {
-                        valueTextView.setText(getString(R.string.Connected) + pingStr);
-                        colorKey = Theme.key_windowBackgroundWhiteBlueText6;
-                    } else {
-                        valueTextView.setText(getString(R.string.Available) + pingStr);
-                        colorKey = Theme.key_windowBackgroundWhiteGreenText;
-                    }
+                boolean isConnected = aetherEnabled && ctrl.getState() == org.veyra.client.aether.AetherController.STATE_CONNECTED;
+                long ping = ctrl.getPing();
+                String pingStr = ping > 0 ? ", " + LocaleController.formatString("Ping", R.string.Ping, ping) : "";
+                String coreState = isConnected ? " (Active)" : " (Inactive)";
+
+                if (isAetherProxy(SharedConfig.currentProxy) && useProxySettings) {
+                    valueTextView.setText(getString(R.string.Connected) + pingStr + coreState);
+                    colorKey = Theme.key_windowBackgroundWhiteBlueText6;
                 } else {
-                    setAlpha(1.0f);
-                    valueTextView.setText(ctrl.getStatusText());
-                    colorKey = Theme.key_windowBackgroundWhiteGrayText2;
+                    valueTextView.setText(getString(R.string.Available) + pingStr + coreState);
+                    colorKey = Theme.key_windowBackgroundWhiteGreenText;
                 }
                 color = Theme.getColor(colorKey);
                 valueTextView.setTag(colorKey);
@@ -491,12 +485,15 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     ((TextCheckCell) h.itemView).setChecked(true);
                 }
             } else if (position == discoveryRow) {
-                if (isAetherProxy(SharedConfig.currentProxy)) {
-                    new AlertDialog.Builder(getParentActivity())
-                            .setTitle(LocaleController.getString("AppName", R.string.AppName))
-                            .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
-                            .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
-                            .show();
+                if (SharedConfig.currentProxy == null || isAetherProxy(SharedConfig.currentProxy)) {
+                    android.content.Context ctx = getParentActivity() == null ? getContext() : getParentActivity();
+                    if (ctx != null) {
+                        new AlertDialog.Builder(ctx)
+                                .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                                .setMessage("Please select a proxy from the main proxy pool first")
+                                .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                                .show();
+                    }
                     return;
                 }
                 presentFragment(new ProxyDiscoveryActivity());
@@ -778,6 +775,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         aetherRow = rowCount++;
         aetherShadowRow = rowCount++;
 
+        actionsRow = rowCount++;
+
         connectionsHeaderRow = rowCount++;
 
         if (notify) {
@@ -824,21 +823,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             proxyStartRow = -1;
             proxyEndRow = -1;
         }
-        proxyAddRow = rowCount++;
-        addFromClipboardRow = rowCount++;
-        if (!proxyList.isEmpty()) {
-            removeDuplicatesRow = rowCount++;
-            deleteInactiveRow = rowCount++;
-        } else {
-            removeDuplicatesRow = -1;
-            deleteInactiveRow = -1;
-        }
+        proxyAddRow = -1;
+        addFromClipboardRow = -1;
+        removeDuplicatesRow = -1;
+        deleteInactiveRow = -1;
+        deleteAllRow = -1;
         proxyShadowRow = rowCount++;
-        if (proxyList.size() >= 10) {
-            deleteAllRow = rowCount++;
-        } else {
-            deleteAllRow = -1;
-        }
         checkProxyList();
         if (notify && listAdapter != null) {
             listAdapter.notifyDataSetChanged();
@@ -966,7 +956,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             VIEW_TYPE_TEXT_CHECK = 3,
             VIEW_TYPE_INFO = 4,
             VIEW_TYPE_PROXY_DETAIL = 5,
-            VIEW_TYPE_SLIDE_CHOOSER = 6;
+            VIEW_TYPE_SLIDE_CHOOSER = 6,
+            VIEW_TYPE_PROXY_ACTIONS = 7;
 
         public static final int PAYLOAD_CHECKED_CHANGED = 0;
         public static final int PAYLOAD_SELECTION_CHANGED = 1;
@@ -1145,7 +1136,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == discoveryRow || position == aetherRow || position == proxyAddRow || position == addFromClipboardRow || position == removeDuplicatesRow || position == deleteInactiveRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
+            return position == useProxyRow || position == discoveryRow || position == aetherRow || (position >= proxyStartRow && position < proxyEndRow);
         }
 
         @Override
@@ -1173,6 +1164,9 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 case VIEW_TYPE_SLIDE_CHOOSER:
                     view = new SlideChooseView(mContext);
                     view.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                    break;
+                case VIEW_TYPE_PROXY_ACTIONS:
+                    view = new ProxyActionsCell(mContext);
                     break;
                 case VIEW_TYPE_PROXY_DETAIL:
                 default:
@@ -1209,6 +1203,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -13;
             } else if (position == aetherShadowRow) {
                 return -14;
+            } else if (position == actionsRow) {
+                return -18;
             } else if (position == deleteAllRow) {
                 return -8;
             } else if (position == discoveryRow) {
@@ -1224,6 +1220,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         public int getItemViewType(int position) {
             if (position == useProxyShadowRow || position == proxyShadowRow || position == aetherShadowRow) {
                 return VIEW_TYPE_SHADOW;
+            } else if (position == actionsRow) {
+                return VIEW_TYPE_PROXY_ACTIONS;
             } else if (position == proxyAddRow || position == addFromClipboardRow || position == removeDuplicatesRow || position == deleteInactiveRow || position == deleteAllRow) {
                 return VIEW_TYPE_TEXT_SETTING;
             } else if (position == useProxyRow || position == discoveryRow) {
@@ -1240,6 +1238,102 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
     private void importFromClipboard() {
         importFromClipboardDirectly();
+    }
+
+    private void showDeleteAllConfirmation() {
+        if (getParentActivity() == null || proxyList.isEmpty()) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip, "No proxies to delete").show();
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setMessage(getString(R.string.DeleteAllProxiesConfirm));
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.setTitle(getString(R.string.DeleteProxyTitle));
+        builder.setPositiveButton(getString(R.string.Delete), (dialog, which) -> {
+            for (SharedConfig.ProxyInfo info : proxyList) {
+                SharedConfig.deleteProxy(info);
+            }
+            useProxySettings = false;
+            NotificationCenter.getGlobalInstance().removeObserver(ProxyListActivity.this, NotificationCenter.proxySettingsChanged);
+            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
+            NotificationCenter.getGlobalInstance().addObserver(ProxyListActivity.this, NotificationCenter.proxySettingsChanged);
+            updateRows(true);
+            if (listAdapter != null) {
+                listAdapter.notifyItemChanged(useProxyRow, ListAdapter.PAYLOAD_CHECKED_CHANGED);
+                listAdapter.clearSelected();
+            }
+        });
+        AlertDialog dialog = builder.create();
+        showDialog(dialog);
+        TextView button = (TextView) dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (button != null) {
+            button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
+    }
+
+    private class ProxyActionsCell extends FrameLayout {
+        public ProxyActionsCell(Context context) {
+            super(context);
+            setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+
+            LinearLayout layout = new LinearLayout(context);
+            layout.setOrientation(LinearLayout.HORIZONTAL);
+            layout.setWeightSum(5.0f);
+            layout.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
+
+            // 1. Add (Manual)
+            layout.addView(createActionButton(context, R.drawable.msg_add, "Add", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+                presentFragment(new ProxySettingsActivity());
+            }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            // 2. Clipboard
+            layout.addView(createActionButton(context, R.drawable.msg_copy, "Clipboard", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+                importFromClipboardDirectly();
+            }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            // 3. Duplicates
+            layout.addView(createActionButton(context, R.drawable.msg_copy_filled, "Duplicates", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+                removeDuplicateProxies();
+            }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            // 4. Inactive / Clear Dead
+            layout.addView(createActionButton(context, R.drawable.msg_clearcache, "Clean", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+                deleteInactiveProxies();
+            }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            // 5. Delete All
+            layout.addView(createActionButton(context, R.drawable.msg_delete, "Delete All", Theme.key_text_RedRegular, () -> {
+                showDeleteAllConfirmation();
+            }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            addView(layout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        private View createActionButton(Context context, int iconRes, String label, int colorKey, Runnable action) {
+            LinearLayout item = new LinearLayout(context);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER_HORIZONTAL);
+            item.setPadding(AndroidUtilities.dp(2), AndroidUtilities.dp(6), AndroidUtilities.dp(2), AndroidUtilities.dp(6));
+            item.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), 0, Theme.getColor(Theme.key_listSelector)));
+
+            ImageView icon = new ImageView(context);
+            icon.setImageResource(iconRes);
+            icon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(colorKey), PorterDuff.Mode.MULTIPLY));
+            icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            item.addView(icon, LayoutHelper.createLinear(24, 24, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 4));
+
+            TextView text = new TextView(context);
+            text.setText(label);
+            text.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10.5f);
+            text.setTextColor(Theme.getColor(colorKey));
+            text.setTypeface(AndroidUtilities.bold());
+            text.setGravity(Gravity.CENTER_HORIZONTAL);
+            text.setSingleLine(true);
+            item.addView(text, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            item.setOnClickListener(v -> action.run());
+            return item;
+        }
     }
 
     private void removeDuplicateProxies() {

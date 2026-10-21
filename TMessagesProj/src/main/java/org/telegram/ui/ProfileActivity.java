@@ -4382,6 +4382,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return;
             }
             listView.stopScroll();
+            if (position == idRow) {
+                copyId(view);
+                return;
+            }
             if (position == affiliateRow) {
                 TLRPC.User user = getMessagesController().getUser(userId);
                 if (userInfo != null && userInfo.starref_program != null) {
@@ -7706,6 +7710,46 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             popupWindow.showAtLocation(getFragmentView(), 0, (int) px, (int) py);
             popupWindow.dimBehind();
             return true;
+        } else if (position == idRow) {
+            return copyId(view);
+        }
+        return false;
+    }
+
+    private boolean copyId(View view) {
+        long displayId = 0;
+        if (userId != 0) {
+            displayId = userId;
+        } else if (chatId != 0) {
+            displayId = chatId;
+        } else if (isTopic && topicId != 0) {
+            displayId = topicId;
+        } else if (dialogId != 0) {
+            displayId = Math.abs(dialogId);
+        } else {
+            displayId = getUserConfig().getClientUserId();
+        }
+        String idStr = null;
+        if (displayId != 0) {
+            idStr = String.valueOf(displayId);
+        } else if (view instanceof TextDetailCell) {
+            try {
+                CharSequence text = ((TextDetailCell) view).getTextView().getText();
+                if (!TextUtils.isEmpty(text)) {
+                    idStr = text.toString();
+                }
+            } catch (Exception ignore) {}
+        }
+        if (!TextUtils.isEmpty(idStr)) {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = android.content.ClipData.newPlainText("label", idStr);
+                clipboard.setPrimaryClip(clip);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+                return true;
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
         }
         return false;
     }
@@ -10581,6 +10625,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         infoEndRowEmpty = -1;
         phoneRow = -1;
         noteRow = -1;
+        idRow = -1;
         userInfoRow = -1;
         locationRow = -1;
         channelInfoRow = -1;
@@ -14518,7 +14563,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
                         position == addToGroupButtonRow || position == premiumRow || position == premiumGiftingRow ||
                         position == businessRow || position == liteModeRow || position == birthdayRow || position == channelRow ||
-                        position == starsRow || position == tonRow || position == linkedCommunityRow;
+                        position == starsRow || position == tonRow || position == linkedCommunityRow || position == idRow;
             }
             if (holder.itemView instanceof UserCell) {
                 UserCell userCell = (UserCell) holder.itemView;
