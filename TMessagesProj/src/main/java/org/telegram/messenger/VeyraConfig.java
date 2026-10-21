@@ -1086,6 +1086,25 @@ public class VeyraConfig {
         ttlBurnForSender = val;
         save("ttlBurnForSender", val);
     }
+
+    private static java.util.Set<String> burntMessagesSet;
+
+    public static boolean isTtlBurnt(long dialogId, int messageId) {
+        if (preferences == null) return false;
+        if (burntMessagesSet == null) {
+            burntMessagesSet = new java.util.HashSet<>(preferences.getStringSet("ttl_burnt_messages", new java.util.HashSet<>()));
+        }
+        return burntMessagesSet.contains(dialogId + "_" + messageId);
+    }
+
+    public static void markTtlBurnt(long dialogId, int messageId) {
+        if (preferences == null) return;
+        if (burntMessagesSet == null) {
+            burntMessagesSet = new java.util.HashSet<>(preferences.getStringSet("ttl_burnt_messages", new java.util.HashSet<>()));
+        }
+        burntMessagesSet.add(dialogId + "_" + messageId);
+        preferences.edit().putStringSet("ttl_burnt_messages", new java.util.HashSet<>(burntMessagesSet)).apply();
+    }
     public static void setCustomHeaderTitle(String title) {
         customHeaderTitle = title != null ? title.trim() : "";
         save("customHeaderTitle", customHeaderTitle);

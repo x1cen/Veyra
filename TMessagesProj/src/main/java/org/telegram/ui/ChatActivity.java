@@ -16251,6 +16251,8 @@ public class ChatActivity extends BaseFragment implements
                 } else {
                     getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
                 }
+                org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+                updateVisibleRows();
             }
         };
         if (readNow) {
@@ -34322,8 +34324,10 @@ public class ChatActivity extends BaseFragment implements
                         getMessagesController().markMessageAsRead2(dialog_id, selectedObject.getId(), null, ttl, 0, false);
                     }
                     selectedObject.messageOwner.media_unread = false;
+                    org.telegram.messenger.VeyraConfig.markTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
+                    updateVisibleRows();
                     try {
-                        BulletinFactory.of(this).createSimpleBulletin(R.drawable.filled_fire, LocaleController.getString("VeyraBurnedForSender", R.string.VeyraBurnedForSender)).show();
+                        BulletinFactory.of(this).createSimpleBulletin(R.drawable.filled_fire, LocaleController.getString("VeyraContentBurned", R.string.VeyraContentBurned)).show();
                     } catch (Exception ignore) {
                     }
                 }
@@ -47190,8 +47194,9 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                     icons.add(R.drawable.msg_download);
 
-                    if (!org.telegram.messenger.VeyraConfig.ttlBurnForSender && !selectedObject.isOut()) {
-                        items.add(LocaleController.getString("VeyraBurnForSender", R.string.VeyraBurnForSender));
+                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId()) || (!selectedObject.messageOwner.media_unread && selectedObject.messageOwner.destroyTime != 0);
+                    if (!isBurnt && !selectedObject.isOut()) {
+                        items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                         options.add(OPTION_BURN_FOR_SENDER);
                         icons.add(R.drawable.filled_fire);
                     }

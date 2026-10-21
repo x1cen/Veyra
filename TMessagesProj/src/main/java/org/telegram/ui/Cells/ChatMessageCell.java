@@ -18504,11 +18504,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSmallDateChat(currentMessageObject.realDate) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (currentMessageObject.realDate) * 1000);
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
-        } else if (deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+        } else if ((currentMessageObject.isSecretMedia() && (org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0))) || deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+            boolean isBurnt = currentMessageObject.isSecretMedia() && (org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0));
             boolean hasEdit = edited || (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get() && messageObject.messageOwner.edit_date != 0);
             boolean hasReaction = org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId());
             String label;
-            if (deleted && hasReaction) {
+            if (isBurnt) {
+                label = LocaleController.getString("VeyraBurntMessage", R.string.VeyraBurntMessage);
+            } else if (deleted && hasReaction) {
                 // Deleted + had reaction removed -> still deleted label (deleted takes precedence visually, but could be modified)
                 label = LocaleController.getString("DeletedMessage", R.string.DeletedMessage);
             } else if (hasEdit && hasReaction) {
@@ -18520,7 +18523,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 label = getString(R.string.EditedMessage);
             }
-            timeString = (!deleted && !hasReaction && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) ?
+            timeString = (!isBurnt && !deleted && !hasReaction && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) ?
                 LocaleController.formatPmEditedDate(currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date) :
                     (label + " " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000));
         } else if (currentMessageObject.isSaved && currentMessageObject.messageOwner.fwd_from != null && (currentMessageObject.messageOwner.fwd_from.date != 0 || currentMessageObject.messageOwner.fwd_from.saved_date != 0)) {
