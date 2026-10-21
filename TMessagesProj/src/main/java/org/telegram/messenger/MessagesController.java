@@ -8338,8 +8338,19 @@ public class MessagesController extends BaseController implements NotificationCe
             AndroidUtilities.runOnUIThread(() -> {
                 if (task != null) {
                     for (int a = 0, N = task.size(); a < N; a++) {
+                        long dialogId = task.keyAt(a);
                         ArrayList<Integer> mids = task.valueAt(a);
-                        deleteMessages(mids, null, null, task.keyAt(a), 0, true, 0, !mids.isEmpty() && mids.get(0) > 0);
+                        if (VeyraConfig.antiDelete) {
+                            if (mids != null) {
+                                for (int i = 0; i < mids.size(); i++) {
+                                    VeyraConfig.markTtlBurnt(dialogId, mids.get(i));
+                                }
+                                getNotificationCenter().postNotificationName(NotificationCenter.messagesReadContent, dialogId, mids);
+                                getNotificationCenter().postNotificationName(NotificationCenter.updateMessageMedia, dialogId);
+                            }
+                        } else {
+                            deleteMessages(mids, null, null, dialogId, 0, true, 0, !mids.isEmpty() && mids.get(0) > 0);
+                        }
                     }
                 }
                 if (taskMedia != null) {
@@ -8348,16 +8359,25 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int a = 0, N = taskMedia.size(); a < N; a++) {
                         long dialogId = taskMedia.keyAt(a);
                         ArrayList<Integer> mids = taskMedia.valueAt(a);
-                        if (checkViewer && viewerObject != null && viewerObject.currentAccount == currentAccount && viewerObject.getDialogId() == dialogId && mids.contains(viewerObject.getId())) {
-                            final int id = viewerObject.getId();
-                            mids.remove((Integer) id);
-                            viewerObject.forceExpired = true;
-                            final long taskId = createDeleteShowOnceTask(dialogId, id);
-                            SecretMediaViewer.getInstance().setOnClose(() -> doDeleteShowOnceTask(taskId, dialogId, id));
-                            getNotificationCenter().postNotificationName(NotificationCenter.updateMessageMedia, viewerObject.messageOwner);
+                        if (mids != null) {
+                            for (int i = 0; i < mids.size(); i++) {
+                                VeyraConfig.markTtlBurnt(dialogId, mids.get(i));
+                            }
                         }
-                        if (!mids.isEmpty()) {
-                            getMessagesStorage().emptyMessagesMedia(dialogId, mids);
+                        if (!VeyraConfig.antiDelete) {
+                            if (checkViewer && viewerObject != null && viewerObject.currentAccount == currentAccount && viewerObject.getDialogId() == dialogId && mids != null && mids.contains(viewerObject.getId())) {
+                                final int id = viewerObject.getId();
+                                mids.remove((Integer) id);
+                                viewerObject.forceExpired = true;
+                                final long taskId = createDeleteShowOnceTask(dialogId, id);
+                                SecretMediaViewer.getInstance().setOnClose(() -> doDeleteShowOnceTask(taskId, dialogId, id));
+                                getNotificationCenter().postNotificationName(NotificationCenter.updateMessageMedia, viewerObject.messageOwner);
+                            }
+                            if (mids != null && !mids.isEmpty()) {
+                                getMessagesStorage().emptyMessagesMedia(dialogId, mids);
+                            }
+                        } else {
+                            getNotificationCenter().postNotificationName(NotificationCenter.updateMessageMedia, dialogId);
                         }
                     }
                 }

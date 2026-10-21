@@ -4744,6 +4744,14 @@ public class MessagesStorage extends BaseController {
     }
 
     public void emptyMessagesMedia(long dialogId, ArrayList<Integer> mids) {
+        if (VeyraConfig.antiDelete) {
+            if (mids != null) {
+                for (int i = 0; i < mids.size(); i++) {
+                    VeyraConfig.markTtlBurnt(dialogId, mids.get(i));
+                }
+            }
+            return;
+        }
         storageQueue.postRunnable(() -> {
             SQLiteCursor cursor = null;
             SQLitePreparedStatement state = null;

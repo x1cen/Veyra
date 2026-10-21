@@ -6806,9 +6806,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 wasPinned != isPinned ||
                 newReply != lastReplyMessage ||
                 messageObject.translated != lastTranslated;
-        boolean isBurntState = messageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        boolean isBurntState = org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) ||
+                (messageObject.messageOwner != null && (messageObject.messageOwner.ttl > 0 || messageObject.isSecretMedia()) &&
+                 messageObject.messageOwner.destroyTime != 0 && messageObject.messageOwner.destroyTime <= ConnectionsManager.getInstance(currentAccount).getCurrentTime());
         boolean isDeletedState = messageObject.isVeyraOrAntiDeleted();
-        boolean veyraStateChanged = (isDeletedState != deleted) || (isBurntState != (currentMessageObject != null && currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(currentMessageObject.getDialogId(), currentMessageObject.getId())));
+        boolean veyraStateChanged = (isDeletedState != deleted) || (isBurntState != (currentMessageObject != null && (org.telegram.messenger.VeyraConfig.isTtlBurnt(currentMessageObject.getDialogId(), currentMessageObject.getId()) || (currentMessageObject.messageOwner != null && (currentMessageObject.messageOwner.ttl > 0 || currentMessageObject.isSecretMedia()) && currentMessageObject.messageOwner.destroyTime != 0 && currentMessageObject.messageOwner.destroyTime <= ConnectionsManager.getInstance(currentAccount).getCurrentTime()))));
         if (veyraStateChanged) {
             dataChanged = true;
             messageChanged = true;
@@ -18512,8 +18514,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSmallDateChat(currentMessageObject.realDate) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (currentMessageObject.realDate) * 1000);
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
-        } else if (deleted || (currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId())) || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
-            boolean isBurnt = currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        } else if (deleted || org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || (messageObject.messageOwner != null && (messageObject.messageOwner.ttl > 0 || messageObject.isSecretMedia()) && messageObject.messageOwner.destroyTime != 0 && messageObject.messageOwner.destroyTime <= ConnectionsManager.getInstance(currentAccount).getCurrentTime()) || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+            boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || (messageObject.messageOwner != null && (messageObject.messageOwner.ttl > 0 || messageObject.isSecretMedia()) && messageObject.messageOwner.destroyTime != 0 && messageObject.messageOwner.destroyTime <= ConnectionsManager.getInstance(currentAccount).getCurrentTime());
             boolean hasEdit = edited || (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get() && messageObject.messageOwner.edit_date != 0);
             boolean hasReaction = org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId());
             String label;
