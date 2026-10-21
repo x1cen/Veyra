@@ -63,9 +63,9 @@ public class VeyraConfig {
     public static boolean antiDelete = true;
     public static boolean antiDeletePrivate = true;
     public static boolean antiDeleteGroups = true;
-    public static boolean antiDeleteGroupsOnlyPrivate = true;
+    public static boolean antiDeleteGroupsOnlyPrivate = false;
     public static boolean antiDeleteChannels = true;
-    public static boolean antiDeleteChannelsOnlyPrivate = true;
+    public static boolean antiDeleteChannelsOnlyPrivate = false;
     public static boolean antiDeleteBots = false;
     public static boolean antiDeleteSecret = true;
     public static boolean ghostMode = true;
@@ -363,10 +363,10 @@ public class VeyraConfig {
     public static boolean ttlBurnForSender = true;
 
     // Ignore Owner / Admin in Groups & Channels (Recent Actions already log them)
-    public static boolean antiDeleteGroupsIgnoreOwner = true;
-    public static boolean antiDeleteGroupsIgnoreAdmin = true;
-    public static boolean antiDeleteChannelsIgnoreOwner = true;
-    public static boolean antiDeleteChannelsIgnoreAdmin = true;
+    public static boolean antiDeleteGroupsIgnoreOwner = false;
+    public static boolean antiDeleteGroupsIgnoreAdmin = false;
+    public static boolean antiDeleteChannelsIgnoreOwner = false;
+    public static boolean antiDeleteChannelsIgnoreAdmin = false;
 
     public static boolean editHistoryGroupsIgnoreOwner = true;
     public static boolean editHistoryGroupsIgnoreAdmin = true;
@@ -438,33 +438,23 @@ public class VeyraConfig {
     public static void loadConfig() {
         if (configLoaded) return;
         preferences = ApplicationLoader.applicationContext.getSharedPreferences("veyraconfig", 0);
-        if (!preferences.getBoolean("defaults_v2_applied", false)) {
+        if (!preferences.getBoolean("defaults_v3_applied", false)) {
             preferences.edit()
-                .putBoolean("defaults_v2_applied", true)
-                .putBoolean("antiDeleteGroupsOnlyPrivate", true)
-                .putBoolean("antiDeleteChannelsOnlyPrivate", true)
-                .putBoolean("antiDeleteGroupsIgnoreOwner", true)
-                .putBoolean("antiDeleteGroupsIgnoreAdmin", true)
-                .putBoolean("antiDeleteChannelsIgnoreOwner", true)
-                .putBoolean("antiDeleteChannelsIgnoreAdmin", true)
-                .putBoolean("editHistoryGroupsOnlyPrivate", true)
-                .putBoolean("editHistoryChannelsOnlyPrivate", true)
-                .putBoolean("editHistoryGroupsIgnoreOwner", true)
-                .putBoolean("editHistoryGroupsIgnoreAdmin", true)
-                .putBoolean("editHistoryChannelsIgnoreOwner", true)
-                .putBoolean("editHistoryChannelsIgnoreAdmin", true)
-                .putBoolean("reactionHistoryGroupsOnlyPrivate", true)
-                .putBoolean("reactionHistoryGroupsIgnoreOwner", true)
-                .putBoolean("reactionHistoryGroupsIgnoreAdmin", true)
-                .putBoolean("reactionHistoryChannels", false)
+                .putBoolean("defaults_v3_applied", true)
+                .putBoolean("antiDeleteGroupsOnlyPrivate", false)
+                .putBoolean("antiDeleteChannelsOnlyPrivate", false)
+                .putBoolean("antiDeleteGroupsIgnoreOwner", false)
+                .putBoolean("antiDeleteGroupsIgnoreAdmin", false)
+                .putBoolean("antiDeleteChannelsIgnoreOwner", false)
+                .putBoolean("antiDeleteChannelsIgnoreAdmin", false)
                 .apply();
         }
         antiDelete = preferences.getBoolean("antiDelete", true);
         antiDeletePrivate = preferences.getBoolean("antiDeletePrivate", true);
         antiDeleteGroups = preferences.getBoolean("antiDeleteGroups", true);
-        antiDeleteGroupsOnlyPrivate = preferences.getBoolean("antiDeleteGroupsOnlyPrivate", true);
+        antiDeleteGroupsOnlyPrivate = preferences.getBoolean("antiDeleteGroupsOnlyPrivate", false);
         antiDeleteChannels = preferences.getBoolean("antiDeleteChannels", true);
-        antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", true);
+        antiDeleteChannelsOnlyPrivate = preferences.getBoolean("antiDeleteChannelsOnlyPrivate", false);
         antiDeleteBots = preferences.getBoolean("antiDeleteBots", false);
         antiDeleteSecret = preferences.getBoolean("antiDeleteSecret", true);
         ghostMode = preferences.getBoolean("ghostMode", true);
@@ -513,10 +503,10 @@ public class VeyraConfig {
         reactionHistorySecret = preferences.getBoolean("reactionHistorySecret", true);
         ttlBurnForSender = preferences.getBoolean("ttlBurnForSender", true);
 
-        antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", true);
-        antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", true);
-        antiDeleteChannelsIgnoreOwner = preferences.getBoolean("antiDeleteChannelsIgnoreOwner", true);
-        antiDeleteChannelsIgnoreAdmin = preferences.getBoolean("antiDeleteChannelsIgnoreAdmin", true);
+        antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", false);
+        antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", false);
+        antiDeleteChannelsIgnoreOwner = preferences.getBoolean("antiDeleteChannelsIgnoreOwner", false);
+        antiDeleteChannelsIgnoreAdmin = preferences.getBoolean("antiDeleteChannelsIgnoreAdmin", false);
 
         editHistoryGroupsIgnoreOwner = preferences.getBoolean("editHistoryGroupsIgnoreOwner", true);
         editHistoryGroupsIgnoreAdmin = preferences.getBoolean("editHistoryGroupsIgnoreAdmin", true);
@@ -1113,7 +1103,27 @@ public class VeyraConfig {
         save("ttlBurnForSender", val);
     }
 
+    private static java.util.Set<String> viewedSecretMessagesSet;
     private static java.util.Set<String> burntMessagesSet;
+
+    public static boolean isSecretViewed(long dialogId, int messageId) {
+        if (preferences == null) return false;
+        if (viewedSecretMessagesSet == null) {
+            viewedSecretMessagesSet = new java.util.HashSet<>(preferences.getStringSet("veyra_viewed_secret", new java.util.HashSet<>()));
+        }
+        return viewedSecretMessagesSet.contains(dialogId + "_" + messageId);
+    }
+
+    public static void markSecretViewed(long dialogId, int messageId) {
+        if (preferences == null) return;
+        if (viewedSecretMessagesSet == null) {
+            viewedSecretMessagesSet = new java.util.HashSet<>(preferences.getStringSet("veyra_viewed_secret", new java.util.HashSet<>()));
+        }
+        String key = dialogId + "_" + messageId;
+        if (viewedSecretMessagesSet.contains(key)) return;
+        viewedSecretMessagesSet.add(key);
+        preferences.edit().putStringSet("veyra_viewed_secret", new java.util.HashSet<>(viewedSecretMessagesSet)).apply();
+    }
 
     public static boolean isTtlBurnt(long dialogId, int messageId) {
         if (preferences == null) return false;

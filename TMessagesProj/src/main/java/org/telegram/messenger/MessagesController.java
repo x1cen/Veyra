@@ -2346,7 +2346,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             ArrayList<MessageObject> oldMsgs = dialogMessage.get(key);
                             boolean oldMsgsDeleted = false;
                             for (int i = 0; oldMsgs != null && i < oldMsgs.size(); ++i) {
-                                if (oldMsgs.get(i) != null && oldMsgs.get(i).deleted) {
+                                if (oldMsgs.get(i) != null && (oldMsgs.get(i).deleted || oldMsgs.get(i).isVeyraOrAntiDeleted())) {
                                     oldMsgsDeleted = true;
                                     break;
                                 }
@@ -13785,7 +13785,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
                         boolean oldMsgsDeleted = false;
                         for (int i = 0; oldMsgs != null && i < oldMsgs.size(); ++i) {
-                            if (oldMsgs.get(i) != null && oldMsgs.get(i).deleted) {
+                            if (oldMsgs.get(i) != null && (oldMsgs.get(i).deleted || oldMsgs.get(i).isVeyraOrAntiDeleted())) {
                                 oldMsgsDeleted = true;
                                 break;
                             }
@@ -14353,7 +14353,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         ArrayList<MessageObject> oldMsgs = dialogMessage.get(key);
                         boolean oldMsgsDeleted = false;
                         for (int i = 0; oldMsgs != null && i < oldMsgs.size(); ++i) {
-                            if (oldMsgs.get(i) != null && oldMsgs.get(i).deleted) {
+                            if (oldMsgs.get(i) != null && (oldMsgs.get(i).deleted || oldMsgs.get(i).isVeyraOrAntiDeleted())) {
                                 oldMsgsDeleted = true;
                                 break;
                             }
@@ -17793,6 +17793,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             MessageObject obj = dialogObjs.get(i);
                             for (int b = 0, size2 = ids.size(); b < size2; b++) {
                                 if (obj != null && obj.getId() == ids.get(b)) {
+                                    obj.deleted = true;
                                     if (obj.messageOwner != null) {
                                         obj.messageOwner.isDeleted = true;
                                     }
@@ -17808,6 +17809,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             Integer id = ids.get(b);
                             MessageObject obj = dialogMessagesByIds.get(id);
                             if (obj != null) {
+                                obj.deleted = true;
                                 obj.messageOwner.isDeleted = true;
                                 obj.forceUpdate = true;
                                 obj.resetLayout();
@@ -17820,6 +17822,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 MessageObject obj = objs.get(i);
                                 for (int b = 0, size2 = ids.size(); b < size2; b++) {
                                     if (obj.getId() == ids.get(b)) {
+                                        obj.deleted = true;
                                         obj.messageOwner.isDeleted = true;
                                         obj.forceUpdate = true;
                                         obj.resetLayout();
@@ -21407,6 +21410,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 if (BuildVars.LOGS_ENABLED) {
                                     FileLog.d("mark messages " + obj.getId() + " deleted");
                                 }
+                                obj.deleted = true;
                                 obj.messageOwner.isDeleted = true;
                                 obj.forceUpdate = true;
                                 obj.resetLayout();
@@ -21423,6 +21427,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                     }
                                     for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                                         if (obj.getId() == arrayList.get(b)) {
+                                            obj.deleted = true;
                                             obj.messageOwner.isDeleted = true;
                                             obj.forceUpdate = true;
                                             obj.resetLayout();
