@@ -28,6 +28,7 @@ import com.google.android.play.core.integrity.IntegrityTokenResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.messenger.AccountInstance;
+import org.telegram.messenger.VeyraLoginConfig;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BaseController;
