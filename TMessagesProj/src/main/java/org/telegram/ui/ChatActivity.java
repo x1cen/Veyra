@@ -47414,7 +47414,7 @@ public class ChatActivity extends BaseFragment implements
                     icons.add(R.drawable.msg_download);
 
                     boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
-                    if (!isBurnt && !selectedObject.isOut()) {
+                    if (!isBurnt) {
                         items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                         options.add(OPTION_BURN_FOR_SENDER);
                         icons.add(R.drawable.filled_fire);
