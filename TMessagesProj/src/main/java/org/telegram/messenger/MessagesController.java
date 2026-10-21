@@ -17784,6 +17784,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                     if (obj.messageOwner != null) {
                                         obj.messageOwner.isDeleted = true;
                                     }
+                                    obj.forceUpdate = true;
+                                    obj.resetLayout();
                                     break;
                                 }
                             }
@@ -17795,6 +17797,8 @@ public class MessagesController extends BaseController implements NotificationCe
                             MessageObject obj = dialogMessagesByIds.get(id);
                             if (obj != null) {
                                 obj.messageOwner.isDeleted = true;
+                                obj.forceUpdate = true;
+                                obj.resetLayout();
                             }
                         }
                     } else {
@@ -17805,6 +17809,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                 for (int b = 0, size2 = ids.size(); b < size2; b++) {
                                     if (obj.getId() == ids.get(b)) {
                                         obj.messageOwner.isDeleted = true;
+                                        obj.forceUpdate = true;
+                                        obj.resetLayout();
                                         break;
                                     }
                                 }
@@ -21387,6 +21393,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                     FileLog.d("mark messages " + obj.getId() + " deleted");
                                 }
                                 obj.messageOwner.isDeleted = true;
+                                obj.forceUpdate = true;
+                                obj.resetLayout();
                             }
                         }
                     } else {
@@ -21401,6 +21409,8 @@ public class MessagesController extends BaseController implements NotificationCe
                                     for (int b = 0, size2 = arrayList.size(); b < size2; b++) {
                                         if (obj.getId() == arrayList.get(b)) {
                                             obj.messageOwner.isDeleted = true;
+                                            obj.forceUpdate = true;
+                                            obj.resetLayout();
                                             break;
                                         }
                                     }

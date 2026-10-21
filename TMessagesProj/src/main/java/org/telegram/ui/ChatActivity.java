@@ -16241,14 +16241,26 @@ public class ChatActivity extends BaseFragment implements
         }
         messageObject.messageOwner.media_unread = false;
         final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
+        final boolean delete = messageObject.messageOwner.ttl != 0x7FFFFFFF;
+        messageObject.messageOwner.destroyTime = ttl + getConnectionsManager().getCurrentTime();
+
+        // Bypass Ghost Mode filters so burn packet actually reaches Telegram server!
+        org.telegram.messenger.VeyraConfig.allowBurnMessage(messageObject.getId());
+        org.telegram.messenger.VeyraConfig.allowSendReadOnce(dialog_id);
+
         if (currentEncryptedChat != null) {
             getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl > 0 ? ttl : 1);
         } else {
-            getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
+            getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, delete);
             try {
                 TLRPC.TL_messages_readMessageContents req = new TLRPC.TL_messages_readMessageContents();
                 req.id.add(messageObject.getId());
-                getConnectionsManager().sendRequest(req, null);
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (error == null && response instanceof TLRPC.TL_messages_affectedMessages) {
+                        TLRPC.TL_messages_affectedMessages res = (TLRPC.TL_messages_affectedMessages) response;
+                        getMessagesController().processNewDifferenceParams(-1, res.pts, -1, res.pts_count);
+                    }
+                });
             } catch (Throwable ignore) {
             }
             try {
@@ -16257,6 +16269,8 @@ public class ChatActivity extends BaseFragment implements
             }
         }
         org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        messageObject.forceUpdate = true;
+        messageObject.resetLayout();
         if (chatAdapter != null) {
             int index = messages.indexOf(messageObject);
             if (index != -1) {
@@ -27077,6 +27091,8 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         obj.isVeyraDeleted = true;
                         obj.deleted = false;
+                        obj.forceUpdate = true;
+                        obj.resetLayout();
                         org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialog_id, obj.getId());
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
