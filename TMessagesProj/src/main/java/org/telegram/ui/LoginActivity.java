@@ -787,11 +787,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         sizeNotifierFrameLayout.addView(proxyButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 16, 0));
 
         deviceConfigButtonView = new ImageView(context);
-        deviceConfigButtonView.setImageResource(R.drawable.settings_devices);
+        deviceConfigButtonView.setImageResource(R.drawable.msg_mask);
         deviceConfigButtonView.setColorFilter(new android.graphics.PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), android.graphics.PorterDuff.Mode.MULTIPLY));
         deviceConfigButtonView.setScaleType(ImageView.ScaleType.CENTER);
         deviceConfigButtonView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
-        deviceConfigButtonView.setContentDescription("Connection & Device Parameters");
+        deviceConfigButtonView.setContentDescription("Device & Identity Spoofing");
         deviceConfigButtonView.setOnClickListener(v -> presentFragment(new VeyraLoginConfigActivity()));
         sizeNotifierFrameLayout.addView(deviceConfigButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 16, 0));
 
