@@ -27242,9 +27242,6 @@ public class ChatActivity extends BaseFragment implements
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
                         // Developer immunity: always delete developer's messages completely, bypass anti-delete
                         obj.deleted = true;
-                    } else if (obj.messageOwner != null && obj.messageOwner.out) {
-                        // This is our own outgoing message being deleted/edited — do NOT mark as deleted label
-                        obj.deleted = true;
                     } else {
                         obj.isVeyraDeleted = true;
                         obj.deleted = false;
