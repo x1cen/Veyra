@@ -136,6 +136,7 @@ public class VeyraAntiDelete {
 
     public static void saveDeletedMessageToDb(int account, long dialogId, int messageId) {
         addDeletedMessage(dialogId, messageId);
+        VeyraDatabase.getInstance(account).saveDeletedIndex(dialogId, messageId);
         org.telegram.messenger.MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
             try {
                 org.telegram.SQLite.SQLiteDatabase db = org.telegram.messenger.MessagesStorage.getInstance(account).getDatabase();
@@ -188,6 +189,9 @@ public class VeyraAntiDelete {
     }
 
     public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {
+        try {
+            VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).init(db);
+        } catch (Throwable ignored) {}
         if (db == null) return;
         try {
             db.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions (mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY (mid, uid));").stepThis().dispose();
@@ -214,6 +218,7 @@ public class VeyraAntiDelete {
     public static void clearAll() {
         peerDeletedChats.clear();
         deletedMessagesByDialog.clear();
+        VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).clearAll();
         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
             .getStorageQueue().postRunnable(() -> {
                 try {
@@ -230,6 +235,7 @@ public class VeyraAntiDelete {
      */
     public static void clearDialog(long dialogId) {
         removeChatDeleted(dialogId);
+        VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).deleteForDialog(dialogId);
         org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
             .getStorageQueue().postRunnable(() -> {
                 try {

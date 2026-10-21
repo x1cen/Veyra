@@ -363,6 +363,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
     private ImageView proxyButtonView;
     private ProxyDrawable proxyDrawable;
+    private ImageView deviceConfigButtonView;
 
     // Veyra: QR Login
     private ImageView qrLoginButtonView;
@@ -591,6 +592,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 marginLayoutParams = (MarginLayoutParams) proxyButtonView.getLayoutParams();
                 marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
 
+                if (deviceConfigButtonView != null) {
+                    marginLayoutParams = (MarginLayoutParams) deviceConfigButtonView.getLayoutParams();
+                    marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
+                }
+
                 marginLayoutParams = (MarginLayoutParams) radialProgressView.getLayoutParams();
                 marginLayoutParams.topMargin = AndroidUtilities.dp(16) + statusBarHeight;
 
@@ -777,7 +783,17 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         proxyButtonView.setOnClickListener(v -> presentFragment(new ProxyListActivity()));
         proxyButtonView.setAlpha(0f);
         proxyButtonView.setVisibility(View.GONE);
-        sizeNotifierFrameLayout.addView(proxyButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 16, 16, 16, 16));
+        sizeNotifierFrameLayout.addView(proxyButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 16, 0));
+
+        deviceConfigButtonView = new ImageView(context);
+        deviceConfigButtonView.setImageResource(R.drawable.settings_devices);
+        deviceConfigButtonView.setColorFilter(new android.graphics.PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), android.graphics.PorterDuff.Mode.MULTIPLY));
+        deviceConfigButtonView.setScaleType(ImageView.ScaleType.CENTER);
+        deviceConfigButtonView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
+        deviceConfigButtonView.setContentDescription("Connection & Device Parameters");
+        deviceConfigButtonView.setOnClickListener(v -> presentFragment(new VeyraLoginConfigActivity()));
+        sizeNotifierFrameLayout.addView(deviceConfigButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 16, 0));
+
         updateProxyButton(false, true);
 
         radialProgressView = new RadialProgressView(context);
@@ -3164,8 +3180,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 ConnectionsManager.getInstance(currentAccount).cleanup(false);
 
                 TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
-                sendCode.api_hash = BuildVars.APP_HASH;
-                sendCode.api_id = BuildVars.APP_ID;
+                sendCode.api_hash = VeyraLoginConfig.getApiHash();
+                sendCode.api_id = VeyraLoginConfig.getApiId();
                 sendCode.phone_number = phone;
                 sendCode.settings = settings;
                 req = sendCode;
@@ -8837,6 +8853,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (showProxyButtonDelayed != null) {
             AndroidUtilities.cancelRunOnUIThread(showProxyButtonDelayed);
             showProxyButtonDelayed = null;
+        }
+        if (deviceConfigButtonView != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) deviceConfigButtonView.getLayoutParams();
+            if (lp != null) {
+                lp.rightMargin = AndroidUtilities.dp(show ? 56 : 16);
+                deviceConfigButtonView.setLayoutParams(lp);
+            }
         }
         proxyButtonVisible = show;
         proxyButtonView.clearAnimation();
