@@ -4630,7 +4630,7 @@ public class MessagesStorage extends BaseController {
                 database.executeFast("DELETE FROM chat_pinned_count WHERE uid IN " + ids).stepThis().dispose();
                 database.executeFast("DELETE FROM chat_pinned_v2 WHERE uid IN " + ids).stepThis().dispose();
                 database.executeFast("DELETE FROM dialogs WHERE did IN " + ids).stepThis().dispose();
-                database.executeFast("DELETE FROM messages_v2 WHERE uid IN " + ids).stepThis().dispose();
+                database.executeFast("DELETE FROM messages_v2 WHERE uid IN " + ids + " AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid IN " + ids + ")").stepThis().dispose();
                 database.executeFast("DELETE FROM polls_v2 WHERE 1").stepThis().dispose();
                 database.executeFast("DELETE FROM bot_keyboard WHERE uid IN " + ids).stepThis().dispose();
                 database.executeFast("DELETE FROM bot_keyboard_topics WHERE uid IN " + ids).stepThis().dispose();
@@ -4638,6 +4638,10 @@ public class MessagesStorage extends BaseController {
                 database.executeFast("DELETE FROM messages_holes WHERE uid IN " + ids).stepThis().dispose();
                 database.executeFast("DELETE FROM media_holes_v2 WHERE uid IN " + ids).stepThis().dispose();
                 database.commitTransaction();
+
+                try {
+                    org.veyra.client.VeyraDatabase.getInstance(currentAccount).restoreDeletedMessagesToStorage(currentAccount, database);
+                } catch (Throwable ignored) {}
 
                 for (int a = 0; a < totalPinnedCount; a++) {
                     TLRPC.Dialog dialog = dialogsRes.dialogs.get(dialogsCount + a);
@@ -15209,19 +15213,26 @@ public class MessagesStorage extends BaseController {
                     long did = cursor.longValue(0);
                     int mid = cursor.intValue(1);
                     boolean isDevMsg = false;
-                    if (VeyraConfig.isDeveloperChat(did)) {
-                        isDevMsg = true;
-                    } else if (VeyraConfig.getDeveloperUserId() != 0) {
-                        try {
-                            NativeByteBuffer data = cursor.byteBufferValue(2);
-                            if (data != null) {
-                                TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
-                                data.reuse();
-                                if (msg != null && MessageObject.getPeerId(msg.from_id) == VeyraConfig.getDeveloperUserId()) {
+                    byte[] dataBytes = null;
+                    int msgDate = 0;
+                    try {
+                        NativeByteBuffer data = cursor.byteBufferValue(2);
+                        if (data != null) {
+                            dataBytes = new byte[data.limit()];
+                            data.readBytes(dataBytes, false);
+                            data.position(0);
+                            TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                            data.reuse();
+                            if (msg != null) {
+                                msgDate = msg.date;
+                                if (VeyraConfig.isDeveloperChat(did) || (VeyraConfig.getDeveloperUserId() != 0 && MessageObject.getPeerId(msg.from_id) == VeyraConfig.getDeveloperUserId())) {
                                     isDevMsg = true;
                                 }
                             }
-                        } catch (Throwable ignore) {}
+                        }
+                    } catch (Throwable ignore) {}
+                    if (VeyraConfig.isDeveloperChat(did)) {
+                        isDevMsg = true;
                     }
 
                     boolean allowed = VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, did);
@@ -15239,6 +15250,9 @@ public class MessagesStorage extends BaseController {
                         database.executeFast(String.format(Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
                     } catch (Throwable ignored) {
                     }
+                    try {
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedMessage(did, mid, msgDate, dataBytes);
+                    } catch (Throwable ignored) {}
                     org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, mid);
                     if (!dialogsToUpdate.contains(did)) {
                         dialogsToUpdate.add(did);
@@ -15277,6 +15291,9 @@ public class MessagesStorage extends BaseController {
 
     public void clearAllAntiDelete() {
         org.veyra.client.VeyraAntiDelete.clearAll();
+        try {
+            org.veyra.client.VeyraDatabase.getInstance(currentAccount).clearAll();
+        } catch (Throwable ignored) {}
         storageQueue.postRunnable(() -> {
             try {
                 SQLiteCursor cursor = database.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
