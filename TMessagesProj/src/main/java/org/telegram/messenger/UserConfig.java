@@ -369,7 +369,11 @@ public class UserConfig extends BaseController {
 
             String userEnc = preferences.getString("user_enc", null);
             if (userEnc != null) {
-                string = org.veyra.client.VeyraKeyStore.decryptString(userEnc);
+                try {
+                    string = org.veyra.client.VeyraKeyStore.decryptString(userEnc);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
             }
             if (string == null) {
                 string = preferences.getString("user", null);

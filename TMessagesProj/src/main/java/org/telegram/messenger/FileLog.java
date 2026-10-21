@@ -537,6 +537,10 @@ public class FileLog {
         }
         ensureInitied();
         e.printStackTrace();
+        try {
+            org.veyra.client.VeyraCrashHandler.logFatal(e);
+        } catch (Throwable ignore) {
+        }
         if (getInstance().streamWriter != null) {
             getInstance().logQueue.postRunnable(() -> {
                 try {

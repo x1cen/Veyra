@@ -81,6 +81,10 @@ public class ApplicationLoader extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
+        try {
+            org.veyra.client.VeyraCrashHandler.install();
+        } catch (Throwable ignore) {
+        }
     }
 
     public static ILocationServiceProvider getLocationServiceProvider() {
