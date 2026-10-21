@@ -151,6 +151,7 @@ public class VeyraAntiDelete {
     public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {
         if (db == null) return;
         try {
+            db.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions (mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY (mid, uid));").stepThis().dispose();
             org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
             while (cursor.next()) {
                 int mid = cursor.intValue(0);

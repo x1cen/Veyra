@@ -15223,7 +15223,10 @@ public class MessagesStorage extends BaseController {
                         continue;
                     }
 
-                    database.executeFast(String.format(Locale.US, "INSERT INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
+                    try {
+                        database.executeFast(String.format(Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions values (%d,%d,1);", mid, did)).stepThis().dispose();
+                    } catch (Throwable ignored) {
+                    }
                     org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, mid);
                     if (!dialogsToUpdate.contains(did)) {
                         dialogsToUpdate.add(did);

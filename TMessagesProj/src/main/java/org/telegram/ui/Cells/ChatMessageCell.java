@@ -18504,20 +18504,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSmallDateChat(currentMessageObject.realDate) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (currentMessageObject.realDate) * 1000);
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
-        } else if ((currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId())) || deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+        } else if (deleted || (currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId())) || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
             boolean isBurnt = currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId());
             boolean hasEdit = edited || (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get() && messageObject.messageOwner.edit_date != 0);
             boolean hasReaction = org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId());
             String label;
-            if (isBurnt) {
-                label = LocaleController.getString("VeyraBurntMessage", R.string.VeyraBurntMessage);
-            } else if (deleted && hasReaction) {
-                // Deleted + had reaction removed -> still deleted label (deleted takes precedence visually, but could be modified)
+            if (deleted) {
                 label = LocaleController.getString("DeletedMessage", R.string.DeletedMessage);
+            } else if (isBurnt) {
+                label = LocaleController.getString("VeyraBurntMessage", R.string.VeyraBurntMessage);
             } else if (hasEdit && hasReaction) {
                 label = LocaleController.getString("ModifiedMessage", R.string.ModifiedMessage);
-            } else if (deleted) {
-                label = LocaleController.getString("DeletedMessage", R.string.DeletedMessage);
             } else if (hasReaction) {
                 label = LocaleController.getString("ReactionMessage", R.string.ReactionMessage);
             } else {
