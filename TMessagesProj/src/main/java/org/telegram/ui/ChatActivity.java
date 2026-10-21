@@ -16257,6 +16257,12 @@ public class ChatActivity extends BaseFragment implements
             }
         }
         org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        if (chatAdapter != null) {
+            int index = messages.indexOf(messageObject);
+            if (index != -1) {
+                chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+            }
+        }
         updateVisibleRows();
     }
 
@@ -27065,6 +27071,9 @@ public class ChatActivity extends BaseFragment implements
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
                         // Developer immunity: always delete developer's messages completely, bypass anti-delete
                         obj.deleted = true;
+                    } else if (obj.isSecretMedia() && obj.isOut()) {
+                        // Outgoing timed messages follow normal upstream behavior: when peer views it, it gets deleted!
+                        obj.deleted = true;
                     } else {
                         obj.isVeyraDeleted = true;
                         obj.deleted = false;
@@ -27072,6 +27081,7 @@ public class ChatActivity extends BaseFragment implements
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                         }
+                        updateVisibleRows();
                         continue;
                     }
                 }
@@ -35688,6 +35698,7 @@ public class ChatActivity extends BaseFragment implements
                     cell.linkedChatId = chatInfo != null ? chatInfo.linked_chat_id : 0;
                     cell.setMessageObject(messageObject, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
                     cell.setIsUpdating(false);
+                    cell.invalidate();
                 }
                 if (cell != scrimView) {
                     cell.setCheckPressed(!disableSelection, disableSelection && selected);
@@ -47263,7 +47274,7 @@ public class ChatActivity extends BaseFragment implements
                 icons.add(R.drawable.msg_download);
             }
             boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
-            if (!isBurnt) {
+            if (!isBurnt && !selectedObject.isOut()) {
                 items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                 options.add(OPTION_BURN_FOR_SENDER);
                 icons.add(R.drawable.filled_fire);
