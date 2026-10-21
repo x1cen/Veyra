@@ -576,17 +576,41 @@ public class ConnectionsManager extends BaseController {
         if (org.telegram.messenger.VeyraConfig.isGhostHideReadContents() && (
                 object instanceof TLRPC.TL_messages_readMessageContents ||
                 object instanceof TLRPC.TL_channels_readMessageContents)) {
-            if (onComplete != null) {
-                TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
-                res.pts = 0;
-                res.pts_count = 0;
-                if (onCompleteTimestamp != null) {
-                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
-                } else {
-                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+            boolean allowBurn = false;
+            if (object instanceof TLRPC.TL_messages_readMessageContents) {
+                TLRPC.TL_messages_readMessageContents req = (TLRPC.TL_messages_readMessageContents) object;
+                if (req.id != null) {
+                    for (int a = 0; a < req.id.size(); a++) {
+                        if (org.telegram.messenger.VeyraConfig.consumeBurnAllowed(req.id.get(a))) {
+                            allowBurn = true;
+                            break;
+                        }
+                    }
+                }
+            } else if (object instanceof TLRPC.TL_channels_readMessageContents) {
+                TLRPC.TL_channels_readMessageContents req = (TLRPC.TL_channels_readMessageContents) object;
+                if (req.id != null) {
+                    for (int a = 0; a < req.id.size(); a++) {
+                        if (org.telegram.messenger.VeyraConfig.consumeBurnAllowed(req.id.get(a))) {
+                            allowBurn = true;
+                            break;
+                        }
+                    }
                 }
             }
-            return;
+            if (!allowBurn) {
+                if (onComplete != null) {
+                    TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
+                    res.pts = 0;
+                    res.pts_count = 0;
+                    if (onCompleteTimestamp != null) {
+                        AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                    } else {
+                        AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                    }
+                }
+                return;
+            }
         }
         if (object instanceof TLRPC.TL_messages_getMessagesViews) {
             TLRPC.TL_messages_getMessagesViews viewsReq = (TLRPC.TL_messages_getMessagesViews) object;

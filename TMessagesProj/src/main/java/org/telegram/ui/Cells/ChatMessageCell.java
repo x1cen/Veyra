@@ -6807,6 +6807,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 wasPinned != isPinned ||
                 newReply != lastReplyMessage ||
                 messageObject.translated != lastTranslated;
+        boolean isBurntState = messageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        boolean isDeletedState = messageObject.isVeyraOrAntiDeleted();
+        boolean veyraStateChanged = (isDeletedState != deleted) || (isBurntState != (currentMessageObject != null && currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(currentMessageObject.getDialogId(), currentMessageObject.getId())));
+        if (veyraStateChanged) {
+            dataChanged = true;
+            messageChanged = true;
+        }
         boolean groupChanged = groupedMessages != currentMessagesGroup;
         boolean pollChanged = false;
 

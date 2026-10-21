@@ -128,6 +128,20 @@ public class VeyraConfig {
         return false;
     }
 
+    private static final java.util.Set<Integer> allowedBurnMessageIds = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    public static void allowBurnMessage(int messageId) {
+        allowedBurnMessageIds.add(messageId);
+    }
+
+    public static boolean isBurnAllowed(int messageId) {
+        return allowedBurnMessageIds.contains(messageId);
+    }
+
+    public static boolean consumeBurnAllowed(int messageId) {
+        return allowedBurnMessageIds.remove(messageId);
+    }
+
     public static boolean isGhostExceptionDialog(long dialogId) {
         return ghostExceptionDialogs.contains(dialogId);
     }
