@@ -14,6 +14,9 @@ public class ProxyDiscoveryConfig {
     public static final int STRATEGY_BALANCED = 2;
 
     public static boolean isEnabled() {
+        if (org.telegram.messenger.SharedConfig.currentProxy == null || org.telegram.ui.ProxyListActivity.isAetherProxy(org.telegram.messenger.SharedConfig.currentProxy)) {
+            return false;
+        }
         return getPrefs().getBoolean("enabled", false);
     }
 

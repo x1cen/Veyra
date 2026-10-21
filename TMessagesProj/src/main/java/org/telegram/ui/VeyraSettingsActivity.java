@@ -95,12 +95,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
                 () -> presentFragment(new VeyraPrivacySettingsActivity())
         ));
-        r.add(VeyraSettingsRow.category(
-                IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
-                R.drawable.msg_mask,
-                "Device & Spoofing Parameters",
-                () -> presentFragment(new VeyraLoginConfigActivity())
-        ));
         r.add(VeyraSettingsRow.shadow());
 
         // Section 2: Chats & Appearance
@@ -138,6 +132,16 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 R.drawable.msg_fave,
                 LocaleController.getString("VeyraBackupRestore", R.string.VeyraBackupRestore),
                 () -> presentFragment(new VeyraBackupSettingsActivity())
+        ));
+        r.add(VeyraSettingsRow.shadow());
+
+        // Section 4: Info
+        r.add(VeyraSettingsRow.header("Info"));
+        r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
+                R.drawable.msg_mask,
+                "Device & Identity",
+                () -> presentFragment(new VeyraLoginConfigActivity())
         ));
         r.add(VeyraSettingsRow.shadow());
 

@@ -77,11 +77,14 @@ public class ProxyDiscoveryActivity extends VeyraSettingsBaseActivity {
                 ProxyDiscoveryConfig::isEnabled,
                 isChecked -> {
                     if (isChecked && (SharedConfig.currentProxy == null || org.telegram.ui.ProxyListActivity.isAetherProxy(SharedConfig.currentProxy))) {
-                        new AlertDialog.Builder(getParentActivity())
-                                .setTitle(LocaleController.getString("AppName", R.string.AppName))
-                                .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
-                                .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
-                                .show();
+                        android.content.Context ctx = getParentActivity() == null ? getContext() : getParentActivity();
+                        if (ctx != null) {
+                            new AlertDialog.Builder(ctx)
+                                    .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                                    .setMessage("Please select a proxy from the main proxy pool first")
+                                    .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                                    .show();
+                        }
                         reloadRows();
                         return;
                     }
@@ -100,11 +103,14 @@ public class ProxyDiscoveryActivity extends VeyraSettingsBaseActivity {
                 false,
                 () -> {
                     if (SharedConfig.currentProxy == null || org.telegram.ui.ProxyListActivity.isAetherProxy(SharedConfig.currentProxy)) {
-                        new AlertDialog.Builder(getParentActivity())
-                                .setTitle(LocaleController.getString("AppName", R.string.AppName))
-                                .setMessage("Auto Discovery only applies to regular Telegram proxies.\nPlease select a proxy from the main proxy pool first.")
-                                .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
-                                .show();
+                        android.content.Context ctx = getParentActivity() == null ? getContext() : getParentActivity();
+                        if (ctx != null) {
+                            new AlertDialog.Builder(ctx)
+                                    .setTitle(LocaleController.getString("AppName", R.string.AppName))
+                                    .setMessage("Please select a proxy from the main proxy pool first")
+                                    .setPositiveButton(LocaleController.getString("OK", R.string.OK), null)
+                                    .show();
+                        }
                         return;
                     }
                     if (!isRunning) {

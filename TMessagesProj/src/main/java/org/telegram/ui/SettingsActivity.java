@@ -762,10 +762,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (items.get(items.size() - 1).viewType != UniversalAdapter.VIEW_TYPE_SHADOW)
             items.add(UItem.asShadow(null));
 
+        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, "Veyra Settings"));
+        items.add(UItem.asShadow(null));
+
         items.add(UItem.asHeader("Veyra"));
-        items.add(SettingCell.Factory.of(100, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_settings, "Settings"));
         items.add(SettingCell.Factory.of(101, 0xFF24292E, 0xFF181717, R.drawable.msg_link, "GitHub"));
-        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, LocaleController.getString("VeyraCheckForUpdates", R.string.VeyraCheckForUpdates)));
+        items.add(SettingCell.Factory.of(103, 0xFF7A40F2, 0xFF4A00E0, R.drawable.msg_download, "Check Updates"));
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(getString(R.string.SettingsHelp)));

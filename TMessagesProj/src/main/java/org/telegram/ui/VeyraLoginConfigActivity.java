@@ -40,6 +40,7 @@ public class VeyraLoginConfigActivity extends BaseFragment {
 
     private static final int DONE_BUTTON = 1;
     private static final int RANDOM_BUTTON = 2;
+    private static final int RESET_BUTTON = 3;
 
     private EditTextBoldCursor deviceModelField;
     private EditTextBoldCursor systemVersionField;
@@ -86,15 +87,20 @@ public class VeyraLoginConfigActivity extends BaseFragment {
 
     @Override
     public View createView(Context context) {
+        boolean isReadOnly = UserConfig.getInstance(currentAccount).isClientActivated();
+
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("Device & Identity Spoofing");
+        actionBar.setTitle("Device & Identity");
         if (AndroidUtilities.isTablet()) {
             actionBar.setOccupyStatusBar(false);
         }
-        ActionBarMenu menu = actionBar.createMenu();
-        menu.addItem(RANDOM_BUTTON, R.drawable.menu_random);
-        menu.addItem(DONE_BUTTON, R.drawable.ic_ab_done);
+        if (!isReadOnly) {
+            ActionBarMenu menu = actionBar.createMenu();
+            menu.addItem(RESET_BUTTON, R.drawable.msg_retry);
+            menu.addItem(RANDOM_BUTTON, R.drawable.menu_random);
+            menu.addItem(DONE_BUTTON, R.drawable.ic_ab_done);
+        }
 
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
@@ -105,6 +111,8 @@ public class VeyraLoginConfigActivity extends BaseFragment {
                     save();
                 } else if (id == RANDOM_BUTTON) {
                     randomizeIdentity();
+                } else if (id == RESET_BUTTON) {
+                    showResetConfirmation();
                 }
             }
         });
