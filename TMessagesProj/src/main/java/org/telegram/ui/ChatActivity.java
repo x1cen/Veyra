@@ -47404,22 +47404,6 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_VIEW_IN_TOPIC);
                     icons.add(R.drawable.msg_viewintopic);
                 }
-                if (selectedObject != null && selectedObject.isSecretMedia()) {
-                    items.add(LocaleController.getString(R.string.SaveToGallery));
-                    options.add(OPTION_SAVE_TO_GALLERY);
-                    icons.add(R.drawable.msg_gallery);
-
-                    items.add(LocaleController.getString(R.string.SaveToDownloads));
-                    options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
-                    icons.add(R.drawable.msg_download);
-
-                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
-                    if (!isBurnt) {
-                        items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
-                        options.add(OPTION_BURN_FOR_SENDER);
-                        icons.add(R.drawable.filled_fire);
-                    }
-                }
                 if (type == 4 && VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
                     int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);
                     if (saveType == VeyraMediaSaver.SAVE_TYPE_GALLERY) {
@@ -47481,6 +47465,25 @@ public class ChatActivity extends BaseFragment implements
                 items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                 options.add(OPTION_DELETE);
                 icons.add(deleteIconRes);
+            }
+        }
+
+        if (selectedObject != null && selectedObject.isSecretMedia()) {
+            if (!options.contains(OPTION_SAVE_TO_GALLERY)) {
+                items.add(LocaleController.getString(R.string.SaveToGallery));
+                options.add(OPTION_SAVE_TO_GALLERY);
+                icons.add(R.drawable.msg_gallery);
+            }
+            if (!options.contains(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC)) {
+                items.add(LocaleController.getString(R.string.SaveToDownloads));
+                options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
+                icons.add(R.drawable.msg_download);
+            }
+            boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
+            if (!isBurnt) {
+                items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
+                options.add(OPTION_BURN_FOR_SENDER);
+                icons.add(R.drawable.filled_fire);
             }
         }
 
