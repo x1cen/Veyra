@@ -346,7 +346,7 @@ public class VeyraConfig {
     public static boolean reactionHistoryBots = false;
     public static boolean reactionHistorySecret = true;
 
-    public static boolean ttlBurnForSender = false;
+    public static boolean ttlBurnForSender = true;
 
     // Ignore Owner / Admin in Groups & Channels (Recent Actions already log them)
     public static boolean antiDeleteGroupsIgnoreOwner = true;
@@ -497,7 +497,7 @@ public class VeyraConfig {
         reactionHistoryChannelsOnlyPrivate = preferences.getBoolean("reactionHistoryChannelsOnlyPrivate", false);
         reactionHistoryBots = preferences.getBoolean("reactionHistoryBots", false);
         reactionHistorySecret = preferences.getBoolean("reactionHistorySecret", true);
-        ttlBurnForSender = preferences.getBoolean("ttlBurnForSender", false);
+        ttlBurnForSender = preferences.getBoolean("ttlBurnForSender", true);
 
         antiDeleteGroupsIgnoreOwner = preferences.getBoolean("antiDeleteGroupsIgnoreOwner", true);
         antiDeleteGroupsIgnoreAdmin = preferences.getBoolean("antiDeleteGroupsIgnoreAdmin", true);

@@ -508,7 +508,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         if (parentActivity == null || currentMessageObject == null) {
             return;
         }
-        if (toGallery && !currentMessageObject.isPhoto() && !isImageDocument(currentMessageObject)) {
+        if (toGallery && !currentMessageObject.isPhoto() && !isImageDocument(currentMessageObject) && !currentMessageObject.isVideo() && !currentMessageObject.isGif()) {
             saveCurrentMedia(false);
             return;
         }
@@ -546,9 +546,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
 
                 if (staged == null || !staged.isFile() || staged.length() <= 0) {
                     throw new IOException("ttl media file is not on disk");
-                }
-                if (AndroidUtilities.isInternalUri(Uri.fromFile(staged))) {
-                    throw new IOException("refusing internal cache path");
                 }
 
                 final int saveType = toGallery ? (video || gif ? 1 : 0) : 2;

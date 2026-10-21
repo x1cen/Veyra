@@ -11916,5 +11916,7 @@
 <string name="VeyraChatTypeSecretDesc">Enable or disable for encrypted secret chats</string>
 <string name="VeyraTtlBurnForSender">Burn Timed Media for Sender</string>
 <string name="VeyraTtlBurnForSenderDesc">Notify sender upon viewing so it deletes on their side, while keeping it permanently for you</string>
+<string name="VeyraBurnForSender">Burn for Sender</string>
+<string name="VeyraBurnedForSender">Message burned for sender</string>
 </resources>
 

@@ -1218,6 +1218,7 @@ public class ChatActivity extends BaseFragment implements
 
     public final static int OPTION_RETRY = 0;
     public final static int OPTION_HIDE_CONTENT = 500;
+    public final static int OPTION_BURN_FOR_SENDER = 505;
     public final static int OPTION_DELETE = 1;
     public final static int OPTION_FORWARD = 2;
     public final static int OPTION_COPY = 3;
@@ -34493,6 +34494,22 @@ public class ChatActivity extends BaseFragment implements
                 }
                 break;
             }
+            case OPTION_BURN_FOR_SENDER: {
+                if (selectedObject != null && selectedObject.messageOwner != null) {
+                    final int ttl = selectedObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : selectedObject.messageOwner.ttl;
+                    if (currentEncryptedChat != null) {
+                        getMessagesController().markMessageAsRead(dialog_id, selectedObject.messageOwner.random_id, ttl);
+                    } else {
+                        getMessagesController().markMessageAsRead2(dialog_id, selectedObject.getId(), null, ttl, 0, false);
+                    }
+                    selectedObject.messageOwner.media_unread = false;
+                    try {
+                        BulletinFactory.of(this).createSimpleBulletin(R.drawable.filled_fire, LocaleController.getString("VeyraBurnedForSender", R.string.VeyraBurnedForSender)).show();
+                    } catch (Exception ignore) {
+                    }
+                }
+                break;
+            }
             case OPTION_APPLY_LOCALIZATION_OR_THEME: {
                 File locFile = null;
                 if (!TextUtils.isEmpty(selectedObject.messageOwner.attachPath)) {
@@ -47386,6 +47403,12 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.SaveToDownloads));
                     options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                     icons.add(R.drawable.msg_download);
+
+                    if (!org.telegram.messenger.VeyraConfig.ttlBurnForSender && !selectedObject.isOut()) {
+                        items.add(LocaleController.getString("VeyraBurnForSender", R.string.VeyraBurnForSender));
+                        options.add(OPTION_BURN_FOR_SENDER);
+                        icons.add(R.drawable.filled_fire);
+                    }
                 }
                 if (type == 4 && VeyraMediaSaver.canSave(selectedObject, currentAccount)) {
                     int saveType = VeyraMediaSaver.getSaveOptionType(selectedObject);
