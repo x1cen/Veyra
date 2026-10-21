@@ -210,7 +210,7 @@ public class VeyraLoginConfigActivity extends BaseFragment {
 
         // ─── Action Buttons ───────────────────────────────────────────────────
         TextView randomBtn = new TextView(context);
-        randomBtn.setText("🎲 Randomize Identity");
+        randomBtn.setText("Randomize Identity");
         randomBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         randomBtn.setTypeface(AndroidUtilities.bold());
         randomBtn.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
@@ -252,29 +252,29 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         chipsContainer.setOrientation(LinearLayout.HORIZONTAL);
         hScroll.addView(chipsContainer);
 
-        addChip(context, chipsContainer, "🎲 Random Identity", 0x1A2CA5E0, Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), this::randomizeIdentity);
+        addChip(context, chipsContainer, "Randomize Identity", 0x1A2CA5E0, Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), this::randomizeIdentity);
 
-        addChip(context, chipsContainer, "👑 Official Telegram", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
-            applyPreset("Google Pixel 9 Pro", "SDK 35", "11.8.0 (5200)", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
+        addChip(context, chipsContainer, "Official Telegram", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
+            applyPreset("Google Pixel 9 Pro", "SDK 35", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Preset: Official Telegram").show();
         });
 
-        addChip(context, chipsContainer, "📱 Samsung S24 Ultra", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
-            applyPreset("samsung SM-S928B", "SDK 34", "11.8.0 (5200)", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
+        addChip(context, chipsContainer, "Samsung Galaxy S24 Ultra", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
+            applyPreset("samsung SM-S928B", "SDK 34", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Preset: Samsung Galaxy S24 Ultra").show();
         });
 
-        addChip(context, chipsContainer, "⚡ Pixel 9 Pro", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
-            applyPreset("Google Pixel 9 Pro", "SDK 35", "11.8.0 (5200)", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
+        addChip(context, chipsContainer, "Google Pixel 9 Pro", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
+            applyPreset("Google Pixel 9 Pro", "SDK 35", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Preset: Google Pixel 9 Pro").show();
         });
 
-        addChip(context, chipsContainer, "🚀 Xiaomi 14 Pro", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
-            applyPreset("Xiaomi 23116PN5BC", "SDK 34", "11.8.0 (5200)", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
+        addChip(context, chipsContainer, "Xiaomi 14 Pro", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader), () -> {
+            applyPreset("Xiaomi 23116PN5BC", "SDK 34", "com.android.vending", "org.telegram.messenger", 3, VeyraLoginConfig.OFFICIAL_CERT_FINGERPRINT);
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Preset: Xiaomi 14 Pro").show();
         });
 
-        addChip(context, chipsContainer, "🔄 My Real Device", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText), () -> {
+        addChip(context, chipsContainer, "Current Device Hardware", Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText), () -> {
             populateFieldsWithDefaults();
             BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Preset: Actual Hardware").show();
         });
@@ -294,10 +294,10 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         parent.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
     }
 
-    private void applyPreset(String model, String sysVer, String appVer, String installer, String pkgId, int perf, String cert) {
+    private void applyPreset(String model, String sysVer, String installer, String pkgId, int perf, String cert) {
         if (deviceModelField != null) deviceModelField.setText(model);
         if (systemVersionField != null) systemVersionField.setText(sysVer);
-        if (appVersionField != null) appVersionField.setText(appVer);
+        // appVersionField is never touched: user can edit manually if desired
         if (installerField != null) installerField.setText(installer);
         if (packageIdField != null) packageIdField.setText(pkgId);
         if (perfCatField != null) perfCatField.setText(String.valueOf(perf));
@@ -359,8 +359,9 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         EditTextBoldCursor field = new EditTextBoldCursor(context);
         field.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         field.setHint(hint);
-        // Explicitly set Telegram's authentic hint color (light gray, never black)
-        field.setHintColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+        int hintColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
+        field.setHintColor(hintColor);
+        field.setHintTextColor(hintColor);
         field.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         field.setBackground(null);
         field.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
