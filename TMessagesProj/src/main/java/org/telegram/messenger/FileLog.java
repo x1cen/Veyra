@@ -574,6 +574,19 @@ public class FileLog {
         }
     }
 
+    public static void flushImmediate(String message) {
+        try {
+            FileLog logger = getInstance();
+            if (logger != null && logger.streamWriter != null) {
+                if (message != null) {
+                    logger.streamWriter.write(message);
+                }
+                logger.streamWriter.flush();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     private static boolean needSent(Throwable e) {
         if (e instanceof InterruptedException || e instanceof MediaCodecVideoConvertor.ConversionCanceledException || e instanceof IgnoreSentException) {
             return false;

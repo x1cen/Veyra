@@ -101,11 +101,7 @@ public class VeyraCrashHandler implements Thread.UncaughtExceptionHandler {
 
         // 3. Flush FileLog if active
         try {
-            FileLog logger = FileLog.getInstance();
-            if (logger != null && logger.streamWriter != null) {
-                logger.streamWriter.write(fullReport);
-                logger.streamWriter.flush();
-            }
+            FileLog.flushImmediate(fullReport);
         } catch (Throwable ignored) {
         }
     }
