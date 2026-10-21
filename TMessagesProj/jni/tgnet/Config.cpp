@@ -15,21 +15,6 @@
 #include "FileLog.h"
 #include "BuffersStorage.h"
 
-#ifdef ANDROID
-#include <jni.h>
-extern JavaVM *javaVm;
-
-static JNIEnv *getConfigJNIEnv() {
-    JNIEnv *env = nullptr;
-    if (javaVm != nullptr) {
-        if (javaVm->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
-            javaVm->AttachCurrentThread(&env, nullptr);
-        }
-    }
-    return env;
-}
-#endif
-
 Config::Config(int32_t instance, std::string fileName) {
     instanceNum = instance;
     configPath = ConnectionsManager::getInstance(instanceNum).currentConfigPath + fileName;
@@ -58,41 +43,11 @@ NativeByteBuffer *Config::readConfig() {
         size_t bytesRead = fread(&size, sizeof(uint32_t), 1, file);
         if (LOGS_ENABLED) DEBUG_D("Config(%p, %s) load, size = %u, fileSize = %u", this, configPath.c_str(), size, (uint32_t) fileSize);
         if (bytesRead > 0 && size > 0 && (int32_t) size < fileSize) {
-            uint8_t *rawBytes = new uint8_t[size];
-            if (fread(rawBytes, sizeof(uint8_t), size, file) == size) {
-#ifdef ANDROID
-                JNIEnv *env = getConfigJNIEnv();
-                jbyteArray decryptedArray = nullptr;
-                if (env != nullptr) {
-                    jclass keyStoreClass = env->FindClass("org/veyra/client/VeyraKeyStore");
-                    if (keyStoreClass != nullptr) {
-                        jmethodID decryptMethod = env->GetStaticMethodID(keyStoreClass, "decryptSessionBytes", "([B)[B");
-                        if (decryptMethod != nullptr) {
-                            jbyteArray inputEncArray = env->NewByteArray(size);
-                            if (inputEncArray != nullptr) {
-                                env->SetByteArrayRegion(inputEncArray, 0, size, (jbyte *) rawBytes);
-                                decryptedArray = (jbyteArray) env->CallStaticObjectMethod(keyStoreClass, decryptMethod, inputEncArray);
-                                env->DeleteLocalRef(inputEncArray);
-                            }
-                        }
-                        env->DeleteLocalRef(keyStoreClass);
-                    }
-                }
-                if (decryptedArray != nullptr) {
-                    uint32_t decLen = (uint32_t) env->GetArrayLength(decryptedArray);
-                    buffer = BuffersStorage::getInstance().getFreeBuffer(decLen);
-                    env->GetByteArrayRegion(decryptedArray, 0, decLen, (jbyte *) buffer->bytes());
-                    env->DeleteLocalRef(decryptedArray);
-                } else {
-                    buffer = BuffersStorage::getInstance().getFreeBuffer(size);
-                    memcpy(buffer->bytes(), rawBytes, size);
-                }
-#else
-                buffer = BuffersStorage::getInstance().getFreeBuffer(size);
-                memcpy(buffer->bytes(), rawBytes, size);
-#endif
+            buffer = BuffersStorage::getInstance().getFreeBuffer(size);
+            if (fread(buffer->bytes(), sizeof(uint8_t), size, file) != size) {
+                buffer->reuse();
+                buffer = nullptr;
             }
-            delete[] rawBytes;
         }
         fclose(file);
     }
@@ -100,38 +55,7 @@ NativeByteBuffer *Config::readConfig() {
 }
 
 void Config::writeConfig(NativeByteBuffer *buffer) {
-    if (buffer == nullptr) return;
     if (LOGS_ENABLED) DEBUG_D("Config(%p, %s) start write config", this, configPath.c_str());
-
-    uint8_t *dataToWrite = buffer->bytes();
-    uint32_t size = buffer->position();
-
-#ifdef ANDROID
-    jbyteArray encryptedArray = nullptr;
-    jbyte *encBytes = nullptr;
-    JNIEnv *env = getConfigJNIEnv();
-    if (env != nullptr) {
-        jclass keyStoreClass = env->FindClass("org/veyra/client/VeyraKeyStore");
-        if (keyStoreClass != nullptr) {
-            jmethodID encryptMethod = env->GetStaticMethodID(keyStoreClass, "encryptSessionBytes", "([B)[B");
-            if (encryptMethod != nullptr) {
-                jbyteArray plainArray = env->NewByteArray(size);
-                if (plainArray != nullptr) {
-                    env->SetByteArrayRegion(plainArray, 0, size, (jbyte *) dataToWrite);
-                    encryptedArray = (jbyteArray) env->CallStaticObjectMethod(keyStoreClass, encryptMethod, plainArray);
-                    env->DeleteLocalRef(plainArray);
-                }
-            }
-            env->DeleteLocalRef(keyStoreClass);
-        }
-    }
-    if (encryptedArray != nullptr) {
-        size = (uint32_t) env->GetArrayLength(encryptedArray);
-        encBytes = env->GetByteArrayElements(encryptedArray, nullptr);
-        dataToWrite = (uint8_t *) encBytes;
-    }
-#endif
-
     FILE *file = fopen(configPath.c_str(), "rb");
     FILE *backup = fopen(backupPath.c_str(), "rb");
     bool error = false;
@@ -152,12 +76,6 @@ void Config::writeConfig(NativeByteBuffer *buffer) {
         }
     }
     if (error) {
-#ifdef ANDROID
-        if (encryptedArray != nullptr && encBytes != nullptr) {
-            env->ReleaseByteArrayElements(encryptedArray, encBytes, JNI_ABORT);
-            env->DeleteLocalRef(encryptedArray);
-        }
-#endif
         return;
     }
     file = fopen(configPath.c_str(), "wb");
@@ -166,16 +84,11 @@ void Config::writeConfig(NativeByteBuffer *buffer) {
     }
     if (file == nullptr) {
         if (LOGS_ENABLED) DEBUG_E("Config(%p, %s) unable to open file for writing", this, configPath.c_str());
-#ifdef ANDROID
-        if (encryptedArray != nullptr && encBytes != nullptr) {
-            env->ReleaseByteArrayElements(encryptedArray, encBytes, JNI_ABORT);
-            env->DeleteLocalRef(encryptedArray);
-        }
-#endif
         return;
     }
+    uint32_t size = buffer->position();
     if (fwrite(&size, sizeof(uint32_t), 1, file) == 1) {
-        if (fwrite(dataToWrite, sizeof(uint8_t), size, file) != size) {
+        if (fwrite(buffer->bytes(), sizeof(uint8_t), size, file) != size) {
             if (LOGS_ENABLED) DEBUG_E("Config(%p, %s) failed to write config data to file", this, configPath.c_str());
             error = true;
         }
@@ -202,14 +115,6 @@ void Config::writeConfig(NativeByteBuffer *buffer) {
         if (LOGS_ENABLED) DEBUG_E("Config(%p, %s) fclose failed", this, configPath.c_str());
         error = true;
     }
-
-#ifdef ANDROID
-    if (encryptedArray != nullptr && encBytes != nullptr) {
-        env->ReleaseByteArrayElements(encryptedArray, encBytes, JNI_ABORT);
-        env->DeleteLocalRef(encryptedArray);
-    }
-#endif
-
     if (error) {
         if (LOGS_ENABLED) DEBUG_E("Config(%p, %s) failed to write config", this, configPath.c_str());
         if (remove(configPath.c_str())) {
