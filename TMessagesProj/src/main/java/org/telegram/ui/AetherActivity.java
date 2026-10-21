@@ -106,6 +106,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 () -> promptTextInput("SOCKS5 Host", AetherConfig.getSocksHost(), "127.0.0.1", s -> {
                     if (!TextUtils.isEmpty(s)) {
                         AetherConfig.setSocksHost(s);
+                        ProxyListActivity.syncAetherProxySettings();
                     }
                 })
         ));
@@ -119,6 +120,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                         int p = Integer.parseInt(s);
                         if (p > 0 && p < 65536) {
                             AetherConfig.setSocksPort(p);
+                            ProxyListActivity.syncAetherProxySettings();
                         }
                     } catch (Exception ignore) {}
                 })

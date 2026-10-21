@@ -759,10 +759,10 @@ public class ConnectionsManager extends BaseController {
                         try {
                             resp = object.deserializeResponse(buff, magic, true);
                         } catch (Exception e2) {
-                            if (BuildVars.DEBUG_PRIVATE_VERSION) {
+                            if (BuildVars.DEBUG_PRIVATE_VERSION && !(e2 instanceof TLParseException)) {
                                 throw e2;
                             }
-                            FileLog.fatal(e2);
+                            FileLog.e(e2);
                             return;
                         }
                     } else if (errorText != null) {

@@ -99,7 +99,12 @@ public class ProxyDiscoveryPipeline {
 
     private void performP2CTournament() {
         SharedConfig.loadProxyList();
-        List<SharedConfig.ProxyInfo> candidates = new ArrayList<>(SharedConfig.proxyList);
+        List<SharedConfig.ProxyInfo> candidates = new ArrayList<>();
+        for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
+            if (!org.telegram.ui.ProxyListActivity.isAetherProxy(p)) {
+                candidates.add(p);
+            }
+        }
 
         if (candidates.isEmpty()) {
             notifyFinished(null, 0);
@@ -228,7 +233,12 @@ public class ProxyDiscoveryPipeline {
 
     public static void cleanInactiveProxiesSmart(CleanCallback callback) {
         new Thread(() -> {
-            List<SharedConfig.ProxyInfo> targets = new ArrayList<>(SharedConfig.proxyList);
+            List<SharedConfig.ProxyInfo> targets = new ArrayList<>();
+            for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
+                if (!org.telegram.ui.ProxyListActivity.isAetherProxy(p)) {
+                    targets.add(p);
+                }
+            }
             if (targets.isEmpty()) {
                 AndroidUtilities.runOnUIThread(() -> {
                     if (callback != null) callback.onFinished(0, 0);
