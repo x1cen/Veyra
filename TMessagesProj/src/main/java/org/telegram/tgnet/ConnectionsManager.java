@@ -251,8 +251,8 @@ public class ConnectionsManager extends BaseController {
             systemVersion = "SDK Unknown";
         }
         getUserConfig().loadConfig();
-        String pushString = getRegId();
-        String fingerprint = AndroidUtilities.getCertificateSHA256Fingerprint();
+        String pushString = VeyraLoginConfig.getDeviceToken(getRegId());
+        String fingerprint = VeyraLoginConfig.getCertFingerprint();
 
         int timezoneOffset = VeyraLoginConfig.getTzOffset();
         SharedPreferences mainPreferences;
