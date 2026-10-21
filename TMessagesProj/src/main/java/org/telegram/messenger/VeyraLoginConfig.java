@@ -347,14 +347,14 @@ public final class VeyraLoginConfig {
 
         // Refresh underlying ConnectionsManager
         try {
-            ConnectionsManager.getInstance(currentAccount).initPushConnection();
+            ConnectionsManager.getInstance(currentAccount).checkConnection();
         } catch (Throwable ignored) {}
     }
 
     public static void resetToDefault(int currentAccount) {
         getPrefs().edit().clear().commit();
         try {
-            ConnectionsManager.getInstance(currentAccount).initPushConnection();
+            ConnectionsManager.getInstance(currentAccount).checkConnection();
         } catch (Throwable ignored) {}
     }
 }
