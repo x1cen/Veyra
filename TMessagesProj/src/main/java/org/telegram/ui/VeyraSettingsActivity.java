@@ -95,6 +95,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 LocaleController.getString("VeyraPrivacySecurity", R.string.VeyraPrivacySecurity),
                 () -> presentFragment(new VeyraPrivacySettingsActivity())
         ));
+        r.add(VeyraSettingsRow.category(
+                IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
+                R.drawable.settings_devices,
+                "Device & Spoofing Parameters",
+                () -> presentFragment(new VeyraLoginConfigActivity())
+        ));
         r.add(VeyraSettingsRow.shadow());
 
         // Section 2: Chats & Appearance

@@ -404,7 +404,7 @@ public final class VeyraLoginConfig {
         editor.commit();
 
         try {
-            ConnectionsManager.getInstance(currentAccount).checkConnection();
+            ConnectionsManager.getInstance(currentAccount).applyDeviceSettings();
         } catch (Throwable ignored) {}
     }
 
@@ -419,7 +419,7 @@ public final class VeyraLoginConfig {
     public static void resetToDefault(int currentAccount) {
         getPrefs().edit().clear().commit();
         try {
-            ConnectionsManager.getInstance(currentAccount).checkConnection();
+            ConnectionsManager.getInstance(currentAccount).applyDeviceSettings();
         } catch (Throwable ignored) {}
     }
 }
