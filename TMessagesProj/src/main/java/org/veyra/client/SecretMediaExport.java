@@ -39,29 +39,99 @@ public final class SecretMediaExport implements AutoCloseable {
             throw new IOException("no message");
         }
 
-        if (TextExists(message.messageOwner.attachPath)) {
-            File attach = new File(message.messageOwner.attachPath);
-            if (attach.isFile()) {
-                return new SecretMediaExport(attach, false);
+        File found = findMediaFile(account, message);
+        if (found != null && found.isFile() && found.length() > 0) {
+            if (!found.getName().endsWith(".enc")) {
+                return new SecretMediaExport(found, false);
             }
-        }
-
-        File plain = FileLoader.getInstance(account).getPathToMessage(message.messageOwner);
-        if (plain != null && plain.isFile()) {
-            return new SecretMediaExport(plain, false);
-        }
-
-        if (plain != null) {
-            File enc = new File(plain.getAbsolutePath() + ".enc");
-            File key = new File(FileLoader.getInternalCacheDir(), plain.getName() + ".enc.key");
-            if (enc.isFile() && key.isFile()) {
-                File tmp = File.createTempFile("veyra_ttl_", "." + extension(message, plain), FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
-                decryptCtrCopy(enc, key, tmp);
+            File keyFile = findKeyFile(found);
+            if (keyFile != null && keyFile.isFile()) {
+                File tmp = File.createTempFile("veyra_ttl_", "." + extension(message, found), FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
+                decryptCtrCopy(found, keyFile, tmp);
                 return new SecretMediaExport(tmp, true);
             }
         }
 
         throw new IOException("ttl media file is not on disk");
+    }
+
+    private static File findMediaFile(int account, MessageObject message) {
+        if (!TextUtils.isEmpty(message.messageOwner.attachPath)) {
+            File attach = new File(message.messageOwner.attachPath);
+            if (attach.isFile() && attach.length() > 0) return attach;
+            File enc = new File(message.messageOwner.attachPath + ".enc");
+            if (enc.isFile() && enc.length() > 0) return enc;
+        }
+
+        File plain = FileLoader.getInstance(account).getPathToMessage(message.messageOwner);
+        if (plain != null) {
+            if (plain.isFile() && plain.length() > 0) return plain;
+            File enc = new File(plain.getAbsolutePath() + ".enc");
+            if (enc.isFile() && enc.length() > 0) return enc;
+
+            File cacheEnc = new File(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE), plain.getName() + ".enc");
+            if (cacheEnc.isFile() && cacheEnc.length() > 0) return cacheEnc;
+
+            File cachePlain = new File(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE), plain.getName());
+            if (cachePlain.isFile() && cachePlain.length() > 0) return cachePlain;
+        }
+
+        File cachePath = FileLoader.getInstance(account).getPathToMessage(message.messageOwner, true, false);
+        if (cachePath != null) {
+            if (cachePath.isFile() && cachePath.length() > 0) return cachePath;
+            File enc = new File(cachePath.getAbsolutePath() + ".enc");
+            if (enc.isFile() && enc.length() > 0) return enc;
+        }
+
+        if (message.isPhoto() && message.photoThumbs != null) {
+            for (int i = 0; i < message.photoThumbs.size(); i++) {
+                TLRPC.PhotoSize size = message.photoThumbs.get(i);
+                File f = FileLoader.getInstance(account).getPathToAttach(size, null, true, false);
+                if (f != null) {
+                    if (f.isFile() && f.length() > 0) return f;
+                    File enc = new File(f.getAbsolutePath() + ".enc");
+                    if (enc.isFile() && enc.length() > 0) return enc;
+                }
+            }
+        }
+
+        if (message.getDocument() != null) {
+            File f = FileLoader.getInstance(account).getPathToAttach(message.getDocument(), null, true, false);
+            if (f != null) {
+                if (f.isFile() && f.length() > 0) return f;
+                File enc = new File(f.getAbsolutePath() + ".enc");
+                if (enc.isFile() && enc.length() > 0) return enc;
+            }
+        }
+        return null;
+    }
+
+    private static File findKeyFile(File mediaFile) {
+        if (mediaFile == null) return null;
+        String name = mediaFile.getName();
+        File internalDir = FileLoader.getInternalCacheDir();
+
+        File k1 = new File(internalDir, name + ".key");
+        if (k1.isFile() && k1.length() >= 48) return k1;
+
+        if (name.endsWith(".enc")) {
+            String withoutEnc = name.substring(0, name.length() - 4);
+            File k2 = new File(internalDir, withoutEnc + ".key");
+            if (k2.isFile() && k2.length() >= 48) return k2;
+            File k3 = new File(internalDir, withoutEnc + ".enc.key");
+            if (k3.isFile() && k3.length() >= 48) return k3;
+        }
+
+        String prefix = name.contains(".") ? name.substring(0, name.indexOf('.')) : name;
+        File[] files = internalDir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.getName().startsWith(prefix) && f.getName().endsWith(".key") && f.length() >= 48) {
+                    return f;
+                }
+            }
+        }
+        return null;
     }
 
     private static void decryptCtrCopy(File enc, File keyFile, File out) throws IOException {
