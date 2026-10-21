@@ -227,7 +227,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     setAlpha(1.0f);
                     long ping = ctrl.getPing();
                     String pingStr = ping > 0 ? ", " + LocaleController.formatString("Ping", R.string.Ping, ping) : "";
-                    if (SharedConfig.currentProxy == currentInfo && useProxySettings) {
+                    if (isAetherProxy(SharedConfig.currentProxy) && useProxySettings) {
                         valueTextView.setText(getString(R.string.Connected) + pingStr);
                         colorKey = Theme.key_windowBackgroundWhiteBlueText6;
                     } else {
@@ -728,7 +728,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         int activePort = org.veyra.client.aether.AetherController.getInstance().getActivePort();
         String addr = p.settings.getAddress();
         int pPort = p.settings.getPort();
-        return (host.equals(addr) || "127.0.0.1".equals(addr)) && (pPort == port || pPort == activePort);
+        return (java.util.Objects.equals(host, addr) || "127.0.0.1".equals(addr)) && (pPort == port || pPort == activePort);
     }
 
     public static SharedConfig.ProxyInfo getAetherProxy() {
@@ -1073,7 +1073,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     if (position == aetherRow) {
                         SharedConfig.ProxyInfo info = getAetherProxy();
                         cell.setProxy(info);
-                        cell.setChecked(SharedConfig.currentProxy == info && useProxySettings);
+                        cell.setChecked(isAetherProxy(SharedConfig.currentProxy) && useProxySettings);
                         cell.setItemSelected(false, false);
                         cell.setSelectionEnabled(false, false);
                     } else if (position >= proxyStartRow && position < proxyEndRow) {
