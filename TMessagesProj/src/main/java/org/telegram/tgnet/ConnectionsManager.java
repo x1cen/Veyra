@@ -128,6 +128,8 @@ public class ConnectionsManager extends BaseController {
     private long lastPauseTime = System.currentTimeMillis();
     private boolean appPaused = true;
     private boolean isUpdating;
+    private String lastConfigPath;
+    private boolean lastEnablePushConnection;
     private int connectionState;
     private AtomicInteger lastRequestToken = new AtomicInteger(1);
     private int appResumeCount;
@@ -1011,6 +1013,8 @@ public class ConnectionsManager extends BaseController {
         installer = VeyraLoginConfig.getInstaller();
         packageId = VeyraLoginConfig.getPackageId();
         int perfCat = VeyraLoginConfig.getPerfCat();
+        lastConfigPath = configPath;
+        lastEnablePushConnection = enablePushConnection;
         native_init(currentAccount, version, layer, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, logPath, regId, cFingerprint, installer, packageId, timezoneOffset, userId, userPremium, enablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), perfCat);
         checkConnection();
     }
@@ -1029,8 +1033,9 @@ public class ConnectionsManager extends BaseController {
             int apiId = VeyraLoginConfig.getApiId();
             String pushString = VeyraLoginConfig.getDeviceToken(getRegId());
             String fingerprint = VeyraLoginConfig.getCertFingerprint();
+            String cfgPath = lastConfigPath != null ? lastConfigPath : (ApplicationLoader.getFilesDirFixed() != null ? ApplicationLoader.getFilesDirFixed().toString() : "");
 
-            native_init(currentAccount, SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, installer, packageId, timezoneOffset, getUserConfig().getClientUserId(), getUserConfig().getCurrentUser() != null && getUserConfig().getCurrentUser().premium, enablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), perfCat);
+            native_init(currentAccount, SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, cfgPath, FileLog.getNetworkLogPath(), pushString, fingerprint, installer, packageId, timezoneOffset, getUserConfig().getClientUserId(), getUserConfig().getCurrentUser() != null && getUserConfig().getCurrentUser().premium, lastEnablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), perfCat);
             checkConnection();
         } catch (Throwable e) {
             FileLog.e(e);
