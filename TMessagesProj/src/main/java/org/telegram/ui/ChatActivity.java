@@ -16370,8 +16370,8 @@ public class ChatActivity extends BaseFragment implements
         }
         messageObject.messageOwner.media_unread = false;
         final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
-        final boolean delete = messageObject.messageOwner.ttl != 0x7FFFFFFF;
-        messageObject.messageOwner.destroyTime = ttl + getConnectionsManager().getCurrentTime();
+        final boolean delete = false; // Never schedule local deletion in Veyra!
+        messageObject.messageOwner.destroyTime = getConnectionsManager().getCurrentTime(); // Immediate expiration for burnt status
 
         // Bypass Ghost Mode filters so burn packet actually reaches Telegram server!
         org.telegram.messenger.VeyraConfig.allowBurnMessage(messageObject.getId());
@@ -16380,7 +16380,7 @@ public class ChatActivity extends BaseFragment implements
         if (currentEncryptedChat != null) {
             getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl > 0 ? ttl : 1);
         } else {
-            getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, delete);
+            getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
             try {
                 TLRPC.TL_messages_readMessageContents req = new TLRPC.TL_messages_readMessageContents();
                 req.id.add(messageObject.getId());
@@ -27278,13 +27278,25 @@ public class ChatActivity extends BaseFragment implements
                 }
                 int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
                 boolean isRemotePeerRevoke = !sent;
+                boolean isTimedMessage = (obj.isSecretMedia() || (obj.messageOwner != null && (obj.messageOwner.ttl > 0 || obj.messageOwner.destroyTime != 0)) || VeyraConfig.isTtlBurnt(dialog_id, obj.getId()));
+
+                if (isTimedMessage) {
+                    VeyraConfig.markTtlBurnt(dialog_id, obj.getId());
+                    obj.isVeyraDeleted = false;
+                    obj.deleted = false;
+                    obj.forceUpdate = true;
+                    obj.resetLayout();
+                    org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, dialog_id, obj.getId());
+                    if (index != -1 && chatAdapter != null) {
+                        chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+                    }
+                    updateVisibleRows();
+                    continue;
+                }
 
                 if (VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(dialog_id) && isRemotePeerRevoke && !obj.scheduled) {
                     if (VeyraConfig.isDeveloperMessage(obj) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
                         // Developer immunity: always delete developer's messages completely, bypass anti-delete
-                        obj.deleted = true;
-                    } else if (obj.isSecretMedia() && obj.isOut()) {
-                        // Outgoing timed messages follow normal upstream behavior: when peer views it, it gets deleted!
                         obj.deleted = true;
                     } else {
                         obj.isVeyraDeleted = true;
