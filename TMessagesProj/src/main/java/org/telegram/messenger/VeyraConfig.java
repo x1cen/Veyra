@@ -1080,6 +1080,18 @@ public class VeyraConfig {
     public static void setBlockScreenCapture(boolean val) {
         blockScreenCapture = val;
         save("blockScreenCapture", val);
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                if (org.telegram.ui.LaunchActivity.instance != null) {
+                    if (val) {
+                        org.telegram.ui.LaunchActivity.instance.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+                    } else {
+                        org.telegram.ui.LaunchActivity.instance.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        });
     }
 
     public static void setTtlBurnForSender(boolean val) {

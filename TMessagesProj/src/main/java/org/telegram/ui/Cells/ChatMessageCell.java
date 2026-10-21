@@ -18504,8 +18504,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSmallDateChat(currentMessageObject.realDate) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (currentMessageObject.realDate) * 1000);
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDayVeyra().format((long) (messageObject.messageOwner.date) * 1000);
-        } else if ((currentMessageObject.isSecretMedia() && (org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || !messageObject.messageOwner.media_unread || messageObject.messageOwner.destroyTime != 0)) || deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
-            boolean isBurnt = currentMessageObject.isSecretMedia() && (org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId()) || !messageObject.messageOwner.media_unread || messageObject.messageOwner.destroyTime != 0);
+        } else if ((currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId())) || deleted || edited || org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId())) {
+            boolean isBurnt = currentMessageObject.isSecretMedia() && org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId());
             boolean hasEdit = edited || (!deleted && AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get() && messageObject.messageOwner.edit_date != 0);
             boolean hasReaction = org.veyra.client.VeyraEditHistoryManager.hasReactionHistory(messageObject.getDialogId(), messageObject.getId());
             String label;
