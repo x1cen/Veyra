@@ -2,6 +2,8 @@
 
 package org.veyra.client;
 
+import android.text.TextUtils;
+
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.Utilities;
