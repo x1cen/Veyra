@@ -353,12 +353,7 @@ public class AetherController {
                 boolean forceFragment = false;
 
                 if (requestedProto == AetherConfig.PROTOCOL_AUTO) {
-                    updateState(STATE_STARTING, "Optimizing for network...", -1);
-                    // On Iran networks: Primary strategy is MASQUE over HTTP/2 + TLS Fragmentation
-                    effectiveProto = AetherConfig.PROTOCOL_MASQUE;
-                    forceH2 = true;
-                    forceFragment = true;
-                    appendLog("[smart-auto] Target network: Iran / DPI active -> selecting MASQUE HTTP/2 (TCP 443) + TLS Fragmentation");
+                    effectiveProto = AetherConfig.PROTOCOL_GOOL;
                 }
 
                 List<String> cmd = new ArrayList<>();

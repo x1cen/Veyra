@@ -175,16 +175,13 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         // 3. Protocol Selection & Obfuscation
         r.add(VeyraSettingsRow.header("Protocol & Obfuscation"));
         int proto = AetherConfig.getProtocol();
-        // Consistent with reference: Smart = Smart, not a full phrase
         String protoStr;
-        if (proto == AetherConfig.PROTOCOL_AUTO) {
-            protoStr = "Smart (Auto)";
+        if (proto == AetherConfig.PROTOCOL_GOOL) {
+            protoStr = "WARP×2 (Gool)";
         } else if (proto == AetherConfig.PROTOCOL_WIREGUARD) {
             protoStr = "WireGuard";
-        } else if (proto == AetherConfig.PROTOCOL_GOOL) {
-            protoStr = "WARP×2";
         } else if (proto == AetherConfig.PROTOCOL_MIM) {
-            protoStr = "MASQUE×2";
+            protoStr = "MASQUE×2 (MIM)";
         } else {
             protoStr = "MASQUE";
         }
@@ -196,7 +193,82 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 this::showProtocolPicker
         ));
 
-        if (proto == AetherConfig.PROTOCOL_MASQUE || proto == AetherConfig.PROTOCOL_AUTO || proto == AetherConfig.PROTOCOL_MIM) {
+        if (proto == AetherConfig.PROTOCOL_GOOL) {
+            int goolMode = AetherConfig.getGoolMode();
+            String goolModeStr = (goolMode == AetherConfig.GOOL_CLASSIC) ? "Classic (WireGuard in WireGuard)" : "Modern (WireGuard in MASQUE)";
+            r.add(VeyraSettingsRow.detail(
+                    "WARP×2 Mode",
+                    () -> goolModeStr,
+                    true,
+                    this::showGoolModePicker
+            ));
+
+            if (goolMode == AetherConfig.GOOL_MODERN) {
+                int carrier = AetherConfig.getMasqueCarrier();
+                String carrierStr = (carrier == AetherConfig.CARRIER_H2) ? "HTTP/2 (TCP 443)" : "HTTP/3 (QUIC / UDP)";
+                r.add(VeyraSettingsRow.detail(
+                        "Carrier Transport",
+                        () -> carrierStr,
+                        true,
+                        this::showCarrierPicker
+                ));
+
+                if (carrier == AetherConfig.CARRIER_H2) {
+                    r.add(VeyraSettingsRow.toggle(
+                            "TLS Fragmentation",
+                            "Split ClientHello across TCP frames",
+                            AetherConfig::isMasqueFragment,
+                            isChecked -> {
+                                AetherConfig.setMasqueFragment(isChecked);
+                                reloadRows();
+                            },
+                            AetherConfig.isMasqueFragment()
+                    ));
+
+                    if (AetherConfig.isMasqueFragment()) {
+                        String fragSize = AetherConfig.getMasqueFragmentSize();
+                        r.add(VeyraSettingsRow.detail(
+                                "Fragment Size",
+                                () -> fragSize,
+                                true,
+                                () -> promptTextInput("Fragment Size", fragSize, "e.g. 8-24", AetherConfig::setMasqueFragmentSize)
+                        ));
+
+                        String fragDelay = AetherConfig.getMasqueFragmentDelay();
+                        r.add(VeyraSettingsRow.detail(
+                                "Fragment Delay (ms)",
+                                () -> fragDelay,
+                                true,
+                                () -> promptTextInput("Fragment Delay", fragDelay, "e.g. 5-15", AetherConfig::setMasqueFragmentDelay)
+                        ));
+                    }
+                }
+            }
+
+            int noize = AetherConfig.getNoizeWg();
+            String noizeStr = (noize == AetherConfig.NOIZE_WG_AGGRESSIVE) ? "Aggressive" :
+                    (noize == AetherConfig.NOIZE_WG_BALANCED ? "Balanced" :
+                            (noize == AetherConfig.NOIZE_WG_LIGHT ? "Light" : "Off"));
+            r.add(VeyraSettingsRow.detail(
+                    "Noise Obfuscation",
+                    () -> noizeStr,
+                    true,
+                    this::showWgNoisePicker
+            ));
+
+            int keepalive = AetherConfig.getKeepalive();
+            String keepStr = keepalive > 0 ? keepalive + "s" : "Off";
+            r.add(VeyraSettingsRow.detail(
+                    "Persistent Keepalive",
+                    () -> keepStr,
+                    false,
+                    () -> promptTextInput("Keepalive (seconds)", String.valueOf(keepalive), "0 to disable", s -> {
+                        try {
+                            AetherConfig.setKeepalive(Integer.parseInt(s));
+                        } catch (Exception ignore) {}
+                    })
+            ));
+        } else if (proto == AetherConfig.PROTOCOL_MASQUE || proto == AetherConfig.PROTOCOL_MIM) {
             int carrier = AetherConfig.getMasqueCarrier();
             String carrierStr = (carrier == AetherConfig.CARRIER_H2) ? "HTTP/2 (TCP 443)" : "HTTP/3 (QUIC / UDP)";
             r.add(VeyraSettingsRow.detail(
@@ -206,7 +278,7 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                     this::showCarrierPicker
             ));
 
-            if (carrier == AetherConfig.CARRIER_H2 || proto == AetherConfig.PROTOCOL_AUTO) {
+            if (carrier == AetherConfig.CARRIER_H2) {
                 r.add(VeyraSettingsRow.toggle(
                         "TLS Fragmentation",
                         "Split ClientHello across TCP frames",
@@ -367,18 +439,6 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
                 this::showIpPicker
         ));
 
-        int mtu = AetherConfig.getMtu();
-        r.add(VeyraSettingsRow.detail(
-                "Interface MTU",
-                () -> String.valueOf(mtu),
-                true,
-                () -> promptTextInput("Interface MTU", String.valueOf(mtu), "1280", s -> {
-                    try {
-                        AetherConfig.setMtu(Integer.parseInt(s));
-                    } catch (Exception ignore) {}
-                })
-        ));
-
         r.add(VeyraSettingsRow.toggle(
                 "Quick Reconnect",
                 "Reuse last healthy IP endpoint",
@@ -404,20 +464,6 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         }
 
         r.add(VeyraSettingsRow.shadow());
-
-        // 6. Gool Mode (only when Gool is selected — reference core 2.3.0)
-        if (proto == AetherConfig.PROTOCOL_GOOL) {
-            r.add(VeyraSettingsRow.header("Gool Mode"));
-            int gm = AetherConfig.getGoolMode();
-            String gmStr = (gm == AetherConfig.GOOL_CLASSIC) ? "Classic (WireGuard→WireGuard)" : "Modern (WireGuard→MASQUE)";
-            r.add(VeyraSettingsRow.detail(
-                    "Transport Mode",
-                    () -> gmStr,
-                    false,
-                    this::showGoolModePicker
-            ));
-            r.add(VeyraSettingsRow.shadow());
-        }
 
         // 7. Tor Boost / Bridges (visible when Tor is involved)
         boolean isTorBackend = (backend == AetherConfig.BACKEND_TOR || backend == AetherConfig.BACKEND_AETHER_TOR
@@ -560,14 +606,19 @@ public class AetherActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Transport Protocol");
         String[] options = new String[]{
-                "Smart (Auto)",
-                "MASQUE",
+                "WARP×2 (Gool) — Recommended",
+                "MASQUE (HTTP/2 & HTTP/3)",
                 "WireGuard",
-                "WARP×2 (Gool-like)",
                 "MASQUE×2 (MIM)"
         };
+        int[] protos = new int[]{
+                AetherConfig.PROTOCOL_GOOL,
+                AetherConfig.PROTOCOL_MASQUE,
+                AetherConfig.PROTOCOL_WIREGUARD,
+                AetherConfig.PROTOCOL_MIM
+        };
         builder.setItems(options, (d, which) -> {
-            AetherConfig.setProtocol(which);
+            AetherConfig.setProtocol(protos[which]);
             reloadRows();
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);

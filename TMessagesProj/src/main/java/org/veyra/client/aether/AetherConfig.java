@@ -84,16 +84,20 @@ public class AetherConfig {
             ed.putInt("socks_port", 1819);
             ed.putBoolean("tunnel_all_traffic", true);
 
-            if (isIran) {
-                ed.putInt("protocol", PROTOCOL_AUTO);
-                ed.putInt("masque_carrier", CARRIER_H2);
-                ed.putBoolean("masque_fragment", true);
-                ed.putString("masque_fragment_size", "8-24");
-                ed.putString("masque_fragment_delay", "5-15");
-                ed.putInt("noize_masque", NOIZE_MASQUE_FIREWALL);
-                ed.putBoolean("ech", true);
-                ed.putBoolean("bypass_iran", true);
-            }
+            // Default to WARPx2 (PROTOCOL_GOOL)
+            ed.putInt("protocol", PROTOCOL_GOOL);
+            ed.putInt("gool_mode", GOOL_MODERN);
+
+            ed.putInt("masque_carrier", CARRIER_H2);
+            ed.putBoolean("masque_fragment", true);
+            ed.putString("masque_fragment_size", "8-24");
+            ed.putString("masque_fragment_delay", "5-15");
+            ed.putInt("noize_masque", NOIZE_MASQUE_FIREWALL);
+
+            // ECH: OFF by default
+            ed.putBoolean("ech", false);
+
+            ed.putBoolean("bypass_iran", true);
             ed.apply();
         }
     }
@@ -145,7 +149,11 @@ public class AetherConfig {
     }
 
     public static int getProtocol() {
-        return getPrefs().getInt("protocol", PROTOCOL_AUTO);
+        int proto = getPrefs().getInt("protocol", PROTOCOL_GOOL);
+        if (proto == PROTOCOL_AUTO) {
+            proto = PROTOCOL_GOOL;
+        }
+        return proto;
     }
 
     public static void setProtocol(int protocol) {
@@ -225,7 +233,7 @@ public class AetherConfig {
     }
 
     public static boolean isEch() {
-        return getPrefs().getBoolean("ech", true);
+        return getPrefs().getBoolean("ech", false);
     }
 
     public static void setEch(boolean ech) {
