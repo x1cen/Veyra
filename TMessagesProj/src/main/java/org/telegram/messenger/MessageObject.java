@@ -10061,10 +10061,21 @@ public class MessageObject {
     }
 
     public boolean isSecretMedia() {
+        if (messageOwner == null) {
+            return false;
+        }
+        if (needDrawBluredPreview() || isVoiceOnce() || isRoundOnce()) {
+            return true;
+        }
+        if (messageOwner.ttl > 0) {
+            return true;
+        }
+        TLRPC.MessageMedia media = getMedia(messageOwner);
+        if (media != null && media.ttl_seconds != 0) {
+            return true;
+        }
         if (messageOwner instanceof TLRPC.TL_message_secret) {
-            return (((getMedia(messageOwner) instanceof TLRPC.TL_messageMediaPhoto) || isGif()) && messageOwner.ttl > 0 && messageOwner.ttl <= 60 || isVoice() || isRoundVideo() || isVideo());
-        } else if (messageOwner instanceof TLRPC.TL_message) {
-            return (getMedia(messageOwner) != null && getMedia(messageOwner).ttl_seconds != 0) && (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaPhoto || getMedia(messageOwner) instanceof TLRPC.TL_messageMediaDocument);
+            return (((media instanceof TLRPC.TL_messageMediaPhoto) || isGif()) && messageOwner.ttl > 0 && messageOwner.ttl <= 60 || isVoice() || isRoundVideo() || isVideo());
         }
         return false;
     }

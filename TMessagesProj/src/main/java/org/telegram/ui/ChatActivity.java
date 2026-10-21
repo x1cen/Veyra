@@ -47194,7 +47194,7 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                     icons.add(R.drawable.msg_download);
 
-                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId()) || (!selectedObject.messageOwner.media_unread && selectedObject.messageOwner.destroyTime != 0);
+                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId()) || !selectedObject.messageOwner.media_unread || selectedObject.messageOwner.destroyTime != 0;
                     if (!isBurnt && !selectedObject.isOut()) {
                         items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                         options.add(OPTION_BURN_FOR_SENDER);

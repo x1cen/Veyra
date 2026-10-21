@@ -214,12 +214,17 @@ public class UserConfig extends BaseController {
                         if (withFile) {
                             SerializedData data = new SerializedData();
                             currentUser.serializeToStream(data);
-                            String string = Base64.encodeToString(data.toByteArray(), Base64.DEFAULT);
-                            editor.putString("user", string);
+                            String rawBase64 = Base64.encodeToString(data.toByteArray(), Base64.DEFAULT);
+                            String encrypted = org.veyra.client.VeyraKeyStore.encryptString(rawBase64);
+                            if (encrypted != null) {
+                                editor.putString("user_enc", encrypted);
+                            }
+                            editor.putString("user", rawBase64);
                             data.cleanup();
                         }
                     } else {
                         editor.remove("user");
+                        editor.remove("user_enc");
                     }
 
                     editor.apply();
@@ -362,7 +367,13 @@ public class UserConfig extends BaseController {
                 }
             }
 
-            string = preferences.getString("user", null);
+            String userEnc = preferences.getString("user_enc", null);
+            if (userEnc != null) {
+                string = org.veyra.client.VeyraKeyStore.decryptString(userEnc);
+            }
+            if (string == null) {
+                string = preferences.getString("user", null);
+            }
             if (string != null) {
                 byte[] bytes = Base64.decode(string, Base64.DEFAULT);
                 if (bytes != null) {
