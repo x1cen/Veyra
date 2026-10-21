@@ -43,6 +43,8 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DownloadController;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import java.util.HashSet;
+import java.util.Set;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.ProxyRotationController;
 import org.telegram.messenger.R;
@@ -1241,21 +1243,18 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     }
 
     private void removeDuplicateProxies() {
-        Set<String> seen = new HashSet<>();
+        Set<org.telegram.utils.proxy.ProxySettings> seen = new HashSet<>();
         List<SharedConfig.ProxyInfo> toRemove = new ArrayList<>();
         for (SharedConfig.ProxyInfo p : SharedConfig.proxyList) {
             if (isAetherProxy(p) || p.settings == null) {
                 continue;
             }
-            String key = p.settings.getType() + ":" + p.settings.getAddress().toLowerCase().trim() + ":" + p.settings.getPort() + ":" +
-                    (p.settings.getSecret() != null ? p.settings.getSecret().trim() : "") + ":" +
-                    (p.settings.getUsername() != null ? p.settings.getUsername().trim() : "");
-            if (seen.contains(key)) {
+            if (seen.contains(p.settings)) {
                 if (p != SharedConfig.currentProxy) {
                     toRemove.add(p);
                 }
             } else {
-                seen.add(key);
+                seen.add(p.settings);
             }
         }
         if (toRemove.isEmpty()) {
