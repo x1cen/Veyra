@@ -145,4 +145,63 @@ public final class VeyraKeyStore {
             FileLog.e(t);
         }
     }
+
+    /**
+     * Encrypt raw session data (e.g., tgnet.dat MTProto authorization keys)
+     * using hardware-backed Android KeyStore AES-256-GCM.
+     */
+    public static byte[] encryptSessionBytes(byte[] plaintext) {
+        if (plaintext == null || plaintext.length == 0) return plaintext;
+        try {
+            SecretKey key = getOrCreateKey();
+            byte[] iv = new byte[IV_LEN];
+            new SecureRandom().nextBytes(iv);
+
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LEN, iv));
+            byte[] ct = cipher.doFinal(plaintext);
+
+            byte[] magic = "VEYRA_ENC_V1".getBytes(StandardCharsets.US_ASCII);
+            byte[] result = new byte[magic.length + IV_LEN + ct.length];
+            System.arraycopy(magic, 0, result, 0, magic.length);
+            System.arraycopy(iv, 0, result, magic.length, IV_LEN);
+            System.arraycopy(ct, 0, result, magic.length + IV_LEN, ct.length);
+            return result;
+        } catch (Throwable t) {
+            FileLog.e(t);
+            return null;
+        }
+    }
+
+    /**
+     * Decrypt raw session data encrypted with encryptSessionBytes.
+     * Returns null if the data is not encrypted with VeyraKeyStore or fails decryption.
+     */
+    public static byte[] decryptSessionBytes(byte[] data) {
+        if (data == null || data.length == 0) return null;
+        try {
+            byte[] magic = "VEYRA_ENC_V1".getBytes(StandardCharsets.US_ASCII);
+            if (data.length <= magic.length + IV_LEN) {
+                return null;
+            }
+            for (int i = 0; i < magic.length; i++) {
+                if (data[i] != magic[i]) {
+                    return null; // Not encrypted with VeyraKeyStore
+                }
+            }
+            byte[] iv = new byte[IV_LEN];
+            int ctLen = data.length - magic.length - IV_LEN;
+            byte[] ct = new byte[ctLen];
+            System.arraycopy(data, magic.length, iv, 0, IV_LEN);
+            System.arraycopy(data, magic.length + IV_LEN, ct, 0, ctLen);
+
+            SecretKey key = getOrCreateKey();
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LEN, iv));
+            return cipher.doFinal(ct);
+        } catch (Throwable t) {
+            FileLog.e(t);
+            return null;
+        }
+    }
 }
