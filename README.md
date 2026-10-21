@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml"><img src="https://github.com/x1cen/Veyra/actions/workflows/veyra-build.yml/badge.svg?branch=veyra" alt="Build Status"></a>
   <a href="https://github.com/x1cen/Veyra/releases/latest"><img src="https://img.shields.io/github/v/release/x1cen/Veyra?label=Stable%20Release" alt="Latest Release"></a>
-  <a href="https://github.com/DrKLO/Telegram"><img src="https://img.shields.io/badge/Upstream%20Base-v13.0.2-2481CC.svg" alt="Upstream Base"></a>
+  <a href="https://github.com/DrKLO/Telegram"><img src="https://img.shields.io/badge/Upstream%20Base-v13.0.3-2481CC.svg" alt="Upstream Base"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--2.0-blue.svg" alt="License"></a>
 </p>
 
@@ -128,7 +128,7 @@ Veyra is a privacy-first Android client built on the official upstream Telegram 
 * Real-Time Monospace Terminal: full-screen console (`Aether Terminal`) with colorized telemetry displaying live gateway RTTs, candidate selection, and handshake logs with auto-scrolling.
 * Native WEB Proxy Tunnel: full web proxy transport through an isolated background Android System WebView, bypassing strict DPI filters without native overhead.
 
-### 🔄 Upstream Telegram 13.0.2 Core Sync
+### 🔄 Upstream Telegram 13.0.3 Core Sync
 
 * High-Performance Deserialization: replaced reflection-based constructor lookups in `TLClassStore` with direct factory lambdas, eliminating invocation overhead and hardening against R8 obfuscation regressions.
 * Theme Parsing Resiliency: ported upstream fixes for parsing themes with CRLF line endings, preventing boundary errors on custom themes.

@@ -6,7 +6,7 @@ on:
             veyra-version:
                 description: 'Veyra version'
                 type: string
-                default: '13.0.2'
+                default: '13.0.3'
             arch:
                 description: 'Target Architecture (auto = all for main, arm64-v8a for dev)'
                 type: choice
@@ -39,14 +39,14 @@ concurrency:
     group: veyra-build-${{ github.ref }}
     cancel-in-progress: false
 
-run-name: Building Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }} [${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}]
+run-name: Building Veyra ${{ inputs.veyra-version || '13.0.3' }} [${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
         name: Generate APK
         runs-on: ubuntu-latest
         env:
-            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && (github.ref_name == 'main' && 'all' || 'arm64-v8a') || inputs.arch }}
+            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'all' || 'arm64-v8a') || inputs.arch }}
             CCACHE_DIR: ${{github.workspace}}/.ccache
             # 6G: arm64 tgcalls+boringssl alone push past 4G of intermediate objects
             CCACHE_MAXSIZE: 6G
@@ -61,8 +61,8 @@ jobs:
             CCACHE_HARDLINK: "1"
             GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=true -Xmx6g -XX:+UseG1GC"
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
-            VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
-            IS_STABLE: ${{ github.ref_name == 'main' && inputs.prerelease != true }}
+            VERSION_NAME: ${{ inputs.veyra-version || '13.0.3' }}
+            IS_STABLE: ${{ (github.ref_name == 'main' || github.ref_name == 'veyra') && inputs.prerelease != true }}
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
@@ -264,7 +264,7 @@ jobs:
             -   name: Process and verify generated APKs
                 id: locate_apk
                 env:
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || '13.0.3' }}
                 run: |
                     APK_DIR="${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone"
                     cd "$APK_DIR"
@@ -313,17 +313,17 @@ jobs:
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
-                    prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || github.ref_name != 'main' }}
+                    prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || (github.ref_name != 'main' && github.ref_name != 'veyra') }}
                     files: |
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.*.apk
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/SHA256SUMS.txt
                     body: |
-                        **Veyra** `${{ env.VERSION_NAME }}` ${{ github.ref_name == 'main' && '— Stable Release 🎉' || '— Preview Build' }}
+                        **Veyra** `${{ env.VERSION_NAME }}` ${{ (github.ref_name == 'main' || github.ref_name == 'veyra') && '— Stable Release 🎉' || '— Preview Build' }}
                         Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal + Dedicated per-architecture APKs (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
 
-                        ${{ inputs.veyra-changes || (github.ref_name == 'main' && 'Veyra v13.0.2 — Stable Release' || 'Veyra v13.0.2 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'Veyra v13.0.3 — Stable Release' || 'Veyra v13.0.3 preview build on dev branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-                    VERSION_NAME: ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
-                    RNAME: Veyra ${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
-                    TNAME: v${{ inputs.veyra-version || (github.ref_name == 'main' && '13.0.2' || '13.0.2-dev') }}
+                    VERSION_NAME: ${{ inputs.veyra-version || '13.0.3' }}
+                    RNAME: Veyra ${{ inputs.veyra-version || '13.0.3' }}
+                    TNAME: v${{ inputs.veyra-version || '13.0.3' }}
