@@ -13811,7 +13811,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             return;
         }
         int currentSize = getMeasuredHeight() + (getMeasuredWidth() << 16);
-        if (lastSize != currentSize || !wasLayout || forcedLayout) {
+        boolean timeStringChanged = timeLayout == null || (currentTimeString != null && !TextUtils.equals(currentTimeString, timeLayout.getText()));
+        if (lastSize != currentSize || !wasLayout || forcedLayout || timeStringChanged) {
             layoutWidth = getMeasuredWidth();
             layoutHeight = getMeasuredHeight() - substractBackgroundHeight - getPaddingTop() - getPaddingBottom() - additionalPaddingHeight;
             if (timeTextWidth < 0) {
