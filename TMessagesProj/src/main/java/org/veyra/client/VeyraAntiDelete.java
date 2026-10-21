@@ -123,17 +123,53 @@ public class VeyraAntiDelete {
             deletedMessagesByDialog.put(dialogId, set);
         }
         set.add(messageId);
+        if (dialogId != 0) {
+            long altId = -dialogId;
+            java.util.Set<Integer> altSet = deletedMessagesByDialog.get(altId);
+            if (altSet == null) {
+                altSet = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+                deletedMessagesByDialog.put(altId, altSet);
+            }
+            altSet.add(messageId);
+        }
+    }
+
+    public static void saveDeletedMessageToDb(int account, long dialogId, int messageId) {
+        addDeletedMessage(dialogId, messageId);
+        org.telegram.messenger.MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
+            try {
+                org.telegram.SQLite.SQLiteDatabase db = org.telegram.messenger.MessagesStorage.getInstance(account).getDatabase();
+                if (db != null) {
+                    db.executeFast(String.format(java.util.Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions (mid, uid, isdel) VALUES (%d, %d, 1);", messageId, dialogId)).stepThis().dispose();
+                }
+            } catch (Throwable ignored) {}
+        });
     }
 
     public static boolean isMessageDeleted(long dialogId, int messageId) {
         java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
-        return set != null && set.contains(messageId);
+        if (set != null && set.contains(messageId)) {
+            return true;
+        }
+        if (dialogId != 0) {
+            java.util.Set<Integer> altSet = deletedMessagesByDialog.get(-dialogId);
+            if (altSet != null && altSet.contains(messageId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void removeDeletedMessage(long dialogId, int messageId) {
         java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
         if (set != null) {
             set.remove(messageId);
+        }
+        if (dialogId != 0) {
+            java.util.Set<Integer> altSet = deletedMessagesByDialog.get(-dialogId);
+            if (altSet != null) {
+                altSet.remove(messageId);
+            }
         }
     }
 
@@ -146,6 +182,9 @@ public class VeyraAntiDelete {
     public static void removeChatDeleted(long dialogId) {
         peerDeletedChats.remove(dialogId);
         deletedMessagesByDialog.remove(dialogId);
+        if (dialogId != 0) {
+            deletedMessagesByDialog.remove(-dialogId);
+        }
     }
 
     public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {

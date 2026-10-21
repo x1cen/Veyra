@@ -15186,8 +15186,20 @@ public class MessagesStorage extends BaseController {
             SQLiteCursor cursor;
             String ids = TextUtils.join(",", messages);
             List<Long> dialogsToUpdate = new ArrayList<>();
+            if (dialogId != 0 && VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, dialogId)) {
+                for (int m = 0; m < messages.size(); m++) {
+                    int mid = messages.get(m);
+                    try {
+                        database.executeFast(String.format(Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions (mid, uid, isdel) VALUES (%d, %d, 1);", mid, dialogId)).stepThis().dispose();
+                    } catch (Throwable ignored) {}
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialogId, mid);
+                }
+                if (!dialogsToUpdate.contains(dialogId)) {
+                    dialogsToUpdate.add(dialogId);
+                }
+            }
             if (dialogId != 0) {
-                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND uid = %d", ids, dialogId));
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, dialogId, -dialogId));
             } else {
                 cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
             }
@@ -15282,9 +15294,13 @@ public class MessagesStorage extends BaseController {
                 cursor.dispose();
                 database.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
                 for (Map.Entry<Long, ArrayList<Integer>> entry : toDelete.entrySet()) {
-                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), false, 0, 0);
+                    markMessagesAsDeletedInternal(entry.getKey(), entry.getValue(), true, 0, 0);
                 }
                 AndroidUtilities.runOnUIThread(() -> {
+                    for (Map.Entry<Long, ArrayList<Integer>> entry : toDelete.entrySet()) {
+                        long did = entry.getKey();
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, entry.getValue(), did < 0 ? -did : 0, false, true, false, 0, null, false);
+                    }
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.needReloadRecentDialogsSearch);
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
@@ -15310,9 +15326,9 @@ public class MessagesStorage extends BaseController {
                 } else {
                     database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE mid IN(%s)", ids)).stepThis().dispose();
                 }
-                markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                markMessagesAsDeletedInternal(dialogId, mids, true, 0, 0);
                 AndroidUtilities.runOnUIThread(() -> {
-                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, true, false, 0, null, false);
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 });
             } catch (Exception e) {
@@ -15334,11 +15350,11 @@ public class MessagesStorage extends BaseController {
 
                 database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
                 if (!mids.isEmpty()) {
-                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                    markMessagesAsDeletedInternal(dialogId, mids, true, 0, 0);
                 }
                 AndroidUtilities.runOnUIThread(() -> {
                     if (!mids.isEmpty()) {
-                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, true, false, 0, null, false);
                     }
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 });
@@ -15360,12 +15376,12 @@ public class MessagesStorage extends BaseController {
 
                 database.executeFast(String.format(Locale.US, "DELETE FROM veyra_message_deletions WHERE uid = %d", dialogId)).stepThis().dispose();
                 if (!mids.isEmpty()) {
-                    markMessagesAsDeletedInternal(dialogId, mids, false, 0, 0);
+                    markMessagesAsDeletedInternal(dialogId, mids, true, 0, 0);
                 }
                 org.veyra.client.VeyraEditHistoryManager.clearDialog(dialogId);
                 AndroidUtilities.runOnUIThread(() -> {
                     if (!mids.isEmpty()) {
-                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, false, false, 0, null, false);
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, mids, dialogId < 0 ? -dialogId : 0, false, true, false, 0, null, false);
                     }
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 });
@@ -15394,7 +15410,7 @@ public class MessagesStorage extends BaseController {
             if (!messages.isEmpty()) {
                 if (channelId != 0) {
                     dialogsToUpdate.add(-channelId);
-                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ?)) WHERE did = ?");
+                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?) ORDER BY date DESC, mid DESC LIMIT 1) WHERE did = ?");
                 } else {
                     if (originalDialogId == 0) {
                         String ids = TextUtils.join(",", messages);
@@ -15407,7 +15423,7 @@ public class MessagesStorage extends BaseController {
                     } else {
                         dialogsToUpdate.add(originalDialogId);
                     }
-                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ? AND date != 0)) WHERE did = ?");
+                    state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date != 0 AND mid NOT IN (SELECT mid FROM veyra_message_deletions WHERE uid = ?) ORDER BY date DESC, mid DESC LIMIT 1) WHERE did = ?");
                 }
                 database.beginTransaction();
                 for (int a = 0; a < dialogsToUpdate.size(); a++) {

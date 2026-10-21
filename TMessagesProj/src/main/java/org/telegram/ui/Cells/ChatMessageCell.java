@@ -18481,7 +18481,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         deleted = currentMessageObject != null && currentMessageObject.isVeyraOrAntiDeleted();
         // Veyra: dim deleted messages
         if (deleted) {
-            alphaInternal = 0.52f;
+            alphaInternal = 0.72f;
         } else {
             alphaInternal = 1.0f;
         }

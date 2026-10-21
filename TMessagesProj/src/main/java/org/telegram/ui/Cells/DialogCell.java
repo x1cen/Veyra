@@ -3235,7 +3235,16 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 LongSparseArray<ArrayList<MessageObject>> dialogMessage = MessagesController.getInstance(currentAccount).dialogMessage;
                 if (dialogMessage != null) {
                     ArrayList<MessageObject> groupMessages = dialogMessage.get(dialog.id);
-                    MessageObject object = groupMessages != null && !groupMessages.isEmpty() ? groupMessages.get(0) : null;
+                    MessageObject object = null;
+                    if (groupMessages != null && !groupMessages.isEmpty()) {
+                        for (int g = 0, sz = groupMessages.size(); g < sz; g++) {
+                            MessageObject m = groupMessages.get(g);
+                            if (m != null && !m.deleted && !m.isVeyraOrAntiDeleted()) {
+                                object = m;
+                                break;
+                            }
+                        }
+                    }
                     if (object != null && (maxMessage == null || object.messageOwner.date > maxMessage.messageOwner.date)) {
                         maxMessage = object;
                     }
@@ -3301,7 +3310,16 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     if (mask == 0) {
                         clearingDialog = MessagesController.getInstance(currentAccount).isClearingDialog(dialog.id);
                         groupMessages = MessagesController.getInstance(currentAccount).dialogMessage.get(dialog.id);
-                        message = groupMessages != null && groupMessages.size() > 0 ? groupMessages.get(0) : null;
+                        message = null;
+                        if (groupMessages != null && groupMessages.size() > 0) {
+                            for (int a = 0, size = groupMessages.size(); a < size; a++) {
+                                MessageObject msgObj = groupMessages.get(a);
+                                if (msgObj != null && !msgObj.deleted && !msgObj.isVeyraOrAntiDeleted()) {
+                                    message = msgObj;
+                                    break;
+                                }
+                            }
+                        }
                         lastUnreadState = message != null && message.isUnread();
                         TLRPC.Chat localChat = MessagesController.getInstance(currentAccount).getChat(-dialog.id);
                         boolean isForumCell = localChat != null && localChat.forum && !isTopic;

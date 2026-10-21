@@ -12809,7 +12809,19 @@ public class ChatActivity extends BaseFragment implements
         icons.add(R.drawable.msg_delete);
         actions.add(() -> {
             showClearConfirmation(LocaleController.getString("VeyraDeletedMessages", R.string.VeyraDeletedMessages), LocaleController.getString("VeyraConfirmClearDeleted", R.string.VeyraConfirmClearDeleted), () -> {
+                ArrayList<Integer> toRemove = new ArrayList<>();
+                if (messages != null) {
+                    for (int i = 0; i < messages.size(); i++) {
+                        MessageObject obj = messages.get(i);
+                        if (obj != null && obj.isVeyraOrAntiDeleted()) {
+                            toRemove.add(obj.getId());
+                        }
+                    }
+                }
                 getMessagesStorage().clearDeletedMessagesForDialog(dialog_id);
+                if (!toRemove.isEmpty()) {
+                    processDeletedMessages(toRemove, dialog_id < 0 ? -dialog_id : 0, true, true);
+                }
                 BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraDeletedMessagesCleared", R.string.VeyraDeletedMessagesCleared)).show();
             });
         });
@@ -12819,6 +12831,10 @@ public class ChatActivity extends BaseFragment implements
         actions.add(() -> {
             showClearConfirmation(LocaleController.getString("VeyraEditedMessages", R.string.VeyraEditedMessages), LocaleController.getString("VeyraConfirmClearEdits", R.string.VeyraConfirmClearEdits), () -> {
                 org.veyra.client.VeyraEditHistoryManager.clearDialogEdits(dialog_id);
+                if (chatAdapter != null) {
+                    chatAdapter.notifyDataSetChanged(false);
+                }
+                updateVisibleRows();
                 BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraEditsCleared", R.string.VeyraEditsCleared)).show();
             });
         });
@@ -12828,6 +12844,10 @@ public class ChatActivity extends BaseFragment implements
         actions.add(() -> {
             showClearConfirmation(LocaleController.getString("VeyraReactionHistory", R.string.VeyraReactionHistory), LocaleController.getString("VeyraConfirmClearReactions", R.string.VeyraConfirmClearReactions), () -> {
                 org.veyra.client.VeyraEditHistoryManager.clearDialogReactions(dialog_id);
+                if (chatAdapter != null) {
+                    chatAdapter.notifyDataSetChanged(false);
+                }
+                updateVisibleRows();
                 BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.fire_on, LocaleController.getString("VeyraReactionsCleared", R.string.VeyraReactionsCleared)).show();
             });
         });
@@ -16268,6 +16288,7 @@ public class ChatActivity extends BaseFragment implements
             } catch (Throwable ignore) {
             }
         }
+        org.telegram.messenger.VeyraConfig.markSecretViewed(messageObject.getDialogId(), messageObject.getId());
         org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
         messageObject.forceUpdate = true;
         messageObject.resetLayout();
@@ -16289,6 +16310,7 @@ public class ChatActivity extends BaseFragment implements
         }
         final Runnable notifySender = () -> {
             messageObject.messageOwner.media_unread = false;
+            org.telegram.messenger.VeyraConfig.markSecretViewed(messageObject.getDialogId(), messageObject.getId());
             if (org.telegram.messenger.VeyraConfig.ttlBurnForSender) {
                 burnMessageNow(messageObject);
             }
@@ -19685,7 +19707,6 @@ public class ChatActivity extends BaseFragment implements
                         return 9;
                     } else if (messageObject.isRoundVideo() || (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto || messageObject.getDocument() != null || messageObject.isMusic() || messageObject.isVideo())) {
                         if (VeyraMediaSaver.canSave(messageObject, currentAccount)) {
-                            sendSecretMessageRead(messageObject, true);
                             if (messageObject.getDocument() != null && !messageObject.isMusic()) {
                                 String mime = messageObject.getDocument().mime_type;
                                 if (mime != null) {
@@ -27093,7 +27114,7 @@ public class ChatActivity extends BaseFragment implements
                         obj.deleted = false;
                         obj.forceUpdate = true;
                         obj.resetLayout();
-                        org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialog_id, obj.getId());
+                        org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, dialog_id, obj.getId());
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                         }
@@ -47290,7 +47311,8 @@ public class ChatActivity extends BaseFragment implements
                 icons.add(R.drawable.msg_download);
             }
             boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
-            if (!isBurnt && !selectedObject.isOut()) {
+            boolean isViewed = org.telegram.messenger.VeyraConfig.isSecretViewed(selectedObject.getDialogId(), selectedObject.getId());
+            if (!isBurnt && !selectedObject.isOut() && isViewed) {
                 items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                 options.add(OPTION_BURN_FOR_SENDER);
                 icons.add(R.drawable.filled_fire);
