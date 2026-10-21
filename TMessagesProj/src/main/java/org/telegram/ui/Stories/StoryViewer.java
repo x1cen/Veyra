@@ -2874,6 +2874,11 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             return;
         }
         allowScreenshots = !isShowing || allowScreenshots;
+        if (!org.telegram.messenger.VeyraConfig.blockScreenCapture) {
+            allowScreenshots = true;
+        } else {
+            allowScreenshots = false;
+        }
         if (this.allowScreenshots != allowScreenshots) {
             this.allowScreenshots = allowScreenshots;
 

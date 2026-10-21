@@ -64,7 +64,7 @@ public class FlagSecureReason {
             return;
         }
 
-        if (isSecuredNow(window)) {
+        if (VeyraConfig.blockScreenCapture) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE);
             AndroidUtilities.logFlagSecure();
         } else {
@@ -74,6 +74,9 @@ public class FlagSecureReason {
     }
 
     public static boolean isSecuredNow(Window window) {
+        if (!VeyraConfig.blockScreenCapture) {
+            return false;
+        }
         return currentSecureReasons != null && currentSecureReasons.get(window) != null;
     }
 

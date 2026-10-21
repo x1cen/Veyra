@@ -16344,24 +16344,42 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
+    public void burnMessageNow(MessageObject messageObject) {
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return;
+        }
+        messageObject.messageOwner.media_unread = false;
+        final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
+        if (currentEncryptedChat != null) {
+            getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl > 0 ? ttl : 1);
+        } else {
+            getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
+            try {
+                TLRPC.TL_messages_readMessageContents req = new TLRPC.TL_messages_readMessageContents();
+                req.id.add(messageObject.getId());
+                getConnectionsManager().sendRequest(req, null);
+            } catch (Throwable ignore) {
+            }
+            try {
+                getMessagesController().markDialogAsRead(dialog_id, messageObject.getId(), messageObject.getId(), messageObject.messageOwner.date, false, 0, 0, true, 0);
+            } catch (Throwable ignore) {
+            }
+        }
+        org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
+        updateVisibleRows();
+    }
+
     private Runnable sendSecretMessageRead(MessageObject messageObject, boolean readNow) {
         if (messageObject == null || messageObject.isOut() || !messageObject.isSecretMedia()) {
             return null;
         }
-        if (!messageObject.messageOwner.media_unread && messageObject.messageOwner.destroyTime != 0) {
+        if (org.telegram.messenger.VeyraConfig.isTtlBurnt(messageObject.getDialogId(), messageObject.getId())) {
             return null;
         }
         final Runnable notifySender = () -> {
             messageObject.messageOwner.media_unread = false;
             if (org.telegram.messenger.VeyraConfig.ttlBurnForSender) {
-                final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
-                if (currentEncryptedChat != null) {
-                    getMessagesController().markMessageAsRead(dialog_id, messageObject.messageOwner.random_id, ttl);
-                } else {
-                    getMessagesController().markMessageAsRead2(dialog_id, messageObject.getId(), null, ttl, 0, false);
-                }
-                org.telegram.messenger.VeyraConfig.markTtlBurnt(messageObject.getDialogId(), messageObject.getId());
-                updateVisibleRows();
+                burnMessageNow(messageObject);
             }
         };
         if (readNow) {
@@ -30680,12 +30698,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
-        // Veyra: screen capture blocking (forced for developer chat, otherwise configurable)
-        if (VeyraConfig.isDeveloperChat(dialog_id) && !VeyraConfig.isSelfDeveloper(currentAccount)) {
-            if (getParentActivity() != null) {
-                getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
-            }
-        } else if (VeyraConfig.blockScreenCapture) {
+        if (VeyraConfig.blockScreenCapture) {
             if (getParentActivity() != null) {
                 getParentActivity().getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE);
             }
@@ -34498,15 +34511,7 @@ public class ChatActivity extends BaseFragment implements
             }
             case OPTION_BURN_FOR_SENDER: {
                 if (selectedObject != null && selectedObject.messageOwner != null) {
-                    final int ttl = selectedObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : selectedObject.messageOwner.ttl;
-                    if (currentEncryptedChat != null) {
-                        getMessagesController().markMessageAsRead(dialog_id, selectedObject.messageOwner.random_id, ttl);
-                    } else {
-                        getMessagesController().markMessageAsRead2(dialog_id, selectedObject.getId(), null, ttl, 0, false);
-                    }
-                    selectedObject.messageOwner.media_unread = false;
-                    org.telegram.messenger.VeyraConfig.markTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
-                    updateVisibleRows();
+                    burnMessageNow(selectedObject);
                     try {
                         BulletinFactory.of(this).createSimpleBulletin(R.drawable.filled_fire, LocaleController.getString("VeyraContentBurned", R.string.VeyraContentBurned)).show();
                     } catch (Exception ignore) {
@@ -47408,7 +47413,7 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_SAVE_TO_DOWNLOADS_OR_MUSIC);
                     icons.add(R.drawable.msg_download);
 
-                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId()) || !selectedObject.messageOwner.media_unread || selectedObject.messageOwner.destroyTime != 0;
+                    boolean isBurnt = org.telegram.messenger.VeyraConfig.isTtlBurnt(selectedObject.getDialogId(), selectedObject.getId());
                     if (!isBurnt && !selectedObject.isOut()) {
                         items.add(LocaleController.getString("VeyraBurnContent", R.string.VeyraBurnContent));
                         options.add(OPTION_BURN_FOR_SENDER);
