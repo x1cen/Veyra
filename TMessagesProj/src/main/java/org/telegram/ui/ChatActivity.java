@@ -16348,8 +16348,6 @@ public class ChatActivity extends BaseFragment implements
         if (messageObject == null || messageObject.messageOwner == null) {
             return;
         }
-        // Manual burn always counts as viewed
-        org.telegram.messenger.VeyraConfig.markSecretViewed(messageObject.getDialogId(), messageObject.getId());
         messageObject.messageOwner.media_unread = false;
         final int ttl = messageObject.messageOwner.ttl == 0x7FFFFFFF ? 0 : messageObject.messageOwner.ttl;
         if (currentEncryptedChat != null) {
@@ -16379,14 +16377,9 @@ public class ChatActivity extends BaseFragment implements
             return null;
         }
         final Runnable notifySender = () -> {
-            // Always mark viewed locally
-            org.telegram.messenger.VeyraConfig.markSecretViewed(messageObject.getDialogId(), messageObject.getId());
-            // Only notify sender / mark burnt if global is on — Burn Content handles the manual case separately
+            messageObject.messageOwner.media_unread = false;
             if (org.telegram.messenger.VeyraConfig.ttlBurnForSender) {
                 burnMessageNow(messageObject);
-            } else {
-                // Refresh to remove blur/spoil locally without notifying sender
-                updateVisibleRows();
             }
         };
         if (readNow) {

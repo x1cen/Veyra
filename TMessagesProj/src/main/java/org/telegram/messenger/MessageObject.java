@@ -10058,10 +10058,6 @@ public class MessageObject {
         if (isRepostPreview) {
             return false;
         }
-        // Veyra: after local view, blur/spoil is removed (user already saw it)
-        if (messageOwner != null && org.telegram.messenger.VeyraConfig.isSecretViewed(getDialogId(), getId())) {
-            return false;
-        }
         if (hasExtendedMediaPreview()) {
             return true;
         } else if (messageOwner instanceof TLRPC.TL_message_secret) {
