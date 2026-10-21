@@ -7767,7 +7767,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             idStr = String.valueOf(displayId);
         } else if (view instanceof TextDetailCell) {
             try {
-                CharSequence text = ((TextDetailCell) view).getTextView().getText();
+                CharSequence text = ((TextDetailCell) view).textView.getText();
                 if (!TextUtils.isEmpty(text)) {
                     idStr = text.toString();
                 }

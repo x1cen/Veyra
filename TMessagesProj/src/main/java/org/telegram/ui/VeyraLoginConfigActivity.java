@@ -87,7 +87,7 @@ public class VeyraLoginConfigActivity extends BaseFragment {
 
     @Override
     public View createView(Context context) {
-        boolean isReadOnly = UserConfig.getInstance(currentAccount).isClientActivated();
+        boolean isReadOnly = getUserConfig().isClientActivated();
 
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
