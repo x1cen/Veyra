@@ -1015,6 +1015,28 @@ public class ConnectionsManager extends BaseController {
         checkConnection();
     }
 
+    public void applyDeviceSettings() {
+        try {
+            String deviceModel = VeyraLoginConfig.getDeviceModel();
+            String systemVersion = VeyraLoginConfig.getSystemVersion();
+            String appVersion = VeyraLoginConfig.getAppVersion();
+            String langCode = VeyraLoginConfig.getLangCode();
+            String systemLangCode = VeyraLoginConfig.getSystemLangCode();
+            String installer = VeyraLoginConfig.getInstaller();
+            String packageId = VeyraLoginConfig.getPackageId();
+            int timezoneOffset = VeyraLoginConfig.getTzOffset();
+            int perfCat = VeyraLoginConfig.getPerfCat();
+            int apiId = VeyraLoginConfig.getApiId();
+            String pushString = VeyraLoginConfig.getDeviceToken(getRegId());
+            String fingerprint = VeyraLoginConfig.getCertFingerprint();
+
+            native_init(currentAccount, SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, installer, packageId, timezoneOffset, getUserConfig().getClientUserId(), getUserConfig().getCurrentUser() != null && getUserConfig().getCurrentUser().premium, enablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), perfCat);
+            checkConnection();
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
     public static void setLangCode(String langCode) {
         langCode = langCode.replace('_', '-').toLowerCase();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
