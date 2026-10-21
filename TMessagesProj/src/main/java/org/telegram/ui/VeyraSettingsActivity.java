@@ -97,7 +97,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.category(
                 IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
-                R.drawable.settings_devices,
+                R.drawable.msg_mask,
                 "Device & Spoofing Parameters",
                 () -> presentFragment(new VeyraLoginConfigActivity())
         ));
