@@ -570,11 +570,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, currentMessageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
                     deleteQuietly(stagedFinal);
                     closeQuietly(exportFinal);
-                    try {
-                        String msg = toGallery ? LocaleController.getString("SaveToGallerySuccess", R.string.SaveToGallerySuccess) : LocaleController.getString("SaveToDownloadsSuccess", R.string.SaveToDownloadsSuccess);
-                        android.widget.Toast.makeText(parentActivity, msg, android.widget.Toast.LENGTH_SHORT).show();
-                    } catch (Exception ignore) {
-                    }
                     if (containerView == null) {
                         return;
                     }
@@ -591,10 +586,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 deleteQuietly(staged);
                 closeQuietly(export);
                 AndroidUtilities.runOnUIThread(() -> {
-                    try {
-                        android.widget.Toast.makeText(parentActivity, LocaleController.getString(R.string.ErrorOccurred), android.widget.Toast.LENGTH_SHORT).show();
-                    } catch (Exception ignore) {
-                    }
                     if (containerView != null) {
                         BulletinFactory.of(containerView, new DarkThemeResourceProvider())
                                 .createErrorBulletin(LocaleController.getString(R.string.ErrorOccurred))
