@@ -1099,7 +1099,27 @@ public class VeyraConfig {
         save("ttlBurnForSender", val);
     }
 
+    private static java.util.Set<String> viewedSecretMessagesSet;
     private static java.util.Set<String> burntMessagesSet;
+
+    public static boolean isSecretViewed(long dialogId, int messageId) {
+        if (preferences == null) return false;
+        if (viewedSecretMessagesSet == null) {
+            viewedSecretMessagesSet = new java.util.HashSet<>(preferences.getStringSet("veyra_viewed_secret", new java.util.HashSet<>()));
+        }
+        return viewedSecretMessagesSet.contains(dialogId + "_" + messageId);
+    }
+
+    public static void markSecretViewed(long dialogId, int messageId) {
+        if (preferences == null) return;
+        if (viewedSecretMessagesSet == null) {
+            viewedSecretMessagesSet = new java.util.HashSet<>(preferences.getStringSet("veyra_viewed_secret", new java.util.HashSet<>()));
+        }
+        String key = dialogId + "_" + messageId;
+        if (viewedSecretMessagesSet.contains(key)) return;
+        viewedSecretMessagesSet.add(key);
+        preferences.edit().putStringSet("veyra_viewed_secret", new java.util.HashSet<>(viewedSecretMessagesSet)).apply();
+    }
 
     public static boolean isTtlBurnt(long dialogId, int messageId) {
         if (preferences == null) return false;
