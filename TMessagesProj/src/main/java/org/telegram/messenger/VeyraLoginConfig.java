@@ -7,6 +7,8 @@ import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.text.TextUtils;
 
+import org.telegram.tgnet.ConnectionsManager;
+
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 

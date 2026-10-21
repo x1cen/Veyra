@@ -15,6 +15,7 @@ import static org.telegram.messenger.LocaleController.formatPluralStringComma;
 import static org.telegram.messenger.LocaleController.formatString;
 import static org.telegram.messenger.LocaleController.getString;
 import static org.telegram.messenger.MessagesController.findUpdatesAndRemove;
+import org.telegram.messenger.VeyraLoginConfig;
 
 import android.Manifest;
 import android.animation.Animator;
