@@ -74,6 +74,11 @@ public class VeyraLocalization {
         EN.put("VeyraTtlBurnForSenderDesc", "Notify sender upon viewing so it deletes on their side, while keeping it permanently for you");
         EN.put("VeyraBurnForSender", "Burn for Sender");
         EN.put("VeyraBurnedForSender", "Message burned for sender");
+        EN.put("VeyraBurnContent", "Burn Content");
+        EN.put("VeyraContentBurned", "Content burned for sender");
+        EN.put("VeyraBurntMessage", "Burnt");
+        EN.put("SaveToGallerySuccess", "Saved to Gallery");
+        EN.put("SaveToDownloadsSuccess", "Saved to Downloads");
         EN.put("VeyraChatTypes", "Scope & Inclusion Policies");
         EN.put("VeyraChatsActiveCount", "%1$d of %2$d active");
         EN.put("VeyraExplicitlyExcluded", "Manually Excluded");
@@ -358,6 +363,11 @@ public class VeyraLocalization {
         FA.put("VeyraTtlBurnForSenderDesc", "هنگام مشاهده، به فرستنده اعلام می‌شود و پیام برای او حذف می‌گردد، اما برای شما باقی می‌ماند");
         FA.put("VeyraBurnForSender", "سوزاندن برای فرستنده");
         FA.put("VeyraBurnedForSender", "پیام برای فرستنده سوزانده شد");
+        FA.put("VeyraBurnContent", "سوزاندن محتوا");
+        FA.put("VeyraContentBurned", "محتوا برای فرستنده سوزانده شد");
+        FA.put("VeyraBurntMessage", "سوزانده شد");
+        FA.put("SaveToGallerySuccess", "در گالری ذخیره شد");
+        FA.put("SaveToDownloadsSuccess", "در دانلودها ذخیره شد");
         FA.put("VeyraChatTypes", "سیاست‌های اعمال و چت‌های فعال");
         FA.put("VeyraChatsActiveCount", "%1$d از %2$d فعال");
         FA.put("VeyraExplicitlyExcluded", "مستثنی شده دستی");

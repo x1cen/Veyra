@@ -11918,5 +11918,10 @@
 <string name="VeyraTtlBurnForSenderDesc">Notify sender upon viewing so it deletes on their side, while keeping it permanently for you</string>
 <string name="VeyraBurnForSender">Burn for Sender</string>
 <string name="VeyraBurnedForSender">Message burned for sender</string>
+<string name="VeyraBurnContent">Burn Content</string>
+<string name="VeyraContentBurned">Content burned for sender</string>
+<string name="VeyraBurntMessage">Burnt</string>
+<string name="SaveToGallerySuccess">Saved to Gallery</string>
+<string name="SaveToDownloadsSuccess">Saved to Downloads</string>
 </resources>
 

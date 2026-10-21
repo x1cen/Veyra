@@ -570,6 +570,11 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, currentMessageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
                     deleteQuietly(stagedFinal);
                     closeQuietly(exportFinal);
+                    try {
+                        String msg = toGallery ? LocaleController.getString("SaveToGallerySuccess", R.string.SaveToGallerySuccess) : LocaleController.getString("SaveToDownloadsSuccess", R.string.SaveToDownloadsSuccess);
+                        android.widget.Toast.makeText(parentActivity, msg, android.widget.Toast.LENGTH_SHORT).show();
+                    } catch (Exception ignore) {
+                    }
                     if (containerView == null) {
                         return;
                     }
@@ -586,6 +591,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 deleteQuietly(staged);
                 closeQuietly(export);
                 AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        android.widget.Toast.makeText(parentActivity, LocaleController.getString(R.string.ErrorOccurred), android.widget.Toast.LENGTH_SHORT).show();
+                    } catch (Exception ignore) {
+                    }
                     if (containerView != null) {
                         BulletinFactory.of(containerView, new DarkThemeResourceProvider())
                                 .createErrorBulletin(LocaleController.getString(R.string.ErrorOccurred))
@@ -1014,10 +1023,13 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         secretHint = new HintView2(activity, HintView2.DIRECTION_TOP);
         secretHint.setJoint(1, -26);
         secretHint.setPadding(dp(8), dp(8), dp(8), dp(8));
+        secretHint.setVisibility(View.GONE);
         containerView.addView(secretHint, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 80, Gravity.TOP | Gravity.RIGHT, 0, 48, 0, 0));
 
         secretDeleteTimer = new SecretDeleteTimer(activity);
+        secretDeleteTimer.setVisibility(View.GONE);
         containerView.addView(secretDeleteTimer, LayoutHelper.createFrame(119, 48, Gravity.TOP | Gravity.RIGHT, 0, 0, 0, 0));
+        containerView.bringChildToFront(actionBar);
 
         final VideoPlayerSeekBar.SeekBarDelegate seekBarDelegate = new VideoPlayerSeekBar.SeekBarDelegate() {
             @Override
@@ -1682,20 +1694,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         showPlayButton(false, false);
         playButtonDrawable.setPause(true);
 
-        if (ignoreDelete) {
-            secretDeleteTimer.setOnce();
-            secretDeleteTimer.setOnClickListener(v -> {
-                if (currentMessageObject == null || currentMessageObject.messageOwner.destroyTime == 0 && currentMessageObject.messageOwner.ttl != 0x7FFFFFFF) {
-                    return;
-                }
-                if (secretHint.shown()) {
-                    secretHint.hide();
-                    return;
-                }
-                showSecretHint();
-            });
-        } else {
-            secretDeleteTimer.setOnClickListener(null);
+        secretDeleteTimer.setVisibility(View.GONE);
+        secretHint.setVisibility(View.GONE);
+        if (actionBar != null) {
+            actionBar.bringToFront();
         }
         try {
             if (windowView.getParent() != null) {
@@ -1727,7 +1729,6 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         imageMoveAnimation.playTogether(
                 ObjectAnimator.ofFloat(actionBar, View.ALPHA, 0, 1.0f),
                 ObjectAnimator.ofFloat(captionScrollView, View.ALPHA, 0, 1f),
-                ObjectAnimator.ofFloat(secretHint, View.ALPHA, 0, 1.0f),
                 ObjectAnimator.ofInt(photoBackgroundDrawable, AnimationProperties.COLOR_DRAWABLE_ALPHA, 0, 255),
                 ObjectAnimator.ofFloat(this, ANIMATION_VALUE, 0, 1),
                 ObjectAnimator.ofFloat(seekbarContainer, seekbarContainer.SEEKBAR_ALPHA, 1.0f),
