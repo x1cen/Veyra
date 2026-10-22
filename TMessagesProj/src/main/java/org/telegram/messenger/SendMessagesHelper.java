@@ -2248,7 +2248,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
-        final boolean effectiveForwardFromMyName = forwardFromMyName || VeyraConfig.anonymousForwardNoQuote;
+        final boolean effectiveForwardFromMyName = forwardFromMyName;
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
         boolean isChannel = false;
@@ -2474,9 +2474,11 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     }
                 }
 
-                newMsg.params = new HashMap<>();
-                newMsg.params.put("fwd_id", "" + msgObj.getId());
-                newMsg.params.put("fwd_peer", "" + msgObj.getDialogId());
+                if (effectiveForwardFromMyName) {
+                    newMsg.params = new HashMap<>();
+                    newMsg.params.put("fwd_id", "" + msgObj.getId());
+                    newMsg.params.put("fwd_peer", "" + msgObj.getDialogId());
+                }
                 if (!msgObj.messageOwner.restriction_reason.isEmpty()) {
                     newMsg.restriction_reason = msgObj.messageOwner.restriction_reason;
                     newMsg.flags |= 4194304;
@@ -2733,13 +2735,6 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     req.random_id = randomIds;
                     req.id = ids;
                     req.drop_author = effectiveForwardFromMyName;
-                    for (int devIdx = 0; devIdx < messages.size(); devIdx++) {
-                        MessageObject m = messages.get(devIdx);
-                        if (m != null && (org.telegram.messenger.VeyraConfig.isDeveloperChat(m.getDialogId()) || (org.telegram.messenger.VeyraConfig.getDeveloperUserId() != 0 && m.getFromChatId() == org.telegram.messenger.VeyraConfig.getDeveloperUserId()))) {
-                            req.drop_author = true;
-                            break;
-                        }
-                    }
                     req.drop_media_captions = hideCaption;
                     req.with_my_score = messages.size() == 1 && messages.get(0).messageOwner.with_my_score;
                     if (video_timestamp >= 0) {
@@ -6494,7 +6489,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 }
                 if (params != null && params.containsKey("fwd_id")) {
                     int fwdId = Utilities.parseInt(params.get("fwd_id"));
-                    reqSend.drop_author = true;
+                    reqSend.drop_author = retryMessageObject == null || retryMessageObject.messageOwner == null || retryMessageObject.messageOwner.fwd_from == null;
                     long peerId = Utilities.parseLong(params.get("fwd_peer"));
                     if (peerId < 0) {
                         TLRPC.Chat chat = getMessagesController().getChat(-peerId);

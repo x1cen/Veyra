@@ -8162,8 +8162,12 @@ public class AlertsCreator {
                 }
                 if (selectedMessage != null && selectedMessage.isVeyraOrAntiDeleted()) {
                     MessagesStorage.getInstance(currentAccount).deleteRetainedDeletedMessages(thisDialogId, ids);
-                }
-                if (!ids.isEmpty()) {
+                    org.veyra.client.VeyraAntiDelete.removeDeletedMessages(thisDialogId, ids);
+                    org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(thisDialogId, ids);
+                    long channelId = thisDialogId < 0 && ChatObject.isChannel((int) -thisDialogId, currentAccount) ? -thisDialogId : 0L;
+                    MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, false);
+                } else if (!ids.isEmpty()) {
+                    org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(thisDialogId, ids);
                     MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, thisDialogId, topicId, deleteForAll[0], mode);
                 }
                 for (MessageObject msg: ephemeralMessages) {
@@ -8178,24 +8182,32 @@ public class AlertsCreator {
                         MessageObject msg = selectedMessages[a].valueAt(b);
                         if (msg != null && msg.isVeyraOrAntiDeleted()) {
                             retainedDeletedIds.add(mid);
+                        } else {
+                            ids.add(mid);
                         }
-                        ids.add(mid);
                     }
                     long targetDialogId = (a == 1 && mergeDialogId != 0) ? mergeDialogId : thisDialogId;
                     if (!retainedDeletedIds.isEmpty()) {
                         MessagesStorage.getInstance(currentAccount).deleteRetainedDeletedMessages(targetDialogId, retainedDeletedIds);
+                        org.veyra.client.VeyraAntiDelete.removeDeletedMessages(targetDialogId, retainedDeletedIds);
+                        org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(targetDialogId, retainedDeletedIds);
+                        long chId = targetDialogId < 0 && ChatObject.isChannel((int) -targetDialogId, currentAccount) ? -targetDialogId : 0L;
+                        MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, retainedDeletedIds, chId, false, false, false, 0, null, false);
                     }
-                    ArrayList<Long> random_ids = null;
-                    if (encryptedChat != null) {
-                        random_ids = new ArrayList<>();
-                        for (int b = 0; b < selectedMessages[a].size(); b++) {
-                            MessageObject msg = selectedMessages[a].valueAt(b);
-                            if (msg.messageOwner.random_id != 0 && msg.type != 10) {
-                                random_ids.add(msg.messageOwner.random_id);
+                    if (!ids.isEmpty()) {
+                        org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(targetDialogId, ids);
+                        ArrayList<Long> random_ids = null;
+                        if (encryptedChat != null) {
+                            random_ids = new ArrayList<>();
+                            for (int b = 0; b < selectedMessages[a].size(); b++) {
+                                MessageObject msg = selectedMessages[a].valueAt(b);
+                                if (msg != null && !msg.isVeyraOrAntiDeleted() && msg.messageOwner.random_id != 0 && msg.type != 10) {
+                                    random_ids.add(msg.messageOwner.random_id);
+                                }
                             }
                         }
+                        MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, targetDialogId, topicId, deleteForAll[0], mode);
                     }
-                    MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, targetDialogId, topicId, deleteForAll[0], mode);
                     selectedMessages[a].clear();
                 }
             }

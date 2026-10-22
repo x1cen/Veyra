@@ -178,7 +178,7 @@ public class MessagePreviewParams {
     public boolean isSecret;
     public boolean multipleUsers;
 
-    public boolean hideForwardSendersName = VeyraConfig.anonymousForwardNoQuote;
+    public boolean hideForwardSendersName = false;
     public boolean hideCaption;
     public boolean willSeeSenders;
 
@@ -210,8 +210,34 @@ public class MessagePreviewParams {
             replyQuote = null;
         }
         hasSecretMessages = replyMessageObject != null && (replyMessageObject.isVoiceOnce() || replyMessageObject.isRoundOnce() || replyMessageObject.type == MessageObject.TYPE_GIFT_STARS);
-        if (replyMessageObject != null && (replyMessageObject.isVeyraOrAntiDeleted() || (replyMessageObject.messageOwner != null && replyMessageObject.messageOwner.noforwards))) {
-            this.noforwards = true;
+        if (replyMessageObject != null) {
+            boolean isMsgNoForwards = replyMessageObject.isVeyraOrAntiDeleted()
+                    || (replyMessageObject.messageOwner != null && replyMessageObject.messageOwner.noforwards);
+            if (!isMsgNoForwards && replyMessageObject.messageOwner != null && replyMessageObject.messageOwner.peer_id != null) {
+                long channelId = replyMessageObject.messageOwner.peer_id.channel_id;
+                long chatId = replyMessageObject.messageOwner.peer_id.chat_id;
+                long userId = replyMessageObject.messageOwner.peer_id.user_id;
+                MessagesController mc = MessagesController.getInstance(replyMessageObject.currentAccount);
+                if (channelId != 0) {
+                    TLRPC.Chat c = mc.getChat(channelId);
+                    if (c != null && (c.noforwards || mc.isChatNoForwards(c))) {
+                        isMsgNoForwards = true;
+                    }
+                } else if (chatId != 0) {
+                    TLRPC.Chat c = mc.getChat(chatId);
+                    if (c != null && (c.noforwards || mc.isChatNoForwards(c))) {
+                        isMsgNoForwards = true;
+                    }
+                } else if (userId != 0) {
+                    TLRPC.UserFull uf = mc.getUserFull(userId);
+                    if (uf != null && mc.isUserNoForwards(uf)) {
+                        isMsgNoForwards = true;
+                    }
+                }
+            }
+            if (isMsgNoForwards) {
+                this.noforwards = true;
+            }
         }
         if (replyMessageObject != null || replyQuote != null) {
             if (group != null) {
@@ -388,6 +414,8 @@ public class MessagePreviewParams {
         hasSenders = false;
         isSecret = DialogObject.isEncryptedDialog(dialogId);
         multipleUsers = false;
+        hideForwardSendersName = false;
+        hideCaption = false;
 
         if (forwardMessages != null) {
             ArrayList<String> hiddenSendersName = new ArrayList<>();
