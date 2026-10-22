@@ -595,9 +595,15 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         builder.setTitle("Reset to Default");
         builder.setMessage("Are you sure you want to revert all connection and device parameters back to their defaults?");
         builder.setPositiveButton("Reset", (dialog, which) -> {
-            VeyraLoginConfig.resetToDefault(currentAccount);
-            populateFieldsWithDefaults();
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Reverted to physical hardware defaults").show();
+            try {
+                VeyraLoginConfig.resetToDefault(currentAccount);
+                populateFieldsWithDefaults();
+                if (BulletinFactory.canShowBulletin(this)) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Reverted to physical hardware defaults").show();
+                }
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
         });
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         showDialog(builder.create());

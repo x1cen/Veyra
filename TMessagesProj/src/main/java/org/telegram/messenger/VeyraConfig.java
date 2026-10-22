@@ -836,6 +836,26 @@ public class VeyraConfig {
         save("antiDeleteBots", val);
     }
 
+    public static org.telegram.tgnet.TLRPC.User findUser(int currentAccount, long userId) {
+        org.telegram.tgnet.TLRPC.User user = null;
+        try {
+            user = MessagesController.getInstance(currentAccount).getUser(userId);
+        } catch (Throwable ignored) {}
+        if (user == null) {
+            try {
+                MessagesStorage storage = MessagesStorage.getInstance(currentAccount);
+                if (storage != null) {
+                    if (Thread.currentThread() == storage.getStorageQueue()) {
+                        user = storage.getUser(userId);
+                    } else {
+                        user = storage.getUserSync(userId);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return user;
+    }
+
     public static org.telegram.tgnet.TLRPC.Chat findChat(int currentAccount, long chatId) {
         if (chatId < 0) chatId = -chatId;
         org.telegram.tgnet.TLRPC.Chat chat = null;
@@ -870,19 +890,7 @@ public class VeyraConfig {
         }
         try {
             if (dialogId > 0) {
-                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
-                if (user == null) {
-                    try {
-                        MessagesStorage storage = MessagesStorage.getInstance(currentAccount);
-                        if (storage != null) {
-                            if (Thread.currentThread() == storage.getStorageQueue()) {
-                                user = storage.getUser(dialogId);
-                            } else {
-                                user = storage.getUserSync(dialogId);
-                            }
-                        }
-                    } catch (Throwable ignored) {}
-                }
+                org.telegram.tgnet.TLRPC.User user = findUser(currentAccount, dialogId);
                 if (user != null && user.bot) {
                     return antiDeleteBots;
                 }
@@ -919,6 +927,10 @@ public class VeyraConfig {
     }
 
     public static boolean isChatTypeAllowedForEditHistory(long dialogId) {
+        return isChatTypeAllowedForEditHistory(UserConfig.selectedAccount, dialogId);
+    }
+
+    public static boolean isChatTypeAllowedForEditHistory(int currentAccount, long dialogId) {
         Boolean exc = getException(CATEGORY_EDIT_HISTORY, dialogId);
         if (exc != null) return exc;
         if (!editHistoryEnabled) return false;
@@ -926,15 +938,15 @@ public class VeyraConfig {
             return editHistorySecret;
         }
         try {
-            int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
-                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                org.telegram.tgnet.TLRPC.User user = findUser(currentAccount, dialogId);
                 if (user != null && user.bot) {
                     return editHistoryBots;
                 }
                 return editHistoryPrivate;
             } else {
                 long chatId = -dialogId;
+                if (chatId < 0) chatId = -chatId;
                 org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
                 if (chat == null) return editHistoryGroups || editHistoryChannels;
                 boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;
@@ -962,6 +974,10 @@ public class VeyraConfig {
     }
 
     public static boolean isChatTypeAllowedForReactionHistory(long dialogId) {
+        return isChatTypeAllowedForReactionHistory(UserConfig.selectedAccount, dialogId);
+    }
+
+    public static boolean isChatTypeAllowedForReactionHistory(int currentAccount, long dialogId) {
         Boolean exc = getException(CATEGORY_REACTION_HISTORY, dialogId);
         if (exc != null) return exc;
         if (!reactionHistoryEnabled) return false;
@@ -969,15 +985,15 @@ public class VeyraConfig {
             return reactionHistorySecret;
         }
         try {
-            int currentAccount = UserConfig.selectedAccount;
             if (dialogId > 0) {
-                org.telegram.tgnet.TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(dialogId);
+                org.telegram.tgnet.TLRPC.User user = findUser(currentAccount, dialogId);
                 if (user != null && user.bot) {
                     return reactionHistoryBots;
                 }
                 return reactionHistoryPrivate;
             } else {
                 long chatId = -dialogId;
+                if (chatId < 0) chatId = -chatId;
                 org.telegram.tgnet.TLRPC.Chat chat = findChat(currentAccount, chatId);
                 if (chat == null) return reactionHistoryGroups || reactionHistoryChannels;
                 boolean isChannel = ChatObject.isChannel(chat) && !chat.megagroup;

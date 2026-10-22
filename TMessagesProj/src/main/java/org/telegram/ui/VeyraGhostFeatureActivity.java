@@ -239,6 +239,8 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
         listView = new RecyclerListView(context);
         listView.setVerticalScrollBarEnabled(false);
         listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
+        listView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), AndroidUtilities.dp(16));
+        listView.setClipToPadding(false);
         listView.setAdapter(listAdapter);
 
         listView.setOnItemClickListener((view, position, x, y) -> {
@@ -557,31 +559,31 @@ public class VeyraGhostFeatureActivity extends BaseFragment {
                         }
                     } else if (position == scopePrivateRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingPrivate : VeyraConfig.ghostReadPrivate;
-                        checkCell.setTextAndCheck("Private Chats (PV)", val, false);
+                        checkCell.setTextAndCheck("Private Chats (PV)", val, true);
                     } else if (position == scopeGroupsRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingGroups : VeyraConfig.ghostReadGroups;
-                        checkCell.setTextAndCheck("Groups & Supergroups", val, false);
+                        checkCell.setTextAndCheck("Groups & Supergroups", val, true);
                     } else if (position == scopeBotsRow) {
                         boolean val = category == VeyraConfig.CATEGORY_GHOST_TYPING ? VeyraConfig.ghostTypingBots : VeyraConfig.ghostReadBots;
                         checkCell.setTextAndCheck("Bots", val, false);
                     } else if (position == scopePublicChannelsRow) {
-                        checkCell.setTextAndCheck("Public Channels", VeyraConfig.ghostChannelPublic, false);
+                        checkCell.setTextAndCheck("Public Channels", VeyraConfig.ghostChannelPublic, true);
                     } else if (position == scopePrivateChannelsRow) {
                         checkCell.setTextAndCheck("Private Channels", VeyraConfig.ghostChannelPrivate, false);
                     } else if (position == typingTextRow) {
-                        checkCell.setTextAndCheck("Text Typing Indicator", VeyraConfig.ghostTypingText, false);
+                        checkCell.setTextAndCheck("Text Typing Indicator", VeyraConfig.ghostTypingText, true);
                     } else if (position == typingVoiceRow) {
-                        checkCell.setTextAndCheck("Voice Recording Indicator", VeyraConfig.ghostTypingVoice, false);
+                        checkCell.setTextAndCheck("Voice Recording Indicator", VeyraConfig.ghostTypingVoice, true);
                     } else if (position == typingVideoRow) {
-                        checkCell.setTextAndCheck("Video Recording Indicator", VeyraConfig.ghostTypingVideo, false);
+                        checkCell.setTextAndCheck("Video Recording Indicator", VeyraConfig.ghostTypingVideo, true);
                     } else if (position == typingFilesRow) {
                         checkCell.setTextAndCheck("File Uploading Indicator", VeyraConfig.ghostTypingFiles, false);
                     } else if (position == readOnReplyRow) {
-                        checkCell.setTextAndCheck("Read on Reply", VeyraConfig.ghostReadOnReply, false);
+                        checkCell.setTextAndCheck("Read on Reply", VeyraConfig.ghostReadOnReply, true);
                     } else if (position == readContentsRow) {
-                        checkCell.setTextAndCheck("Hide Media Receipts (Audio/Video)", VeyraConfig.ghostHideReadContents, false);
+                        checkCell.setTextAndCheck("Hide Media Receipts (Audio/Video)", VeyraConfig.ghostHideReadContents, true);
                     } else if (position == readReactionsRow) {
-                        checkCell.setTextAndCheck(LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions), VeyraConfig.ghostHideReadReactions, false);
+                        checkCell.setTextAndCheck(LocaleController.getString("VeyraGhostHideReadReactions", R.string.VeyraGhostHideReadReactions), VeyraConfig.ghostHideReadReactions, true);
                     } else if (position == secretReadRow) {
                         checkCell.setTextAndCheck("Hide Secret Chat Receipts", VeyraConfig.ghostHideSecretRead, false);
                     }

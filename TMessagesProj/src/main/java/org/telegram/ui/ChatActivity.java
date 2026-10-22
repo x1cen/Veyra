@@ -46862,6 +46862,28 @@ public class ChatActivity extends BaseFragment implements
                     icons.add(R.drawable.menu_gift);
                 }
             }
+            boolean hasMsgHist = selectedObject != null && VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId());
+            boolean hasReactHist = selectedObject != null && VeyraConfig.reactionHistoryEnabled && VeyraEditHistoryManager.hasReactionHistory(selectedObject.getDialogId(), selectedObject.getId());
+            if (selectedObject != null) {
+                if (hasMsgHist && hasReactHist) {
+                    items.add(LocaleController.getString("EditHistory", R.string.EditHistory));
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_recent);
+                } else if (hasMsgHist) {
+                    items.add(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages));
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_edit);
+                } else if (hasReactHist) {
+                    items.add(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions));
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_reactions);
+                }
+            }
+            if (org.telegram.messenger.VeyraConfig.viewRawEnabled && selectedObject != null && selectedObject.messageOwner != null) {
+                items.add("View Raw");
+                options.add(OPTION_VIEW_RAW);
+                icons.add(R.drawable.msg_info);
+            }
             if (message.canDeleteMessage(chatMode == MODE_SCHEDULED, currentChat) && (threadMessageObjects == null || !threadMessageObjects.contains(message)) && !(message != null && message.messageOwner != null && message.messageOwner.action instanceof TLRPC.TL_messageActionTopicCreate)) {
                 items.add(LocaleController.getString(chatMode == MODE_SAVED && threadMessageId != getUserConfig().getClientUserId() ? R.string.Remove : R.string.Delete));
                 options.add(OPTION_DELETE);

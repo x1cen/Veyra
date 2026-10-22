@@ -204,7 +204,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             for (int i = 0; i < dbReactions.size(); i++) {
                 VeyraEditHistoryManager.ReactionEntry entry = dbReactions.get(i);
                 // Ignore self reactions unless explicitly enabled in settings
-                if (!VeyraConfig.reactionHistoryIncludeSelf && (entry.userId == currentSelfId || (entry.userId == 0 && entry.count == 1 && currentSelfId != 0))) {
+                if (!VeyraConfig.reactionHistoryIncludeSelf && entry.userId != 0 && entry.userId == currentSelfId) {
                     continue;
                 }
                 // Avoid duplicate same-action entries
