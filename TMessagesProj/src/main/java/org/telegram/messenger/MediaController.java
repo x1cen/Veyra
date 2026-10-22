@@ -3686,7 +3686,30 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 file = null;
             }
         }
-        final File cacheFile = file != null ? file : FileLoader.getInstance(messageObject.currentAccount).getPathToMessage(messageObject.messageOwner);
+        File cacheFile = file;
+        if (cacheFile == null) {
+            File messageFile = FileLoader.getInstance(messageObject.currentAccount).getPathToMessage(messageObject.messageOwner);
+            if (messageFile != null && messageFile.exists()) {
+                cacheFile = messageFile;
+                exists = true;
+            } else if (messageObject.getDocument() != null) {
+                File attachFile = FileLoader.getInstance(messageObject.currentAccount).getPathToAttach(messageObject.getDocument());
+                if (attachFile != null && attachFile.exists()) {
+                    cacheFile = attachFile;
+                    exists = true;
+                } else {
+                    File cacheDirFile = FileLoader.getInstance(messageObject.currentAccount).getPathToAttach(messageObject.getDocument(), true);
+                    if (cacheDirFile != null && cacheDirFile.exists()) {
+                        cacheFile = cacheDirFile;
+                        exists = true;
+                    } else {
+                        cacheFile = messageFile;
+                    }
+                }
+            } else {
+                cacheFile = messageFile;
+            }
+        }
         boolean canStream = SharedConfig.streamMedia && (messageObject.isMusic() || messageObject.isRoundVideo() || messageObject.isVideo() && messageObject.canStreamVideo()) && !messageObject.shouldEncryptPhotoOrVideo() && !DialogObject.isEncryptedDialog(messageObject.getDialogId());
         if (cacheFile != file && !(exists = cacheFile.exists()) && !canStream) {
             FileLoader.getInstance(messageObject.currentAccount).loadFile(messageObject.getDocument(), messageObject, FileLoader.PRIORITY_LOW, messageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
@@ -3748,6 +3771,16 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 @Override
                 public void onError(VideoPlayer player, Exception e) {
                     FileLog.e(e);
+                    if (messageObject != null && messageObject.getDocument() != null) {
+                        File f1 = FileLoader.getInstance(messageObject.currentAccount).getPathToAttach(messageObject.getDocument(), true);
+                        File f2 = FileLoader.getInstance(messageObject.currentAccount).getPathToAttach(messageObject.getDocument(), false);
+                        File f3 = FileLoader.getInstance(messageObject.currentAccount).getPathToMessage(messageObject.messageOwner);
+                        File validFile = (f1 != null && f1.exists()) ? f1 : ((f2 != null && f2.exists()) ? f2 : ((f3 != null && f3.exists()) ? f3 : null));
+                        if (validFile != null && videoPlayer != null) {
+                            videoPlayer.preparePlayer(Uri.fromFile(validFile), "other");
+                            videoPlayer.play();
+                        }
+                    }
                 }
 
                 @Override

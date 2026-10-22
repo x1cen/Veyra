@@ -10067,9 +10067,6 @@ public class MessageObject {
         if (needDrawBluredPreview() || isVoiceOnce() || isRoundOnce()) {
             return true;
         }
-        if (messageOwner.ttl > 0 || messageOwner.destroyTime != 0) {
-            return true;
-        }
         TLRPC.MessageMedia media = getMedia(messageOwner);
         if (media != null && media.ttl_seconds != 0) {
             return true;
