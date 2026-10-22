@@ -141,7 +141,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom,
                 R.drawable.msg_mask,
                 "Device & Identity",
-                () -> presentFragment(new VeyraLoginConfigActivity())
+                () -> presentFragment(new VeyraLoginConfigActivity(true))
         ));
         r.add(VeyraSettingsRow.shadow());
 
