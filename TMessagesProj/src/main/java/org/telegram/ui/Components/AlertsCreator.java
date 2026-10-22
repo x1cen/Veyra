@@ -8165,7 +8165,7 @@ public class AlertsCreator {
                     org.veyra.client.VeyraAntiDelete.removeDeletedMessages(thisDialogId, ids);
                     org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(thisDialogId, ids);
                     long channelId = thisDialogId < 0 && ChatObject.isChannel((int) -thisDialogId, currentAccount) ? -thisDialogId : 0L;
-                    MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, false);
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false, false, false, 0, null, false);
                 } else if (!ids.isEmpty()) {
                     org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(thisDialogId, ids);
                     MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, thisDialogId, topicId, deleteForAll[0], mode);
@@ -8192,7 +8192,7 @@ public class AlertsCreator {
                         org.veyra.client.VeyraAntiDelete.removeDeletedMessages(targetDialogId, retainedDeletedIds);
                         org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(targetDialogId, retainedDeletedIds);
                         long chId = targetDialogId < 0 && ChatObject.isChannel((int) -targetDialogId, currentAccount) ? -targetDialogId : 0L;
-                        MessagesController.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, retainedDeletedIds, chId, false, false, false, 0, null, false);
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.messagesDeleted, retainedDeletedIds, chId, false, false, false, 0, null, false);
                     }
                     if (!ids.isEmpty()) {
                         org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(targetDialogId, ids);
