@@ -161,6 +161,46 @@ public class VeyraAntiDelete {
         return false;
     }
 
+    private static final java.util.Map<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void addSelfDeletedMessage(long dialogId, int messageId) {
+        java.util.Set<Integer> set = selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>()));
+        set.add(messageId);
+    }
+
+    public static void addSelfDeletedMessages(long dialogId, java.util.List<Integer> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) return;
+        java.util.Set<Integer> set = selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>()));
+        set.addAll(messageIds);
+    }
+
+    public static boolean isSelfDeleted(long dialogId, int messageId) {
+        java.util.Set<Integer> set = selfDeletedMessagesByDialog.get(dialogId);
+        if (set != null && set.contains(messageId)) {
+            return true;
+        }
+        if (dialogId != 0) {
+            java.util.Set<Integer> altSet = selfDeletedMessagesByDialog.get(-dialogId);
+            if (altSet != null && altSet.contains(messageId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void removeSelfDeletedMessage(long dialogId, int messageId) {
+        java.util.Set<Integer> set = selfDeletedMessagesByDialog.get(dialogId);
+        if (set != null) {
+            set.remove(messageId);
+        }
+        if (dialogId != 0) {
+            java.util.Set<Integer> altSet = selfDeletedMessagesByDialog.get(-dialogId);
+            if (altSet != null) {
+                altSet.remove(messageId);
+            }
+        }
+    }
+
     public static void removeDeletedMessage(long dialogId, int messageId) {
         java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
         if (set != null) {
@@ -171,6 +211,13 @@ public class VeyraAntiDelete {
             if (altSet != null) {
                 altSet.remove(messageId);
             }
+        }
+    }
+
+    public static void removeDeletedMessages(long dialogId, java.util.List<Integer> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) return;
+        for (int i = 0; i < messageIds.size(); i++) {
+            removeDeletedMessage(dialogId, messageIds.get(i));
         }
     }
 

@@ -327,6 +327,108 @@ public final class VeyraLoginConfig {
         return null;
     }
 
+    public static void setDeviceModel(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_DEVICE_MODEL, value, getDefaultDeviceModel());
+        editor.apply();
+    }
+
+    public static void setSystemVersion(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_SYSTEM_VERSION, value, getDefaultSystemVersion());
+        editor.apply();
+    }
+
+    public static void setAppVersion(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_APP_VERSION, value, getDefaultAppVersion());
+        editor.apply();
+    }
+
+    public static void setLangCode(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_LANG_CODE, value, getDefaultLangCode());
+        editor.apply();
+    }
+
+    public static void setSystemLangCode(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_SYSTEM_LANG_CODE, value, getDefaultSystemLangCode());
+        editor.apply();
+    }
+
+    public static void setInstaller(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_INSTALLER, value, getDefaultInstaller());
+        editor.apply();
+    }
+
+    public static void setPackageId(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        putOrRemove(editor, KEY_PACKAGE_ID, value, getDefaultPackageId());
+        editor.apply();
+    }
+
+    public static void setTzOffset(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        if (!TextUtils.isEmpty(value)) {
+            try {
+                editor.putInt(KEY_TZ_OFFSET, Integer.parseInt(value.trim()));
+            } catch (Throwable e) {
+                editor.remove(KEY_TZ_OFFSET);
+            }
+        } else {
+            editor.remove(KEY_TZ_OFFSET);
+        }
+        editor.apply();
+    }
+
+    public static void setPerformanceClass(int value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        if (value >= 0) {
+            editor.putInt(KEY_PERF_CAT, value);
+        } else {
+            editor.remove(KEY_PERF_CAT);
+        }
+        editor.apply();
+    }
+
+    public static void setCertFingerprint(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        if (!TextUtils.isEmpty(value)) {
+            editor.putString(KEY_CERT_FINGERPRINT, value.replace(":", "").replace(" ", "").trim().toUpperCase());
+        } else {
+            editor.remove(KEY_CERT_FINGERPRINT);
+        }
+        editor.apply();
+    }
+
+    public static void setDeviceToken(String value) {
+        SharedPreferences.Editor editor = getPrefs().edit();
+        if (!TextUtils.isEmpty(value)) {
+            editor.putString(KEY_DEVICE_TOKEN, value.trim());
+        } else {
+            editor.remove(KEY_DEVICE_TOKEN);
+        }
+        editor.apply();
+    }
+
+    public static void setAllowFirebase(boolean value) {
+        getPrefs().edit().putBoolean(KEY_ALLOW_FIREBASE, value).apply();
+    }
+
+    public static void setAllowAppHash(boolean value) {
+        getPrefs().edit().putBoolean(KEY_ALLOW_APP_HASH, value).apply();
+    }
+
+    public static void setAllowFlashcall(boolean value) {
+        getPrefs().edit().putBoolean(KEY_ALLOW_FLASHCALL, value).apply();
+    }
+
+    public static void setAllowMissedCall(boolean value) {
+        getPrefs().edit().putBoolean(KEY_ALLOW_MISSED_CALL, value).apply();
+    }
+
     // ─── Persistence ──────────────────────────────────────────────────────────
 
     public static void saveConfig(int currentAccount,
@@ -414,6 +516,10 @@ public final class VeyraLoginConfig {
         } else {
             editor.remove(key);
         }
+    }
+
+    public static void resetToDefault() {
+        resetToDefault(UserConfig.selectedAccount);
     }
 
     public static void resetToDefault(int currentAccount) {

@@ -15249,6 +15249,9 @@ public class MessagesStorage extends BaseController {
             if (dialogId != 0 && VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, dialogId)) {
                 for (int m = 0; m < messages.size(); m++) {
                     int mid = messages.get(m);
+                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                        continue;
+                    }
                     try {
                         database.executeFast(String.format(Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions (mid, uid, isdel) VALUES (%d, %d, 1);", mid, dialogId)).stepThis().dispose();
                     } catch (Throwable ignored) {}

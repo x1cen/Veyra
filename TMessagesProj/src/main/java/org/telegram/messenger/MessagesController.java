@@ -17814,7 +17814,11 @@ public class MessagesController extends BaseController implements NotificationCe
                         for (int i = 0; i < dialogObjs.size(); ++i) {
                             MessageObject obj = dialogObjs.get(i);
                             for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                                if (obj != null && obj.getId() == ids.get(b)) {
+                                int mid = ids.get(b);
+                                if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                                    continue;
+                                }
+                                if (obj != null && obj.getId() == mid) {
                                     obj.deleted = true;
                                     if (obj.messageOwner != null) {
                                         obj.messageOwner.isDeleted = true;
@@ -17829,6 +17833,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     if (channelId == 0) {
                         for (int b = 0, size2 = ids.size(); b < size2; b++) {
                             Integer id = ids.get(b);
+                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, id)) {
+                                continue;
+                            }
                             MessageObject obj = dialogMessagesByIds.get(id);
                             if (obj != null) {
                                 obj.deleted = true;
@@ -17843,7 +17850,11 @@ public class MessagesController extends BaseController implements NotificationCe
                             for (int i = 0; i < objs.size(); ++i) {
                                 MessageObject obj = objs.get(i);
                                 for (int b = 0, size2 = ids.size(); b < size2; b++) {
-                                    if (obj.getId() == ids.get(b)) {
+                                    int mid = ids.get(b);
+                                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                                        continue;
+                                    }
+                                    if (obj.getId() == mid) {
                                         obj.deleted = true;
                                         obj.messageOwner.isDeleted = true;
                                         obj.forceUpdate = true;
@@ -17856,11 +17867,24 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             });
-            if (isAntiDeleteAllowed) {
-                List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, ids, false);
-            } else {
-                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, true, false, 0, 0);
-                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+            ArrayList<Integer> retainedIds = new ArrayList<>();
+            ArrayList<Integer> selfDelIds = new ArrayList<>();
+            for (int b = 0; b < ids.size(); b++) {
+                int mid = ids.get(b);
+                if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                    selfDelIds.add(mid);
+                } else {
+                    retainedIds.add(mid);
+                }
+            }
+            if (isAntiDeleteAllowed && !retainedIds.isEmpty()) {
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(dialogId, retainedIds, false);
+            }
+            if (!selfDelIds.isEmpty() || (!isAntiDeleteAllowed && !retainedIds.isEmpty())) {
+                ArrayList<Integer> toDelete = new ArrayList<>(selfDelIds);
+                if (!isAntiDeleteAllowed) toDelete.addAll(retainedIds);
+                List<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, toDelete, true, false, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, toDelete, dialogIds);
             }
         });
     }
@@ -21550,13 +21574,26 @@ public class MessagesController extends BaseController implements NotificationCe
                 long key = deletedMessages.keyAt(a);
                 List<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                    ArrayList<Integer> retainedList = new ArrayList<>();
+                    ArrayList<Integer> selfDelList = new ArrayList<>();
+                    for (int i = 0; i < arrayList.size(); i++) {
+                        int mid = arrayList.get(i);
+                        if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(key, mid)) {
+                            selfDelList.add(mid);
+                        } else {
+                            retainedList.add(mid);
+                        }
+                    }
                     boolean allowAntiDelete = key == 0 ? VeyraConfig.antiDelete : VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, key);
-                    if (allowAntiDelete) {
-                        List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, arrayList, false);
-                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
-                    } else {
-                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList instanceof ArrayList ? (ArrayList<Integer>) arrayList : new ArrayList<>(arrayList), false, true, 0, 0);
-                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    if (allowAntiDelete && !retainedList.isEmpty()) {
+                        List<Long> dialogIds = getMessagesStorage().markMessagesAsIsDeleted(key, retainedList, false);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, retainedList, dialogIds);
+                    }
+                    if (!selfDelList.isEmpty() || (!allowAntiDelete && !retainedList.isEmpty())) {
+                        ArrayList<Integer> toDelete = new ArrayList<>(selfDelList);
+                        if (!allowAntiDelete) toDelete.addAll(retainedList);
+                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, toDelete, false, true, 0, 0);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, toDelete, dialogIds);
                     }
                 });
             }
