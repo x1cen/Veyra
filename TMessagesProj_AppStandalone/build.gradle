@@ -124,16 +124,14 @@ android {
 
     productFlavors {
         afat {
-            ndk {
-                def targetArch = System.getenv("TARGET_ARCH") ?: (project.hasProperty("targetArch") ? project.property("targetArch") : "")
-                if (targetArch == "arm64-v8a") {
+            def targetArch = System.getenv("TARGET_ARCH") ?: (project.hasProperty("targetArch") ? project.property("targetArch") : "")
+            if (targetArch == "arm64-v8a") {
+                ndk {
                     abiFilters "arm64-v8a"
-                } else if (targetArch == "arm64-v8a,armeabi-v7a") {
-                    abiFilters "arm64-v8a", "armeabi-v7a"
-                } else if (targetArch && targetArch != "all" && targetArch != "auto") {
+                }
+            } else if (targetArch && targetArch != "all" && targetArch != "auto" && targetArch != "arm64-v8a,armeabi-v7a") {
+                ndk {
                     abiFilters targetArch
-                } else {
-                    abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
                 }
             }
             ext {
