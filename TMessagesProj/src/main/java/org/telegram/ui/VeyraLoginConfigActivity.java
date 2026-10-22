@@ -4,15 +4,11 @@ package org.telegram.ui;
 import android.content.Context;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
-import android.graphics.drawable.Drawable;
-import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -20,6 +16,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.VeyraLoginConfig;
@@ -95,11 +93,12 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         if (AndroidUtilities.isTablet()) {
             actionBar.setOccupyStatusBar(false);
         }
+
         if (!isReadOnly) {
             ActionBarMenu menu = actionBar.createMenu();
-            menu.addItem(RESET_BUTTON, R.drawable.msg_retry);
-            menu.addItem(RANDOM_BUTTON, R.drawable.menu_random);
-            menu.addItem(DONE_BUTTON, R.drawable.ic_ab_done);
+            menu.addItemWithWidth(RESET_BUTTON, R.drawable.msg_retry, AndroidUtilities.dp(48), "Restore Defaults");
+            menu.addItemWithWidth(RANDOM_BUTTON, R.drawable.menu_random, AndroidUtilities.dp(48), "Randomize");
+            menu.addItemWithWidth(DONE_BUTTON, R.drawable.ic_ab_done, AndroidUtilities.dp(56), "Save");
         }
 
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
@@ -127,7 +126,17 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         rootLayout.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(36));
         scrollView.addView(rootLayout, LayoutHelper.createScroll(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT));
 
-        // ─── Hero Header Card with Mask Icon ──────────────────────────────────
+        if (isReadOnly) {
+            buildReadOnlyLayout(context, rootLayout);
+        } else {
+            buildEditableLayout(context, rootLayout);
+        }
+
+        return fragmentView;
+    }
+
+    private void buildReadOnlyLayout(Context context, LinearLayout rootLayout) {
+        // Hero Header Card
         LinearLayout heroCard = new LinearLayout(context);
         heroCard.setOrientation(LinearLayout.VERTICAL);
         heroCard.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -141,7 +150,71 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         heroCard.addView(heroIcon, LayoutHelper.createLinear(64, 64, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 12));
 
         TextView heroTitle = new TextView(context);
-        heroTitle.setText("Device & Identity Spoofing");
+        heroTitle.setText("Device & Identity");
+        heroTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
+        heroTitle.setTypeface(AndroidUtilities.bold());
+        heroTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        heroTitle.setGravity(Gravity.CENTER_HORIZONTAL);
+        heroCard.addView(heroTitle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 4));
+
+        TextView heroSubtitle = new TextView(context);
+        heroSubtitle.setText("Active MTProto Session Parameters • Read-Only\nTap any row to copy its value to clipboard.");
+        heroSubtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        heroSubtitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        heroSubtitle.setGravity(Gravity.CENTER_HORIZONTAL);
+        heroCard.addView(heroSubtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 12, 0, 12, 12));
+
+        rootLayout.addView(heroCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        // Card 1: Hardware & System Emulation
+        LinearLayout cardHardware = createCard(context, rootLayout, "Hardware & System Emulation", R.drawable.msg_mask);
+        addReadOnlyField(context, cardHardware, "Device Model", VeyraLoginConfig.getDeviceModel(), "Sent as initConnection.device_model");
+        addReadOnlyField(context, cardHardware, "System Version", VeyraLoginConfig.getSystemVersion(), "Android SDK level / OS version");
+        addReadOnlyField(context, cardHardware, "App Version", VeyraLoginConfig.getAppVersion(), "Telegram client version");
+        addReadOnlyField(context, cardHardware, "Performance Class", VeyraLoginConfig.getCustomPerfCatString(), "Device performance tier");
+
+        // Card 2: Security & App Verification
+        LinearLayout cardSecurity = createCard(context, rootLayout, "Security & App Verification", R.drawable.msg_mask);
+        addReadOnlyField(context, cardSecurity, "Certificate SHA-256 Fingerprint", VeyraLoginConfig.getCustomCertFingerprintString(), "Official Telegram signature (avoids 3rd-party flags)");
+        addReadOnlyField(context, cardSecurity, "Push / FCM Device Token", VeyraLoginConfig.getCustomDeviceTokenString(), "Unique push registration token");
+
+        // Card 3: Localization & Distribution
+        LinearLayout cardLocale = createCard(context, rootLayout, "Localization & Distribution", R.drawable.msg_mask);
+        addReadOnlyField(context, cardLocale, "App Language Code", VeyraLoginConfig.getLangCode(), "ISO-639 UI language code");
+        addReadOnlyField(context, cardLocale, "System Language Code", VeyraLoginConfig.getSystemLangCode(), "Device OS primary language");
+        addReadOnlyField(context, cardLocale, "Timezone Offset (Seconds)", VeyraLoginConfig.getCustomTzOffsetString(), "Seconds from UTC");
+        addReadOnlyField(context, cardLocale, "Installer Package", VeyraLoginConfig.getInstaller(), "Distribution package source");
+        addReadOnlyField(context, cardLocale, "Package Identifier", VeyraLoginConfig.getPackageId(), "Application package name");
+
+        // Card 4: MTProto API Credentials
+        LinearLayout cardApi = createCard(context, rootLayout, "Custom API Credentials", R.drawable.msg_mask);
+        addReadOnlyField(context, cardApi, "API ID", VeyraLoginConfig.getCustomApiIdString(), "Custom API ID (empty = built-in default)");
+        addReadOnlyField(context, cardApi, "API Hash", VeyraLoginConfig.getCustomApiHashString(), "Custom API Hash (empty = built-in default)");
+
+        // Card 5: Auth Verification Flags
+        LinearLayout cardFlags = createCard(context, rootLayout, "Auth Verification Flags", R.drawable.msg_mask);
+        addReadOnlyFlag(context, cardFlags, "Play Integrity & SafetyNet Token", VeyraLoginConfig.isAllowFirebase(true));
+        addReadOnlyFlag(context, cardFlags, "SMS Retriever App Hash", VeyraLoginConfig.isAllowAppHash(true));
+        addReadOnlyFlag(context, cardFlags, "Allow Flash Call Verification", VeyraLoginConfig.isAllowFlashcall(false));
+        addReadOnlyFlag(context, cardFlags, "Allow Missed Call Verification", VeyraLoginConfig.isAllowMissedCall(false));
+    }
+
+    private void buildEditableLayout(Context context, LinearLayout rootLayout) {
+        // Hero Header Card
+        LinearLayout heroCard = new LinearLayout(context);
+        heroCard.setOrientation(LinearLayout.VERTICAL);
+        heroCard.setGravity(Gravity.CENTER_HORIZONTAL);
+        heroCard.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(20), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+
+        ImageView heroIcon = new ImageView(context);
+        heroIcon.setImageResource(R.drawable.msg_mask);
+        heroIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+        heroIcon.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(64), 0x1A2CA5E0));
+        heroIcon.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+        heroCard.addView(heroIcon, LayoutHelper.createLinear(64, 64, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 12));
+
+        TextView heroTitle = new TextView(context);
+        heroTitle.setText("Device & Identity");
         heroTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
         heroTitle.setTypeface(AndroidUtilities.bold());
         heroTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
@@ -157,22 +230,22 @@ public class VeyraLoginConfigActivity extends BaseFragment {
 
         rootLayout.addView(heroCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        // ─── Preset Chips Bar ─────────────────────────────────────────────────
+        // Preset Chips Bar
         addPresetChips(context, rootLayout);
 
-        // ─── Card 1: Hardware & System Emulation ──────────────────────────────
+        // Card 1: Hardware & System Emulation
         LinearLayout cardHardware = createCard(context, rootLayout, "Hardware & System Emulation", R.drawable.msg_mask);
         deviceModelField = addField(context, cardHardware, "Device Model", VeyraLoginConfig.getDeviceModel(), "Sent as initConnection.device_model (e.g. samsung SM-S928B)", InputType.TYPE_CLASS_TEXT);
         systemVersionField = addField(context, cardHardware, "System Version", VeyraLoginConfig.getSystemVersion(), "Android SDK level / OS version (e.g. SDK 34)", InputType.TYPE_CLASS_TEXT);
         appVersionField = addField(context, cardHardware, "App Version", VeyraLoginConfig.getAppVersion(), "Telegram client version (e.g. 11.8.0 (5200))", InputType.TYPE_CLASS_TEXT);
         perfCatField = addField(context, cardHardware, "Performance Class", VeyraLoginConfig.getCustomPerfCatString(), "Device tier: -1 (Auto), 1 (Low), 2 (Med), 3 (High)", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
 
-        // ─── Card 2: Security & Certificate Fingerprint ───────────────────────
+        // Card 2: Security & App Verification
         LinearLayout cardSecurity = createCard(context, rootLayout, "Security & App Verification", R.drawable.msg_mask);
         certFingerprintField = addField(context, cardSecurity, "Certificate SHA-256 Fingerprint", VeyraLoginConfig.getCustomCertFingerprintString(), "Official Telegram signature: 49C15225...38E1 (avoids 3rd-party flags)", InputType.TYPE_CLASS_TEXT);
         deviceTokenField = addField(context, cardSecurity, "Push / FCM Device Token", VeyraLoginConfig.getCustomDeviceTokenString(), "Unique push registration token (leave empty to auto-generate)", InputType.TYPE_CLASS_TEXT);
 
-        // ─── Card 3: Localization & Network ───────────────────────────────────
+        // Card 3: Localization & Distribution
         LinearLayout cardLocale = createCard(context, rootLayout, "Localization & Distribution", R.drawable.msg_mask);
         langCodeField = addField(context, cardLocale, "App Language Code", VeyraLoginConfig.getLangCode(), "ISO-639 language code for app UI (e.g. en, fa)", InputType.TYPE_CLASS_TEXT);
         systemLangCodeField = addField(context, cardLocale, "System Language Code", VeyraLoginConfig.getSystemLangCode(), "Device OS primary language (e.g. en, fa)", InputType.TYPE_CLASS_TEXT);
@@ -180,9 +253,8 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         installerField = addField(context, cardLocale, "Installer Package", VeyraLoginConfig.getInstaller(), "com.android.vending (Google Play) or empty for Direct APK", InputType.TYPE_CLASS_TEXT);
         packageIdField = addField(context, cardLocale, "Package Identifier", VeyraLoginConfig.getPackageId(), "Application package name (org.telegram.messenger)", InputType.TYPE_CLASS_TEXT);
 
-        // ─── Card 4: MTProto API Credentials ──────────────────────────────────
+        // Card 4: MTProto API Credentials
         LinearLayout cardApi = createCard(context, rootLayout, "Custom API Credentials (Hidden by Default)", R.drawable.msg_mask);
-
         TextView apiNote = new TextView(context);
         apiNote.setText("Zero-Knowledge Security: Official built-in API credentials are protected and never shown. Leave blank to use built-in Telegram API keys safely.");
         apiNote.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
@@ -193,7 +265,7 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         apiIdField = addField(context, cardApi, "API ID", VeyraLoginConfig.getCustomApiIdString(), "Optional custom integer API ID (leave empty for default)", InputType.TYPE_CLASS_NUMBER);
         apiHashField = addField(context, cardApi, "API Hash", VeyraLoginConfig.getCustomApiHashString(), "Optional 32-character Hex API Hash (leave empty for default)", InputType.TYPE_CLASS_TEXT);
 
-        // ─── Card 5: Authentication Security Flags ────────────────────────────
+        // Card 5: Auth Verification Flags
         LinearLayout cardFlags = createCard(context, rootLayout, "Auth Verification Flags", R.drawable.msg_mask);
 
         firebaseCheckCell = new TextCheckCell(context);
@@ -216,38 +288,91 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         missedCallCheckCell.setOnClickListener(v -> missedCallCheckCell.setChecked(!missedCallCheckCell.isChecked()));
         cardFlags.addView(missedCallCheckCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        // ─── Action Buttons ───────────────────────────────────────────────────
-        TextView randomBtn = new TextView(context);
-        randomBtn.setText("Randomize Identity");
-        randomBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        randomBtn.setTypeface(AndroidUtilities.bold());
-        randomBtn.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
-        randomBtn.setGravity(Gravity.CENTER);
-        randomBtn.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(14), 0x1A2CA5E0, 0x332CA5E0));
-        randomBtn.setOnClickListener(v -> randomizeIdentity());
-        rootLayout.addView(randomBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48, 16, 16, 16, 8));
+        // NOTE: Bottom action buttons are completely removed!
+        // All actions (Reset, Randomize, Save) are now in the top ActionBar menu!
+    }
 
-        TextView saveButton = new TextView(context);
-        saveButton.setText("Save & Apply Changes");
-        saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        saveButton.setTypeface(AndroidUtilities.bold());
-        saveButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
-        saveButton.setGravity(Gravity.CENTER);
-        saveButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(14), Theme.getColor(Theme.key_featuredStickers_addButton), Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
-        saveButton.setOnClickListener(v -> save());
-        rootLayout.addView(saveButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50, 16, 0, 16, 10));
+    private void addReadOnlyField(Context context, LinearLayout parent, String title, String val, String subtitle) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10), AndroidUtilities.dp(16), AndroidUtilities.dp(10));
+        row.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), 0, Theme.getColor(Theme.key_listSelector)));
+        row.setClickable(true);
+        row.setFocusable(true);
 
-        TextView resetButton = new TextView(context);
-        resetButton.setText("Reset All to Device Defaults");
-        resetButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        resetButton.setTypeface(AndroidUtilities.bold());
-        resetButton.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
-        resetButton.setGravity(Gravity.CENTER);
-        resetButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(14), 0x1AE53935, 0x33E53935));
-        resetButton.setOnClickListener(v -> showResetConfirmation());
-        rootLayout.addView(resetButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 16, 0, 16, 16));
+        TextView titleView = new TextView(context);
+        titleView.setText(title);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
+        titleView.setTypeface(AndroidUtilities.bold());
+        row.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
 
-        return fragmentView;
+        final String displayVal = TextUtils.isEmpty(val) ? "Default" : val;
+        TextView valView = new TextView(context);
+        valView.setText(displayVal);
+        valView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        valView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        valView.setTypeface(AndroidUtilities.bold());
+        row.addView(valView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
+
+        if (!TextUtils.isEmpty(subtitle)) {
+            TextView subView = new TextView(context);
+            subView.setText(subtitle);
+            subView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            subView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            row.addView(subView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        row.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = android.content.ClipData.newPlainText(title, displayVal);
+                clipboard.setPrimaryClip(clip);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+
+        parent.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+    }
+
+    private void addReadOnlyFlag(Context context, LinearLayout parent, String title, boolean enabled) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
+        row.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), 0, Theme.getColor(Theme.key_listSelector)));
+        row.setClickable(true);
+        row.setFocusable(true);
+
+        TextView titleView = new TextView(context);
+        titleView.setText(title);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14.5f);
+        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        row.addView(titleView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, Gravity.CENTER_VERTICAL));
+
+        TextView badge = new TextView(context);
+        badge.setText(enabled ? "Enabled" : "Disabled");
+        badge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        badge.setTypeface(AndroidUtilities.bold());
+        badge.setTextColor(enabled ? Theme.getColor(Theme.key_windowBackgroundWhiteGreenText) : Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        badge.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), enabled ? 0x1A4CAF50 : 0x1A9E9E9E));
+        badge.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(4), AndroidUtilities.dp(10), AndroidUtilities.dp(4));
+        row.addView(badge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+        row.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = android.content.ClipData.newPlainText(title, enabled ? "Enabled" : "Disabled");
+                clipboard.setPrimaryClip(clip);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+
+        parent.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
     }
 
     private void addPresetChips(Context context, LinearLayout parent) {
@@ -305,7 +430,6 @@ public class VeyraLoginConfigActivity extends BaseFragment {
     private void applyPreset(String model, String sysVer, String installer, String pkgId, int perf, String cert) {
         if (deviceModelField != null) deviceModelField.setText(model);
         if (systemVersionField != null) systemVersionField.setText(sysVer);
-        // appVersionField is never touched: user can edit manually if desired
         if (installerField != null) installerField.setText(installer);
         if (packageIdField != null) packageIdField.setText(pkgId);
         if (perfCatField != null) perfCatField.setText(String.valueOf(perf));
@@ -320,7 +444,6 @@ public class VeyraLoginConfigActivity extends BaseFragment {
         if (systemVersionField != null) systemVersionField.setText(profile[1]);
         if (perfCatField != null) perfCatField.setText(profile[2]);
 
-        // Generate a realistic random Google FCM registration token string
         if (deviceTokenField != null) {
             String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
             StringBuilder sb = new StringBuilder(140);
@@ -335,7 +458,6 @@ public class VeyraLoginConfigActivity extends BaseFragment {
             deviceTokenField.setText(sb.toString());
         }
 
-        // Haptic feedback
         try {
             if (fragmentView != null) {
                 fragmentView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
@@ -406,22 +528,23 @@ public class VeyraLoginConfigActivity extends BaseFragment {
     }
 
     private void save() {
+        if (deviceModelField == null) return;
         String deviceModel = deviceModelField.getText().toString().trim();
-        String systemVersion = systemVersionField.getText().toString().trim();
-        String appVersion = appVersionField.getText().toString().trim();
-        String perfCat = perfCatField.getText().toString().trim();
+        String systemVersion = systemVersionField != null ? systemVersionField.getText().toString().trim() : "";
+        String appVersion = appVersionField != null ? appVersionField.getText().toString().trim() : "";
+        String perfCat = perfCatField != null ? perfCatField.getText().toString().trim() : "";
 
-        String certFingerprint = certFingerprintField.getText().toString().trim();
-        String deviceToken = deviceTokenField.getText().toString().trim();
+        String certFingerprint = certFingerprintField != null ? certFingerprintField.getText().toString().trim() : "";
+        String deviceToken = deviceTokenField != null ? deviceTokenField.getText().toString().trim() : "";
 
-        String langCode = langCodeField.getText().toString().trim();
-        String systemLangCode = systemLangCodeField.getText().toString().trim();
-        String tzOffset = tzOffsetField.getText().toString().trim();
-        String installer = installerField.getText().toString().trim();
-        String packageId = packageIdField.getText().toString().trim();
+        String langCode = langCodeField != null ? langCodeField.getText().toString().trim() : "";
+        String systemLangCode = systemLangCodeField != null ? systemLangCodeField.getText().toString().trim() : "";
+        String tzOffset = tzOffsetField != null ? tzOffsetField.getText().toString().trim() : "";
+        String installer = installerField != null ? installerField.getText().toString().trim() : "";
+        String packageId = packageIdField != null ? packageIdField.getText().toString().trim() : "";
 
-        String apiId = apiIdField.getText().toString().trim();
-        String apiHash = apiHashField.getText().toString().trim();
+        String apiId = apiIdField != null ? apiIdField.getText().toString().trim() : "";
+        String apiHash = apiHashField != null ? apiHashField.getText().toString().trim() : "";
 
         boolean allowFirebase = firebaseCheckCell != null && firebaseCheckCell.isChecked();
         boolean allowAppHash = appHashCheckCell != null && appHashCheckCell.isChecked();

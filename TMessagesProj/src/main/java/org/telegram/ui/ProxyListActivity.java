@@ -1272,50 +1272,48 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
     }
 
-    private class ProxyActionsCell extends FrameLayout {
+    private class ProxyActionsCell extends LinearLayout {
         public ProxyActionsCell(Context context) {
             super(context);
+            setOrientation(HORIZONTAL);
+            setWeightSum(5.0f);
             setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-
-            LinearLayout layout = new LinearLayout(context);
-            layout.setOrientation(LinearLayout.HORIZONTAL);
-            layout.setWeightSum(5.0f);
-            layout.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
+            setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
 
             // 1. Add (Manual)
-            layout.addView(createActionButton(context, R.drawable.msg_add, "Add", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+            addView(createActionButton(context, R.drawable.msg_add, "Add", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
                 presentFragment(new ProxySettingsActivity());
             }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
 
             // 2. Clipboard
-            layout.addView(createActionButton(context, R.drawable.msg_copy, "Clipboard", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+            addView(createActionButton(context, R.drawable.msg_copy, "Clipboard", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
                 importFromClipboardDirectly();
             }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
 
             // 3. Duplicates
-            layout.addView(createActionButton(context, R.drawable.msg_copy_filled, "Duplicates", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+            addView(createActionButton(context, R.drawable.msg_copy_filled, "Duplicates", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
                 removeDuplicateProxies();
             }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
 
             // 4. Inactive / Clear Dead
-            layout.addView(createActionButton(context, R.drawable.msg_clearcache, "Clean", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
+            addView(createActionButton(context, R.drawable.msg_clearcache, "Clean", Theme.key_windowBackgroundWhiteBlueHeader, () -> {
                 deleteInactiveProxies();
             }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
 
             // 5. Delete All
-            layout.addView(createActionButton(context, R.drawable.msg_delete, "Delete All", Theme.key_text_RedRegular, () -> {
+            addView(createActionButton(context, R.drawable.msg_delete, "Delete All", Theme.key_text_RedRegular, () -> {
                 showDeleteAllConfirmation();
             }), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
-
-            addView(layout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
 
         private View createActionButton(Context context, int iconRes, String label, int colorKey, Runnable action) {
             LinearLayout item = new LinearLayout(context);
             item.setOrientation(LinearLayout.VERTICAL);
             item.setGravity(Gravity.CENTER_HORIZONTAL);
-            item.setPadding(AndroidUtilities.dp(2), AndroidUtilities.dp(6), AndroidUtilities.dp(2), AndroidUtilities.dp(6));
-            item.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), 0, Theme.getColor(Theme.key_listSelector)));
+            item.setPadding(AndroidUtilities.dp(2), AndroidUtilities.dp(8), AndroidUtilities.dp(2), AndroidUtilities.dp(8));
+            item.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(10), 0, Theme.getColor(Theme.key_listSelector)));
+            item.setClickable(true);
+            item.setFocusable(true);
 
             ImageView icon = new ImageView(context);
             icon.setImageResource(iconRes);
@@ -1332,6 +1330,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
             text.setSingleLine(true);
             item.addView(text, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
+            item.setOnTouchListener((v, e) -> {
+                if (e.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                return false;
+            });
             item.setOnClickListener(v -> action.run());
             return item;
         }
