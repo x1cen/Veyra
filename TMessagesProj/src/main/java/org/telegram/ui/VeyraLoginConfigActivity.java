@@ -83,9 +83,19 @@ public class VeyraLoginConfigActivity extends BaseFragment {
             {"Asus ASUS_AI2401_D", "SDK 34", "3"}  // ROG Phone 8
     };
 
+    private final boolean isReadOnly;
+
+    public VeyraLoginConfigActivity() {
+        this(false);
+    }
+
+    public VeyraLoginConfigActivity(boolean readOnly) {
+        super();
+        this.isReadOnly = readOnly;
+    }
+
     @Override
     public View createView(Context context) {
-        boolean isReadOnly = getUserConfig().isClientActivated();
 
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);

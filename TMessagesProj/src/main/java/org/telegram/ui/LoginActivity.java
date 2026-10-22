@@ -793,7 +793,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         deviceConfigButtonView.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
         deviceConfigButtonView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
         deviceConfigButtonView.setContentDescription("Device & Identity");
-        deviceConfigButtonView.setOnClickListener(v -> presentFragment(new VeyraLoginConfigActivity()));
+        deviceConfigButtonView.setOnClickListener(v -> presentFragment(new VeyraLoginConfigActivity(false)));
         sizeNotifierFrameLayout.addView(deviceConfigButtonView, LayoutHelper.createFrame(32, 32, Gravity.RIGHT | Gravity.TOP, 0, 16, 16, 0));
 
         updateProxyButton(false, true);
