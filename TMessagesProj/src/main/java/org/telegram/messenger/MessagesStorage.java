@@ -5370,7 +5370,7 @@ public class MessagesStorage extends BaseController {
                                                 }
                                             }
                                             if (!wasPresent) {
-                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, newPeerId, true, mySelfId);
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, 1, newPeerId, mySelfId);
                                             }
                                         }
                                     } else if (pastReactions != null && pastReactions.results != null && !pastReactions.results.isEmpty()) {
@@ -5393,7 +5393,7 @@ public class MessagesStorage extends BaseController {
                                             if (newCount < oldRc.count) {
                                                 org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, 0, mySelfId);
                                             } else if (newCount > oldRc.count) {
-                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, oldEmoji, 0, true, mySelfId);
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, oldEmoji, newCount, 0, mySelfId);
                                             }
                                         }
                                         if (reactions != null && reactions.results != null) {
@@ -5411,7 +5411,7 @@ public class MessagesStorage extends BaseController {
                                                     }
                                                 }
                                                 if (!existed && newRc.count > 0) {
-                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, 0, true, mySelfId);
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, newRc.count, 0, mySelfId);
                                                 }
                                             }
                                         }
@@ -5421,7 +5421,7 @@ public class MessagesStorage extends BaseController {
                                             if (newRc == null) continue;
                                             String newEmoji = getReactionString(newRc.reaction);
                                             if (newRc.count > 0 && !TextUtils.isEmpty(newEmoji)) {
-                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, 0, true, mySelfId);
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, newRc.count, 0, mySelfId);
                                             }
                                         }
                                     }
