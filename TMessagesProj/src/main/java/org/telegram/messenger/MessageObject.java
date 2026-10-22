@@ -11688,9 +11688,6 @@ public class MessageObject {
     }
 
     public boolean canEditMedia() {
-        if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
-            return true;
-        }
         if (isSecretMedia() || isEphemeralAndNotWelcome()) {
             return false;
         } else if (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaPhoto) {
@@ -11822,7 +11819,7 @@ public class MessageObject {
     }
 
     public boolean canDeleteMessage(boolean inScheduleMode, TLRPC.Chat chat) {
-        if (isVeyraOrAntiDeleted() || org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
+        if (isVeyraOrAntiDeleted()) {
             return true;
         }
         return (

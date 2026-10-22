@@ -5277,6 +5277,18 @@ public class MessagesStorage extends BaseController {
         });
     }
 
+    private static String getReactionString(TLRPC.Reaction reaction) {
+        if (reaction == null) return "";
+        if (reaction instanceof TLRPC.TL_reactionPaid) {
+            return "\u2b50\ufe0f";
+        } else if (reaction instanceof TLRPC.TL_reactionEmoji) {
+            return ((TLRPC.TL_reactionEmoji) reaction).emoticon;
+        } else if (reaction instanceof TLRPC.TL_reactionCustomEmoji) {
+            return "custom:" + ((TLRPC.TL_reactionCustomEmoji) reaction).document_id;
+        }
+        return "";
+    }
+
     public void updateMessageReactions(long dialogId, int msgId, TLRPC.TL_messageReactions reactions) {
         storageQueue.postRunnable(() -> {
             SQLiteCursor cursor = null;
@@ -5304,33 +5316,26 @@ public class MessagesStorage extends BaseController {
                                 }
                                 MessageObject.updateReactions(message, reactions);
                                 // Do not clear edited flag on reaction updates — preserve server-set edited state.
-                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(dialogId)) {
+                                if (i == 0 && VeyraConfig.reactionHistoryEnabled && !VeyraConfig.isDeveloperChat(dialogId) && VeyraConfig.isChatTypeAllowedForReactionHistory(currentAccount, dialogId)) {
                                     int nowTime = (int) (System.currentTimeMillis() / 1000);
                                     long mySelfId = getUserConfig().clientUserId;
-                                    if (pastReactions != null && pastReactions.recent_reactions != null && !pastReactions.recent_reactions.isEmpty()) {
+                                    boolean hasPastRecent = pastReactions != null && pastReactions.recent_reactions != null && !pastReactions.recent_reactions.isEmpty();
+                                    boolean hasNewRecent = reactions != null && reactions.recent_reactions != null && !reactions.recent_reactions.isEmpty();
+
+                                    if (hasPastRecent) {
                                         for (int p = 0; p < pastReactions.recent_reactions.size(); p++) {
                                             TLRPC.MessagePeerReaction oldMpr = pastReactions.recent_reactions.get(p);
                                             if (oldMpr == null) continue;
                                             long oldPeerId = MessageObject.getPeerId(oldMpr.peer_id);
-                                            String oldEmoji = "";
-                                            if (oldMpr.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                oldEmoji = "\u2b50\ufe0f";
-                                            } else if (oldMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldMpr.reaction).emoticon;
-                                            }
+                                            String oldEmoji = getReactionString(oldMpr.reaction);
                                             if (TextUtils.isEmpty(oldEmoji)) continue;
 
                                             boolean stillExists = false;
-                                            if (reactions != null && reactions.recent_reactions != null) {
+                                            if (hasNewRecent) {
                                                 for (int r = 0; r < reactions.recent_reactions.size(); r++) {
                                                     TLRPC.MessagePeerReaction newMpr = reactions.recent_reactions.get(r);
                                                     if (newMpr != null && MessageObject.getPeerId(newMpr.peer_id) == oldPeerId) {
-                                                        String newEmoji = "";
-                                                        if (newMpr.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                            newEmoji = "\u2b50\ufe0f";
-                                                        } else if (newMpr.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newMpr.reaction).emoticon;
-                                                        }
+                                                        String newEmoji = getReactionString(newMpr.reaction);
                                                         if (oldEmoji.equals(newEmoji)) {
                                                             stillExists = true;
                                                             break;
@@ -5342,38 +5347,81 @@ public class MessagesStorage extends BaseController {
                                                 org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, oldPeerId, mySelfId);
                                             }
                                         }
+                                    }
+                                    if (hasNewRecent) {
+                                        for (int r = 0; r < reactions.recent_reactions.size(); r++) {
+                                            TLRPC.MessagePeerReaction newMpr = reactions.recent_reactions.get(r);
+                                            if (newMpr == null) continue;
+                                            long newPeerId = MessageObject.getPeerId(newMpr.peer_id);
+                                            String newEmoji = getReactionString(newMpr.reaction);
+                                            if (TextUtils.isEmpty(newEmoji)) continue;
+
+                                            boolean wasPresent = false;
+                                            if (hasPastRecent) {
+                                                for (int p = 0; p < pastReactions.recent_reactions.size(); p++) {
+                                                    TLRPC.MessagePeerReaction oldMpr = pastReactions.recent_reactions.get(p);
+                                                    if (oldMpr != null && MessageObject.getPeerId(oldMpr.peer_id) == newPeerId) {
+                                                        String oldEmoji = getReactionString(oldMpr.reaction);
+                                                        if (newEmoji.equals(oldEmoji)) {
+                                                            wasPresent = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (!wasPresent) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, newPeerId, true, mySelfId);
+                                            }
+                                        }
                                     } else if (pastReactions != null && pastReactions.results != null && !pastReactions.results.isEmpty()) {
                                         for (int p = 0; p < pastReactions.results.size(); p++) {
                                             TLRPC.ReactionCount oldRc = pastReactions.results.get(p);
                                             if (oldRc == null) continue;
-                                            String oldEmoji = "";
-                                            if (oldRc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                oldEmoji = "\u2b50\ufe0f";
-                                            } else if (oldRc.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                oldEmoji = ((TLRPC.TL_reactionEmoji) oldRc.reaction).emoticon;
-                                            }
+                                            String oldEmoji = getReactionString(oldRc.reaction);
                                             if (TextUtils.isEmpty(oldEmoji)) continue;
 
                                             int newCount = 0;
                                             if (reactions != null && reactions.results != null) {
                                                 for (int r = 0; r < reactions.results.size(); r++) {
                                                     TLRPC.ReactionCount newRc = reactions.results.get(r);
-                                                    if (newRc != null) {
-                                                        String newEmoji = "";
-                                                        if (newRc.reaction instanceof TLRPC.TL_reactionPaid) {
-                                                            newEmoji = "\u2b50\ufe0f";
-                                                        } else if (newRc.reaction instanceof TLRPC.TL_reactionEmoji) {
-                                                            newEmoji = ((TLRPC.TL_reactionEmoji) newRc.reaction).emoticon;
-                                                        }
-                                                        if (oldEmoji.equals(newEmoji)) {
-                                                            newCount = newRc.count;
-                                                            break;
-                                                        }
+                                                    if (newRc != null && oldEmoji.equals(getReactionString(newRc.reaction))) {
+                                                        newCount = newRc.count;
+                                                        break;
                                                     }
                                                 }
                                             }
                                             if (newCount < oldRc.count) {
                                                 org.veyra.client.VeyraEditHistoryManager.logReactionRemoved(dialogId, msgId, nowTime, oldEmoji, 0, mySelfId);
+                                            } else if (newCount > oldRc.count) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, oldEmoji, 0, true, mySelfId);
+                                            }
+                                        }
+                                        if (reactions != null && reactions.results != null) {
+                                            for (int r = 0; r < reactions.results.size(); r++) {
+                                                TLRPC.ReactionCount newRc = reactions.results.get(r);
+                                                if (newRc == null) continue;
+                                                String newEmoji = getReactionString(newRc.reaction);
+                                                if (TextUtils.isEmpty(newEmoji)) continue;
+                                                boolean existed = false;
+                                                for (int p = 0; p < pastReactions.results.size(); p++) {
+                                                    TLRPC.ReactionCount oldRc = pastReactions.results.get(p);
+                                                    if (oldRc != null && newEmoji.equals(getReactionString(oldRc.reaction))) {
+                                                        existed = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!existed && newRc.count > 0) {
+                                                    org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, 0, true, mySelfId);
+                                                }
+                                            }
+                                        }
+                                    } else if (reactions != null && reactions.results != null) {
+                                        for (int r = 0; r < reactions.results.size(); r++) {
+                                            TLRPC.ReactionCount newRc = reactions.results.get(r);
+                                            if (newRc == null) continue;
+                                            String newEmoji = getReactionString(newRc.reaction);
+                                            if (newRc.count > 0 && !TextUtils.isEmpty(newEmoji)) {
+                                                org.veyra.client.VeyraEditHistoryManager.logReaction(dialogId, msgId, nowTime, newEmoji, 0, true, mySelfId);
                                             }
                                         }
                                     }

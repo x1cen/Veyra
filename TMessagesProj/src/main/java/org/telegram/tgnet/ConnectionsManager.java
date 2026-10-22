@@ -1021,22 +1021,19 @@ public class ConnectionsManager extends BaseController {
 
     public void applyDeviceSettings() {
         try {
-            String deviceModel = VeyraLoginConfig.getDeviceModel();
-            String systemVersion = VeyraLoginConfig.getSystemVersion();
-            String appVersion = VeyraLoginConfig.getAppVersion();
             String langCode = VeyraLoginConfig.getLangCode();
+            if (langCode != null) {
+                native_setLangCode(currentAccount, langCode.replace('_', '-').toLowerCase());
+            }
             String systemLangCode = VeyraLoginConfig.getSystemLangCode();
-            String installer = VeyraLoginConfig.getInstaller();
-            String packageId = VeyraLoginConfig.getPackageId();
-            int timezoneOffset = VeyraLoginConfig.getTzOffset();
-            int perfCat = VeyraLoginConfig.getPerfCat();
-            int apiId = VeyraLoginConfig.getApiId();
+            if (systemLangCode != null) {
+                native_setSystemLangCode(currentAccount, systemLangCode.replace('_', '-').toLowerCase());
+            }
             String pushString = VeyraLoginConfig.getDeviceToken(getRegId());
-            String fingerprint = VeyraLoginConfig.getCertFingerprint();
-            String cfgPath = lastConfigPath != null ? lastConfigPath : (ApplicationLoader.getFilesDirFixed() != null ? ApplicationLoader.getFilesDirFixed().toString() : "");
-
-            native_init(currentAccount, SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, cfgPath, FileLog.getNetworkLogPath(), pushString, fingerprint, installer, packageId, timezoneOffset, getUserConfig().getClientUserId(), getUserConfig().getCurrentUser() != null && getUserConfig().getCurrentUser().premium, lastEnablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), perfCat);
-            checkConnection();
+            if (pushString != null) {
+                native_setRegId(currentAccount, pushString);
+            }
+            resumeNetworkMaybe();
         } catch (Throwable e) {
             FileLog.e(e);
         }

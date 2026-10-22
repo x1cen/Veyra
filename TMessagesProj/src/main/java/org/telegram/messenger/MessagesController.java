@@ -8348,7 +8348,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int a = 0, N = task.size(); a < N; a++) {
                         long dialogId = task.keyAt(a);
                         ArrayList<Integer> mids = task.valueAt(a);
-                        if (VeyraConfig.antiDelete) {
+                        boolean allowAntiDelete = VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, dialogId);
+                        if (allowAntiDelete) {
                             if (mids != null) {
                                 for (int i = 0; i < mids.size(); i++) {
                                     VeyraConfig.markTtlBurnt(dialogId, mids.get(i));
@@ -8367,12 +8368,13 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int a = 0, N = taskMedia.size(); a < N; a++) {
                         long dialogId = taskMedia.keyAt(a);
                         ArrayList<Integer> mids = taskMedia.valueAt(a);
-                        if (mids != null) {
+                        boolean allowAntiDelete = VeyraConfig.antiDelete && VeyraConfig.isChatTypeAllowedForAntiDelete(currentAccount, dialogId);
+                        if (mids != null && allowAntiDelete) {
                             for (int i = 0; i < mids.size(); i++) {
                                 VeyraConfig.markTtlBurnt(dialogId, mids.get(i));
                             }
                         }
-                        if (!VeyraConfig.antiDelete) {
+                        if (!allowAntiDelete) {
                             if (checkViewer && viewerObject != null && viewerObject.currentAccount == currentAccount && viewerObject.getDialogId() == dialogId && mids != null && mids.contains(viewerObject.getId())) {
                                 final int id = viewerObject.getId();
                                 mids.remove((Integer) id);

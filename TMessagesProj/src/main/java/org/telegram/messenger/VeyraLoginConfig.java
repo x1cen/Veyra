@@ -417,7 +417,16 @@ public final class VeyraLoginConfig {
     }
 
     public static void resetToDefault(int currentAccount) {
-        getPrefs().edit().clear().commit();
+        try {
+            SharedPreferences prefs = getPrefs();
+            SharedPreferences.Editor editor = prefs.edit();
+            for (String key : prefs.getAll().keySet()) {
+                if (key.startsWith("veyra_login_")) {
+                    editor.remove(key);
+                }
+            }
+            editor.commit();
+        } catch (Throwable ignored) {}
         try {
             ConnectionsManager.getInstance(currentAccount).applyDeviceSettings();
         } catch (Throwable ignored) {}
