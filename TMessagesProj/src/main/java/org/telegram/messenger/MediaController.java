@@ -3710,6 +3710,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 cacheFile = messageFile;
             }
         }
+        final File finalCacheFile = cacheFile;
         boolean canStream = SharedConfig.streamMedia && (messageObject.isMusic() || messageObject.isRoundVideo() || messageObject.isVideo() && messageObject.canStreamVideo()) && !messageObject.shouldEncryptPhotoOrVideo() && !DialogObject.isEncryptedDialog(messageObject.getDialogId());
         if (cacheFile != file && !(exists = cacheFile.exists()) && !canStream) {
             FileLoader.getInstance(messageObject.currentAccount).loadFile(messageObject.getDocument(), messageObject, FileLoader.PRIORITY_LOW, messageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
@@ -3878,7 +3879,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
 
             if (exists) {
                 if (!messageObject.mediaExists && cacheFile != file) {
-                    AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.fileLoaded, FileLoader.getAttachFileName(messageObject.getDocument()), cacheFile));
+                    AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.fileLoaded, FileLoader.getAttachFileName(messageObject.getDocument()), finalCacheFile));
                 }
                 videoPlayer.preparePlayer(Uri.fromFile(cacheFile), "other");
             } else {
@@ -3976,7 +3977,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 });
                 if (exists) {
                     if (!messageObject.mediaExists && cacheFile != file) {
-                        AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.fileLoaded, FileLoader.getAttachFileName(messageObject.getDocument()), cacheFile));
+                        AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.fileLoaded, FileLoader.getAttachFileName(messageObject.getDocument()), finalCacheFile));
                     }
                     audioPlayer.preparePlayer(Uri.fromFile(cacheFile), "other");
                     isStreamingCurrentAudio = false;
