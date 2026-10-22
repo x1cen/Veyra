@@ -102,6 +102,24 @@ android {
         manifest.srcFile '../TMessagesProj/config/release/AndroidManifest_standalone.xml'
     }
 
+    splits {
+        abi {
+            def targetArch = System.getenv("TARGET_ARCH") ?: (project.hasProperty("targetArch") ? project.property("targetArch") : "")
+            if (targetArch == "all" || targetArch == "auto" || targetArch == "arm64-v8a,armeabi-v7a") {
+                enable true
+                reset()
+                if (targetArch == "arm64-v8a,armeabi-v7a") {
+                    include "arm64-v8a", "armeabi-v7a"
+                } else {
+                    include "arm64-v8a", "armeabi-v7a", "x86_64"
+                }
+                universalApk false
+            } else {
+                enable false
+            }
+        }
+    }
+
     flavorDimensions "minApi"
 
     productFlavors {
@@ -110,10 +128,12 @@ android {
                 def targetArch = System.getenv("TARGET_ARCH") ?: (project.hasProperty("targetArch") ? project.property("targetArch") : "")
                 if (targetArch == "arm64-v8a") {
                     abiFilters "arm64-v8a"
+                } else if (targetArch == "arm64-v8a,armeabi-v7a") {
+                    abiFilters "arm64-v8a", "armeabi-v7a"
                 } else if (targetArch && targetArch != "all" && targetArch != "auto") {
                     abiFilters targetArch
                 } else {
-                    abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                    abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
                 }
             }
             ext {
@@ -129,8 +149,22 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "app.apk"
-            output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi != null) {
+                outputFileName = "app-${abi}.apk"
+                int abiCode = 0
+                if (abi == "arm64-v8a") {
+                    abiCode = 9
+                } else if (abi == "armeabi-v7a") {
+                    abiCode = 1
+                } else if (abi == "x86_64") {
+                    abiCode = 8
+                }
+                output.versionCodeOverride = defaultConfig.versionCode * 10 + abiCode
+            } else {
+                outputFileName = "app.apk"
+                output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
+            }
         }
     }
 
