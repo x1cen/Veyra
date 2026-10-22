@@ -30,8 +30,9 @@ import java.util.function.Consumer;
 
 public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
 
-    private static final int RANDOM_BUTTON = 1;
-    private static final int RESET_BUTTON = 2;
+    private static final int RESET_BUTTON = 1;
+    private static final int RANDOM_BUTTON = 2;
+    private static final int DONE_BUTTON = 3;
 
     private static final String[][] RANDOM_DEVICE_PROFILES = {
             {"samsung SM-S928B", "SDK 34", "3"},   // Galaxy S24 Ultra
@@ -54,12 +55,15 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
             {"Asus ASUS_AI2401_D", "SDK 34", "3"}  // ROG Phone 8
     };
 
+    private final boolean isReadOnly;
+
     public VeyraLoginConfigActivity() {
         this(false);
     }
 
     public VeyraLoginConfigActivity(boolean readOnly) {
         super();
+        this.isReadOnly = readOnly;
     }
 
     @Override
@@ -71,15 +75,20 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
     public View createView(Context context) {
         View v = super.createView(context);
         if (actionBar != null) {
-            ActionBarMenu menu = actionBar.createMenu();
-            menu.addItemWithWidth(RANDOM_BUTTON, R.drawable.menu_random, AndroidUtilities.dp(48), "Randomize");
-            menu.addItemWithWidth(RESET_BUTTON, R.drawable.msg_retry, AndroidUtilities.dp(48), "Restore Defaults");
+            if (!isReadOnly) {
+                ActionBarMenu menu = actionBar.createMenu();
+                menu.addItemWithWidth(RESET_BUTTON, R.drawable.msg_retry, AndroidUtilities.dp(48), "Restore Defaults");
+                menu.addItemWithWidth(RANDOM_BUTTON, R.drawable.menu_random, AndroidUtilities.dp(48), "Randomize");
+                menu.addItemWithWidth(DONE_BUTTON, R.drawable.ic_ab_done, AndroidUtilities.dp(56), "Save");
+            }
 
             actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
                 @Override
                 public void onItemClick(int id) {
                     if (id == -1) {
                         finishFragment();
+                    } else if (id == DONE_BUTTON) {
+                        saveAndFinish();
                     } else if (id == RANDOM_BUTTON) {
                         randomizeIdentity();
                     } else if (id == RESET_BUTTON) {
@@ -95,19 +104,120 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
     protected List<VeyraSettingsRow> buildRows() {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
-        // Section 1: Presets & Randomization
+        if (isReadOnly) {
+            r.add(VeyraSettingsRow.header("Active Session Identity (Read-Only)"));
+            r.add(VeyraSettingsRow.shadow());
+
+            // Hardware Emulation (Read-only)
+            r.add(VeyraSettingsRow.header("Hardware Emulation"));
+            r.add(VeyraSettingsRow.detail(
+                    "Device Model",
+                    () -> VeyraLoginConfig.getDeviceModel(),
+                    true,
+                    () -> copyValue("Device Model", VeyraLoginConfig.getDeviceModel())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "System Version",
+                    () -> VeyraLoginConfig.getSystemVersion(),
+                    true,
+                    () -> copyValue("System Version", VeyraLoginConfig.getSystemVersion())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "App Version",
+                    () -> VeyraLoginConfig.getAppVersion(),
+                    true,
+                    () -> copyValue("App Version", VeyraLoginConfig.getAppVersion())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Performance Class",
+                    this::getPerfCatDisplay,
+                    false,
+                    () -> copyValue("Performance Class", getPerfCatDisplay())
+            ));
+            r.add(VeyraSettingsRow.shadow());
+
+            // Security & Verification (Read-only)
+            r.add(VeyraSettingsRow.header("Security & Verification"));
+            r.add(VeyraSettingsRow.detail(
+                    "Certificate Fingerprint",
+                    this::getShortCertFingerprint,
+                    true,
+                    () -> showReadOnlyValueDialog("Certificate Fingerprint", VeyraLoginConfig.getCertFingerprint(currentAccount))
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Push / FCM Device Token",
+                    this::getShortDeviceToken,
+                    true,
+                    () -> showReadOnlyValueDialog("Push / FCM Device Token", VeyraLoginConfig.getDeviceToken(currentAccount))
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Play Integrity & SafetyNet",
+                    () -> VeyraLoginConfig.isAllowFirebase(true) ? "Enabled" : "Disabled",
+                    true,
+                    null
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "SMS Retriever App Hash",
+                    () -> VeyraLoginConfig.isAllowAppHash(true) ? "Enabled" : "Disabled",
+                    true,
+                    null
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Flash Call Verification",
+                    () -> VeyraLoginConfig.isAllowFlashcall(false) ? "Enabled" : "Disabled",
+                    true,
+                    null
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Missed Call Verification",
+                    () -> VeyraLoginConfig.isAllowMissedCall(false) ? "Enabled" : "Disabled",
+                    false,
+                    null
+            ));
+            r.add(VeyraSettingsRow.shadow());
+
+            // Localization & Environment (Read-only)
+            r.add(VeyraSettingsRow.header("Localization & Environment"));
+            r.add(VeyraSettingsRow.detail(
+                    "App Language",
+                    () -> VeyraLoginConfig.getLangCode(),
+                    true,
+                    () -> copyValue("App Language", VeyraLoginConfig.getLangCode())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "System Language",
+                    () -> VeyraLoginConfig.getSystemLangCode(),
+                    true,
+                    () -> copyValue("System Language", VeyraLoginConfig.getSystemLangCode())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Installer Package",
+                    () -> {
+                        String inst = VeyraLoginConfig.getInstaller();
+                        return TextUtils.isEmpty(inst) ? "Direct APK (None)" : inst;
+                    },
+                    true,
+                    () -> copyValue("Installer Package", VeyraLoginConfig.getInstaller())
+            ));
+            r.add(VeyraSettingsRow.detail(
+                    "Package Identifier",
+                    () -> VeyraLoginConfig.getPackageId(),
+                    false,
+                    () -> copyValue("Package Identifier", VeyraLoginConfig.getPackageId())
+            ));
+            r.add(VeyraSettingsRow.shadow());
+
+            return r;
+        }
+
+        // Editable Mode (Before initial login)
+        // Section 1: Presets
         r.add(VeyraSettingsRow.header("Device Presets"));
         r.add(VeyraSettingsRow.detail(
                 "Select Device Preset",
                 () -> VeyraLoginConfig.getDeviceModel(),
-                true,
+                false,
                 this::showPresetPicker
-        ));
-        r.add(VeyraSettingsRow.button(
-                "Randomize Device Identity",
-                false,
-                false,
-                this::randomizeIdentity
         ));
         r.add(VeyraSettingsRow.shadow());
 
@@ -247,17 +357,41 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        // Section 5: Reset
-        r.add(VeyraSettingsRow.header("Reset"));
-        r.add(VeyraSettingsRow.button(
-                "Restore Default Hardware & Identity",
-                true,
-                false,
-                this::confirmReset
-        ));
-        r.add(VeyraSettingsRow.shadow());
-
         return r;
+    }
+
+    private void saveAndFinish() {
+        try {
+            ConnectionsManager.getInstance(currentAccount).applyDeviceSettings();
+        } catch (Throwable ignored) {}
+        try {
+            if (canShowBulletin()) {
+                BulletinFactory.of(this).createSimpleBulletin(R.raw.done, "Device parameters saved").show();
+            }
+        } catch (Throwable ignored) {}
+        finishFragment();
+    }
+
+    private void copyValue(String label, String value) {
+        if (TextUtils.isEmpty(value)) return;
+        AndroidUtilities.addToClipboard(value);
+        try {
+            if (canShowBulletin()) {
+                BulletinFactory.of(this).createCopyBulletin(label + " copied").show();
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void showReadOnlyValueDialog(String title, String value) {
+        if (getParentActivity() == null || TextUtils.isEmpty(value)) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(title);
+        builder.setMessage(value);
+        builder.setPositiveButton(LocaleController.getString("Copy", R.string.Copy), (dialog, which) -> {
+            copyValue(title, value);
+        });
+        builder.setNegativeButton(LocaleController.getString("Close", R.string.Close), null);
+        showDialog(builder.create());
     }
 
     private String getPerfCatDisplay() {

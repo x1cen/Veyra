@@ -42573,10 +42573,12 @@ public class ChatActivity extends BaseFragment implements
             }
             if (message.isDice()) {
                 final Runnable toastForNotStackedDice = () -> {
-                    // BulletinFactory.of(ChatActivity.this).createSimpleBulletin() todo: update to bulletin
-
                     createUndoView();
                     if (undoView == null) return;
+                    undoView.bringToFront();
+                    undoView.setAdditionalTranslationY(
+                        windowInsetsStateHolder.getAnimatedMaxBottomInset() + dp(9 + 7)
+                            + (chatInputViewsContainer != null ? chatInputViewsContainer.getInputBubbleHeight() : dp(51)) + getTopicTabsSideSize(TopicsTabsView.Position.BOTTOM));
                     undoView.showWithAction(0, chatActivityEnterView.getVisibility() == View.VISIBLE && bottomOverlay.getVisibility() != View.VISIBLE ? UndoView.ACTION_DICE_INFO : UndoView.ACTION_DICE_NO_SEND_INFO, message.getDiceEmoji(), null, () -> {
                         if (checkSlowModeAlert()) {
                             SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(message.getDiceEmoji(), dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
@@ -42586,19 +42588,13 @@ public class ChatActivity extends BaseFragment implements
                     });
                 };
 
-                if (message.isStakeableDice()) {
-                    getMessagesController().loadStakeDiceInfo(available -> {
-                        if (available) {
-                            StakedDiceSheet.showStakeToast(ChatActivity.this, message.getDiceValue(), message.getStakedDiceAmount(), stake -> {
-                                if (checkSlowModeAlert()) {
-                                    SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(message.getDiceEmoji(), dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
-                                    params.sendMessageChatArguments = getMessageChatSendParams();
-                                    params.dice_stake = stake;
-                                    getSendMessagesHelper().sendMessage(params);
-                                }
-                            });
-                        } else {
-                            toastForNotStackedDice.run();
+                if (message.isStakeableDice() && getMessagesController().stakeDiceInfo instanceof TLRPC.TL_emojiGameDiceInfo) {
+                    StakedDiceSheet.showStakeToast(ChatActivity.this, message.getDiceValue(), message.getStakedDiceAmount(), stake -> {
+                        if (checkSlowModeAlert()) {
+                            SendMessagesHelper.SendMessageParams params = SendMessagesHelper.SendMessageParams.of(message.getDiceEmoji(), dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, true, 0, 0, null, false);
+                            params.sendMessageChatArguments = getMessageChatSendParams();
+                            params.dice_stake = stake;
+                            getSendMessagesHelper().sendMessage(params);
                         }
                     });
                 } else {
