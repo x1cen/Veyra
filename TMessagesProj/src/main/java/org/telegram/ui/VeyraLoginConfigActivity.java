@@ -430,6 +430,7 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
     }
 
     private EditTextBoldCursor createStyledInputBox(String text, String hint) {
+        Theme.ResourcesProvider resourcesProvider = getResourceProvider();
         EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
         editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
