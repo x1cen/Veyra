@@ -21270,6 +21270,10 @@ public class MessagesController extends BaseController implements NotificationCe
                             for (int a = 0, size2 = arrayList.size(); a < size2; a++) {
                                 MessageObject newMessage = arrayList.get(a);
                                 if (oldObject.getId() == newMessage.getId()) {
+                                    oldObject.messageOwner = newMessage.messageOwner;
+                                    oldObject.messageText = newMessage.messageText;
+                                    oldObject.caption = newMessage.caption;
+                                    oldObject.resetLayout();
                                     oldObjects.set(i, newMessage);
                                     if (newMessage.messageOwner.peer_id != null && newMessage.messageOwner.peer_id.channel_id == 0) {
                                         dialogMessagesByIds.put(newMessage.getId(), newMessage);
