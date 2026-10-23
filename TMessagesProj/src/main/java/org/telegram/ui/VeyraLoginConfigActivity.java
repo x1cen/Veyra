@@ -142,13 +142,13 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
                     "Certificate Fingerprint",
                     this::getShortCertFingerprint,
                     true,
-                    () -> showReadOnlyValueDialog("Certificate Fingerprint", VeyraLoginConfig.getCertFingerprint(currentAccount))
+                    () -> showReadOnlyValueDialog("Certificate Fingerprint", VeyraLoginConfig.getCertFingerprint())
             ));
             r.add(VeyraSettingsRow.detail(
                     "Push / FCM Device Token",
                     this::getShortDeviceToken,
                     true,
-                    () -> showReadOnlyValueDialog("Push / FCM Device Token", VeyraLoginConfig.getDeviceToken(currentAccount))
+                    () -> showReadOnlyValueDialog("Push / FCM Device Token", VeyraLoginConfig.getDeviceToken(""))
             ));
             r.add(VeyraSettingsRow.detail(
                     "Play Integrity & SafetyNet",
