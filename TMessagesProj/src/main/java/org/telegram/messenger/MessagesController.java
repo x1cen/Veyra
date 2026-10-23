@@ -21512,7 +21512,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int a = 0, size = clearHistoryMessagesFinal.size(); a < size; a++) {
                     long key = clearHistoryMessagesFinal.keyAt(a);
                     int id = clearHistoryMessagesFinal.valueAt(a);
-                    long did = -key;
+                    long did = key < 0 ? key : -key;
                     getNotificationCenter().postNotificationName(NotificationCenter.historyCleared, did, id);
                     ArrayList<MessageObject> objs = dialogMessage.get(did);
                     if (objs != null) {
@@ -21622,7 +21622,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 int id = clearHistoryMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
                     ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, id, false, true);
-                    getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, new ArrayList<>(), dialogIds);
+                    getMessagesStorage().updateDialogsWithDeletedMessages(key, key < 0 ? key : -key, new ArrayList<>(), dialogIds);
                 });
             }
         }

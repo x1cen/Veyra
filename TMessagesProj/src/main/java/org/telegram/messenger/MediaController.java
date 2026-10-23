@@ -1504,7 +1504,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 };
                 TelephonyManager mgr = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
                 if (mgr != null) {
-                    mgr.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+                    try {
+                        mgr.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+                    } catch (Throwable ignored) {
+                    }
                 }
             } catch (Exception e) {
                 FileLog.e(e);
