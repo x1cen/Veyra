@@ -2,12 +2,14 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -105,9 +107,6 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
         List<VeyraSettingsRow> r = new ArrayList<>();
 
         if (isReadOnly) {
-            r.add(VeyraSettingsRow.header("Active Session Identity (Read-Only)"));
-            r.add(VeyraSettingsRow.shadow());
-
             // Hardware Emulation (Read-only)
             r.add(VeyraSettingsRow.header("Hardware Emulation"));
             r.add(VeyraSettingsRow.detail(
@@ -430,23 +429,47 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
         return token;
     }
 
+    private EditTextBoldCursor createStyledInputBox(String text, String hint) {
+        EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2, resourcesProvider));
+        editText.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, resourcesProvider));
+        editText.setCursorWidth(1.5f);
+        if (text != null) {
+            editText.setText(text);
+        }
+        if (hint != null) {
+            editText.setHint(hint);
+        }
+        editText.setSelectAllOnFocus(true);
+        editText.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
+
+        final GradientDrawable fieldBackground = new GradientDrawable();
+        fieldBackground.setCornerRadius(AndroidUtilities.dp(10));
+        fieldBackground.setColor(Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider), 0.06f));
+        final int normalStroke = Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider), 0.16f);
+        final int activeStroke = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, resourcesProvider);
+        fieldBackground.setStroke(AndroidUtilities.dp(1), normalStroke);
+        editText.setBackground(fieldBackground);
+
+        editText.setOnFocusChangeListener((v, hasFocus) -> {
+            fieldBackground.setStroke(AndroidUtilities.dp(hasFocus ? 1.5f : 1), hasFocus ? activeStroke : normalStroke);
+        });
+        return editText;
+    }
+
     private void showEditDialog(String title, String currentValue, Consumer<String> onSave) {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(title);
 
-        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setText(currentValue != null ? currentValue : "");
-        editText.setSelectAllOnFocus(true);
-        editText.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
+        final EditTextBoldCursor editText = createStyledInputBox(currentValue != null ? currentValue : "", null);
 
-        FrameLayout frameLayout = new FrameLayout(getParentActivity());
-        frameLayout.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 4, 8, 4, 8));
-        builder.setView(frameLayout);
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 14, 24, 14));
+        builder.setView(container);
 
         builder.setPositiveButton(LocaleController.getString("Save", R.string.Save), (dialog, which) -> {
             String newVal = editText.getText().toString().trim();
@@ -539,18 +562,12 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Certificate Fingerprint");
 
-        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setText(VeyraLoginConfig.getCertFingerprint());
-        editText.setSelectAllOnFocus(true);
-        editText.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
+        final EditTextBoldCursor editText = createStyledInputBox(VeyraLoginConfig.getCertFingerprint(), "SHA-256 Hex");
 
-        FrameLayout frameLayout = new FrameLayout(getParentActivity());
-        frameLayout.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 4, 8, 4, 8));
-        builder.setView(frameLayout);
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 14, 24, 14));
+        builder.setView(container);
 
         builder.setPositiveButton(LocaleController.getString("Save", R.string.Save), (dialog, which) -> {
             String newVal = editText.getText().toString().trim();
@@ -572,18 +589,12 @@ public class VeyraLoginConfigActivity extends VeyraSettingsBaseActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Push / FCM Device Token");
 
-        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setText(VeyraLoginConfig.getDeviceToken(""));
-        editText.setSelectAllOnFocus(true);
-        editText.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
+        final EditTextBoldCursor editText = createStyledInputBox(VeyraLoginConfig.getDeviceToken(""), "FCM Token (f...:APA91b...)");
 
-        FrameLayout frameLayout = new FrameLayout(getParentActivity());
-        frameLayout.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 4, 8, 4, 8));
-        builder.setView(frameLayout);
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 14, 24, 14));
+        builder.setView(container);
 
         builder.setPositiveButton(LocaleController.getString("Save", R.string.Save), (dialog, which) -> {
             String newVal = editText.getText().toString().trim();
