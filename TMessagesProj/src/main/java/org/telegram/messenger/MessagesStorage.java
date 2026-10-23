@@ -15514,7 +15514,10 @@ public class MessagesStorage extends BaseController {
                 state = null;
                 database.commitTransaction();
             } else {
-                dialogsToUpdate.add(-channelId);
+                long targetDid = originalDialogId != 0 ? originalDialogId : (channelId < 0 ? channelId : -channelId);
+                if (targetDid != 0) {
+                    dialogsToUpdate.add(targetDid);
+                }
             }
             if (additionalDialogsToUpdate != null) {
                 for (int a = 0; a < additionalDialogsToUpdate.size(); a++) {

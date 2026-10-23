@@ -3307,7 +3307,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 if (dialog != null) {
                     readOutboxMaxId = dialog.read_outbox_max_id;
                     ttlPeriod = dialog.ttl_period;
-                    if (mask == 0) {
+                    if (mask == 0 || (mask & MessagesController.UPDATE_MASK_MESSAGE_TEXT) != 0 || (mask & MessagesController.UPDATE_MASK_NEW_MESSAGE) != 0) {
                         clearingDialog = MessagesController.getInstance(currentAccount).isClearingDialog(dialog.id);
                         groupMessages = MessagesController.getInstance(currentAccount).dialogMessage.get(dialog.id);
                         message = null;
@@ -3457,7 +3457,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     }
                 }
                 if (!continueUpdate && (mask & MessagesController.UPDATE_MASK_MESSAGE_TEXT) != 0) {
-                    if (message != null && message.messageText != lastMessageString) {
+                    if (message != null) {
                         continueUpdate = true;
                     }
                 }
@@ -6272,6 +6272,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
         public long lastDrawnDialogId;
         public long lastDrawnMessageId;
+        public int lastDrawnEditDate;
+        public int lastDrawnMessageTextHash;
         public boolean lastDrawnTranslated;
         public boolean lastDrawnDialogIsFolder;
         public long lastDrawnReadState;
@@ -6300,6 +6302,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 return false;
             }
             int messageHash = message == null ? 0 : message.getId() + message.hashCode();
+            int messageTextHash = message == null || message.messageText == null ? 0 : message.messageText.hashCode();
+            int editDate = message != null && message.messageOwner != null ? message.messageOwner.edit_date : 0;
             Integer printingType = null;
             long readHash = dialog.read_inbox_max_id + ((long) dialog.read_outbox_max_id << 8) + ((long) (dialog.unread_count + (dialog.unread_mark ? -1 : 0)) << 16) +
                     (dialog.unread_reactions_count > 0 ? (1 << 18) : 0) +
@@ -6350,6 +6354,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             boolean translated = MessagesController.getInstance(currentAccount).getTranslateController().isTranslatingDialog(currentDialogId);
             if (lastDrawnSizeHash == sizeHash &&
                     lastDrawnMessageId == messageHash &&
+                    lastDrawnEditDate == editDate &&
+                    lastDrawnMessageTextHash == messageTextHash &&
                     lastDrawnTranslated == translated &&
                     lastDrawnDialogId == currentDialogId &&
                     lastDrawnDialogIsFolder == dialog.isFolder &&
@@ -6386,6 +6392,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             }
             lastDrawnDialogId = currentDialogId;
             lastDrawnMessageId = messageHash;
+            lastDrawnEditDate = editDate;
+            lastDrawnMessageTextHash = messageTextHash;
             lastDrawnDialogIsFolder = dialog.isFolder;
             lastDrawnReadState = readHash;
             lastDrawnPrintingType = printingType;
