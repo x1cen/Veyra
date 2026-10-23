@@ -4013,17 +4013,23 @@ public class ChatActivity extends BaseFragment implements
                         return;
                     }
                     AlertsCreator.createClearOrDeleteDialogAlert(ChatActivity.this, id == clear_history, currentChat, currentUser, currentEncryptedChat != null, true, false, canDeleteHistory, (param) -> {
-                        if (id == clear_history && ChatObject.isChannel(currentChat) && (!currentChat.megagroup || ChatObject.isPublic(currentChat))) {
-                            getMessagesController().deleteDialog(dialog_id, 2, param);
-                        } else {
-                            if (id != clear_history) {
-                                getNotificationCenter().removeObserver(ChatActivity.this, NotificationCenter.closeChats);
-                                getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
-                                finishFragment();
-                                getNotificationCenter().postNotificationName(NotificationCenter.needDeleteDialog, dialog_id, currentUser, currentChat, param);
+                        if (id == clear_history) {
+                            if (canDeleteHistory || (currentChat != null && (currentChat.creator || ChatObject.canManageCalls(currentChat)))) {
+                                performHistoryClear(param, canDeleteHistory);
+                            } else if (ChatObject.isChannel(currentChat) && (!currentChat.megagroup || ChatObject.isPublic(currentChat))) {
+                                getMessagesController().deleteDialog(dialog_id, 2, param);
+                                clearHistory(false, null);
+                                if (chatAdapter != null) {
+                                    chatAdapter.notifyDataSetChanged();
+                                }
                             } else {
                                 performHistoryClear(param, canDeleteHistory);
                             }
+                        } else {
+                            getNotificationCenter().removeObserver(ChatActivity.this, NotificationCenter.closeChats);
+                            getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
+                            finishFragment();
+                            getNotificationCenter().postNotificationName(NotificationCenter.needDeleteDialog, dialog_id, currentUser, currentChat, param);
                         }
                     });
                 } else if (id == share_contact) {

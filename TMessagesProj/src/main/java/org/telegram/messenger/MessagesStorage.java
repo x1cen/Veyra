@@ -15720,8 +15720,9 @@ public class MessagesStorage extends BaseController {
             ArrayList<String> namesToDelete = new ArrayList<>();
             ArrayList<Pair<Long, Integer>> idsToDelete = new ArrayList<>();
             long currentUser = getUserConfig().getClientUserId();
+            final long uid = channelId < 0 ? channelId : -channelId;
 
-            cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, data, read_state, out, mention FROM messages_v2 WHERE uid = %d AND mid <= %d", -channelId, mid));
+            cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, data, read_state, out, mention FROM messages_v2 WHERE uid = %d AND mid <= %d", uid, mid));
 
             try {
                 while (cursor.next()) {
@@ -15814,11 +15815,11 @@ public class MessagesStorage extends BaseController {
                 cursor = null;
             }
 
-            database.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE uid = %d AND mid <= %d", -channelId, mid)).stepThis().dispose();
-            database.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE uid = %d AND mid <= %d", -channelId, mid)).stepThis().dispose();
-            database.executeFast(String.format(Locale.US, "DELETE FROM media_v4 WHERE uid = %d AND mid <= %d", -channelId, mid)).stepThis().dispose();
-            database.executeFast(String.format(Locale.US, "UPDATE media_counts_v2 SET old = 1 WHERE uid = %d", -channelId)).stepThis().dispose();
-            database.executeFast(String.format(Locale.US, "UPDATE media_counts_topics SET old = 1 WHERE uid = %d", -channelId)).stepThis().dispose();
+            database.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE uid = %d AND mid <= %d", uid, mid)).stepThis().dispose();
+            database.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE uid = %d AND mid <= %d", uid, mid)).stepThis().dispose();
+            database.executeFast(String.format(Locale.US, "DELETE FROM media_v4 WHERE uid = %d AND mid <= %d", uid, mid)).stepThis().dispose();
+            database.executeFast(String.format(Locale.US, "UPDATE media_counts_v2 SET old = 1 WHERE uid = %d", uid)).stepThis().dispose();
+            database.executeFast(String.format(Locale.US, "UPDATE media_counts_topics SET old = 1 WHERE uid = %d", uid)).stepThis().dispose();
             updateWidgets(dialogsIds);
             return dialogsIds;
         } catch (Exception e) {

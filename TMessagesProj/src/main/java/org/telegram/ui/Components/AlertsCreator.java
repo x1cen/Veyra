@@ -2886,7 +2886,7 @@ public class AlertsCreator {
                     });
                     return;
                 }
-                if (ChatObject.isChannel(chat) && chat.creator && !deleteForAll[0]) {
+                if (!clear && ChatObject.isChannel(chat) && chat.creator && !deleteForAll[0]) {
                     final AlertDialog dialog = builder.create();
                     final Browser.Progress progress = dialog.makeButtonLoading(AlertDialog.BUTTON_POSITIVE);
                     progress.init();
