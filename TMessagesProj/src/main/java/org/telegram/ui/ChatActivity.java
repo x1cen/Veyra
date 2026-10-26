@@ -15095,7 +15095,8 @@ public class ChatActivity extends BaseFragment implements
         if (!checkSlowModeAlert()) {
             return;
         }
-        if ((scheduleDate != 0) == (chatMode == MODE_SCHEDULED)) {
+        final boolean isRestricted = org.veyra.client.VeyraForwarder.needsRestrictedForward(arrayList);
+        if (!isRestricted && (scheduleDate != 0) == (chatMode == MODE_SCHEDULED)) {
             waitingForSendingMessageLoad = true;
             if (chatAdapter != null) {
                 chatAdapter.checkRemoveBotForumRowsStartThreadRow(true);
@@ -15103,11 +15104,16 @@ public class ChatActivity extends BaseFragment implements
         }
         int result = getSendMessagesHelper().sendMessage(arrayList, dialog_id, fromMyName, hideCaption, notify, scheduleDate, 0, getThreadMessage(), -1, payStars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
         AlertsCreator.showSendMediaAlert(result, this, themeDelegate);
-        if (result != 0) {
-            AndroidUtilities.runOnUIThread(() -> {
-                waitingForSendingMessageLoad = false;
-                hideFieldPanel(true);
-            });
+        if (result != 0 || isRestricted) {
+            waitingForSendingMessageLoad = false;
+            chatActivityEnterViewAnimateBeforeSending = false;
+            chatActivityEnterViewAnimateFromTop = 0;
+            if (chatActivityEnterView != null) {
+                chatActivityEnterView.hideTopView(true);
+            }
+            if (changeBoundAnimator != null) {
+                changeBoundAnimator.start();
+            }
         }
     }
 
@@ -16310,11 +16316,17 @@ public class ChatActivity extends BaseFragment implements
                     forwardMessages(messagesToForward, messagePreviewParams.hideForwardSendersName, messagePreviewParams.hideCaption, notify, scheduleDate != 0 && scheduleDate != 0x7ffffffe ? scheduleDate + 1 : scheduleDate, payStars);
 //                }
             }
+            final boolean isRestrictedFwd = messagePreviewParams != null && messagePreviewParams.forwardMessages != null && org.veyra.client.VeyraForwarder.needsRestrictedForward(messagePreviewParams.forwardMessages.messages);
+            if (isRestrictedFwd) {
+                waitingForSendingMessageLoad = false;
+                chatActivityEnterViewAnimateBeforeSending = false;
+                chatActivityEnterViewAnimateFromTop = 0;
+            }
             if (forwardingPreviewView == null) {
                 messagePreviewParams = null;
             }
             chatActivityEnterView.setForceShowSendButton(false, animated);
-            if (!waitingForSendingMessageLoad) {
+            if (!waitingForSendingMessageLoad || isRestrictedFwd) {
                 chatActivityEnterView.hideTopView(animated);
             }
             chatActivityEnterView.setReplyingMessageObject(threadMessageObject, null);

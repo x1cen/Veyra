@@ -75,6 +75,7 @@ public class VeyraForwardProgress {
         isCancelled = true;
         AndroidUtilities.runOnUIThread(() -> {
             cancelNotification();
+            VeyraForwarder.cancelCurrentDownload();
             if (activeCancelListener != null) {
                 try {
                     activeCancelListener.onCancel();
@@ -121,13 +122,22 @@ public class VeyraForwardProgress {
         }
 
         try {
-            final ViewGroup decorView = (ViewGroup) activity.getWindow().getDecorView();
-            if (decorView == null) {
+            final ViewGroup rootContainer;
+            if (activity.getWindow() != null && activity.getWindow().getDecorView() != null) {
+                rootContainer = (ViewGroup) activity.getWindow().getDecorView();
+            } else {
                 return;
             }
 
-            final FrameLayout container = new FrameLayout(activity);
+            final FrameLayout container = new FrameLayout(activity) {
+                @Override
+                protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                    super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(heightMeasureSpec), MeasureSpec.AT_MOST));
+                }
+            };
             container.setTag("VeyraForwardProgressBar");
+            container.setClickable(false);
+            container.setFocusable(false);
 
             // Rounded Card Background with subtle border
             final GradientDrawable bg = new GradientDrawable();
@@ -149,11 +159,13 @@ public class VeyraForwardProgress {
 
             final LinearLayout contentLayout = new LinearLayout(activity);
             contentLayout.setOrientation(LinearLayout.VERTICAL);
+            contentLayout.setClickable(false);
 
             // Top row: [Forward Icon] [Status Text] [Cancel Button]
             final LinearLayout topRow = new LinearLayout(activity);
             topRow.setOrientation(LinearLayout.HORIZONTAL);
             topRow.setGravity(Gravity.CENTER_VERTICAL);
+            topRow.setClickable(false);
 
             final ImageView iconView = new ImageView(activity);
             iconView.setImageResource(R.drawable.msg_forward);
@@ -177,6 +189,7 @@ public class VeyraForwardProgress {
             closeBtn.setImageResource(R.drawable.ic_ab_close);
             closeBtn.setColorFilter(new PorterDuffColorFilter(0x80FFFFFF, PorterDuff.Mode.SRC_IN));
             closeBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+            closeBtn.setClickable(true);
             closeBtn.setOnClickListener(v -> cancel());
             topRow.addView(closeBtn, new LinearLayout.LayoutParams(AndroidUtilities.dp(26), AndroidUtilities.dp(26)));
 
@@ -209,7 +222,7 @@ public class VeyraForwardProgress {
             // Animate entry from top
             container.setAlpha(0f);
             container.setTranslationY(-AndroidUtilities.dp(30));
-            decorView.addView(container, containerLp);
+            rootContainer.addView(container, containerLp);
             container.animate()
                     .alpha(1f)
                     .translationY(0)

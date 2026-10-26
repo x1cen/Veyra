@@ -6389,12 +6389,13 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     public void hideTopView(final boolean animated) {
-        if (topView == null || !topViewShowed) {
-            return;
-        }
-
         if (showTopViewRunnable != null) {
             AndroidUtilities.cancelRunOnUIThread(showTopViewRunnable);
+            showTopViewRunnable = null;
+        }
+        if (topView == null || !topViewShowed) {
+            needShowTopView = false;
+            return;
         }
 
         topViewShowed = false;
