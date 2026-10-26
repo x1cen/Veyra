@@ -2258,7 +2258,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         if (org.veyra.client.VeyraForwarder.needsRestrictedForward(messages)) {
             org.veyra.client.VeyraForwarder.forwardMessages(currentAccount, messages, peer, replyToTopMsg, notify, scheduleDate, hideCaption, null);
-            return 1;
+            return 0;
         }
         final boolean effectiveForwardFromMyName = forwardFromMyName;
         int sendResult = 0;

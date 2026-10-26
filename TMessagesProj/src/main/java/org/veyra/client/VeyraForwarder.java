@@ -1,6 +1,5 @@
 package org.veyra.client;
 
-import android.app.Activity;
 import android.text.TextUtils;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -8,19 +7,12 @@ import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageLocation;
-import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
-import org.telegram.messenger.R;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.Utilities;
-import org.telegram.messenger.VeyraConfig;
 import org.telegram.tgnet.TLRPC;
-import org.telegram.ui.ActionBar.AlertDialog;
-import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.Components.BulletinFactory;
-import org.telegram.ui.LaunchActivity;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -28,19 +20,10 @@ import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/**
- * VeyraForwarder - Enables seamless forwarding of messages from restricted channels and chats
- * (noforwards = true) by cleanly recreating the message content, downloading media if needed,
- * and sending it as a new message while preserving captions, entities, spoilers, and album grouping.
- */
 public class VeyraForwarder {
 
     private static final int DOWNLOAD_TIMEOUT_SECONDS = 90;
 
-    /**
-     * Checks whether a message cannot be forwarded natively via TL_messages_forwardMessages
-     * and must be recreated locally.
-     */
     public static boolean needsRestrictedForward(MessageObject messageObject) {
         if (messageObject == null || messageObject.messageOwner == null) {
             return false;
@@ -87,43 +70,49 @@ public class VeyraForwarder {
 
     public static void forwardMessages(int currentAccount, ArrayList<MessageObject> messages, long toDialogId, MessageObject replyToTopMsg, boolean notify, int scheduleDate, boolean hideCaption, Runnable onDone) {
         if (messages == null || messages.isEmpty()) {
-            if (onDone != null) {
-                onDone.run();
-            }
+            if (onDone != null) onDone.run();
             return;
         }
-        final ArrayList<MessageObject> list = new ArrayList<>(messages);
-        final AlertDialog[] progress = new AlertDialog[1];
-        AndroidUtilities.runOnUIThread(() -> progress[0] = showProgress());
 
-        final Thread thread = new Thread(() -> {
+        final ArrayList<MessageObject> list = new ArrayList<>(messages);
+        final int totalCount = list.size();
+
+        // Non-blocking in-app card & background notification
+        VeyraForwardProgress.show(totalCount, () -> {
+            // Cancel listener: user tapped close on the progress banner
+        });
+
+        Utilities.stageQueue.postRunnable(() -> {
             int failed = 0;
             try {
                 failed = forwardInternal(currentAccount, list, toDialogId, replyToTopMsg, notify, scheduleDate, hideCaption);
             } catch (Throwable e) {
                 FileLog.e(e);
+                failed = totalCount;
+            } finally {
+                final int finalFailed = failed;
+                AndroidUtilities.runOnUIThread(() -> {
+                    VeyraForwardProgress.complete(totalCount, finalFailed);
+                    if (onDone != null) {
+                        onDone.run();
+                    }
+                });
             }
-            final int failedFinal = failed;
-            AndroidUtilities.runOnUIThread(() -> {
-                dismissProgress(progress[0]);
-                if (failedFinal > 0) {
-                    showError(failedFinal);
-                }
-                if (onDone != null) {
-                    onDone.run();
-                }
-            });
-        }, "VeyraForwarder");
-        thread.setPriority(Thread.MIN_PRIORITY + 2);
-        thread.start();
+        });
     }
 
     private static int forwardInternal(int currentAccount, ArrayList<MessageObject> list, long toDialogId, MessageObject replyToTopMsg, boolean notify, int scheduleDate, boolean hideCaption) {
         int failed = 0;
+        int done = 0;
+        final int total = list.size();
         final ArrayList<MessageObject> nativeBatch = new ArrayList<>();
 
         int i = 0;
         while (i < list.size()) {
+            if (VeyraForwardProgress.isCancelled()) {
+                break;
+            }
+
             final MessageObject first = list.get(i);
             final long groupedId = first.messageOwner != null ? first.messageOwner.grouped_id : 0;
 
@@ -151,11 +140,16 @@ public class VeyraForwarder {
 
             if (!needs) {
                 nativeBatch.addAll(unit);
+                done += unit.size();
+                VeyraForwardProgress.update(done, total);
                 continue;
             }
 
             flushNativeBatch(currentAccount, nativeBatch, toDialogId, replyToTopMsg, notify, scheduleDate, hideCaption);
-            failed += sendUnit(currentAccount, unit, toDialogId, replyToTopMsg, notify, scheduleDate, hideCaption);
+            final int unitFailed = sendUnit(currentAccount, unit, toDialogId, replyToTopMsg, notify, scheduleDate, hideCaption);
+            failed += unitFailed;
+            done += unit.size();
+            VeyraForwardProgress.update(done, total);
         }
 
         flushNativeBatch(currentAccount, nativeBatch, toDialogId, replyToTopMsg, notify, scheduleDate, hideCaption);
@@ -173,12 +167,19 @@ public class VeyraForwarder {
     }
 
     private static int sendUnit(int currentAccount, ArrayList<MessageObject> unit, long toDialogId, MessageObject replyToTopMsg, boolean notify, int scheduleDate, boolean hideCaption) {
-        final ArrayList<SendMessagesHelper.SendMessageParams> built = new ArrayList<>();
+        if (unit == null || unit.isEmpty() || VeyraForwardProgress.isCancelled()) {
+            return 0;
+        }
+
         final boolean album = unit.size() > 1 && !DialogObject.isEncryptedDialog(toDialogId);
         final long groupId = album ? Utilities.random.nextLong() : 0;
-
+        final ArrayList<SendMessagesHelper.SendMessageParams> built = new ArrayList<>();
         int failed = 0;
+
         for (int a = 0; a < unit.size(); a++) {
+            if (VeyraForwardProgress.isCancelled()) {
+                break;
+            }
             final MessageObject messageObject = unit.get(a);
             SendMessagesHelper.SendMessageParams params = null;
             try {
@@ -223,22 +224,29 @@ public class VeyraForwarder {
     }
 
     private static SendMessagesHelper.SendMessageParams build(int currentAccount, MessageObject messageObject, long toDialogId, MessageObject replyToTopMsg, boolean notify, int scheduleDate, boolean hideCaption) {
-        final TLRPC.Message message = messageObject.messageOwner;
-        if (message == null) {
+        if (messageObject == null || messageObject.messageOwner == null) {
             return null;
         }
-        final TLRPC.MessageMedia media = MessageObject.getMedia(message);
-        final String caption = hideCaption ? "" : (message.message == null ? "" : message.message);
-        final ArrayList<TLRPC.MessageEntity> entities = hideCaption ? null : copyEntities(message.entities);
+
+        final TLRPC.Message message = messageObject.messageOwner;
+        final TLRPC.MessageMedia media = message.media;
         final HashMap<String, String> params = new HashMap<>();
+
+        // Sticker
+        if (messageObject.isSticker()) {
+            final TLRPC.Document sourceDocument = messageObject.getDocument();
+            if (sourceDocument != null) {
+                final File local = resolveLocalFile(currentAccount, messageObject);
+                return SendMessagesHelper.SendMessageParams.of((TLRPC.TL_document) sourceDocument, null, local != null ? local.getAbsolutePath() : null, toDialogId, null, replyToTopMsg, null, null, null, params, notify, scheduleDate, 0, 0, messageObject, null, false, false);
+            }
+        }
 
         // Poll
         if (media instanceof TLRPC.TL_messageMediaPoll) {
             final TLRPC.TL_messageMediaPoll poll = clonePoll((TLRPC.TL_messageMediaPoll) media);
-            if (poll == null) {
-                return null;
+            if (poll != null) {
+                return SendMessagesHelper.SendMessageParams.of(poll, toDialogId, null, replyToTopMsg, null, params, notify, scheduleDate, 0);
             }
-            return SendMessagesHelper.SendMessageParams.of(poll, toDialogId, null, replyToTopMsg, null, params, notify, scheduleDate, 0);
         }
 
         // Contact
@@ -259,43 +267,18 @@ public class VeyraForwarder {
             return SendMessagesHelper.SendMessageParams.of(user, toDialogId, null, replyToTopMsg, null, params, notify, scheduleDate, 0);
         }
 
-        // Location / Venue
-        if (media instanceof TLRPC.TL_messageMediaVenue) {
+        // Geo / Venue
+        if (media instanceof TLRPC.TL_messageMediaGeo || media instanceof TLRPC.TL_messageMediaVenue) {
             return SendMessagesHelper.SendMessageParams.of(media, toDialogId, null, replyToTopMsg, null, params, notify, scheduleDate, 0);
         }
-        if (media instanceof TLRPC.TL_messageMediaGeo || media instanceof TLRPC.TL_messageMediaGeoLive) {
-            final TLRPC.TL_messageMediaGeo geo = new TLRPC.TL_messageMediaGeo();
-            geo.geo = media.geo;
-            return SendMessagesHelper.SendMessageParams.of(geo, toDialogId, null, replyToTopMsg, null, params, notify, scheduleDate, 0);
-        }
 
-        // Document (video / gif / voice / round / sticker / music / file)
-        final TLRPC.Document sourceDocument = messageObject.getDocument();
-
-        // Stickers
-        if (sourceDocument instanceof TLRPC.TL_document && sourceDocument.access_hash != 0 && messageObject.isAnyKindOfSticker()) {
-            final File local = resolveLocalFile(currentAccount, messageObject);
-            return SendMessagesHelper.SendMessageParams.of((TLRPC.TL_document) sourceDocument, null, local != null ? local.getAbsolutePath() : null,
-                    toDialogId, null, replyToTopMsg, caption, entities, null, params, notify, scheduleDate, 0, 0, messageObject, null, false, false);
-        }
-
-        if (sourceDocument != null) {
-            final File file = ensureDownloaded(currentAccount, messageObject);
-            if (file == null) {
-                return null;
-            }
-            final TLRPC.TL_document document = cloneDocument(sourceDocument, file);
-            params.put("originalPath", file.getAbsolutePath() + file.length());
-            SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(document, null, file.getAbsolutePath(), toDialogId, null, replyToTopMsg,
-                    caption, entities, null, params, notify, scheduleDate, 0, 0, null, null, false, messageObject.hasMediaSpoilers());
-            sendParams.invert_media = message.invert_media;
-            return sendParams;
-        }
+        final String caption = hideCaption ? "" : (message.message == null ? "" : message.message);
+        final ArrayList<TLRPC.MessageEntity> entities = hideCaption ? null : copyEntities(message.entities);
 
         // Photo
-        if (media instanceof TLRPC.TL_messageMediaPhoto && media.photo != null) {
+        if (media instanceof TLRPC.TL_messageMediaPhoto) {
             final File file = ensureDownloaded(currentAccount, messageObject);
-            if (file == null) {
+            if (file == null || !file.exists()) {
                 return null;
             }
             final TLRPC.TL_photo photo = SendMessagesHelper.getInstance(currentAccount).generatePhotoSizes(file.getAbsolutePath(), null);
@@ -303,13 +286,69 @@ public class VeyraForwarder {
                 return null;
             }
             params.put("originalPath", file.getAbsolutePath() + file.length());
-            SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(photo, file.getAbsolutePath(), toDialogId, null, replyToTopMsg,
-                    caption, entities, null, params, notify, scheduleDate, 0, 0, null, false, messageObject.hasMediaSpoilers());
-            sendParams.invert_media = message.invert_media;
-            return sendParams;
+            final SendMessagesHelper.SendMessageParams out = SendMessagesHelper.SendMessageParams.of(
+                    photo,
+                    file.getAbsolutePath(),
+                    toDialogId,
+                    null,
+                    replyToTopMsg,
+                    caption,
+                    entities,
+                    null,
+                    params,
+                    notify,
+                    scheduleDate,
+                    0,
+                    0,
+                    null,
+                    false,
+                    messageObject.hasMediaSpoilers()
+            );
+            if (out != null) {
+                out.invert_media = message.invert_media;
+            }
+            return out;
         }
 
-        // Plain text / web page / anything else with text
+        // Document / Video / Audio / Voice / Round
+        if (media instanceof TLRPC.TL_messageMediaDocument) {
+            final TLRPC.Document sourceDocument = messageObject.getDocument();
+            if (sourceDocument == null) {
+                return null;
+            }
+            final File file = ensureDownloaded(currentAccount, messageObject);
+            if (file == null || !file.exists()) {
+                return null;
+            }
+            final TLRPC.TL_document document = cloneDocument(sourceDocument, file);
+            params.put("originalPath", file.getAbsolutePath() + file.length());
+            final SendMessagesHelper.SendMessageParams out = SendMessagesHelper.SendMessageParams.of(
+                    document,
+                    null,
+                    file.getAbsolutePath(),
+                    toDialogId,
+                    null,
+                    replyToTopMsg,
+                    caption,
+                    entities,
+                    null,
+                    params,
+                    notify,
+                    scheduleDate,
+                    0,
+                    0,
+                    null,
+                    null,
+                    false,
+                    messageObject.hasMediaSpoilers()
+            );
+            if (out != null) {
+                out.invert_media = message.invert_media;
+            }
+            return out;
+        }
+
+        // Plain text / WebPage fallback
         CharSequence text = message.message;
         if (TextUtils.isEmpty(text)) {
             text = messageObject.messageText;
@@ -317,35 +356,8 @@ public class VeyraForwarder {
         if (TextUtils.isEmpty(text)) {
             return null;
         }
-        TLRPC.WebPage webPage = media != null ? media.webpage : null;
-        return SendMessagesHelper.SendMessageParams.of(text.toString(), toDialogId, null, replyToTopMsg, webPage, webPage != null,
+        return SendMessagesHelper.SendMessageParams.of(text.toString(), toDialogId, null, replyToTopMsg, null, true,
                 entities, null, params, notify, scheduleDate, 0, null, false);
-    }
-
-    private static ArrayList<TLRPC.MessageEntity> copyEntities(ArrayList<TLRPC.MessageEntity> src) {
-        if (src == null || src.isEmpty()) {
-            return null;
-        }
-        return new ArrayList<>(src);
-    }
-
-    private static TLRPC.TL_messageMediaPoll clonePoll(TLRPC.TL_messageMediaPoll src) {
-        if (src == null || src.poll == null) {
-            return null;
-        }
-        final TLRPC.TL_poll poll = new TLRPC.TL_poll();
-        poll.id = 0;
-        poll.question = src.poll.question;
-        poll.answers.addAll(src.poll.answers);
-        poll.multiple_choice = src.poll.multiple_choice;
-        poll.public_voters = src.poll.public_voters;
-        poll.quiz = false;
-        poll.closed = false;
-
-        final TLRPC.TL_messageMediaPoll media = new TLRPC.TL_messageMediaPoll();
-        media.poll = poll;
-        media.results = new TLRPC.TL_pollResults();
-        return media;
     }
 
     private static TLRPC.TL_document cloneDocument(TLRPC.Document source, File file) {
@@ -382,7 +394,33 @@ public class VeyraForwarder {
         return document;
     }
 
-    private static File resolveLocalFile(int currentAccount, MessageObject messageObject) {
+    private static TLRPC.TL_messageMediaPoll clonePoll(TLRPC.TL_messageMediaPoll src) {
+        if (src == null || src.poll == null) {
+            return null;
+        }
+        final TLRPC.TL_poll poll = new TLRPC.TL_poll();
+        poll.id = 0;
+        poll.question = src.poll.question;
+        poll.answers.addAll(src.poll.answers);
+        poll.multiple_choice = src.poll.multiple_choice;
+        poll.public_voters = src.poll.public_voters;
+        poll.quiz = false;
+        poll.closed = false;
+
+        final TLRPC.TL_messageMediaPoll media = new TLRPC.TL_messageMediaPoll();
+        media.poll = poll;
+        media.results = new TLRPC.TL_pollResults();
+        return media;
+    }
+
+    private static ArrayList<TLRPC.MessageEntity> copyEntities(ArrayList<TLRPC.MessageEntity> src) {
+        if (src == null || src.isEmpty()) {
+            return null;
+        }
+        return new ArrayList<>(src);
+    }
+
+    public static File resolveLocalFile(int currentAccount, MessageObject messageObject) {
         if (messageObject == null) return null;
         final TLRPC.Message message = messageObject.messageOwner;
         if (message != null && !TextUtils.isEmpty(message.attachPath)) {
@@ -399,9 +437,28 @@ public class VeyraForwarder {
         } catch (Throwable e) {
             FileLog.e(e);
         }
+
+        final int[] dirs = new int[]{
+                FileLoader.MEDIA_DIR_CACHE,
+                FileLoader.MEDIA_DIR_DOCUMENT,
+                FileLoader.MEDIA_DIR_VIDEO,
+                FileLoader.MEDIA_DIR_AUDIO,
+                FileLoader.MEDIA_DIR_FILES,
+                FileLoader.MEDIA_DIR_IMAGE,
+                FileLoader.MEDIA_DIR_VIDEO_PUBLIC,
+                FileLoader.MEDIA_DIR_IMAGE_PUBLIC
+        };
+
+        // Check document
         final TLRPC.Document doc = messageObject.getDocument();
         if (doc != null) {
             try {
+                if (!TextUtils.isEmpty(doc.localPath)) {
+                    final File local = new File(doc.localPath);
+                    if (local.exists() && local.length() > 0) {
+                        return local;
+                    }
+                }
                 File file = FileLoader.getInstance(currentAccount).getPathToAttach(doc, false);
                 if (file != null && file.exists() && file.length() > 0) {
                     return file;
@@ -410,22 +467,68 @@ public class VeyraForwarder {
                 if (file != null && file.exists() && file.length() > 0) {
                     return file;
                 }
+
+                // Check FilePathDatabase
+                try {
+                    final int docType = MessageObject.isVoiceDocument(doc) ? FileLoader.MEDIA_DIR_AUDIO : (MessageObject.isVideoDocument(doc) ? FileLoader.MEDIA_DIR_VIDEO : FileLoader.MEDIA_DIR_DOCUMENT);
+                    final String dbPath = FileLoader.getInstance(currentAccount).getFileDatabase().getPath(doc.id, doc.dc_id, docType, true);
+                    if (!TextUtils.isEmpty(dbPath)) {
+                        final File dbFile = new File(dbPath);
+                        if (dbFile.exists() && dbFile.length() > 0) {
+                            return dbFile;
+                        }
+                    }
+                } catch (Throwable ignore) {}
+
+                // Check dirs with attachName & originalName
+                final String attachName = FileLoader.getAttachFileName(doc);
+                final String originalName = FileLoader.getDocumentFileName(doc);
+                for (int d : dirs) {
+                    final File dir = FileLoader.getInstance(currentAccount).getDirectory(d);
+                    if (dir == null) continue;
+                    if (!TextUtils.isEmpty(attachName)) {
+                        File candidate = new File(dir, attachName);
+                        if (candidate.exists() && candidate.length() > 0) return candidate;
+                        File enc = new File(dir, attachName + ".enc");
+                        if (enc.exists() && enc.length() > 0) return enc;
+                    }
+                    if (!TextUtils.isEmpty(originalName)) {
+                        File candidate = new File(dir, originalName);
+                        if (candidate.exists() && candidate.length() > 0) return candidate;
+                    }
+                }
             } catch (Throwable e) {
                 FileLog.e(e);
             }
         }
+
+        // Check photo
         final TLRPC.Photo photo = MessageObject.getPhoto(message);
-        if (photo != null) {
+        if (photo != null && photo.sizes != null) {
             try {
-                TLRPC.PhotoSize photoSize = FileLoader.getClosestPhotoSizeWithSize(photo.sizes, AndroidUtilities.getPhotoSize(), false, null, true);
-                if (photoSize != null) {
-                    File file = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, null, false);
+                for (int s = photo.sizes.size() - 1; s >= 0; s--) {
+                    final TLRPC.PhotoSize ps = photo.sizes.get(s);
+                    if (ps == null || ps instanceof TLRPC.TL_photoStrippedSize || ps instanceof TLRPC.TL_photoPathSize) {
+                        continue;
+                    }
+                    File file = FileLoader.getInstance(currentAccount).getPathToAttach(ps, false);
                     if (file != null && file.exists() && file.length() > 0) {
                         return file;
                     }
-                    file = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, null, true);
+                    file = FileLoader.getInstance(currentAccount).getPathToAttach(ps, true);
                     if (file != null && file.exists() && file.length() > 0) {
                         return file;
+                    }
+                    final String psFileName = FileLoader.getAttachFileName(ps);
+                    if (!TextUtils.isEmpty(psFileName)) {
+                        for (int d : dirs) {
+                            final File dir = FileLoader.getInstance(currentAccount).getDirectory(d);
+                            if (dir == null) continue;
+                            File candidate = new File(dir, psFileName);
+                            if (candidate.exists() && candidate.length() > 0) return candidate;
+                            File enc = new File(dir, psFileName + ".enc");
+                            if (enc.exists() && enc.length() > 0) return enc;
+                        }
                     }
                 }
             } catch (Throwable e) {
@@ -436,7 +539,10 @@ public class VeyraForwarder {
     }
 
     private static File ensureDownloaded(int currentAccount, MessageObject messageObject) {
-        File file = resolveLocalFile(currentAccount, messageObject);
+        if (VeyraForwardProgress.isCancelled()) {
+            return null;
+        }
+        final File file = resolveLocalFile(currentAccount, messageObject);
         if (file != null) {
             return file;
         }
@@ -446,8 +552,8 @@ public class VeyraForwarder {
         TLRPC.PhotoSize photoSize = null;
         if (document == null) {
             photo = MessageObject.getPhoto(messageObject.messageOwner);
-            if (photo != null) {
-                photoSize = FileLoader.getClosestPhotoSizeWithSize(photo.sizes, AndroidUtilities.getPhotoSize(), false, null, true);
+            if (photo != null && photo.sizes != null) {
+                photoSize = FileLoader.getClosestPhotoSizeWithSize(photo.sizes, AndroidUtilities.getPhotoSize(true), false, null, true);
             }
             if (photoSize == null) {
                 return null;
@@ -502,47 +608,5 @@ public class VeyraForwarder {
             return result[0];
         }
         return resolveLocalFile(currentAccount, messageObject);
-    }
-
-    private static AlertDialog showProgress() {
-        try {
-            final BaseFragment fragment = LaunchActivity.getSafeLastFragment();
-            final Activity activity = fragment != null ? fragment.getParentActivity() : null;
-            if (activity == null) {
-                return null;
-            }
-            final AlertDialog dialog = new AlertDialog(activity, AlertDialog.ALERT_TYPE_SPINNER);
-            dialog.setCanCancel(false);
-            dialog.showDelayed(400);
-            return dialog;
-        } catch (Throwable e) {
-            FileLog.e(e);
-            return null;
-        }
-    }
-
-    private static void dismissProgress(AlertDialog dialog) {
-        if (dialog == null) {
-            return;
-        }
-        try {
-            dialog.dismiss();
-        } catch (Throwable e) {
-            FileLog.e(e);
-        }
-    }
-
-    private static void showError(int count) {
-        try {
-            final BaseFragment fragment = LaunchActivity.getSafeLastFragment();
-            if (fragment == null) {
-                return;
-            }
-            BulletinFactory.of(fragment)
-                    .createErrorBulletin(LocaleController.getString("ErrorOccurred", R.string.ErrorOccurred))
-                    .show();
-        } catch (Throwable e) {
-            FileLog.e(e);
-        }
     }
 }
