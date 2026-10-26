@@ -235,7 +235,7 @@ public class MessagePreviewParams {
                     }
                 }
             }
-            if (isMsgNoForwards) {
+            if (isMsgNoForwards && !org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
                 this.noforwards = true;
             }
         }

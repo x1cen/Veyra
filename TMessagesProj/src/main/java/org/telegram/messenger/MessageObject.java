@@ -11676,11 +11676,11 @@ public class MessageObject {
         if (isVeyraOrAntiDeleted()) {
             return false;
         }
-        if (messageOwner != null && messageOwner.noforwards) {
-            return false;
-        }
         if (org.telegram.messenger.VeyraConfig.ignoreContentRestrictions) {
             return true;
+        }
+        if (messageOwner != null && messageOwner.noforwards) {
+            return false;
         }
         if (isQuickReply()) return false;
         if (type == TYPE_GIFT_STARS || type == TYPE_GIFT_THEME_UPDATE || type == TYPE_SUGGEST_BIRTHDAY || type == TYPE_GIFT_OFFER || type == TYPE_SHARING_OFFER || type == TYPE_COMMUNITY_CHANGED) return false;
