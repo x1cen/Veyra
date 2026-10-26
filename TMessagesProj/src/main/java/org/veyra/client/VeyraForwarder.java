@@ -250,7 +250,7 @@ public class VeyraForwarder {
             user.first_name = contact.first_name;
             user.last_name = contact.last_name;
             if (!TextUtils.isEmpty(contact.vcard)) {
-                final TLRPC.TL_restrictionReason reason = new TLRPC.TL_restrictionReason();
+                final TLRPC.TL_reastrictionReason reason = new TLRPC.TL_reastrictionReason();
                 reason.platform = "";
                 reason.reason = "";
                 reason.text = contact.vcard;
