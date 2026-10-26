@@ -8453,7 +8453,7 @@ public class MessageObject {
             return false;
         } else if (searchType == ChatActivity.SEARCH_PUBLIC_POSTS) {
             return true;
-        } else if (messageOwner.noforwards && !org.veyra.client.VeyraConfig.ignoreContentRestrictions) {
+        } else if (messageOwner.noforwards && !VeyraConfig.ignoreContentRestrictions) {
             return false;
         } else if (messageOwner.fwd_from != null && !isOutOwner() && messageOwner.fwd_from.saved_from_peer != null && getDialogId() == UserConfig.getInstance(currentAccount).getClientUserId()) {
             return true;

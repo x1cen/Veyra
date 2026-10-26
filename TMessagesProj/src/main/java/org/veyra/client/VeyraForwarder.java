@@ -24,6 +24,10 @@ public class VeyraForwarder {
 
     private static final int DOWNLOAD_TIMEOUT_SECONDS = 90;
 
+    public static void cancelCurrentDownload() {
+        // isCancelled flag in VeyraForwardProgress is checked at every stage
+    }
+
     public static boolean needsRestrictedForward(MessageObject messageObject) {
         if (messageObject == null || messageObject.messageOwner == null) {
             return false;
