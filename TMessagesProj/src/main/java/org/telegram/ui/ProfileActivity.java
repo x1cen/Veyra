@@ -13171,7 +13171,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         Bundle args = new Bundle();
         if (chatId != 0) args.putLong("chat_id", chatId);
         if (userId != 0) args.putLong("user_id", userId);
-        presentFragment(new QrActivity(args));
+        presentFragment(new org.telegram.ui.QrShare.QrShareActivity(args));
     }
 
     private void showAvatarProgress(boolean show, boolean animated) {
