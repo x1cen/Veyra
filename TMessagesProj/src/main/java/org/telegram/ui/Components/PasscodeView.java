@@ -133,11 +133,11 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
         public AnimatingTextView(Context context) {
             super(context);
-            characterTextViews = new ArrayList<>(4);
-            dotTextViews = new ArrayList<>(4);
-            stringBuilder = new StringBuilder(4);
+            characterTextViews = new ArrayList<>(8);
+            dotTextViews = new ArrayList<>(8);
+            stringBuilder = new StringBuilder(8);
 
-            for (int a = 0; a < 4; a++) {
+            for (int a = 0; a < 8; a++) {
                 TextView textView = new TextView(context);
                 textView.setTextColor(0xffffffff);
                 textView.setTypeface(AndroidUtilities.bold());
@@ -164,11 +164,11 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
         }
 
         private int getXForTextView(int pos) {
-            return (getMeasuredWidth() - stringBuilder.length() * dp(30)) / 2 + pos * dp(30) - dp(10);
+            return (getMeasuredWidth() - stringBuilder.length() * dp(24)) / 2 + pos * dp(24) - dp(8);
         }
 
         public void appendCharacter(String c) {
-            if (stringBuilder.length() == 4) {
+            if (stringBuilder.length() == 8) {
                 return;
             }
             try {
@@ -196,7 +196,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_Y, 0, 1));
             animators.add(ObjectAnimator.ofFloat(textView, View.TRANSLATION_Y, dp(20), 0));
 
-            for (int a = newPos + 1; a < 4; a++) {
+            for (int a = newPos + 1; a < 8; a++) {
                 textView = characterTextViews.get(a);
                 if (textView.getAlpha() != 0) {
                     animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
@@ -306,7 +306,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 stringBuilder.deleteCharAt(deletingPos);
             }
 
-            for (int a = deletingPos; a < 4; a++) {
+            for (int a = deletingPos; a < 8; a++) {
                 TextView textView = characterTextViews.get(a);
                 if (textView.getAlpha() != 0) {
                     animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
@@ -379,7 +379,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
             if (animated) {
                 ArrayList<Animator> animators = new ArrayList<>();
 
-                for (int a = 0; a < 4; a++) {
+                for (int a = 0; a < 8; a++) {
                     TextView textView = characterTextViews.get(a);
                     if (textView.getAlpha() != 0) {
                         animators.add(ObjectAnimator.ofFloat(textView, View.SCALE_X, 0));
@@ -408,7 +408,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 });
                 currentAnimation.start();
             } else {
-                for (int a = 0; a < 4; a++) {
+                for (int a = 0; a < 8; a++) {
                     characterTextViews.get(a).setAlpha(0);
                     dotTextViews.get(a).setAlpha(0);
                 }
@@ -428,7 +428,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                 currentAnimation = null;
             }
 
-            for (int a = 0; a < 4; a++) {
+            for (int a = 0; a < 8; a++) {
                 if (a < stringBuilder.length()) {
                     TextView textView = characterTextViews.get(a);
                     textView.setAlpha(0);
@@ -717,7 +717,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == 4 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                if (passwordEditText.length() == 8 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
                     processDone(false);
                 }
             }
@@ -945,7 +945,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                     }
                 }
                 // after the background step of the last digit, so a wrong code can turn the background back smoothly
-                if (passwordEditText2.length() == 4) {
+                if (passwordEditText2.length() == 8) {
                     processDone(false);
                 }
             });
