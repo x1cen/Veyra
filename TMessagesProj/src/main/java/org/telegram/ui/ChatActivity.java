@@ -26633,7 +26633,22 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }
-                obj.deleted = true;
+                    int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
+                    if (!obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
+                        obj.deleted = true;
+                        if (obj.messageOwner != null) {
+                            obj.messageOwner.isDeleted = true;
+                        }
+                        obj.forceUpdate = true;
+                        obj.resetLayout();
+                        org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, dialog_id, obj.getId());
+                        if (index != -1 && chatAdapter != null) {
+                            chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
+                        }
+                        updateVisibleRows();
+                        continue;
+                    }
+                    obj.deleted = true;
                 if (obj.scheduled && sent) {
                     obj.scheduledSent = true;
                 }

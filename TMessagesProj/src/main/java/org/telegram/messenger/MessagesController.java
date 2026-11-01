@@ -9354,6 +9354,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 } else {
                     markDialogMessageAsDeleted(dialogId, messages);
                 }
+                org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(dialogId, messages);
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId);
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
             }
@@ -17619,9 +17620,24 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             });
-            getMessagesStorage().deletePushMessages(dialogId, ids);
-            ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, ids, false, true, 0, 0);
-            getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, ids, dialogIds);
+            ArrayList<Integer> retainedIds = new ArrayList<>();
+            ArrayList<Integer> selfDelIds = new ArrayList<>();
+            for (int b = 0; b < ids.size(); b++) {
+                int mid = ids.get(b);
+                if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                    selfDelIds.add(mid);
+                } else {
+                    retainedIds.add(mid);
+                }
+            }
+            if (!retainedIds.isEmpty()) {
+                getMessagesStorage().markMessagesAsIsDeleted(dialogId, retainedIds, false);
+            }
+            if (!selfDelIds.isEmpty()) {
+                getMessagesStorage().deletePushMessages(dialogId, selfDelIds);
+                ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(dialogId, selfDelIds, false, true, 0, 0);
+                getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, selfDelIds, dialogIds);
+            }
         });
     }
 
@@ -21269,8 +21285,23 @@ public class MessagesController extends BaseController implements NotificationCe
                 long key = deletedMessages.keyAt(a);
                 ArrayList<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
-                    ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0);
-                    getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
+                    ArrayList<Integer> selfDelList = new ArrayList<>();
+                    ArrayList<Integer> retainedList = new ArrayList<>();
+                    for (int i = 0; i < arrayList.size(); i++) {
+                        int mid = arrayList.get(i);
+                        if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(key, mid)) {
+                            selfDelList.add(mid);
+                        } else {
+                            retainedList.add(mid);
+                        }
+                    }
+                    if (!retainedList.isEmpty()) {
+                        getMessagesStorage().markMessagesAsIsDeleted(key, retainedList, false);
+                    }
+                    if (!selfDelList.isEmpty()) {
+                        ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, selfDelList, false, true, 0, 0);
+                        getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, selfDelList, dialogIds);
+                    }
                 });
             }
         }

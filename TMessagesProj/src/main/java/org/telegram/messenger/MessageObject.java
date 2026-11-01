@@ -226,6 +226,10 @@ public class MessageObject {
     public String monthKey;
     public boolean deleted;
     public boolean deletedByThanos;
+
+    public boolean isDeleted() {
+        return deleted || (messageOwner != null && messageOwner.isDeleted) || org.veyra.client.VeyraAntiDelete.isMessageDeleted(getDialogId(), getId());
+    }
     public float audioProgress;
     public float forceSeekTo = -1;
     public int audioProgressMs;

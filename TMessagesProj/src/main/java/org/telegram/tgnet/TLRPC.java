@@ -58706,6 +58706,7 @@ public class TLRPC {
     //Message start
     public static class Message extends TLObject {
         public int id;
+        public boolean isDeleted;
         public Peer from_id;
         public int from_boosts_applied;
         public Peer peer_id;

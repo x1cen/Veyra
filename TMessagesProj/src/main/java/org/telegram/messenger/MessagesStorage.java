@@ -410,6 +410,9 @@ public class MessagesStorage extends BaseController {
         loadUnreadMessages();
         loadPendingTasks();
         try {
+            org.veyra.client.VeyraAntiDelete.initFromDb(database);
+        } catch (Throwable ignored) {}
+        try {
             openSync.countDown();
         } catch (Throwable ignore) {
 
@@ -14500,6 +14503,84 @@ public class MessagesStorage extends BaseController {
 
     private void broadcastQuickRepliesMessagesChange(Long type, long topic_id) {
         AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.quickRepliesUpdated));
+    }
+
+    public List<Long> markMessagesAsIsDeletedInternal(Long dialogId, List<Integer> messages) {
+        try {
+            SQLiteCursor cursor;
+            String ids = TextUtils.join(",", messages);
+            List<Long> dialogsToUpdate = new ArrayList<>();
+            if (dialogId != 0) {
+                for (int m = 0; m < messages.size(); m++) {
+                    int mid = messages.get(m);
+                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                        continue;
+                    }
+                    try {
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(dialogId, mid);
+                    } catch (Throwable ignored) {}
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialogId, mid);
+                }
+                if (!dialogsToUpdate.contains(dialogId)) {
+                    dialogsToUpdate.add(dialogId);
+                }
+            }
+            if (dialogId != 0) {
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, dialogId, -dialogId));
+            } else {
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
+            }
+            while (cursor.next()) {
+                try {
+                    long did = cursor.longValue(0);
+                    int mid = cursor.intValue(1);
+                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, mid)) {
+                        continue;
+                    }
+                    byte[] dataBytes = null;
+                    int msgDate = 0;
+                    try {
+                        NativeByteBuffer data = cursor.byteBufferValue(2);
+                        if (data != null) {
+                            dataBytes = new byte[data.limit()];
+                            data.readBytes(dataBytes, false);
+                            data.position(0);
+                            TLRPC.Message msg = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                            data.reuse();
+                            if (msg != null) {
+                                msgDate = msg.date;
+                            }
+                        }
+                    } catch (Throwable ignore) {}
+
+                    try {
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedMessage(did, mid, msgDate, dataBytes);
+                    } catch (Throwable ignored) {}
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, mid);
+                    if (!dialogsToUpdate.contains(did)) {
+                        dialogsToUpdate.add(did);
+                    }
+                } catch (Exception e) {}
+            }
+            cursor.dispose();
+            updateWidgets(dialogsToUpdate);
+            return dialogsToUpdate;
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return null;
+    }
+
+    public List<Long> markMessagesAsIsDeleted(Long dialogId, List<Integer> messages, boolean useQueue) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        if (useQueue) {
+            storageQueue.postRunnable(() -> markMessagesAsIsDeletedInternal(dialogId, messages));
+        } else {
+            return markMessagesAsIsDeletedInternal(dialogId, messages);
+        }
+        return null;
     }
 
     private ArrayList<Long> markMessagesAsDeletedInternal(long dialogId, ArrayList<Integer> messages, boolean deleteFiles, int mode, int threadMessageId) {
