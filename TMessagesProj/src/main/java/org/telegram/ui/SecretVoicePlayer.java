@@ -711,7 +711,7 @@ public class SecretVoicePlayer extends Dialog {
         actionBar.setItemsBackgroundColor(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR, false);
         actionBar.setItemsColor(0xffffffff, false);
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitle(LocaleController.getString(isRound ? R.string.DisappearingVideo : R.string.DisappearingVoice));
+        actionBar.setTitle(LocaleController.getString(isRound ? R.string.DisappearingVideo : R.string.AttachAudio));
         ActionBarMenu menu = actionBar.createMenu();
         menu.addItem(1, R.drawable.msg_download);
         if (isRound) {
@@ -999,7 +999,7 @@ public class SecretVoicePlayer extends Dialog {
                         : staged.getName());
                 final BulletinFactory.FileType bulletinType = isRoundMedia
                         ? (toGallery ? BulletinFactory.FileType.VIDEO : BulletinFactory.FileType.VIDEO_TO_DOWNLOADS)
-                        : BulletinFactory.FileType.AUDIO_TO_DOWNLOADS;
+                        : BulletinFactory.FileType.AUDIO;
 
                 final File stagedFinal = staged;
                 final SecretMediaExport exportFinal = export;
