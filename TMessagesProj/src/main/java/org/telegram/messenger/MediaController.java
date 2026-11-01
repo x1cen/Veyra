@@ -6126,6 +6126,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                 DownloadManager downloadManager = (DownloadManager) ApplicationLoader.applicationContext.getSystemService(Context.DOWNLOAD_SERVICE);
                                 downloadManager.addCompletedDownload(destFile.getName(), destFile.getName(), false, mime, destFile.getAbsolutePath(), destFile.length(), true);
                             } else {
+                                destFile.setLastModified(System.currentTimeMillis());
                                 AndroidUtilities.addMediaToGallery(destFile.getAbsoluteFile());
                             }
                         }
@@ -6380,6 +6381,17 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
 
             contentValues.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
+            long nowMs = System.currentTimeMillis();
+            long nowSec = nowMs / 1000L;
+            contentValues.put(MediaStore.MediaColumns.DATE_ADDED, nowSec);
+            contentValues.put(MediaStore.MediaColumns.DATE_MODIFIED, nowSec);
+            if (Build.VERSION.SDK_INT >= 29) {
+                if (selectedType == 0) {
+                    contentValues.put(MediaStore.Images.Media.DATE_TAKEN, nowMs);
+                } else if (selectedType == 1) {
+                    contentValues.put(MediaStore.Video.Media.DATE_TAKEN, nowMs);
+                }
+            }
 
             Uri dstUri = ApplicationLoader.applicationContext.getContentResolver().insert(uriToInsert, contentValues);
             if (dstUri != null) {
