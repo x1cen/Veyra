@@ -230,6 +230,16 @@ public class MessageObject {
     public boolean isDeleted() {
         return deleted || (messageOwner != null && messageOwner.isDeleted) || org.veyra.client.VeyraAntiDelete.isMessageDeleted(getDialogId(), getId());
     }
+
+    // Veyra: message was edited at least once before it was deleted. Derived from the stored
+    // message flags, not from any UI label. Implies isDeleted(), so every deleted-message rule
+    // (delete option, checkbox hiding, forwarding) applies unchanged.
+    public boolean isEditedDeleted() {
+        if (messageOwner == null || scheduled || !isDeleted()) {
+            return false;
+        }
+        return ((messageOwner.flags & TLRPC.MESSAGE_FLAG_EDITED) != 0 || messageOwner.edit_date != 0) && !messageOwner.edit_hide;
+    }
     public float audioProgress;
     public float forceSeekTo = -1;
     public int audioProgressMs;
