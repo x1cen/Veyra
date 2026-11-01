@@ -52,7 +52,7 @@ public class VeyraForwarder {
             if (msg.messageOwner != null && msg.messageOwner.noforwards) {
                 return true;
             }
-            if (msg.needDrawBluredPreview()) {
+            if (msg.needDrawBluredPreview() || msg.isRoundOnce() || msg.isVoiceOnce()) {
                 return true;
             }
         }
