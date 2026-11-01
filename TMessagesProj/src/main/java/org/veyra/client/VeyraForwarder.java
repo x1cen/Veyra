@@ -127,7 +127,69 @@ public class VeyraForwarder {
             }
             ArrayList<TLRPC.MessageEntity> entities = hideCaption ? null : msg.messageOwner.entities;
 
-            if (isVisualMedia(msg)) {
+            if (msg.isRoundVideo()) {
+                File itemPath = getMessageFilePath(currentAccount, msg);
+                if (itemPath != null && itemPath.exists()) {
+                    org.telegram.messenger.VideoEditedInfo videoEditedInfo = new org.telegram.messenger.VideoEditedInfo();
+                    videoEditedInfo.roundVideo = true;
+                    videoEditedInfo.startTime = -1;
+                    videoEditedInfo.endTime = -1;
+                    SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
+                            (TLRPC.TL_document) msg.getDocument(),
+                            videoEditedInfo,
+                            itemPath.getAbsolutePath(),
+                            peer,
+                            null,
+                            replyToTopMsg,
+                            null,
+                            null,
+                            null,
+                            null,
+                            notify,
+                            scheduleDate,
+                            0,
+                            0,
+                            null,
+                            null,
+                            false,
+                            false
+                    );
+                    AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ignored) {}
+                }
+                i++;
+            } else if (msg.isVoice()) {
+                File itemPath = getMessageFilePath(currentAccount, msg);
+                if (itemPath != null && itemPath.exists()) {
+                    SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
+                            (TLRPC.TL_document) msg.getDocument(),
+                            null,
+                            itemPath.getAbsolutePath(),
+                            peer,
+                            null,
+                            replyToTopMsg,
+                            null,
+                            null,
+                            null,
+                            null,
+                            notify,
+                            scheduleDate,
+                            0,
+                            0,
+                            null,
+                            null,
+                            false,
+                            false
+                    );
+                    AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ignored) {}
+                }
+                i++;
+            } else if (isVisualMedia(msg)) {
                 ArrayList<SendMessagesHelper.SendingMediaInfo> albumMedia = new ArrayList<>();
                 long currentGroupId = msg.getGroupId();
 
@@ -286,6 +348,21 @@ public class VeyraForwarder {
                 return f;
             }
         }
+        if (message.getDocument() != null) {
+            File f = FileLoader.getInstance(currentAccount).getPathToAttach(message.getDocument());
+            if (f != null && f.exists() && f.length() > 0) {
+                return f;
+            }
+        }
+        if (message.photoThumbs != null && !message.photoThumbs.isEmpty()) {
+            TLRPC.PhotoSize size = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, AndroidUtilities.getPhotoSize(true), false, null, true);
+            if (size != null) {
+                File f = FileLoader.getInstance(currentAccount).getPathToAttach(size);
+                if (f != null && f.exists() && f.length() > 0) {
+                    return f;
+                }
+            }
+        }
         return file;
     }
 
@@ -334,14 +411,14 @@ public class VeyraForwarder {
         if (message == null || message.messageOwner == null || message.messageOwner.media == null) {
             return false;
         }
-        return message.isPhoto() || message.isVideo() || message.isRoundVideo() || message.isGif() || message.isNewGif();
+        return (message.isPhoto() || message.isVideo() || message.isGif() || message.isNewGif()) && !message.isRoundVideo();
     }
 
     public static boolean isDocumentOrAudio(MessageObject message) {
         if (message == null || message.messageOwner == null || message.messageOwner.media == null) {
             return false;
         }
-        return message.isDocument() || message.isMusic() || message.isVoice();
+        return (message.isDocument() || message.isMusic()) && !message.isVoice();
     }
 
     public static boolean isMediaDownloadable(MessageObject message) {
@@ -357,6 +434,6 @@ public class VeyraForwarder {
         if (MessageObject.isMediaEmpty(message.messageOwner)) {
             return false;
         }
-        return isVisualMedia(message) || isDocumentOrAudio(message);
+        return isVisualMedia(message) || isDocumentOrAudio(message) || message.isRoundVideo() || message.isVoice();
     }
 }
