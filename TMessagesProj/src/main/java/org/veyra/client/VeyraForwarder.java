@@ -37,10 +37,6 @@ public class VeyraForwarder {
             if (MessagesController.getInstance(currentAccount).isPeerNoForwards(dialogId)) {
                 return true;
             }
-            TLRPC.UserFull userFull = MessagesController.getInstance(currentAccount).getUserFull(dialogId);
-            if (userFull != null && userFull.noforwards) {
-                return true;
-            }
         }
 
         for (int i = 0; i < messages.size(); i++) {

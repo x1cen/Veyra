@@ -14509,11 +14509,11 @@ public class MessagesStorage extends BaseController {
         AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.quickRepliesUpdated));
     }
 
-    public List<Long> markMessagesAsIsDeletedInternal(Long dialogId, List<Integer> messages) {
+    public ArrayList<Long> markMessagesAsIsDeletedInternal(Long dialogId, List<Integer> messages) {
         try {
             SQLiteCursor cursor;
             String ids = TextUtils.join(",", messages);
-            List<Long> dialogsToUpdate = new ArrayList<>();
+            ArrayList<Long> dialogsToUpdate = new ArrayList<>();
             if (dialogId != 0) {
                 for (int m = 0; m < messages.size(); m++) {
                     int mid = messages.get(m);
@@ -14575,7 +14575,7 @@ public class MessagesStorage extends BaseController {
         return null;
     }
 
-    public List<Long> markMessagesAsIsDeleted(Long dialogId, List<Integer> messages, boolean useQueue) {
+    public ArrayList<Long> markMessagesAsIsDeleted(Long dialogId, List<Integer> messages, boolean useQueue) {
         if (messages == null || messages.isEmpty()) {
             return null;
         }
