@@ -8002,7 +8002,7 @@ public class AlertsCreator {
                     })
                     .collect(Collectors.toCollection(ArrayList::new));
 
-            if (!actionParticipants.isEmpty()) {
+            if (!actionParticipants.isEmpty() && hasNonDeletedMessages) {
                 if (channelParticipants == null) {
                     final AlertDialog[] progressDialog = new AlertDialog[]{new AlertDialog(activity, AlertDialog.ALERT_TYPE_SPINNER)};
 
