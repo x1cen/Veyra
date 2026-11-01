@@ -25180,56 +25180,7 @@ public class ChatActivity extends BaseFragment implements
     private Pattern sponsoredUrlPattern;
     private MessageObject botSponsoredMessage;
     private void addSponsoredMessages(boolean animated) {
-        if (sponsoredMessagesAdded || chatMode != 0 || !ChatObject.isChannel(currentChat) && !UserObject.isBot(currentUser) || !forwardEndReached[0] || getUserConfig().isPremium() && getMessagesController().isSponsoredDisabled() || isReport()) {
-            return;
-        }
-        MessagesController.SponsoredMessagesInfo res = getMessagesController().getSponsoredMessages(dialog_id);
-        if (res == null || res.messages == null) {
-            return;
-        }
-        for (int i = 0; i < res.messages.size(); i++) {
-            MessageObject messageObject = res.messages.get(i);
-            messageObject.resetLayout();
-            if (messageObject.sponsoredUrl != null) {
-                try {
-                    if (sponsoredUrlPattern == null) {
-                        sponsoredUrlPattern = Pattern.compile("https://t\\.me/(\\w+)(?:/(\\d+))?");
-                    }
-                    Matcher matcher = sponsoredUrlPattern.matcher(messageObject.sponsoredUrl);
-                    if (matcher.matches()) {
-                        String username = matcher.group(1);
-                        int postId = 0;
-                        try {
-                            postId = matcher.groupCount() >= 2 ? Integer.parseInt(matcher.group(2)) : 0;
-                        } catch (Exception e2) {}
-                        TLObject obj = getMessagesController().getUserOrChat(username);
-                        long did;
-                        if (obj instanceof TLRPC.User) {
-                            did = ((TLRPC.User) obj).id;
-                        } else if (obj instanceof TLRPC.Chat) {
-                            did = -((TLRPC.Chat) obj).id;
-                        } else {
-                            continue;
-                        }
-                        if (postId < 0) continue;
-                        getMessagesController().ensureMessagesLoaded(did, postId, null);
-                    }
-                } catch (Exception e) {
-                    FileLog.e(e, false);
-                }
-            }
-        }
-        sponsoredMessagesAdded = true;
-        if (UserObject.isBot(currentUser)) {
-            botSponsoredMessage = res == null || res.messages == null || res.messages.isEmpty() ? null : res.messages.get(0);
-            updateTopPanel(true);
-        } else {
-            sponsoredMessagesPostsBetween = res.posts_between != null ? res.posts_between : 0;
-            if (notPushedSponsoredMessages != null) {
-                notPushedSponsoredMessages.clear();
-            }
-            processNewMessages(res.messages, false);
-        }
+        return;
     }
 
     public void removeFromSponsored(MessageObject message) {
@@ -26519,14 +26470,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private int getSponsoredMessagesCount() {
-        int sponsoredMessagesCount = 0;
-        while (sponsoredMessagesCount < messages.size()) {
-            if (!messages.get(sponsoredMessagesCount).isSponsored()) {
-                break;
-            }
-            sponsoredMessagesCount++;
-        }
-        return sponsoredMessagesCount;
+        return 0;
     }
 
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent) {

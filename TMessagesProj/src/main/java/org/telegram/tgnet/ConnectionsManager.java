@@ -396,6 +396,29 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (object instanceof TLRPC.TL_messages_getSponsoredMessages) {
+            if (onComplete != null || onCompleteTimestamp != null) {
+                TLRPC.TL_messages_sponsoredMessagesEmpty res = new TLRPC.TL_messages_sponsoredMessagesEmpty();
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
+        if (object instanceof TLRPC.TL_help_getPromoData) {
+            if (onComplete != null || onCompleteTimestamp != null) {
+                TLRPC.TL_help_promoDataEmpty res = new TLRPC.TL_help_promoDataEmpty();
+                res.expires = Integer.MAX_VALUE;
+                if (onCompleteTimestamp != null) {
+                    AndroidUtilities.runOnUIThread(() -> onCompleteTimestamp.run(res, null, System.currentTimeMillis()));
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(res, null));
+                }
+            }
+            return;
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
