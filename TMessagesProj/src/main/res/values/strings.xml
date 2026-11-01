@@ -281,7 +281,6 @@
     <string name="DisappearingVideo">Secret Video</string>
     <string name="DisappearingGif">Secret GIF</string>
     <string name="SecretChatAcceptAuto">Accept Automatically</string>
-    <string name="SecretChatAcceptAutoInfo">Automatically accept incoming secret chat invitations.</string>
     <string name="SearchMessages">Messages</string>
     <string name="SearchMessagesIn">Messages in %s</string>
     <string name="Search">Search</string>

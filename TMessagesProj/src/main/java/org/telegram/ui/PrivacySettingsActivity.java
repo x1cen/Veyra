@@ -1248,7 +1248,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                     } else if (position == sessionsDetailRow) {
                         privacyCell.setText(getString("SessionsSettingsInfo", R.string.SessionsSettingsInfo));
                     } else if (position == secretDetailRow) {
-                        privacyCell.setText(getString("SecretWebPageInfo", R.string.SecretWebPageInfo) + "\n\n" + LocaleController.getString(R.string.SecretChatAcceptAutoInfo));
+                        privacyCell.setText(getString("SecretWebPageInfo", R.string.SecretWebPageInfo));
                     } else if (position == botsDetailRow) {
                         privacyCell.setText(getString("PrivacyBotsInfo", R.string.PrivacyBotsInfo));
                     } else if (position == privacyShadowRow) {
