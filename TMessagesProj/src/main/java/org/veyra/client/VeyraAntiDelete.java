@@ -175,6 +175,9 @@ public class VeyraAntiDelete {
     }
 
     public static boolean isSelfDeleted(long dialogId, int messageId) {
+        if (messageId <= 0) {
+            return true;
+        }
         java.util.Set<Integer> set = selfDeletedMessagesByDialog.get(dialogId);
         if (set != null && set.contains(messageId)) {
             return true;

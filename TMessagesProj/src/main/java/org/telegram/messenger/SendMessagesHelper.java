@@ -815,6 +815,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         public boolean performMediaUpload;
         public boolean performCoverUpload;
         public boolean forceReupload;
+        public boolean isCancelled;
 
         private boolean retriedToSend;
         public boolean[] retriedToSendArray;
@@ -969,6 +970,16 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         return localInstance;
     }
 
+    private final java.util.Set<Integer> cancelledSendingMessageIds = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
+    public void markSendingCancelled(int id) {
+        cancelledSendingMessageIds.add(id);
+    }
+
+    public boolean isSendingCancelled(int id) {
+        return cancelledSendingMessageIds.contains(id);
+    }
+
     public SendMessagesHelper(int instance) {
         super(instance);
 
@@ -1044,6 +1055,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             if (arr != null) {
                 for (int a = 0; a < arr.size(); a++) {
                     DelayedMessage message = arr.get(a);
+                    if (message.isCancelled || (message.obj != null && isSendingCancelled(message.obj.getId()))) {
+                        continue;
+                    }
                     TLRPC.InputMedia media = null;
                     if (message.sendRequest instanceof TLRPC.TL_messages_sendMedia) {
                         media = ((TLRPC.TL_messages_sendMedia) message.sendRequest).media;
@@ -1587,6 +1601,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         int topicId = 0;
         for (int c = 0; c < objects.size(); c++) {
             MessageObject object = objects.get(c);
+            markSendingCancelled(object.getId());
             if (object.scheduled) {
                 scheduled = true;
             }
@@ -1667,10 +1682,13 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                             }
                         }
                         break;
-                    } else if (message.obj.getId() == object.getId()) {
+                    } else if (message.obj != null && message.obj.getId() == object.getId()) {
+                        message.isCancelled = true;
+                        if (message.requests != null) {
+                            message.requests.clear();
+                        }
                         removeFromUploadingMessages(object.getId(), object.scheduled);
                         messages.remove(a);
-                        message.sendDelayedRequests();
                         MediaController.getInstance().cancelVideoConvert(message.obj);
                         if (messages.size() == 0) {
                             keysToRemove.add(entry.getKey());
@@ -8093,6 +8111,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             }
         }
         final TLRPC.Message newMsgObj = msgObj.messageOwner;
+        if (isSendingCancelled(newMsgObj.id) || (delayedMessage != null && delayedMessage.isCancelled)) {
+            removeFromSendingMessages(newMsgObj.id, scheduled);
+            return;
+        }
         putToSendingMessages(newMsgObj, scheduled);
         if (!StarsController.getInstance(currentAccount).beforeSendingFinalRequest(req, msgObj, () -> performSendMessageRequest(req, msgObj, originalPath, parentMessage, check, delayedMessage, parentObject, params, scheduled))) {
             return;
@@ -8105,6 +8127,32 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
 
         newMsgObj.reqId = getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (isSendingCancelled(newMsgObj.id)) {
+                int serverMid = 0;
+                if (response instanceof TLRPC.TL_updateShortSentMessage) {
+                    serverMid = ((TLRPC.TL_updateShortSentMessage) response).id;
+                } else if (response instanceof TLRPC.Updates) {
+                    for (TLRPC.Update u : ((TLRPC.Updates) response).updates) {
+                        if (u instanceof TL_update.TL_updateNewMessage) {
+                            serverMid = ((TL_update.TL_updateNewMessage) u).message.id;
+                            break;
+                        } else if (u instanceof TL_update.TL_updateNewChannelMessage) {
+                            serverMid = ((TL_update.TL_updateNewChannelMessage) u).message.id;
+                            break;
+                        }
+                    }
+                }
+                if (serverMid > 0) {
+                    final int delMid = serverMid;
+                    AndroidUtilities.runOnUIThread(() -> {
+                        ArrayList<Integer> toDel = new ArrayList<>();
+                        toDel.add(delMid);
+                        getMessagesController().deleteMessages(toDel, null, null, newMsgObj.dialog_id, 0, true, 0);
+                    });
+                }
+                removeFromSendingMessages(newMsgObj.id, scheduled);
+                return;
+            }
             if (error != null && (req instanceof TLRPC.TL_messages_sendMedia || req instanceof TL_ephemeral.TL_sendMessage || req instanceof TLRPC.TL_messages_editMessage || req instanceof TLRPC.TL_messages_addPollAnswer) && FileRefController.isFileRefError(error.text)) {
                 if (FileRefController.isFileRefErrorCover(error.text)) {
                     if (removeCoverFromRequest(req)) {

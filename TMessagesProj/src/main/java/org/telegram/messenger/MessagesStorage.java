@@ -14977,7 +14977,7 @@ public class MessagesStorage extends BaseController {
                     ArrayList<Integer> toDeleteFromDb = new ArrayList<>();
                     for (int m = 0; m < mids.size(); m++) {
                         int msgId = mids.get(m);
-                        if (!org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, msgId)) {
+                        if (msgId > 0 && !org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, msgId)) {
                             try {
                                 org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(did, msgId);
                                 org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, msgId);

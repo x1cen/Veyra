@@ -357,7 +357,11 @@ public class FileLoader extends BaseController {
             }
             uploadSizes.remove(location);
             if (operation != null) {
-                uploadOperationPathsEnc.remove(location);
+                if (!enc) {
+                    uploadOperationPaths.remove(location);
+                } else {
+                    uploadOperationPathsEnc.remove(location);
+                }
                 uploadOperationQueue.remove(operation);
                 uploadSmallOperationQueue.remove(operation);
                 operation.cancel();
