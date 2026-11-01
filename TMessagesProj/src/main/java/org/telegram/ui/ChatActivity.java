@@ -33494,47 +33494,107 @@ public class ChatActivity extends BaseFragment implements
         return fragment;
     }
 
-    private void saveMessageToGallery(MessageObject messageObject) {
+    private String getMessageSavePath(MessageObject messageObject) {
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return null;
+        }
         String path = messageObject.messageOwner.attachPath;
         if (!TextUtils.isEmpty(path)) {
             File temp = new File(path);
-            if (!temp.exists()) {
-                path = null;
+            if (temp.exists() && temp.length() > 0) {
+                return path;
             }
         }
-        if (TextUtils.isEmpty(path)) {
-            File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-            if (f != null && f.exists()) {
-                path = f.getPath();
-            }
-        }
-        if (TextUtils.isEmpty(path) && messageObject.cachedQuality != null && messageObject.cachedQuality.isCached()) {
+        if (messageObject.cachedQuality != null && messageObject.cachedQuality.isCached()) {
             File f = new File(messageObject.cachedQuality.uri.getPath());
-            if (f != null && f.exists()) {
-                path = f.getPath();
+            if (f.exists() && f.length() > 0) {
+                return f.getAbsolutePath();
             }
         }
-        if (TextUtils.isEmpty(path) && messageObject.qualityToSave != null) {
+        if (messageObject.qualityToSave != null) {
             File f = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.qualityToSave, null, false, true);
-            if (f != null && f.exists()) {
-                path = f.getPath();
+            if (f != null && f.exists() && f.length() > 0) {
+                return f.getAbsolutePath();
+            }
+            f = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.qualityToSave, null, true, true);
+            if (f != null && f.exists() && f.length() > 0) {
+                return f.getAbsolutePath();
             }
         }
-        if (TextUtils.isEmpty(path) && messageObject.getDocument() != null) {
-            File f = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.getDocument());
-            if (f != null && f.exists()) {
-                path = f.getPath();
+        File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
+        if (f != null && f.exists() && f.length() > 0) {
+            return f.getAbsolutePath();
+        }
+        f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner, true, true);
+        if (f != null && f.exists() && f.length() > 0) {
+            return f.getAbsolutePath();
+        }
+        if (messageObject.getDocument() != null) {
+            TLRPC.Document doc = messageObject.getDocument();
+            f = FileLoader.getInstance(currentAccount).getPathToAttach(doc, false);
+            if (f != null && f.exists() && f.length() > 0) {
+                return f.getAbsolutePath();
+            }
+            f = FileLoader.getInstance(currentAccount).getPathToAttach(doc, true);
+            if (f != null && f.exists() && f.length() > 0) {
+                return f.getAbsolutePath();
+            }
+            String attachFileName = FileLoader.getAttachFileName(doc);
+            if (!TextUtils.isEmpty(attachFileName)) {
+                File cacheDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
+                File candidate = new File(cacheDir, attachFileName);
+                if (candidate.exists() && candidate.length() > 0) {
+                    return candidate.getAbsolutePath();
+                }
+                File docDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_DOCUMENT);
+                candidate = new File(docDir, attachFileName);
+                if (candidate.exists() && candidate.length() > 0) {
+                    return candidate.getAbsolutePath();
+                }
+                File videoDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_VIDEO);
+                candidate = new File(videoDir, attachFileName);
+                if (candidate.exists() && candidate.length() > 0) {
+                    return candidate.getAbsolutePath();
+                }
+            }
+        }
+        if (messageObject.photoThumbs != null && !messageObject.photoThumbs.isEmpty()) {
+            TLRPC.PhotoSize size = FileLoader.getClosestPhotoSizeWithSize(messageObject.photoThumbs, AndroidUtilities.getPhotoSize(true), false, null, true);
+            if (size != null) {
+                f = FileLoader.getInstance(currentAccount).getPathToAttach(size, null, false);
+                if (f != null && f.exists() && f.length() > 0) {
+                    return f.getAbsolutePath();
+                }
+                f = FileLoader.getInstance(currentAccount).getPathToAttach(size, null, true);
+                if (f != null && f.exists() && f.length() > 0) {
+                    return f.getAbsolutePath();
+                }
             }
         }
         if (messageObject.isSecretMedia() || messageObject.isVoiceOnce() || messageObject.isRoundOnce() || messageObject.isSecret()) {
             try {
                 org.veyra.client.SecretMediaExport export = org.veyra.client.SecretMediaExport.open(currentAccount, messageObject);
-                if (export != null && export.getFile() != null && export.getFile().exists()) {
-                    path = export.getFile().getAbsolutePath();
+                if (export != null && export.getFile() != null && export.getFile().exists() && export.getFile().length() > 0) {
+                    return export.getFile().getAbsolutePath();
                 }
             } catch (Throwable ignored) {}
         }
+        return null;
+    }
+
+    private void saveMessageToGallery(MessageObject messageObject) {
+        String path = getMessageSavePath(messageObject);
+        boolean isVideo = messageObject.isVideo() || messageObject.isRoundVideo() || messageObject.isRoundOnce();
         if (TextUtils.isEmpty(path)) {
+            if (messageObject.getDocument() != null || (messageObject.messageOwner != null && messageObject.messageOwner.media != null)) {
+                ArrayList<MessageObject> list = new ArrayList<>();
+                list.add(messageObject);
+                MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), list, count -> {
+                    if (getParentActivity() != null && count > 0) {
+                        BulletinFactory.createSaveToGalleryBulletin(ChatActivity.this, isVideo, false, themeDelegate).show();
+                    }
+                });
+            }
             return;
         }
         if (messageObject.isLivePhoto()) {
@@ -33553,10 +33613,12 @@ public class ChatActivity extends BaseFragment implements
             }
             if (!TextUtils.isEmpty(videoPath)) {
                 MediaController.saveFile(path, videoPath, getParentActivity(), null);
+                BulletinFactory.createSaveToGalleryBulletin(this, false, true, themeDelegate).show();
                 return;
             }
         }
-        MediaController.saveFile(path, getParentActivity(), messageObject.isVideo() ? 1 : 0, null, null);
+        MediaController.saveFile(path, getParentActivity(), isVideo ? 1 : 0, null, null);
+        BulletinFactory.createSaveToGalleryBulletin(this, isVideo, false, themeDelegate).show();
     }
 
     private void processSelectedOption(int option) {
@@ -33807,51 +33869,6 @@ public class ChatActivity extends BaseFragment implements
                 break;
             }
             case OPTION_SAVE_TO_GALLERY2: {
-                String path = selectedObject.messageOwner.attachPath;
-                if (path != null && path.length() > 0) {
-                    File temp = new File(path);
-                    if (!temp.exists()) {
-                        path = null;
-                    }
-                }
-                if (TextUtils.isEmpty(path)) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner);
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path)) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner, true, true);
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path) && selectedObject.cachedQuality != null && selectedObject.cachedQuality.isCached()) {
-                    File f = new File(selectedObject.cachedQuality.uri.getPath());
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path) && selectedObject.qualityToSave != null) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.qualityToSave, null, false, true);
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path) && selectedObject.getDocument() != null) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.getDocument());
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (selectedObject.isSecretMedia() || selectedObject.isVoiceOnce() || selectedObject.isRoundOnce() || selectedObject.isSecret()) {
-                    try {
-                        org.veyra.client.SecretMediaExport export = org.veyra.client.SecretMediaExport.open(currentAccount, selectedObject);
-                        if (export != null && export.getFile() != null && export.getFile().exists()) {
-                            path = export.getFile().getAbsolutePath();
-                        }
-                    } catch (Throwable ignored) {}
-                }
                 if (Build.VERSION.SDK_INT >= 23 && (Build.VERSION.SDK_INT <= 28 || BuildVars.NO_SCOPED_STORAGE) && getParentActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     getParentActivity().requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
                     selectedObject = null;
@@ -33859,31 +33876,7 @@ public class ChatActivity extends BaseFragment implements
                     selectedObjectToEditCaption = null;
                     return;
                 }
-                if (TextUtils.isEmpty(path)) {
-                    return;
-                }
-                if (selectedObject.isLivePhoto()) {
-                    final TLRPC.Document videoDoc = MessageObject.getMedia(selectedObject.messageOwner) != null
-                            ? MessageObject.getMedia(selectedObject.messageOwner).document
-                            : null;
-                    String videoPath = null;
-                    if (videoDoc != null) {
-                        File videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, false);
-                        if (videoFile == null || !videoFile.exists()) {
-                            videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, true);
-                        }
-                        if (videoFile != null && videoFile.exists()) {
-                            videoPath = videoFile.getPath();
-                        }
-                    }
-                    if (!TextUtils.isEmpty(videoPath)) {
-                        MediaController.saveFile(path, videoPath, getParentActivity(), null);
-                        BulletinFactory.createSaveToGalleryBulletin(this, false, true, themeDelegate).show();
-                        break;
-                    }
-                }
-                MediaController.saveFile(path, getParentActivity(), 0, null, null);
-                BulletinFactory.createSaveToGalleryBulletin(this, selectedObject.isVideo() && !selectedObject.isLivePhoto(), selectedObject.isLivePhoto(), themeDelegate).show();
+                saveMessageToGallery(selectedObject);
                 break;
             }
             case OPTION_REPLY: {
@@ -34011,44 +34004,31 @@ public class ChatActivity extends BaseFragment implements
                     } else if (TextUtils.isEmpty(fileName) && (selectedObject.isRoundVideo() || selectedObject.isRoundOnce())) {
                         fileName = "round_" + selectedObject.getId() + ".mp4";
                     }
-                    String path = selectedObject.messageOwner.attachPath;
-                    if (path != null && path.length() > 0) {
-                        File temp = new File(path);
-                        if (!temp.exists()) {
-                            path = null;
-                        }
-                    }
+                    String path = getMessageSavePath(selectedObject);
                     if (TextUtils.isEmpty(path)) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.cachedQuality != null && selectedObject.cachedQuality.isCached()) {
-                        File f = new File(selectedObject.cachedQuality.uri.getPath());
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.qualityToSave != null) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.qualityToSave, null, false, true);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.getDocument() != null) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.getDocument());
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (selectedObject.isSecretMedia() || selectedObject.isVoiceOnce() || selectedObject.isRoundOnce() || selectedObject.isSecret()) {
-                        try {
-                            org.veyra.client.SecretMediaExport export = org.veyra.client.SecretMediaExport.open(currentAccount, selectedObject);
-                            if (export != null && export.getFile() != null && export.getFile().exists()) {
-                                path = export.getFile().getAbsolutePath();
+                        ArrayList<MessageObject> messageObjects = new ArrayList<>();
+                        messageObjects.add(selectedObject);
+                        final boolean isVideoFinal = video;
+                        final boolean isPhotoFinal = photo;
+                        MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, count -> {
+                            if (getParentActivity() == null || fragmentView == null) {
+                                return;
                             }
-                        } catch (Throwable ignored) {}
+                            if (count > 0) {
+                                final BulletinFactory.FileType fileType;
+                                if (isPhotoFinal) {
+                                    fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
+                                } else if (isVideoFinal) {
+                                    fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
+                                } else if (selectedObject.isVoice() || selectedObject.isVoiceOnce()) {
+                                    fileType = BulletinFactory.FileType.AUDIO;
+                                } else {
+                                    fileType = BulletinFactory.FileType.UNKNOWN;
+                                }
+                                BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, themeDelegate).show();
+                            }
+                        });
+                        break;
                     }
                     MediaController.saveFile(path, getParentActivity(), 2, fileName, selectedObject.getDocument() != null ? selectedObject.getDocument().mime_type : "", uri -> {
                         if (getParentActivity() == null) {
