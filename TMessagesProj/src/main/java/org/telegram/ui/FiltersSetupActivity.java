@@ -599,9 +599,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
         folderTagsPosition = items.size();
         showTagsRow = items.size();
         items.add(ItemInner.asCheck(LocaleController.getString(R.string.FolderShowTags)));
-        items.add(ItemInner.asShadow(!getUserConfig().isPremium() ? AndroidUtilities.replaceSingleTag(LocaleController.getString(R.string.FolderShowTagsInfoPremium), Theme.key_windowBackgroundWhiteBlueHeader, AndroidUtilities.REPLACING_TAG_TYPE_LINKBOLD, () -> {
-            presentFragment(new PremiumPreviewFragment("settings"));
-        }) : LocaleController.getString(R.string.FolderShowTagsInfo)));
+        items.add(ItemInner.asShadow(LocaleController.getString(R.string.FolderShowTagsInfo)));
 
         if (adapter != null) {
             if (animated) {
@@ -688,20 +686,19 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
                 return;
             }
             if (item.viewType == VIEW_TYPE_CHECK) {
-                if (!getUserConfig().isPremium()) {
-                    showDialog(new PremiumFeatureBottomSheet(this, PremiumPreviewFragment.PREMIUM_FEATURE_FOLDER_TAGS, true));
-                    return;
+                boolean newEnabled = !getMessagesController().folderTags;
+                getMessagesController().setFolderTags(newEnabled);
+                if (getUserConfig().isPremium()) {
+                    TLRPC.TL_messages_toggleDialogFilterTags req = new TLRPC.TL_messages_toggleDialogFilterTags();
+                    req.enabled = newEnabled;
+                    getConnectionsManager().sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                        if (req.enabled && !loadedColors) {
+                            loadingFiltersForColors = true;
+                            getMessagesController().loadRemoteFilters(true);
+                            loadedColors = true;
+                        }
+                    }));
                 }
-                TLRPC.TL_messages_toggleDialogFilterTags req = new TLRPC.TL_messages_toggleDialogFilterTags();
-                req.enabled = !getMessagesController().folderTags;
-                getMessagesController().setFolderTags(req.enabled);
-                getConnectionsManager().sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
-                    if (req.enabled && !loadedColors) {
-                        loadingFiltersForColors = true;
-                        getMessagesController().loadRemoteFilters(true);
-                        loadedColors = true;
-                    }
-                }));
                 ((TextCheckCell) view).setChecked(getMessagesController().folderTags);
                 adapter.notifyItemRangeChanged(filtersSectionStart, filtersSectionEnd - filtersSectionStart);
             } else if (item.viewType == VIEW_TYPE_FILTER) {
@@ -733,10 +730,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
 
     public void createFolder(INavigationLayout navigationLayout) {
         final int count = getMessagesController().getDialogFilters().size();
-        if (
-            count - 1 >= getMessagesController().dialogFiltersLimitDefault && !getUserConfig().isPremium() ||
-            count >= getMessagesController().dialogFiltersLimitPremium
-        ) {
+        if (count >= getMessagesController().dialogFiltersLimitPremium) {
             showDialog(new LimitReachedBottomSheet(this, getContext(), LimitReachedBottomSheet.TYPE_FOLDERS, currentAccount, null));
         } else if (navigationLayout != null) {
             navigationLayout.presentFragment(new FilterCreateActivity());
@@ -1087,7 +1081,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
                 case VIEW_TYPE_CHECK: {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setTextAndCheck(item.text, getMessagesController().folderTags, divider);
-                    cell.setCheckBoxIcon(!getUserConfig().isPremium() ? R.drawable.permission_locked : 0);
+                    cell.setCheckBoxIcon(0);
                     break;
                 }
                 case VIEW_TYPE_FILTER_SUGGESTION: {
@@ -1175,18 +1169,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
         }
 
         private void resetDefaultPosition() {
-            if (UserConfig.getInstance(UserConfig.selectedAccount).isPremium()) {
-                return;
-            }
-            ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
-            for (int i = 0; i < filters.size(); ++i) {
-                if (filters.get(i).isDefault() && i != 0) {
-                    adapter.moveElementToStart(i);
-                    listView.scrollToPosition(0);
-                    onDefaultTabMoved();
-                    break;
-                }
-            }
+            // Unlocked: allow reordering All Chats tab freely
         }
 
         @Override

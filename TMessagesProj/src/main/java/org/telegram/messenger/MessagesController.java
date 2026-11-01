@@ -877,28 +877,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void lockFiltersInternal() {
-        boolean changed = false;
-        if (!getUserConfig().isPremium() && dialogFilters.size() - 1 > dialogFiltersLimitDefault) {
-            int n = dialogFilters.size() - 1 - dialogFiltersLimitDefault;
-            ArrayList<DialogFilter> filtersSortedById = new ArrayList<>(dialogFilters);
-            Collections.reverse(filtersSortedById);
-            for (int i = 0; i < filtersSortedById.size(); i++) {
-                if (i < n) {
-                    if (!filtersSortedById.get(i).locked) {
-                        changed = true;
-                    }
-                    filtersSortedById.get(i).locked = true;
-                } else {
-                    if (filtersSortedById.get(i).locked) {
-                        changed = true;
-                    }
-                    filtersSortedById.get(i).locked = false;
-                }
-            }
-        }
-        if (changed) {
-            getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
-        }
+        // Disabled: do not lock filters beyond default limit
     }
 
     public int getCaptionMaxLengthLimit() {
@@ -2460,11 +2439,13 @@ public class MessagesController extends BaseController implements NotificationCe
                 });
             } else if (response instanceof TLRPC.TL_messages_dialogFilters) {
                 TLRPC.TL_messages_dialogFilters res = (TLRPC.TL_messages_dialogFilters) response;
-                if (folderTags != res.tags_enabled) {
-                    setFolderTags(res.tags_enabled);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
-                    });
+                if (getUserConfig().isPremium()) {
+                    if (folderTags != res.tags_enabled) {
+                        setFolderTags(res.tags_enabled);
+                        AndroidUtilities.runOnUIThread(() -> {
+                            getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
+                        });
+                    }
                 }
                 getMessagesStorage().checkLoadedRemoteFilters(res.filters, () -> {
                     if (onLoadedRemoteFilters != null) {
