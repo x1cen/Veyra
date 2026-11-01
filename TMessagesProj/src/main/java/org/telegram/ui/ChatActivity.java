@@ -46442,7 +46442,7 @@ public class ChatActivity extends BaseFragment implements
                 } else if (type == 4) {
                     if (!noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia()) {
                         if (selectedObject.isVideo() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce()) {
-                            if (!selectedObject.needDrawBluredPreview()) {
+                            if (!selectedObject.needDrawBluredPreview() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce() || selectedObject.isVoice() || selectedObject.isVoiceOnce()) {
                                 items.add(LocaleController.getString(R.string.SaveToGallery));
                                 options.add(OPTION_SAVE_TO_GALLERY);
                                 icons.add(R.drawable.msg_gallery);
@@ -46512,7 +46512,7 @@ public class ChatActivity extends BaseFragment implements
                         icons.add(R.drawable.msg_shareout);
                     }
                 } else if (type == 6 && !noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia()) {
-                    if (!selectedObject.needDrawBluredPreview()) {
+                    if (!selectedObject.needDrawBluredPreview() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce() || selectedObject.isVoice() || selectedObject.isVoiceOnce()) {
                         items.add(LocaleController.getString(R.string.SaveToGallery));
                         options.add(OPTION_SAVE_TO_GALLERY2);
                         icons.add(R.drawable.msg_gallery);
@@ -46683,7 +46683,7 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_VIEW_IN_TOPIC);
                     icons.add(R.drawable.msg_viewintopic);
                 }
-                if (type == 4 && !noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia() && !selectedObject.needDrawBluredPreview()) {
+                if (type == 4 && !noforwardsOrPaidMedia && !selectedObject.hasRevealedExtendedMedia() && (!selectedObject.needDrawBluredPreview() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce() || selectedObject.isVoice() || selectedObject.isVoiceOnce())) {
                     if (selectedObject.isVideo() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce()) {
                         items.add(LocaleController.getString(R.string.SaveToGallery));
                         options.add(OPTION_SAVE_TO_GALLERY);

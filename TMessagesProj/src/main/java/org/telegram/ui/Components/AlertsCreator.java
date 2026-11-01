@@ -7918,6 +7918,30 @@ public class AlertsCreator {
         boolean hasDeleteForAllCheck = false;
         boolean hasNotOut = false;
         int myMessagesCount = 0;
+        boolean hasNonDeletedMessages = false;
+        if (selectedGroup != null) {
+            for (int a = 0; a < selectedGroup.messages.size(); a++) {
+                if (selectedGroup.messages.get(a) != null && !selectedGroup.messages.get(a).isDeleted()) {
+                    hasNonDeletedMessages = true;
+                    break;
+                }
+            }
+        } else if (selectedMessage != null) {
+            hasNonDeletedMessages = !selectedMessage.isDeleted();
+        } else if (selectedMessages != null) {
+            for (int a = 1; a >= 0; a--) {
+                for (int b = 0; b < selectedMessages[a].size(); b++) {
+                    MessageObject msg = selectedMessages[a].valueAt(b);
+                    if (msg != null && !msg.isDeleted()) {
+                        hasNonDeletedMessages = true;
+                        break;
+                    }
+                }
+                if (hasNonDeletedMessages) {
+                    break;
+                }
+            }
+        }
         boolean canDeleteInbox = encryptedChat == null && user != null && canRevokeInbox && revokeTimeLimit == 0x7fffffff;
         if (chat != null && chat.megagroup && !scheduled && !isSavedMessages) {
             ArrayList<MessageObject> messages = new ArrayList<>();
@@ -8039,7 +8063,7 @@ public class AlertsCreator {
                 }
                 deleteMessagesBottomSheet.show();
                 return;
-            } else if (!hasNotOut && myMessagesCount > 0 && hasNonDiceMessages) {
+            } else if (!hasNotOut && myMessagesCount > 0 && hasNonDiceMessages && hasNonDeletedMessages) {
                 hasDeleteForAllCheck = true;
                 FrameLayout frameLayout = new FrameLayout(activity);
                 CheckBoxCell cell = new CheckBoxCell(activity, 1, resourcesProvider);
@@ -8096,7 +8120,7 @@ public class AlertsCreator {
                     }
                 }
             }
-            if (myMessagesCount > 0 && hasNonDiceMessages && (user == null || !UserObject.isDeleted(user))) {
+            if (myMessagesCount > 0 && hasNonDiceMessages && (user == null || !UserObject.isDeleted(user)) && hasNonDeletedMessages) {
                 hasDeleteForAllCheck = true;
                 FrameLayout frameLayout = new FrameLayout(activity);
                 CheckBoxCell cell = new CheckBoxCell(activity, 1, resourcesProvider);
