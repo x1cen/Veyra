@@ -525,7 +525,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             File staged = null;
             try {
                 if (bitmapCopy != null) {
-                    staged = stageExternalFile(\"jpg\");
+                    staged = stageExternalFile("jpg");
                     try (FileOutputStream os = new FileOutputStream(staged)) {
                         bitmapCopy.compress(Bitmap.CompressFormat.JPEG, 95, os);
                         os.getFD().sync();
@@ -536,10 +536,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 }
 
                 if (staged == null || !staged.isFile() || staged.length() <= 0) {
-                    throw new IOException(\"ttl media file is not on disk\");
+                    throw new IOException("ttl media file is not on disk");
                 }
                 if (AndroidUtilities.isInternalUri(Uri.fromFile(staged))) {
-                    throw new IOException(\"refusing internal cache path\");
+                    throw new IOException("refusing internal cache path");
                 }
 
                 final int saveType = toGallery ? (video || gif ? 1 : 0) : 2;
@@ -599,7 +599,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             return message != null && message.isPhoto();
         }
         String mime = message.getDocument().mime_type;
-        return mime.startsWith(\"image/\") && !message.isSticker() && !message.isAnimatedSticker();
+        return mime.startsWith("image/") && !message.isSticker() && !message.isAnimatedSticker();
     }
 
     private static File stageExternalFile(String ext) throws IOException {
@@ -608,21 +608,21 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             dir = ApplicationLoader.applicationContext.getCacheDir();
         }
         if (!dir.exists() && !dir.mkdirs()) {
-            throw new IOException(\"no external cache\");
+            throw new IOException("no external cache");
         }
-        return File.createTempFile(\"veyra_ttl_\", \".\" + ext, dir);
+        return File.createTempFile("veyra_ttl_", "." + ext, dir);
     }
 
     private static File stagePublicCopy(File src) throws IOException {
         if (src == null || !src.isFile()) {
-            throw new IOException(\"ttl media file is not on disk\");
+            throw new IOException("ttl media file is not on disk");
         }
         if (!AndroidUtilities.isInternalUri(Uri.fromFile(src))) {
             return src;
         }
         String ext = FileLoader.getFileExtension(src);
         if (TextUtils.isEmpty(ext)) {
-            ext = \"bin\";
+            ext = "bin";
         }
         File dst = stageExternalFile(ext);
         try (FileInputStream in = new FileInputStream(src);
