@@ -4638,6 +4638,10 @@ public class MessagesStorage extends BaseController {
                 database.executeFast("DELETE FROM media_holes_v2 WHERE uid IN " + ids).stepThis().dispose();
                 database.commitTransaction();
 
+                try {
+                    org.veyra.client.VeyraDatabase.getInstance(currentAccount).restoreDeletedMessagesToStorage(currentAccount, database);
+                } catch (Throwable ignored) {}
+
                 for (int a = 0; a < totalPinnedCount; a++) {
                     TLRPC.Dialog dialog = dialogsRes.dialogs.get(dialogsCount + a);
                     if (dialog instanceof TLRPC.TL_dialog && !dialog.pinned) {
