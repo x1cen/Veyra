@@ -61461,6 +61461,10 @@ public class TLRPC {
                 case 0xf18cda44:
                     result = new TL_upload_fileCdnRedirect();
                     break;
+                case 0xcd78e586:
+                case 0xa43ad8b7:
+                case 0x5e2c3ab8:
+                    return null;
             }
             return TLdeserialize(upload_File.class, result, stream, constructor, exception);
         }
