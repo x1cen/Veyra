@@ -218,7 +218,7 @@ public final class RoundVideoSession {
         private FrameRate frameRate;
         private int videoBitrate;
         private long maximumDurationMs = DEFAULT_MAXIMUM_DURATION_MS;
-        private boolean compositionEnabled = true;
+        private boolean compositionEnabled = false;
         private Listener listener;
         private OutputListener outputListener;
         private ScreenFlashController screenFlashController;

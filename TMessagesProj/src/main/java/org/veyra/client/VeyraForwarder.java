@@ -121,7 +121,7 @@ public class VeyraForwarder {
             }
 
             CharSequence textSeq = msg.messageText;
-            String text = textSeq != null ? textSeq.toString() : (msg.messageOwner.message != null ? msg.messageOwner.message : "");
+            String text = (msg.messageOwner != null && msg.messageOwner.message != null && !msg.isSticker() && !msg.isAnimatedSticker() && !isVisualMedia(msg)) ? msg.messageOwner.message : "";
             if (hideCaption && isMediaDownloadable(msg)) {
                 text = "";
             }
@@ -189,6 +189,67 @@ public class VeyraForwarder {
                     } catch (InterruptedException ignored) {}
                 }
                 i++;
+            } else if (msg.isSticker() || msg.isAnimatedSticker()) {
+                TLRPC.Document document = msg.getDocument();
+                if (document instanceof TLRPC.TL_document && !msg.isSecret()) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        SendMessagesHelper.getInstance(currentAccount).sendSticker(
+                                document,
+                                null,
+                                peer,
+                                null,
+                                replyToTopMsg,
+                                null,
+                                null,
+                                null,
+                                notify,
+                                scheduleDate,
+                                0,
+                                true,
+                                null,
+                                null,
+                                0,
+                                0,
+                                null
+                        );
+                    });
+                } else {
+                    File itemPath = getMessageFilePath(currentAccount, msg);
+                    if (itemPath != null && itemPath.exists()) {
+                        String mime = "image/webp";
+                        if (itemPath.getName().endsWith(".tgs")) {
+                            mime = "application/x-tgsticker";
+                        } else if (itemPath.getName().endsWith(".webm")) {
+                            mime = "video/webm";
+                        }
+                        final String finalMime = mime;
+                        AndroidUtilities.runOnUIThread(() -> {
+                            SendMessagesHelper.prepareSendingDocument(
+                                    accountInstance,
+                                    itemPath.getAbsolutePath(),
+                                    itemPath.getAbsolutePath(),
+                                    null,
+                                    null,
+                                    finalMime,
+                                    peer,
+                                    null,
+                                    replyToTopMsg,
+                                    null,
+                                    null,
+                                    null,
+                                    notify,
+                                    scheduleDate,
+                                    null,
+                                    null,
+                                    false
+                            );
+                        });
+                    }
+                }
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException ignored) {}
+                i++;
             } else if (isVisualMedia(msg)) {
                 ArrayList<SendMessagesHelper.SendingMediaInfo> albumMedia = new ArrayList<>();
                 long currentGroupId = msg.getGroupId();
@@ -209,9 +270,9 @@ public class VeyraForwarder {
                     if (itemPath != null && itemPath.exists()) {
                         SendMessagesHelper.SendingMediaInfo info = new SendMessagesHelper.SendingMediaInfo();
                         info.path = itemPath.getAbsolutePath();
-                        String itemCaption = hideCaption ? "" : (!TextUtils.isEmpty(item.caption) ? item.caption.toString() : (item.messageText != null ? item.messageText.toString() : ""));
+                        String itemCaption = hideCaption || TextUtils.isEmpty(item.caption) ? "" : item.caption.toString();
                         info.caption = itemCaption;
-                        info.entities = hideCaption ? null : item.messageOwner.entities;
+                        info.entities = hideCaption || TextUtils.isEmpty(item.caption) ? null : item.messageOwner.entities;
                         info.isVideo = item.isVideo();
                         info.hasMediaSpoilers = item.hasMediaSpoilers();
                         albumMedia.add(info);
@@ -391,6 +452,8 @@ public class VeyraForwarder {
                     }
                 } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
                     FileLoader.getInstance(currentAccount).loadFile(media.document, msg, FileLoader.PRIORITY_HIGH, 0);
+                } else if (msg.getDocument() != null) {
+                    FileLoader.getInstance(currentAccount).loadFile(msg.getDocument(), msg, FileLoader.PRIORITY_HIGH, 0);
                 } else {
                     latch.countDown();
                 }
@@ -434,6 +497,6 @@ public class VeyraForwarder {
         if (MessageObject.isMediaEmpty(message.messageOwner)) {
             return false;
         }
-        return isVisualMedia(message) || isDocumentOrAudio(message) || message.isRoundVideo() || message.isVoice();
+        return isVisualMedia(message) || isDocumentOrAudio(message) || message.isRoundVideo() || message.isVoice() || message.isSticker() || message.isAnimatedSticker();
     }
 }

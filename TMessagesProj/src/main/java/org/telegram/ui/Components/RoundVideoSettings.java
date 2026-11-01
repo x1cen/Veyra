@@ -89,12 +89,7 @@ public final class RoundVideoSettings {
 
     /** Returns whether circular styling and Telegram overlays are enabled. */
     public static boolean isCompositionEnabled() {
-        SharedPreferences preferences = preferences();
-        if (preferences.contains(KEY_COMPOSITION)) {
-            return preferences.getBoolean(KEY_COMPOSITION, true);
-        }
-        return preferences.getBoolean(LEGACY_KEY_OUTSIDE_EFFECT, true)
-                && preferences.getBoolean(LEGACY_KEY_WATERMARK, true);
+        return false;
     }
 
     /** Stores whether circular styling and Telegram overlays are enabled. */

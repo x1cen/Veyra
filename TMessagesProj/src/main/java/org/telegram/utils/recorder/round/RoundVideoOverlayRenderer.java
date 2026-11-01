@@ -88,9 +88,7 @@ final class RoundVideoOverlayRenderer {
             "uniform sampler2D mTexture;\n" +
             "void main() {\n" +
             "    vec3 sharp = texture2D(sTexture, vTextureCoord).rgb;\n" +
-            "    vec3 blurred = texture2D(bTexture, vScreenTextureCoord).rgb * 0.25;\n" +
-            "    float mask = texture2D(mTexture, vScreenTextureCoord).a;\n" +
-            "    gl_FragColor = vec4(mix(blurred, sharp, mask), 1.0);\n" +
+            "    gl_FragColor = vec4(sharp, 1.0);\n" +
             "}\n";
 
     private static final String CAMERA_VERTEX_SHADER =

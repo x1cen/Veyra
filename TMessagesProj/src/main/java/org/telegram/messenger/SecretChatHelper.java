@@ -118,7 +118,17 @@ public class SecretChatHelper extends BaseController {
                 for (int a = 0; a < pendingEncMessagesToDeleteCopy.size(); a++) {
                     MessageObject messageObject = getMessagesController().dialogMessagesByRandomIds.get(pendingEncMessagesToDeleteCopy.get(a));
                     if (messageObject != null) {
-                        messageObject.deleted = true;
+                        if (!messageObject.isOutOwner()) {
+                            messageObject.deleted = false;
+                            if (messageObject.messageOwner != null) {
+                                messageObject.messageOwner.isDeleted = true;
+                            }
+                            messageObject.forceUpdate = true;
+                            messageObject.resetLayout();
+                            org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, messageObject.getDialogId(), messageObject.getId());
+                        } else {
+                            messageObject.deleted = true;
+                        }
                     }
                 }
             });
