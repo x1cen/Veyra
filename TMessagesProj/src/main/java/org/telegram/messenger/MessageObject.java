@@ -11809,7 +11809,7 @@ public class MessageObject {
         if (message == null) {
             return false;
         }
-        if (message.deleted) {
+        if (message.isDeleted || org.veyra.client.VeyraAntiDelete.isMessageDeleted(message.dialog_id, message.id)) {
             return true;
         }
         if (ChatObject.isChannelAndNotMegaGroup(chat) && message.action instanceof TLRPC.TL_messageActionChatJoinedByRequest) {
