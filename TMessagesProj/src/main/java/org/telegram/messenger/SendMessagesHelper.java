@@ -2246,6 +2246,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
+        if (org.veyra.client.VeyraForwarder.isVeyraForwardNeeded(currentAccount, messages)) {
+            org.veyra.client.VeyraForwarder.startForward(currentAccount, messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, replyToTopMsg);
+            return 0;
+        }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
         boolean isChannel = false;

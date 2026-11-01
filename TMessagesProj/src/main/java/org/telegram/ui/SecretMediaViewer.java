@@ -43,6 +43,9 @@ import androidx.dynamicanimation.animation.SpringForce;
 
 import android.text.Layout;
 import android.text.Spannable;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.MediaController;
+import org.telegram.messenger.Utilities;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.StaticLayout;
