@@ -1162,10 +1162,7 @@ public class SecretChatHelper extends BaseController {
                     }
                     return null;
                 } else if (serviceMessage.action instanceof TLRPC.TL_decryptedMessageActionReadMessages) {
-                    if (!serviceMessage.action.random_ids.isEmpty()) {
-                        int time = getConnectionsManager().getCurrentTime();
-                        getMessagesStorage().createTaskForSecretChat(chat.id, time, time, 1, serviceMessage.action.random_ids);
-                    }
+                    // Veyra: ignore self-destruct trigger on read to prevent deletion
                 } else if (serviceMessage.action instanceof TLRPC.TL_decryptedMessageActionNotifyLayer) {
                     applyPeerLayer(chat, serviceMessage.action.layer);
                 } else if (serviceMessage.action instanceof TLRPC.TL_decryptedMessageActionRequestKey) {
