@@ -629,7 +629,8 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         }
                     }
                 };
-                codeFieldContainer.setNumbersCount(8, CodeFieldContainer.TYPE_PASSCODE);
+                // Veyra: new PINs are 8 digits; entering an existing PIN uses its stored length (4 for pre-upgrade PINs).
+                codeFieldContainer.setNumbersCount(type == TYPE_SETUP_CODE ? 8 : SharedConfig.passcodeLength, CodeFieldContainer.TYPE_PASSCODE);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
                     f.setTransformationMethod(PasswordTransformationMethod.getInstance());
@@ -931,7 +932,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     }
 
     private void processNext() {
-        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 4) {
+        if (currentPasswordType == SharedConfig.PASSCODE_TYPE_PASSWORD && passwordEditText.getText().length() == 0 || currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN && codeFieldContainer.getCode().length() != 8) {
             onPasscodeError();
             return;
         }
@@ -1001,6 +1002,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             }
             SharedConfig.allowScreenCapture = true;
             SharedConfig.passcodeType = currentPasswordType;
+            SharedConfig.passcodeLength = currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN ? 8 : 4;
             SharedConfig.saveConfig();
 
             passwordEditText.clearFocus();

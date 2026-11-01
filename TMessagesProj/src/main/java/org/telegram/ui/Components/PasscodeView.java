@@ -168,7 +168,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
         }
 
         public void appendCharacter(String c) {
-            if (stringBuilder.length() == 8) {
+            if (stringBuilder.length() >= SharedConfig.passcodeLength) {
                 return;
             }
             try {
@@ -717,7 +717,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == 8 && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                if (passwordEditText.length() == SharedConfig.passcodeLength && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
                     processDone(false);
                 }
             }
@@ -945,7 +945,7 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                     }
                 }
                 // after the background step of the last digit, so a wrong code can turn the background back smoothly
-                if (passwordEditText2.length() == 8) {
+                if (passwordEditText2.length() == SharedConfig.passcodeLength) {
                     processDone(false);
                 }
             });
