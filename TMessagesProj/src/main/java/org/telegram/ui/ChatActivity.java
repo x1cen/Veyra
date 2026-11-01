@@ -26587,7 +26587,6 @@ public class ChatActivity extends BaseFragment implements
                                 if (child instanceof ChatMessageCell) {
                                     ChatMessageCell cell = (ChatMessageCell) child;
                                     if (cell.getMessageObject() != null && cell.getMessageObject().getId() == mid) {
-                                        cell.setAlpha(0.60f);
                                         cell.setMessageObject(obj, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
                                         cell.invalidate();
                                     }
