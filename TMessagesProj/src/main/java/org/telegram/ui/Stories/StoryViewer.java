@@ -2883,24 +2883,23 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             if (liveView != null) {
                 liveView.setSecure(!allowScreenshots);
             }
+            boolean secure = org.telegram.messenger.FlagSecureReason.isScreenProtectionActive();
             if (ATTACH_TO_FRAGMENT) {
                 if (fragment.getParentActivity() != null) {
-                    if (allowScreenshots) {
+                    if (!secure) {
                         fragment.getParentActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-                        AndroidUtilities.logFlagSecure();
                     } else {
                         fragment.getParentActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-                        AndroidUtilities.logFlagSecure();
                     }
+                    AndroidUtilities.logFlagSecure();
                 }
             } else {
-                if (allowScreenshots) {
+                if (!secure) {
                     windowLayoutParams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
-                    AndroidUtilities.logFlagSecure();
                 } else {
                     windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
-                    AndroidUtilities.logFlagSecure();
                 }
+                AndroidUtilities.logFlagSecure();
                 try {
                     windowManager.updateViewLayout(windowView, windowLayoutParams);
                 } catch (Exception e) {

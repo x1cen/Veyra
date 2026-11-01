@@ -368,8 +368,9 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     } else if (position == captureRow) {
                         SharedConfig.allowScreenCapture = !SharedConfig.allowScreenCapture;
                         UserConfig.getInstance(currentAccount).saveConfig(false);
-                        ((TextCheckCell) view).setChecked(SharedConfig.allowScreenCapture);
+                        ((TextCheckCell) view).setChecked(!SharedConfig.allowScreenCapture);
                         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetPasscode, false);
+                        org.telegram.messenger.FlagSecureReason.updateAllWindows();
                         if (!SharedConfig.allowScreenCapture) {
                             AlertsCreator.showSimpleAlert(PasscodeActivity.this, LocaleController.getString(R.string.ScreenCaptureAlert));
                         }
@@ -628,7 +629,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         }
                     }
                 };
-                codeFieldContainer.setNumbersCount(4, CodeFieldContainer.TYPE_PASSCODE);
+                codeFieldContainer.setNumbersCount(8, CodeFieldContainer.TYPE_PASSCODE);
                 for (CodeNumberField f : codeFieldContainer.codeField) {
                     f.setShowSoftInputOnFocusCompat(!isCustomKeyboardVisible());
                     f.setTransformationMethod(PasswordTransformationMethod.getInstance());
@@ -1174,7 +1175,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     if (position == fingerprintRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.UnlockFingerprint), SharedConfig.useFingerprintLock, false);
                     } else if (position == captureRow) {
-                        textCell.setTextAndCheck(LocaleController.getString(R.string.ScreenCaptureShowContent), SharedConfig.allowScreenCapture, false);
+                        textCell.setTextAndCheck(LocaleController.getString(R.string.ScreenCaptureShowContent), !SharedConfig.allowScreenCapture, false);
                     } else if (position == walletFingerprintRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.WalletConfirmWithFingerprint), GramWallet.getInstance(currentAccount).canSend() && GramWallet.getInstance(currentAccount).needsFingerprint(), false);
                     } else if (position == walletPasscodeRow) {

@@ -573,10 +573,10 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
         AndroidUtilities.requestAdjustResize(getParentActivity(), classGuid);
         if (Build.VERSION.SDK_INT >= 23) {
             try {
-                if ((currentStep == STEP_PAYMENT_INFO || currentStep == STEP_SET_PASSWORD_EMAIL) && !paymentForm.invoice.test) {
+                if (org.telegram.messenger.FlagSecureReason.isScreenProtectionActive()) {
                     getParentActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                     AndroidUtilities.logFlagSecure();
-                } else if (SharedConfig.passcodeHash.length() == 0 || SharedConfig.allowScreenCapture) {
+                } else {
                     getParentActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                     AndroidUtilities.logFlagSecure();
                 }

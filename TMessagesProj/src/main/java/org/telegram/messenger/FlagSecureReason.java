@@ -3,6 +3,8 @@ package org.telegram.messenger;
 import android.view.Window;
 import android.view.WindowManager;
 
+import org.telegram.ui.LaunchActivity;
+
 import java.util.HashMap;
 
 public class FlagSecureReason {
@@ -19,6 +21,16 @@ public class FlagSecureReason {
 
     private boolean attached = false;
     private boolean value = false;
+
+    public static boolean isScreenProtectionActive() {
+        return SharedConfig.passcodeHash != null && SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture;
+    }
+
+    public static void updateAllWindows() {
+        if (LaunchActivity.instance != null) {
+            updateWindowSecure(LaunchActivity.instance.getWindow());
+        }
+    }
 
     public void invalidate() {
         boolean newValue = attached && condition != null && condition.run();
@@ -59,22 +71,21 @@ public class FlagSecureReason {
         updateWindowSecure(window);
     }
 
-    private static void updateWindowSecure(Window window) {
+    public static void updateWindowSecure(Window window) {
         if (window == null) {
             return;
         }
 
-        if (isSecuredNow(window)) {
+        if (isScreenProtectionActive()) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-            AndroidUtilities.logFlagSecure();
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-            AndroidUtilities.logFlagSecure();
         }
+        AndroidUtilities.logFlagSecure();
     }
 
     public static boolean isSecuredNow(Window window) {
-        return currentSecureReasons != null && currentSecureReasons.get(window) != null;
+        return isScreenProtectionActive();
     }
 
     public interface FlagSecureCondition {

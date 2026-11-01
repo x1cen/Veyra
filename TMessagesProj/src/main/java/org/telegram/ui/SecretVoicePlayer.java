@@ -238,7 +238,7 @@ public class SecretVoicePlayer extends Dialog {
             WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
             WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS |
             WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION;
-        if (!BuildVars.DEBUG_PRIVATE_VERSION) {
+        if (org.telegram.messenger.FlagSecureReason.isScreenProtectionActive()) {
             params.flags |= WindowManager.LayoutParams.FLAG_SECURE;
             AndroidUtilities.logFlagSecure();
         }
