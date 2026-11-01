@@ -1651,14 +1651,22 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             } else {
                 playerRetryPlayCount = 1;
                 actionBar.setTitle(LocaleController.getString(R.string.DisappearingVideo));
-                File f = new File(messageObject.messageOwner.attachPath);
-                if (f.exists()) {
+                File f = !TextUtils.isEmpty(messageObject.messageOwner.attachPath) ? new File(messageObject.messageOwner.attachPath) : null;
+                if (f != null && f.exists()) {
                     preparePlayer(f);
                 } else {
                     File file = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-                    File encryptedFile = new File(file.getAbsolutePath() + ".enc");
-                    if (encryptedFile.exists()) {
-                        file = encryptedFile;
+                    if (file == null || !file.exists()) {
+                        File attach = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.getDocument());
+                        if (attach != null && attach.exists()) {
+                            file = attach;
+                        }
+                    }
+                    if (file != null) {
+                        File encryptedFile = new File(file.getAbsolutePath() + ".enc");
+                        if (encryptedFile.exists()) {
+                            file = encryptedFile;
+                        }
                     }
                     preparePlayer(file);
                 }
