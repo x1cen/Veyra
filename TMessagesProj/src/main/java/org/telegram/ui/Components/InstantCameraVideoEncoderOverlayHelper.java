@@ -237,14 +237,15 @@ public class InstantCameraVideoEncoderOverlayHelper {
             GLES20.glUseProgram(0);
         }
 
-        if (false) {
+        {
             final Program program = programRenderWatermark;
 
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glUseProgram(program.program);
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 
-            for (int a = 0; a < 2; a++) {
+            // Veyra: pass 0 = text watermark only; pass 1 (Telegram logo) is skipped.
+            for (int a = 0; a < 1; a++) {
                 if (a == 0) {
                     GLES20.glVertexAttribPointer(program.attributePositionHandle, 3, GLES20.GL_FLOAT, false, 12, attributeVertexBuffer.position(VERTEX_BUFFER_WATERMARK_TEXT_POSITION));
                     GLES20.glEnableVertexAttribArray(program.attributePositionHandle);
