@@ -49644,7 +49644,11 @@ public class TLRPC {
         public int ttl_period;
 
         public static Updates TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
-            return TLdeserialize(Updates.class, fromConstructor(constructor), stream, constructor, exception);
+            Updates result = fromConstructor(constructor);
+            if (result == null && (constructor == 0xf35c6d01 || constructor == 0xcd78e586 || constructor == 0xa43ad8b7 || constructor == 0x5e2c3ab8 || constructor == 0xd18be2ef)) {
+                return null;
+            }
+            return TLdeserialize(Updates.class, result, stream, constructor, exception);
         }
 
         private static Updates fromConstructor(int constructor) {

@@ -15,7 +15,7 @@ public class TLParseException extends RuntimeException {
         final String message = String.format("can't parse magic %x in %s. Source: %s", constructorId, tlTypeName, dataSourceType);
         final TLParseException tlParseException = new TLParseException(message);
 
-        FileLog.e(tlParseException, constructorId != 0xcd78e586 && constructorId != 0xa43ad8b7 && constructorId != 0x5e2c3ab8);
+        FileLog.e(tlParseException, constructorId != 0xcd78e586 && constructorId != 0xa43ad8b7 && constructorId != 0x5e2c3ab8 && constructorId != 0xd18be2ef && constructorId != 0xf35c6d01);
         if (BuildConfig.DEBUG_VERSION && constructorId != 0xcd78e586 && constructorId != 0xa43ad8b7 && constructorId != 0x5e2c3ab8 && constructorId != 0xd18be2ef && constructorId != 0xf35c6d01) {
             AndroidUtilities.runOnUIThread(() -> {
                 NotificationCenter.getGlobalInstance()
@@ -23,7 +23,7 @@ public class TLParseException extends RuntimeException {
             });
         }
 
-        if (throwEnabled && constructorId != 0xcd78e586 && constructorId != 0xa43ad8b7 && constructorId != 0x5e2c3ab8) {
+        if (throwEnabled && constructorId != 0xcd78e586 && constructorId != 0xa43ad8b7 && constructorId != 0x5e2c3ab8 && constructorId != 0xd18be2ef && constructorId != 0xf35c6d01) {
             throw tlParseException;
         }
     }
