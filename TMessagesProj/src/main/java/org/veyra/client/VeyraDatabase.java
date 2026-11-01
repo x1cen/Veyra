@@ -12,8 +12,11 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.tgnet.NativeByteBuffer;
 
+import android.text.TextUtils;
+
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -222,6 +225,23 @@ public final class VeyraDatabase {
             }
         }
         VeyraAntiDelete.removeDeletedMessage(uid, mid);
+    }
+
+    public void deleteMessages(long uid, List<Integer> mids) {
+        if (mids == null || mids.isEmpty()) return;
+        synchronized (lock) {
+            if (database == null) return;
+            try {
+                String ids = TextUtils.join(",", mids);
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_deleted_index WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, uid, -uid)).stepThis().dispose();
+                database.executeFast(String.format(Locale.US, "DELETE FROM veyra_deleted_messages WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, uid, -uid)).stepThis().dispose();
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        }
+        for (int i = 0; i < mids.size(); i++) {
+            VeyraAntiDelete.removeDeletedMessage(uid, mids.get(i));
+        }
     }
 
     public void clearAll() {

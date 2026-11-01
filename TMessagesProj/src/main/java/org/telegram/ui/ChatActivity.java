@@ -26625,7 +26625,11 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
                     int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
-                    if (!obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
+                    boolean isSelfDel = org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialog_id, mid);
+                    if (isSelfDel) {
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessage(dialog_id, mid);
+                    }
+                    if (!isSelfDel && !obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
                         obj.deleted = false;
                         if (obj.messageOwner != null) {
                             obj.messageOwner.isDeleted = true;
