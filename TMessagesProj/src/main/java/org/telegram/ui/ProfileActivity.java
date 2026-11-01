@@ -613,6 +613,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private int rowCount;
 
+    // Extra info rows for user profile
+    private int idRow = -1;
+    private int mutualContactRow = -1;
+    private int premiumStatusRow = -1;
+
     private int setAvatarRow;
     private int setAvatarSectionRow;
     private int channelRow;
@@ -4355,6 +4360,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return;
             }
             listView.stopScroll();
+            if (position == idRow) {
+                copyId(view);
+                return;
+            }
             if (position == affiliateRow) {
                 TLRPC.User user = getMessagesController().getUser(userId);
                 if (userInfo != null && userInfo.starref_program != null) {
@@ -7327,6 +7336,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private boolean processOnClickOrPress(final int position, final View view, final float x, final float y) {
+        if (position == idRow) {
+            return copyId(view);
+        }
         if (position == usernameRow || position == setUsernameRow) {
             final String username;
             final TLRPC.TL_username usernameObj;
@@ -7683,6 +7695,44 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             popupWindow.showAtLocation(getFragmentView(), 0, (int) px, (int) py);
             popupWindow.dimBehind();
             return true;
+        }
+        return false;
+    }
+
+    private boolean copyId(View view) {
+        long displayId = 0;
+        if (userId != 0) {
+            displayId = userId;
+        } else if (chatId != 0) {
+            displayId = chatId;
+        } else if (isTopic && topicId != 0) {
+            displayId = topicId;
+        } else if (dialogId != 0) {
+            displayId = Math.abs(dialogId);
+        } else {
+            displayId = getUserConfig().getClientUserId();
+        }
+        String idStr = null;
+        if (displayId != 0) {
+            idStr = String.valueOf(displayId);
+        } else if (view instanceof TextDetailCell) {
+            try {
+                CharSequence text = ((TextDetailCell) view).textView.getText();
+                if (!TextUtils.isEmpty(text)) {
+                    idStr = text.toString();
+                }
+            } catch (Exception ignore) {}
+        }
+        if (!TextUtils.isEmpty(idStr)) {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                android.content.ClipData clip = android.content.ClipData.newPlainText("label", idStr);
+                clipboard.setPrimaryClip(clip);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+                return true;
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
         }
         return false;
     }
@@ -10564,6 +10614,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         infoEndRowEmpty = -1;
         phoneRow = -1;
         noteRow = -1;
+        idRow = -1;
+        mutualContactRow = -1;
+        premiumStatusRow = -1;
         userInfoRow = -1;
         locationRow = -1;
         channelInfoRow = -1;
@@ -10671,6 +10724,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 numberRow = rowCount++;
                 setUsernameRow = rowCount++;
                 bioRow = rowCount++;
+                idRow = rowCount++;
 
                 settingsSectionRow = rowCount++;
 
@@ -10761,6 +10815,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (user != null && username != null) {
                     usernameRow = rowCount++;
+                }
+                idRow = rowCount++;
+                if (userId != 0 && userId != getUserConfig().getClientUserId()) {
+                    TLRPC.User profileUser = getMessagesController().getUser(userId);
+                    if (profileUser != null) {
+                        if (profileUser.mutual_contact) {
+                            mutualContactRow = rowCount++;
+                        }
+                        premiumStatusRow = rowCount++;
+                    }
                 }
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
@@ -13681,6 +13745,51 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                         detailCell.setTextAndValue(text, value, true);
                         detailCell.setContentDescriptionValueFirst(true);
+                    } else if (position == idRow) {
+                        long displayId = 0;
+                        int dc = 0;
+                        String label = "ID";
+                        if (userId != 0) {
+                            displayId = userId;
+                            TLRPC.User u = getMessagesController().getUser(userId);
+                            if (u != null) {
+                                if (u.bot) {
+                                    label = "Bot ID";
+                                } else if (UserObject.isUserSelf(u)) {
+                                    label = "My ID";
+                                } else {
+                                    label = "User ID";
+                                }
+                                if (u.photo != null && u.photo.dc_id != 0) {
+                                    dc = u.photo.dc_id;
+                                } else if (UserObject.isUserSelf(u) && getConnectionsManager().getCurrentDatacenterId() > 0) {
+                                    dc = getConnectionsManager().getCurrentDatacenterId();
+                                }
+                            }
+                        } else if (chatId != 0) {
+                            displayId = chatId;
+                            TLRPC.Chat c = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
+                            if (c != null) {
+                                label = ChatObject.isChannel(c) && !c.megagroup ? "Channel ID" : "Group ID";
+                                if (c.photo != null && c.photo.dc_id != 0) {
+                                    dc = c.photo.dc_id;
+                                } else if (chatInfo != null && chatInfo.stats_dc != 0) {
+                                    dc = chatInfo.stats_dc;
+                                }
+                            }
+                        } else if (isTopic && topicId != 0) {
+                            displayId = topicId;
+                            label = "Topic ID";
+                        }
+                        String idText = String.valueOf(displayId);
+                        String idValue = dc > 0 ? label + " (DC " + dc + ")" : label;
+                        detailCell.setTextAndValue(idText, idValue, false);
+                    } else if (position == mutualContactRow) {
+                        detailCell.setTextAndValue("Mutual Contact", "Yes — they have saved your number too", false);
+                    } else if (position == premiumStatusRow) {
+                        TLRPC.User profileUser = getMessagesController().getUser(userId);
+                        boolean hasPremium = profileUser != null && profileUser.premium;
+                        detailCell.setTextAndValue("Telegram Premium", hasPremium ? "Active" : "Not active", false);
                     }
                     if (containsGift) {
                         Drawable drawable = ContextCompat.getDrawable(detailCell.getContext(), R.drawable.msg_input_gift);
@@ -14344,7 +14453,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
                         position == addToGroupButtonRow || position == premiumRow || position == premiumGiftingRow ||
                         position == businessRow || position == liteModeRow || position == birthdayRow || position == channelRow ||
-                        position == starsRow || position == tonRow || position == linkedCommunityRow;
+                        position == starsRow || position == tonRow || position == linkedCommunityRow || position == idRow;
             }
             if (holder.itemView instanceof UserCell) {
                 UserCell userCell = (UserCell) holder.itemView;
@@ -14372,7 +14481,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (position == infoHeaderRow || position == membersHeaderRow || position == settingsSectionRow2 ||
                     position == numberSectionRow || position == helpHeaderRow || position == debugHeaderRow || position == botPermissionsHeader) {
                 return VIEW_TYPE_HEADER;
-            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow) {
+            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == idRow || position == mutualContactRow || position == premiumStatusRow) {
                 return VIEW_TYPE_TEXT_DETAIL;
             } else if (position == usernameRow || position == setUsernameRow) {
                 return VIEW_TYPE_TEXT_DETAIL_MULTILINE;
