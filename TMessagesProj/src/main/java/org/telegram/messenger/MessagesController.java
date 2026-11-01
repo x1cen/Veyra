@@ -9335,7 +9335,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 } else {
                     markDialogMessageAsDeleted(dialogId, messages);
                 }
-                org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(dialogId, messages);
+                if (!onlyCache && !DialogObject.isEncryptedDialog(dialogId)) {
+                    org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(dialogId, messages);
+                }
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, forAll, 0, topicId);
                 getMessagesStorage().updateDialogsWithDeletedMessages(dialogId, channelId, messages, null);
             }

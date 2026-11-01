@@ -14461,7 +14461,22 @@ public class MessagesStorage extends BaseController {
                         ArrayList<Integer> mids = dialogs.valueAt(a);
                         AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, mids, 0L, false));
                         updateDialogsWithReadMessagesInternal(mids, null, null, null, null);
-                        markMessagesAsDeletedInternal(dialogId, mids, true, 0, 0);
+                        ArrayList<Integer> selfDelList = new ArrayList<>();
+                        ArrayList<Integer> retainedList = new ArrayList<>();
+                        for (int i = 0; i < mids.size(); i++) {
+                            int mid = mids.get(i);
+                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                                selfDelList.add(mid);
+                            } else {
+                                retainedList.add(mid);
+                            }
+                        }
+                        if (!retainedList.isEmpty()) {
+                            markMessagesAsIsDeletedInternal(dialogId, retainedList);
+                        }
+                        if (!selfDelList.isEmpty()) {
+                            markMessagesAsDeletedInternal(dialogId, selfDelList, true, 0, 0);
+                        }
                         updateDialogsWithDeletedMessagesInternal(dialogId, 0, mids, null);
                     }
                 }
@@ -14715,7 +14730,7 @@ public class MessagesStorage extends BaseController {
                                 deletedMessages.add(message);
                             }
                             data.reuse();
-                            if (DialogObject.isEncryptedDialog(did) || deleteFiles) {
+                            if ((DialogObject.isEncryptedDialog(did) || deleteFiles) && org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, mid)) {
                                 addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, false);
                             }
 
@@ -14959,11 +14974,26 @@ public class MessagesStorage extends BaseController {
                         cursor.dispose();
                         cursor = null;
                     }
-                    database.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE mid IN(%s) AND uid = %d", ids, did)).stepThis().dispose();
-                    database.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE mid IN(%s) AND uid = %d", ids, did)).stepThis().dispose();
-                    database.executeFast(String.format(Locale.US, "DELETE FROM polls_v2 WHERE mid IN(%s) AND uid = %d", ids, did)).stepThis().dispose();
-                    database.executeFast(String.format(Locale.US, "DELETE FROM bot_keyboard WHERE mid IN(%s) AND uid = %d", ids, did)).stepThis().dispose();
-                    database.executeFast(String.format(Locale.US, "DELETE FROM bot_keyboard_topics WHERE mid IN(%s) AND uid = %d", ids, did)).stepThis().dispose();
+                    ArrayList<Integer> toDeleteFromDb = new ArrayList<>();
+                    for (int m = 0; m < mids.size(); m++) {
+                        int msgId = mids.get(m);
+                        if (!org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, msgId)) {
+                            try {
+                                org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(did, msgId);
+                                org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, msgId);
+                            } catch (Throwable ignored) {}
+                            continue;
+                        }
+                        toDeleteFromDb.add(msgId);
+                    }
+                    if (!toDeleteFromDb.isEmpty()) {
+                        String delIds = TextUtils.join(",", toDeleteFromDb);
+                        database.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
+                        database.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
+                        database.executeFast(String.format(Locale.US, "DELETE FROM polls_v2 WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
+                        database.executeFast(String.format(Locale.US, "DELETE FROM bot_keyboard WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
+                        database.executeFast(String.format(Locale.US, "DELETE FROM bot_keyboard_topics WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
+                    }
                     if (unknownMessages.isEmpty()) {
                         cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, type FROM media_v4 WHERE mid IN(%s) AND uid = %d", ids, did));
                         SparseArray<LongSparseArray<Integer>> mediaCounts = null;

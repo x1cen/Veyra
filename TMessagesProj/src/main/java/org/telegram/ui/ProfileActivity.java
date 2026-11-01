@@ -606,6 +606,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int enable_no_forwards = 46;
     private final static int disable_no_forwards = 47;
     private final static int send_money = 48;
+    private final static int veyra_view_details = 63;
 
     private Rect rect = new Rect();
 
@@ -2748,6 +2749,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     presentFragment(fragment);
                 } else if (id == share) {
                     onShareClicked();
+                } else if (id == veyra_view_details) {
+                    showDetailsJson();
                 } else if (id == add_shortcut) {
                     try {
                         long did;
@@ -12453,6 +12456,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.hideSubItem(gallery_menu_save);
         }
 
+        if (otherItem != null) {
+            otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, "View Raw");
+        }
+
         if (userId != 0 && !isBot && !myProfile) {
             otherItem.addSubItem(report, R.drawable.msg_report, LocaleController.getString(R.string.ReportBot)).setColors(getThemedColor(Theme.key_text_RedRegular), getThemedColor(Theme.key_text_RedRegular));
         }
@@ -17157,6 +17164,36 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         @Override
         public void updateColors() {
             setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+        }
+    }
+
+    private void showDetailsJson() {
+        if (userId != 0) {
+            final long uid = userId;
+            final TLRPC.User user = getMessagesController().getUser(uid);
+            final TLRPC.UserFull uInfo = userInfo;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (user != null) root.add("user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(user));
+                if (uInfo != null) root.add("full_user", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(uInfo));
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, "View Raw"));
+        } else if (chatId != 0) {
+            final TLRPC.Chat chat = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
+            final TLRPC.ChatFull cInfo = chatInfo;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                if (chat != null) root.add("chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(chat));
+                if (cInfo != null) root.add("full_chat", org.telegram.ui.MessageDetailsActivity.gson.toJsonTree(cInfo));
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, "View Raw"));
+        } else if (topicId != 0) {
+            final long tid = topicId;
+            presentFragment(new JsonViewerActivity(() -> {
+                com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                root.addProperty("topic_id", tid);
+                return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
+            }, "View Raw"));
         }
     }
 }

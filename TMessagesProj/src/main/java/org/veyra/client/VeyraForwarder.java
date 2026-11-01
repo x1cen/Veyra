@@ -26,6 +26,9 @@ public class VeyraForwarder {
             return false;
         }
         long dialogId = messages.get(0).getDialogId();
+        if (org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
+            return true;
+        }
         if (dialogId < 0) {
             TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
             if (chat != null && chat.noforwards) {
@@ -40,6 +43,9 @@ public class VeyraForwarder {
         for (int i = 0; i < messages.size(); i++) {
             MessageObject msg = messages.get(i);
             if (msg == null) continue;
+            if (msg.messageOwner instanceof TLRPC.TL_message_secret || msg.isSecret() || org.telegram.messenger.DialogObject.isEncryptedDialog(msg.getDialogId())) {
+                return true;
+            }
             if (msg.isDeleted()) {
                 return true;
             }
@@ -262,6 +268,14 @@ public class VeyraForwarder {
 
     private static File getMessageFilePath(int currentAccount, MessageObject message) {
         if (message == null || message.messageOwner == null) return null;
+        if (message.messageOwner instanceof TLRPC.TL_message_secret || message.isSecret()) {
+            try {
+                SecretMediaExport export = SecretMediaExport.open(currentAccount, message);
+                if (export != null && export.getFile() != null && export.getFile().exists()) {
+                    return export.getFile();
+                }
+            } catch (Throwable ignored) {}
+        }
         File file = FileLoader.getInstance(currentAccount).getPathToMessage(message.messageOwner);
         if (file != null && file.exists() && file.length() > 0) {
             return file;

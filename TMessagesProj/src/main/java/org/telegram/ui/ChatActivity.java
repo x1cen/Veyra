@@ -10393,6 +10393,7 @@ public class ChatActivity extends BaseFragment implements
             actionModeViews.add(actionMode.addItemWithWidth(edit, R.drawable.msg_edit, dp(48), LocaleController.getString(R.string.Edit)));
             actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(48), LocaleController.getString(R.string.AddToFavorites)));
             actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, dp(48), LocaleController.getString(R.string.Copy)));
+            actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward, dp(48), LocaleController.getString(R.string.Forward)));
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(48), LocaleController.getString(R.string.Delete)));
         }
         actionMode.setItemVisibility(edit, canEditMessagesCount == 1 && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1 ? View.VISIBLE : View.GONE);
@@ -46570,10 +46571,9 @@ public class ChatActivity extends BaseFragment implements
                 final boolean canForward = !selectedObject.isSponsored()
                     && !isQuickRepliesOrWelcomeMessagesMode()
                     && chatMode != MODE_SCHEDULED
-                    && (!selectedObject.needDrawBluredPreview() || selectedObject.hasExtendedMediaPreview())
                     && !selectedObject.isLiveLocation()
                     && selectedObject.type != MessageObject.TYPE_PHONE_CALL
-                    && !noforwards && selectedObject.type != MessageObject.TYPE_SHARING_OFFER
+                    && selectedObject.type != MessageObject.TYPE_SHARING_OFFER
                     && selectedObject.type != MessageObject.TYPE_GIFT_PREMIUM
                     && selectedObject.type != MessageObject.TYPE_GIFT_OFFER
                     && selectedObject.type != MessageObject.TYPE_COMMUNITY_CHANGED
