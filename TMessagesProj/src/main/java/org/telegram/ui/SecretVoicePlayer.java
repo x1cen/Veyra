@@ -43,17 +43,9 @@ import androidx.core.view.WindowInsetsCompat;
 
 import androidx.media3.exoplayer.ExoPlayer;
 
-import android.Manifest;
-import android.app.Activity;
-import android.content.pm.PackageManager;
-import android.os.Build;
-import android.text.TextUtils;
-
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLoader;
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
@@ -64,14 +56,11 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.AnimatedFloat;
 import org.telegram.ui.Components.AudioVisualizerDrawable;
-import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EarListener;
 import org.telegram.ui.Components.LayoutHelper;
@@ -80,14 +69,9 @@ import org.telegram.ui.Components.SeekBarWaveform;
 import org.telegram.ui.Components.ThanosEffect;
 import org.telegram.ui.Components.TimerParticles;
 import org.telegram.ui.Components.VideoPlayer;
-import org.telegram.ui.Stories.DarkThemeResourceProvider;
 import org.telegram.ui.Stories.recorder.HintView2;
-import org.veyra.client.SecretMediaExport;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 public class SecretVoicePlayer extends Dialog {
 
@@ -313,8 +297,6 @@ public class SecretVoicePlayer extends Dialog {
     private boolean renderedFirstFrame;
     private final RectF rect = new RectF();
     private boolean isRound;
-    private ActionBar actionBar;
-    private File currentMediaFile;
 
     private float clipTop = 0, clipBottom = 0;
 
@@ -331,7 +313,7 @@ public class SecretVoicePlayer extends Dialog {
         }
         cell = messageCell;
         messageObject = cell != null ? cell.getMessageObject() : null;
-        isRound = messageObject != null && (messageObject.isRoundVideo() || messageObject.isRoundOnce());
+        isRound = messageObject != null && messageObject.isRoundVideo();
         resourcesProvider = cell != null ? cell.getResourcesProvider() : null;
         int videoDp = 360;
         if (cell != null) {
@@ -580,7 +562,6 @@ public class SecretVoicePlayer extends Dialog {
             if (file == null || !file.exists()) {
                 return;
             }
-            currentMediaFile = file;
             player = new VideoPlayer();
             player.setDelegate(new VideoPlayer.VideoPlayerDelegate() {
                 @Override
@@ -698,38 +679,6 @@ public class SecretVoicePlayer extends Dialog {
             dismiss();
         });
         containerView.addView(closeButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER, 0, 0, 0, 18));
-
-        if (actionBar != null) {
-            containerView.removeView(actionBar);
-            actionBar = null;
-        }
-        actionBar = new ActionBar(context);
-        actionBar.setTitleColor(0xffffffff);
-        actionBar.setSubtitleColor(0xffffffff);
-        actionBar.setBackgroundColor(Theme.ACTION_BAR_PHOTO_VIEWER_COLOR);
-        actionBar.setOccupyStatusBar(true);
-        actionBar.setItemsBackgroundColor(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR, false);
-        actionBar.setItemsColor(0xffffffff, false);
-        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitle(LocaleController.getString(isRound ? R.string.DisappearingVideo : R.string.AttachAudio));
-        ActionBarMenu menu = actionBar.createMenu();
-        menu.addItem(1, R.drawable.msg_download);
-        if (isRound) {
-            menu.addItem(2, R.drawable.msg_gallery);
-        }
-        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
-            @Override
-            public void onItemClick(int id) {
-                if (id == -1) {
-                    dismiss();
-                } else if (id == 1) {
-                    saveCurrentMedia(false);
-                } else if (id == 2) {
-                    saveCurrentMedia(true);
-                }
-            }
-        });
-        containerView.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
 
         if (!isOut && myCell != null && myCell.getMessageObject() != null && myCell.getMessageObject().messageOwner != null) {
             myCell.getMessageObject().messageOwner.media_unread = false;
@@ -904,9 +853,6 @@ public class SecretVoicePlayer extends Dialog {
             if (closeButton != null) {
                 closeButton.setAlpha(openProgress);
             }
-            if (actionBar != null) {
-                actionBar.setAlpha(openProgress);
-            }
             if (!isRound && myCell != null && myCell.getSeekBarWaveform() != null) {
                 myCell.getSeekBarWaveform().setExplosionRate((open ? CubicBezierInterpolator.EASE_OUT : CubicBezierInterpolator.EASE_IN).getInterpolation(Utilities.clamp(openProgress * 1.25f, 1f, 0f)));
             }
@@ -956,126 +902,5 @@ public class SecretVoicePlayer extends Dialog {
         open2Animator.setDuration((long) (1.5f * duration));
         open2Animator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
         open2Animator.start();
-    }
-
-    private void saveCurrentMedia(boolean toGallery) {
-        if (messageObject == null) {
-            return;
-        }
-        Activity parentActivity = AndroidUtilities.findActivity(context);
-        if (parentActivity == null) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= 23 && (Build.VERSION.SDK_INT <= 28)
-                && parentActivity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            parentActivity.requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
-            return;
-        }
-
-        final boolean isRoundMedia = messageObject.isRoundVideo() || messageObject.isRoundOnce();
-        final int currentAccount = messageObject.currentAccount;
-
-        Utilities.globalQueue.postRunnable(() -> {
-            SecretMediaExport export = null;
-            File staged = null;
-            try {
-                if (currentMediaFile != null && currentMediaFile.exists() && !currentMediaFile.getName().endsWith(".enc")) {
-                    staged = stagePublicCopy(currentMediaFile);
-                } else {
-                    export = SecretMediaExport.open(currentAccount, messageObject);
-                    staged = stagePublicCopy(export.getFile());
-                }
-
-                if (staged == null || !staged.isFile() || staged.length() <= 0) {
-                    throw new IOException("media file is not on disk");
-                }
-                if (AndroidUtilities.isInternalUri(Uri.fromFile(staged))) {
-                    throw new IOException("refusing internal cache path");
-                }
-
-                final int saveType = toGallery ? 1 : 2;
-                final String name = toGallery ? null : (!TextUtils.isEmpty(messageObject.getFileName())
-                        ? messageObject.getFileName()
-                        : staged.getName());
-                final BulletinFactory.FileType bulletinType = isRoundMedia
-                        ? (toGallery ? BulletinFactory.FileType.VIDEO : BulletinFactory.FileType.VIDEO_TO_DOWNLOADS)
-                        : BulletinFactory.FileType.AUDIO;
-
-                final File stagedFinal = staged;
-                final SecretMediaExport exportFinal = export;
-                MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, messageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
-                    deleteQuietly(stagedFinal);
-                    closeQuietly(exportFinal);
-                    if (containerView == null) {
-                        return;
-                    }
-                    if (toGallery) {
-                        BulletinFactory.createSaveToGalleryBulletin(containerView, true, 0xf9222222, 0xffffffff).show();
-                    } else {
-                        BulletinFactory.of(containerView, new DarkThemeResourceProvider())
-                                .createDownloadBulletin(bulletinType)
-                                .show();
-                    }
-                }));
-            } catch (Exception e) {
-                FileLog.e(e);
-                deleteQuietly(staged);
-                closeQuietly(export);
-                AndroidUtilities.runOnUIThread(() -> {
-                    if (containerView != null) {
-                        BulletinFactory.of(containerView, new DarkThemeResourceProvider())
-                                .createErrorBulletin(LocaleController.getString(R.string.ErrorOccurred))
-                                .show();
-                    }
-                });
-            }
-        });
-    }
-
-    private static File stageExternalFile(String ext) throws IOException {
-        File dir = ApplicationLoader.applicationContext.getExternalCacheDir();
-        if (dir == null) {
-            dir = ApplicationLoader.applicationContext.getCacheDir();
-        }
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new IOException("no external cache");
-        }
-        return File.createTempFile("veyra_round_", "." + ext, dir);
-    }
-
-    private static File stagePublicCopy(File src) throws IOException {
-        if (src == null || !src.isFile()) {
-            throw new IOException("media file is not on disk");
-        }
-        if (!AndroidUtilities.isInternalUri(Uri.fromFile(src))) {
-            return src;
-        }
-        String ext = FileLoader.getFileExtension(src);
-        if (TextUtils.isEmpty(ext)) {
-            ext = "mp4";
-        }
-        File dst = stageExternalFile(ext);
-        try (FileInputStream in = new FileInputStream(src);
-             FileOutputStream out = new FileOutputStream(dst)) {
-            byte[] buf = new byte[64 * 1024];
-            int n;
-            while ((n = in.read(buf)) > 0) {
-                out.write(buf, 0, n);
-            }
-            out.getFD().sync();
-        }
-        return dst;
-    }
-
-    private static void deleteQuietly(File file) {
-        if (file != null && file.exists() && !file.delete()) {
-            file.deleteOnExit();
-        }
-    }
-
-    private static void closeQuietly(SecretMediaExport export) {
-        if (export != null) {
-            export.close();
-        }
     }
 }
