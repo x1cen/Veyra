@@ -39,14 +39,14 @@ concurrency:
     group: veyra-build-${{ github.ref }}
     cancel-in-progress: false
 
-run-name: Building Veyra ${{ inputs.veyra-version || '13.1.1' }} [${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'all' || 'arm64-v8a') || inputs.arch }}]
+run-name: Building Veyra ${{ inputs.veyra-version || '13.1.1' }} [${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra' || github.ref_name == 'master') && 'all' || 'arm64-v8a') || inputs.arch }}]
 
 jobs:
     apk:
         name: Generate APK
         runs-on: ubuntu-latest
         env:
-            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'all' || 'arm64-v8a') || inputs.arch }}
+            TARGET_ARCH: ${{ (inputs.arch == 'auto' || !inputs.arch) && ((github.ref_name == 'main' || github.ref_name == 'veyra' || github.ref_name == 'master') && 'all' || 'arm64-v8a') || inputs.arch }}
             CCACHE_DIR: ${{github.workspace}}/.ccache
             # 6G: arm64 tgcalls+boringssl alone push past 4G of intermediate objects
             CCACHE_MAXSIZE: 6G
@@ -62,7 +62,7 @@ jobs:
             GRADLE_OPTS: "-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=true -Xmx6g -XX:+UseG1GC"
             CMAKE_BUILD_PARALLEL_LEVEL: "4"
             VERSION_NAME: ${{ inputs.veyra-version || '13.1.1' }}
-            IS_STABLE: ${{ (github.ref_name == 'main' || github.ref_name == 'veyra') && inputs.prerelease != true }}
+            IS_STABLE: ${{ (github.ref_name == 'main' || github.ref_name == 'veyra' || github.ref_name == 'master') && inputs.prerelease != true }}
         steps:
             -   name: Checkout
                 uses: actions/checkout@v6
@@ -318,10 +318,10 @@ jobs:
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.*.apk
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/SHA256SUMS.txt
                     body: |
-                        **Veyra** `${{ env.VERSION_NAME }}` ${{ (github.ref_name == 'main' || github.ref_name == 'veyra') && '— Stable Release 🎉' || '— Preview Build' }}
+                        **Veyra** `${{ env.VERSION_NAME }}` ${{ (github.ref_name == 'main' || github.ref_name == 'veyra' || github.ref_name == 'master') && '— Stable Release 🎉' || '— Preview Build' }}
                         Target Architecture: `${{ env.TARGET_ARCH == 'all' && 'Universal + Dedicated per-architecture APKs (arm64-v8a, armeabi-v7a, x86, x86_64)' || env.TARGET_ARCH }}`
 
-                        ${{ inputs.veyra-changes || ((github.ref_name == 'main' || github.ref_name == 'veyra') && 'Veyra v13.1.1 — Stable Release' || 'Veyra v13.1.1 preview build on dev branch.') }}
+                        ${{ inputs.veyra-changes || ((github.ref_name == 'main' || github.ref_name == 'veyra' || github.ref_name == 'master') && 'Veyra v13.1.1 — Stable Release' || 'Veyra v13.1.1 preview build on master branch.') }}
                 env:
                     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
                     VERSION_NAME: ${{ inputs.veyra-version || '13.1.1' }}
