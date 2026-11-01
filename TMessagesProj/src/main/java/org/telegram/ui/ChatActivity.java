@@ -26625,13 +26625,26 @@ public class ChatActivity extends BaseFragment implements
                 }
                     int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
                     if (!obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
-                        obj.deleted = true;
+                        obj.deleted = false;
                         if (obj.messageOwner != null) {
                             obj.messageOwner.isDeleted = true;
                         }
                         obj.forceUpdate = true;
                         obj.resetLayout();
                         org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, dialog_id, obj.getId());
+                        if (chatListView != null) {
+                            for (int v = 0, n = chatListView.getChildCount(); v < n; v++) {
+                                View child = chatListView.getChildAt(v);
+                                if (child instanceof ChatMessageCell) {
+                                    ChatMessageCell cell = (ChatMessageCell) child;
+                                    if (cell.getMessageObject() != null && cell.getMessageObject().getId() == mid) {
+                                        cell.setAlpha(0.60f);
+                                        cell.setMessageObject(obj, cell.getCurrentMessagesGroup(), cell.isPinnedBottom(), cell.isPinnedTop(), cell.isFirstInChat(), cell.isLastInChatList());
+                                        cell.invalidate();
+                                    }
+                                }
+                            }
+                        }
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                         }

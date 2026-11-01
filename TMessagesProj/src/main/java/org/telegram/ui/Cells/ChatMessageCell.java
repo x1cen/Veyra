@@ -6779,6 +6779,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         lastHeight = AndroidUtilities.displaySize.y;
         lastWidth = getParentWidth();
         isRoundVideo = messageObject != null && messageObject.isRoundVideo();
+        if (messageObject != null && messageObject.isDeleted()) {
+            setAlpha(0.60f);
+        } else {
+            setAlpha(1.0f);
+        }
         mediaSpoilerRevealProgress = 0f;
         TLRPC.Message newReply = messageObject.hasValidReplyMessageObject() ? messageObject.replyMessageObject.messageOwner : null;
         boolean messageIdChanged = currentMessageObject == null || currentMessageObject.getId() != messageObject.getId();
@@ -18505,7 +18510,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (currentMessageObject.isRepostPreview) {
             timeString = LocaleController.formatSmallDateChat(messageObject.messageOwner.date) + ", " + LocaleController.getInstance().getFormatterDay().format((long) (messageObject.messageOwner.date) * 1000);
         } else if (isDeleted) {
-            timeString = "🗑 " + getString(R.string.DeletedMessage) + " " + LocaleController.getInstance().getFormatterDay().format((long) (messageObject.messageOwner.date) * 1000);
+            timeString = getString(R.string.DeletedMessage) + " " + LocaleController.getInstance().getFormatterDay().format((long) (messageObject.messageOwner.date) * 1000);
         } else if (edited) {
             if (AppGlobalConfig.getInstance(currentAccount).messagePrimaryEditedDate.get()) {
                 int editDate = currentMessagesGroup != null ? currentMessagesGroup.getMaxEditDate() : messageObject.messageOwner.edit_date;
