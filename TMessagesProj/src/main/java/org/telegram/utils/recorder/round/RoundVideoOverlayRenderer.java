@@ -582,6 +582,7 @@ final class RoundVideoOverlayRenderer {
     }
 
     private void renderWatermarks() {
+        if (true) return;
         if (!compositionEnabled || watermarkProgram == null) return;
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
