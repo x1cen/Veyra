@@ -159,6 +159,8 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     private int secretMapRow;
     @Keep
     private int secretWebpageRow;
+    @Keep
+    private int secretAcceptRow;
     private int secretDetailRow;
     private int rowCount;
 
@@ -567,6 +569,11 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(newSync);
                 }
+            } else if (position == secretAcceptRow) {
+                SharedConfig.toggleAutoAcceptSecretChats();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(SharedConfig.autoAcceptSecretChats);
+                }
             } else if (position == secretMapRow) {
                 AlertsCreator.showSecretLocationAlert(getParentActivity(), currentAccount, () -> {
                     listAdapter.notifyDataSetChanged();
@@ -794,6 +801,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         secretSectionRow = rowCount++;
         secretMapRow = rowCount++;
         secretWebpageRow = rowCount++;
+        secretAcceptRow = rowCount++;
         secretDetailRow = rowCount++;
         if (listAdapter != null && notify) {
             listAdapter.notifyDataSetChanged();
@@ -1240,7 +1248,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                     } else if (position == sessionsDetailRow) {
                         privacyCell.setText(getString("SessionsSettingsInfo", R.string.SessionsSettingsInfo));
                     } else if (position == secretDetailRow) {
-                        privacyCell.setText(getString("SecretWebPageInfo", R.string.SecretWebPageInfo));
+                        privacyCell.setText(getString("SecretWebPageInfo", R.string.SecretWebPageInfo) + "\n\n" + LocaleController.getString(R.string.SecretChatAcceptAutoInfo));
                     } else if (position == botsDetailRow) {
                         privacyCell.setText(getString("PrivacyBotsInfo", R.string.PrivacyBotsInfo));
                     } else if (position == privacyShadowRow) {
@@ -1277,7 +1285,9 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 case 3:
                     TextCheckCell textCheckCell = (TextCheckCell) holder.itemView;
                     if (position == secretWebpageRow) {
-                        textCheckCell.setTextAndCheck(getString("SecretWebPage", R.string.SecretWebPage), getMessagesController().secretWebpagePreview == 1, false);
+                        textCheckCell.setTextAndCheck(getString("SecretWebPage", R.string.SecretWebPage), getMessagesController().secretWebpagePreview == 1, true);
+                    } else if (position == secretAcceptRow) {
+                        textCheckCell.setTextAndCheck(LocaleController.getString(R.string.SecretChatAcceptAuto), SharedConfig.autoAcceptSecretChats, false);
                     } else if (position == contactsSyncRow) {
                         textCheckCell.setTextAndCheck(getString("SyncContacts", R.string.SyncContacts), newSync, true);
                     } else if (position == contactsSuggestRow) {
@@ -1397,7 +1407,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 return 1;
             } else if (position == securitySectionRow || position == advancedSectionRow || position == privacySectionRow || position == secretSectionRow || position == botsSectionRow || position == contactsSectionRow || position == newChatsHeaderRow) {
                 return 2;
-            } else if (position == secretWebpageRow || position == contactsSyncRow || position == contactsSuggestRow || position == newChatsRow) {
+            } else if (position == secretWebpageRow || position == secretAcceptRow || position == contactsSyncRow || position == contactsSuggestRow || position == newChatsRow) {
                 return 3;
             } else if (position == botsAndWebsitesShadowRow) {
                 return 4;

@@ -237,6 +237,7 @@ public class SharedConfig {
 
     public static boolean saveIncomingPhotos;
     public static boolean allowScreenCapture;
+    public static boolean autoAcceptSecretChats;
     public static int lastPauseTime;
     public static boolean isWaitingForPasscodeEnter;
     public static boolean useFingerprintLock = true;
@@ -531,6 +532,7 @@ public class SharedConfig {
             useFingerprintLock = preferences.getBoolean("useFingerprint", true);
             walletUseFingerprintLock = preferences.getBoolean("walletUseFingerprintLock", true);
             allowScreenCapture = preferences.getBoolean("allowScreenCapture", true);
+            autoAcceptSecretChats = preferences.getBoolean("autoAcceptSecretChats", false);
             lastLocalId = preferences.getInt("lastLocalId", -210000);
             pushString = preferences.getString("pushString2", "");
             pushType = preferences.getInt("pushType", PushListenerController.PUSH_TYPE_FIREBASE);
@@ -1865,6 +1867,9 @@ public class SharedConfig {
         pref.edit().putBoolean("drawActionBarShadow", drawActionBarShadow);
     }
 
-
-
+    public static void toggleAutoAcceptSecretChats() {
+        autoAcceptSecretChats = !autoAcceptSecretChats;
+        SharedPreferences pref = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        pref.edit().putBoolean("autoAcceptSecretChats", autoAcceptSecretChats).commit();
+    }
 }
