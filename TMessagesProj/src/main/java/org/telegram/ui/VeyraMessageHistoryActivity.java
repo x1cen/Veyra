@@ -198,7 +198,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         int messageId = currentMessageObject.getId();
 
         // 1. Load Edit History
-        List<VeyraEditHistoryManager.EditEntry> history = VeyraEditHistoryManager.getHistory(dialogId, messageId);
+        List<VeyraEditHistoryManager.EditEntry> history = VeyraEditHistoryManager.getHistory(currentAccount, dialogId, messageId);
         int totalVersions = (history != null ? history.size() : 0) + 1;
 
         int prevDate = 0;
@@ -224,7 +224,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         }
 
         // 2. Load Reaction History
-        List<VeyraEditHistoryManager.ReactionEntry> dbReactions = VeyraEditHistoryManager.getReactionHistory(dialogId, messageId);
+        List<VeyraEditHistoryManager.ReactionEntry> dbReactions = VeyraEditHistoryManager.getReactionHistory(currentAccount, dialogId, messageId);
         long currentSelfId = UserConfig.getInstance(currentAccount).getClientUserId();
         if (dbReactions != null && !dbReactions.isEmpty()) {
             HashSet<String> seen = new HashSet<>();
