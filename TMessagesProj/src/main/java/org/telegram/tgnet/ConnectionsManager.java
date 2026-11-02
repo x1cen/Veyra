@@ -421,7 +421,7 @@ public class ConnectionsManager extends BaseController {
         }
         if (object instanceof TLRPC.TL_messages_readHistory) {
             long peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readHistory) object).peer);
-            if (org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
+            if (org.veyra.client.VeyraGhost.shouldHideRead(currentAccount, peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }
@@ -434,7 +434,7 @@ public class ConnectionsManager extends BaseController {
                     peerDialogId = -((TLRPC.TL_channels_readHistory) object).channel.channel_id;
                 }
             } catch (Throwable ignore) {}
-            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
+            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(currentAccount, peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }
@@ -470,7 +470,7 @@ public class ConnectionsManager extends BaseController {
             try {
                 peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readDiscussion) object).peer);
             } catch (Throwable ignore) {}
-            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
+            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(currentAccount, peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }
@@ -481,7 +481,7 @@ public class ConnectionsManager extends BaseController {
             try {
                 peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readSavedHistory) object).parent_peer);
             } catch (Throwable ignore) {}
-            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
+            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(currentAccount, peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }

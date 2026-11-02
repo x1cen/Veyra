@@ -21654,7 +21654,7 @@ public class MessagesController extends BaseController implements NotificationCe
             topicsController.markAllReactionsAsRead(-dialogId, topicId);
         }
         getMessagesStorage().updateUnreadReactionsCount(dialogId, topicId, 0);
-        if (org.veyra.client.VeyraGhost.shouldHideReadReactions()) {
+        if (org.veyra.client.VeyraGhost.shouldHideReadReactions(currentAccount, dialogId)) {
             // Veyra: cleared locally only; the request is not sent, so no fake response reaches update sync.
             return;
         }

@@ -152,6 +152,18 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header("Always Send Read Receipts"));
+        r.add(VeyraSettingsRow.toggle("Channels", "Read receipts are sent normally in channels",
+                () -> VeyraGhost.alwaysReadChannels, val -> VeyraGhost.toggleAlwaysReadChannels(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.toggle("Large Groups", "Groups with more than " + VeyraGhost.LARGE_GROUP_MIN_MEMBERS + " members",
+                () -> VeyraGhost.alwaysReadLargeGroups, val -> VeyraGhost.toggleAlwaysReadLargeGroups(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.toggle("Bots", "Read receipts are sent normally in bot chats",
+                () -> VeyraGhost.alwaysReadBots, val -> VeyraGhost.toggleAlwaysReadBots(), false
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.shadow());
+
         r.add(VeyraSettingsRow.header("Views"));
         r.add(VeyraSettingsRow.toggle(
                 "Stealth Story Views",

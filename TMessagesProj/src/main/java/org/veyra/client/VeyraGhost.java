@@ -42,6 +42,12 @@ public class VeyraGhost {
     public static boolean hideStories = true;
     public static boolean hideChannelViews = false;
 
+    // Low-value chats where read receipts are always sent even while hiding reads.
+    public static boolean alwaysReadChannels = true;
+    public static boolean alwaysReadLargeGroups = true;
+    public static boolean alwaysReadBots = true;
+    public static final int LARGE_GROUP_MIN_MEMBERS = 100;
+
     private static final java.util.concurrent.ConcurrentHashMap<Long, Long> allowedReadDialogs = new java.util.concurrent.ConcurrentHashMap<>();
 
     static {
@@ -75,6 +81,9 @@ public class VeyraGhost {
         hideMediaReceipts = prefs.getBoolean("hideMediaReceipts", false);
         hideStories = prefs.getBoolean("hideStories", true);
         hideChannelViews = prefs.getBoolean("hideChannelViews", false);
+        alwaysReadChannels = prefs.getBoolean("alwaysReadChannels", true);
+        alwaysReadLargeGroups = prefs.getBoolean("alwaysReadLargeGroups", true);
+        alwaysReadBots = prefs.getBoolean("alwaysReadBots", true);
     }
 
     private static void save(String key, boolean val) {
@@ -113,6 +122,47 @@ public class VeyraGhost {
     public static void toggleHideMediaReceipts() { hideMediaReceipts = !hideMediaReceipts; save("hideMediaReceipts", hideMediaReceipts); }
     public static void toggleHideStories() { hideStories = !hideStories; save("hideStories", hideStories); }
     public static void toggleHideChannelViews() { hideChannelViews = !hideChannelViews; save("hideChannelViews", hideChannelViews); }
+    public static void toggleAlwaysReadChannels() { alwaysReadChannels = !alwaysReadChannels; save("alwaysReadChannels", alwaysReadChannels); }
+    public static void toggleAlwaysReadLargeGroups() { alwaysReadLargeGroups = !alwaysReadLargeGroups; save("alwaysReadLargeGroups", alwaysReadLargeGroups); }
+    public static void toggleAlwaysReadBots() { alwaysReadBots = !alwaysReadBots; save("alwaysReadBots", alwaysReadBots); }
+
+    // True when the dialog is a broadcast channel, a group above LARGE_GROUP_MIN_MEMBERS, or a bot and its exemption is on.
+    // Unknown chats or unknown member counts are not exempt, so privacy is kept when in doubt.
+    public static boolean isReadExempt(int account, long dialogId) {
+        if (dialogId == 0 || org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
+            return false;
+        }
+        try {
+            org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(account);
+            if (dialogId > 0) {
+                if (!alwaysReadBots) {
+                    return false;
+                }
+                TLRPC.User user = mc.getUser(dialogId);
+                return user != null && user.bot;
+            }
+            TLRPC.Chat chat = mc.getChat(-dialogId);
+            if (chat == null) {
+                return false;
+            }
+            if (org.telegram.messenger.ChatObject.isChannelAndNotMegaGroup(chat)) {
+                return alwaysReadChannels;
+            }
+            if (!alwaysReadLargeGroups) {
+                return false;
+            }
+            int count = chat.participants_count;
+            if (count <= 0) {
+                TLRPC.ChatFull full = mc.getChatFull(-dialogId);
+                if (full != null) {
+                    count = full.participants_count;
+                }
+            }
+            return count > LARGE_GROUP_MIN_MEMBERS;
+        } catch (Throwable ignore) {
+            return false;
+        }
+    }
 
     // The server keeps an account "online" for minutes after the last update; go offline right away when hiding starts.
     private static void sendOfflineNow() {
@@ -182,6 +232,13 @@ public class VeyraGhost {
         return !(readOnReply && consumeSendReadAllowed(dialogId));
     }
 
+    public static boolean shouldHideRead(int account, long dialogId) {
+        if (isReadExempt(account, dialogId)) {
+            return false;
+        }
+        return shouldHideRead(dialogId);
+    }
+
     public static boolean shouldHideSecretRead(long encryptedDialogId) {
         return hideSecretRead && shouldHideRead(encryptedDialogId);
     }
@@ -190,11 +247,18 @@ public class VeyraGhost {
         return ghostMode && hideRead && hideReadReactions;
     }
 
+    public static boolean shouldHideReadReactions(int account, long dialogId) {
+        return shouldHideReadReactions() && !isReadExempt(account, dialogId);
+    }
+
     public static boolean shouldHideMediaReceipt(MessageObject messageObject) {
         if (!ghostMode || !hideRead || !hideMediaReceipts || messageObject == null || messageObject.messageOwner == null) {
             return false;
         }
         if (messageObject.messageOwner.mentioned) {
+            return false;
+        }
+        if (isReadExempt(messageObject.currentAccount, messageObject.getDialogId())) {
             return false;
         }
         if (messageObject.isVoiceOnce() || messageObject.isRoundOnce() || messageObject.needDrawBluredPreview() || messageObject.isSecretMedia()) {
