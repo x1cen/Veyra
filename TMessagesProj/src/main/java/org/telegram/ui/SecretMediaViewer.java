@@ -523,6 +523,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             bitmapCopy = null;
         }
 
+        final MessageObject messageObject = currentMessageObject;
         Utilities.globalQueue.postRunnable(() -> {
             SecretMediaExport export = null;
             File staged = null;
@@ -534,7 +535,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                         os.getFD().sync();
                     }
                 } else {
-                    export = SecretMediaExport.open(currentAccount, currentMessageObject);
+                    export = SecretMediaExport.open(currentAccount, messageObject);
                     staged = stagePublicCopy(export.getFile());
                 }
 
@@ -546,8 +547,8 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 }
 
                 final int saveType = toGallery ? (video || gif ? 1 : 0) : 2;
-                final String name = toGallery ? null : (!TextUtils.isEmpty(currentMessageObject.getFileName())
-                                                        ? currentMessageObject.getFileName()
+                final String name = toGallery ? null : (!TextUtils.isEmpty(messageObject.getFileName())
+                                                        ? messageObject.getFileName()
                                                         : staged.getName());
                 final BulletinFactory.FileType bulletinType;
                 if (toGallery) {
@@ -556,7 +557,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                     bulletinType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
                 } else if (gif) {
                     bulletinType = BulletinFactory.FileType.GIF_TO_DOWNLOADS;
-                } else if (currentMessageObject.isPhoto() || isImageDocument(currentMessageObject)) {
+                } else if (messageObject.isPhoto() || isImageDocument(messageObject)) {
                     bulletinType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
                 } else {
                     bulletinType = BulletinFactory.FileType.UNKNOWN;
@@ -564,7 +565,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
 
                 final File stagedFinal = staged;
                 final SecretMediaExport exportFinal = export;
-                MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, currentMessageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
+                MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, messageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
                     deleteQuietly(stagedFinal);
                     closeQuietly(exportFinal);
                     if (containerView == null) {
