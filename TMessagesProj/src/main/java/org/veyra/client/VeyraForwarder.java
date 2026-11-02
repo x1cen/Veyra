@@ -93,102 +93,125 @@ public class VeyraForwarder {
             MessageObject replyToTopMsg
     ) {
         ArrayList<MessageObject> toBeDownloaded = new ArrayList<>();
+        ArrayList<SecretMediaExport> openedExports = new ArrayList<>();
 
-        for (int i = 0; i < messages.size(); i++) {
-            MessageObject msg = messages.get(i);
-            if (msg == null) continue;
+        try {
+            for (int i = 0; i < messages.size(); i++) {
+                MessageObject msg = messages.get(i);
+                if (msg == null) continue;
 
-            if (isMediaDownloadable(msg)) {
-                File path = getMessageFilePath(currentAccount, msg);
-                if (path == null || !path.exists() || path.length() == 0) {
-                    toBeDownloaded.add(msg);
+                if (isMediaDownloadable(msg)) {
+                    File path = getMessageFilePath(currentAccount, msg, openedExports);
+                    if (path == null || !path.exists() || path.length() == 0) {
+                        toBeDownloaded.add(msg);
+                    }
                 }
             }
-        }
 
-        if (!toBeDownloaded.isEmpty()) {
-            downloadMediaSync(currentAccount, toBeDownloaded);
-        }
-
-        final AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
-
-        int i = 0;
-        while (i < messages.size()) {
-            MessageObject msg = messages.get(i);
-            if (msg == null || msg.messageOwner == null) {
-                i++;
-                continue;
+            if (!toBeDownloaded.isEmpty()) {
+                downloadMediaSync(currentAccount, toBeDownloaded);
             }
 
-            CharSequence textSeq = msg.messageText;
-            String text = (msg.messageOwner != null && msg.messageOwner.message != null && !msg.isSticker() && !msg.isAnimatedSticker() && !isVisualMedia(msg)) ? msg.messageOwner.message : "";
-            if (hideCaption && isMediaDownloadable(msg)) {
-                text = "";
-            }
-            ArrayList<TLRPC.MessageEntity> entities = hideCaption ? null : msg.messageOwner.entities;
+            final AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
 
-            if (msg.isRoundVideo()) {
-                File itemPath = getMessageFilePath(currentAccount, msg);
-                if (itemPath != null && itemPath.exists()) {
-                    org.telegram.messenger.VideoEditedInfo videoEditedInfo = new org.telegram.messenger.VideoEditedInfo();
-                    videoEditedInfo.roundVideo = true;
-                    videoEditedInfo.startTime = -1;
-                    videoEditedInfo.endTime = -1;
-                    SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
-                            (TLRPC.TL_document) msg.getDocument(),
-                            videoEditedInfo,
-                            itemPath.getAbsolutePath(),
-                            peer,
-                            null,
-                            replyToTopMsg,
-                            null,
-                            null,
-                            null,
-                            null,
-                            notify,
-                            scheduleDate,
-                            0,
-                            0,
-                            null,
-                            null,
-                            false,
-                            false
-                    );
-                    AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException ignored) {}
+            int i = 0;
+            while (i < messages.size()) {
+                MessageObject msg = messages.get(i);
+                if (msg == null || msg.messageOwner == null) {
+                    i++;
+                    continue;
                 }
-                i++;
-            } else if (msg.isVoice()) {
-                File itemPath = getMessageFilePath(currentAccount, msg);
-                if (itemPath != null && itemPath.exists()) {
-                    SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
-                            (TLRPC.TL_document) msg.getDocument(),
-                            null,
-                            itemPath.getAbsolutePath(),
-                            peer,
-                            null,
-                            replyToTopMsg,
-                            null,
-                            null,
-                            null,
-                            null,
-                            notify,
-                            scheduleDate,
-                            0,
-                            0,
-                            null,
-                            null,
-                            false,
-                            false
-                    );
-                    AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException ignored) {}
+
+                CharSequence textSeq = msg.messageText;
+                String text = (msg.messageOwner != null && msg.messageOwner.message != null && !msg.isSticker() && !msg.isAnimatedSticker() && !isVisualMedia(msg)) ? msg.messageOwner.message : "";
+                if (hideCaption && isMediaDownloadable(msg)) {
+                    text = "";
                 }
-                i++;
+                ArrayList<TLRPC.MessageEntity> entities = (hideCaption && isMediaDownloadable(msg)) ? null : (msg.messageOwner != null ? msg.messageOwner.entities : null);
+
+                if (msg.isRoundVideo()) {
+                    File itemPath = getMessageFilePath(currentAccount, msg, openedExports);
+                    if (itemPath != null && itemPath.exists()) {
+                        org.telegram.messenger.VideoEditedInfo videoEditedInfo = new org.telegram.messenger.VideoEditedInfo();
+                        videoEditedInfo.roundVideo = true;
+                        videoEditedInfo.startTime = -1;
+                        videoEditedInfo.endTime = -1;
+
+                        TLRPC.TL_document doc = new TLRPC.TL_document();
+                        doc.id = 0;
+                        doc.access_hash = 0;
+                        doc.file_reference = new byte[0];
+                        doc.size = (int) itemPath.length();
+                        doc.dc_id = 0;
+                        TLRPC.Document origDoc = msg.getDocument();
+                        doc.mime_type = origDoc != null && origDoc.mime_type != null ? origDoc.mime_type : "video/mp4";
+                        doc.attributes = origDoc != null && origDoc.attributes != null ? new ArrayList<>(origDoc.attributes) : new ArrayList<>();
+
+                        SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
+                                doc,
+                                videoEditedInfo,
+                                itemPath.getAbsolutePath(),
+                                peer,
+                                null,
+                                replyToTopMsg,
+                                null,
+                                null,
+                                null,
+                                null,
+                                notify,
+                                scheduleDate,
+                                0,
+                                0,
+                                null,
+                                null,
+                                false,
+                                false
+                        );
+                        AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException ignored) {}
+                    }
+                    i++;
+                } else if (msg.isVoice()) {
+                    File itemPath = getMessageFilePath(currentAccount, msg, openedExports);
+                    if (itemPath != null && itemPath.exists()) {
+                        TLRPC.TL_document doc = new TLRPC.TL_document();
+                        doc.id = 0;
+                        doc.access_hash = 0;
+                        doc.file_reference = new byte[0];
+                        doc.size = (int) itemPath.length();
+                        doc.dc_id = 0;
+                        TLRPC.Document origDoc = msg.getDocument();
+                        doc.mime_type = origDoc != null && origDoc.mime_type != null ? origDoc.mime_type : "audio/ogg";
+                        doc.attributes = origDoc != null && origDoc.attributes != null ? new ArrayList<>(origDoc.attributes) : new ArrayList<>();
+
+                        SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
+                                doc,
+                                null,
+                                itemPath.getAbsolutePath(),
+                                peer,
+                                null,
+                                replyToTopMsg,
+                                null,
+                                null,
+                                null,
+                                null,
+                                notify,
+                                scheduleDate,
+                                0,
+                                0,
+                                null,
+                                null,
+                                false,
+                                false
+                        );
+                        AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException ignored) {}
+                    }
+                    i++;
             } else if (msg.isSticker() || msg.isAnimatedSticker()) {
                 TLRPC.Document document = msg.getDocument();
                 if (document instanceof TLRPC.TL_document && !msg.isSecret()) {
@@ -387,14 +410,28 @@ public class VeyraForwarder {
                 i++;
             }
         }
+        } finally {
+            for (SecretMediaExport exp : openedExports) {
+                try {
+                    exp.close();
+                } catch (Throwable ignore) {}
+            }
+        }
     }
 
     private static File getMessageFilePath(int currentAccount, MessageObject message) {
+        return getMessageFilePath(currentAccount, message, null);
+    }
+
+    private static File getMessageFilePath(int currentAccount, MessageObject message, List<SecretMediaExport> openedExports) {
         if (message == null || message.messageOwner == null) return null;
         if (message.messageOwner instanceof TLRPC.TL_message_secret || message.isSecret()) {
             try {
                 SecretMediaExport export = SecretMediaExport.open(currentAccount, message);
                 if (export != null && export.getFile() != null && export.getFile().exists()) {
+                    if (openedExports != null) {
+                        openedExports.add(export);
+                    }
                     return export.getFile();
                 }
             } catch (Throwable ignored) {}
@@ -429,10 +466,30 @@ public class VeyraForwarder {
 
     private static void downloadMediaSync(int currentAccount, ArrayList<MessageObject> toBeDownloaded) {
         if (toBeDownloaded == null || toBeDownloaded.isEmpty()) return;
-        final CountDownLatch latch = new CountDownLatch(toBeDownloaded.size());
+        final java.util.Set<String> expectedFileNames = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+        for (int i = 0; i < toBeDownloaded.size(); i++) {
+            MessageObject msg = toBeDownloaded.get(i);
+            TLRPC.MessageMedia media = MessageObject.getMedia(msg.messageOwner);
+            if (media instanceof TLRPC.TL_messageMediaPhoto && media.photo != null) {
+                TLRPC.PhotoSize size = FileLoader.getClosestPhotoSizeWithSize(media.photo.sizes, AndroidUtilities.getPhotoSize(true), false, null, true);
+                if (size != null) {
+                    expectedFileNames.add(FileLoader.getAttachFileName(size));
+                }
+            } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
+                expectedFileNames.add(FileLoader.getAttachFileName(media.document));
+            } else if (msg.getDocument() != null) {
+                expectedFileNames.add(FileLoader.getAttachFileName(msg.getDocument()));
+            }
+        }
+        final CountDownLatch latch = new CountDownLatch(Math.max(1, expectedFileNames.size()));
         final NotificationCenter.NotificationCenterDelegate delegate = (id, account, args) -> {
             if (id == NotificationCenter.fileLoaded || id == NotificationCenter.fileLoadFailed) {
-                latch.countDown();
+                if (args != null && args.length > 0 && args[0] instanceof String) {
+                    String fileName = (String) args[0];
+                    if (expectedFileNames.remove(fileName)) {
+                        latch.countDown();
+                    }
+                }
             }
         };
 
@@ -447,15 +504,11 @@ public class VeyraForwarder {
                     ImageLocation loc = ImageLocation.getForPhoto(size, media.photo);
                     if (loc != null) {
                         FileLoader.getInstance(currentAccount).loadFile(loc, msg, null, FileLoader.PRIORITY_HIGH, 0);
-                    } else {
-                        latch.countDown();
                     }
                 } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
                     FileLoader.getInstance(currentAccount).loadFile(media.document, msg, FileLoader.PRIORITY_HIGH, 0);
                 } else if (msg.getDocument() != null) {
                     FileLoader.getInstance(currentAccount).loadFile(msg.getDocument(), msg, FileLoader.PRIORITY_HIGH, 0);
-                } else {
-                    latch.countDown();
                 }
             }
         });

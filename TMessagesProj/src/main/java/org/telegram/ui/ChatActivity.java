@@ -33584,42 +33584,72 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void saveMessageToGallery(MessageObject messageObject) {
-        String path = getMessageSavePath(messageObject);
+        if (messageObject == null) return;
         boolean isVideo = messageObject.isVideo() || messageObject.isRoundVideo() || messageObject.isRoundOnce();
-        if (TextUtils.isEmpty(path)) {
-            if (messageObject.getDocument() != null || (messageObject.messageOwner != null && messageObject.messageOwner.media != null)) {
-                ArrayList<MessageObject> list = new ArrayList<>();
-                list.add(messageObject);
-                MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), list, count -> {
-                    if (getParentActivity() != null && count > 0) {
-                        BulletinFactory.createSaveToGalleryBulletin(ChatActivity.this, isVideo, false, themeDelegate).show();
+        Utilities.globalQueue.postRunnable(() -> {
+            org.veyra.client.SecretMediaExport export = null;
+            String path = null;
+            if (messageObject.isSecretMedia() || messageObject.isVoiceOnce() || messageObject.isRoundOnce() || messageObject.isSecret()) {
+                try {
+                    export = org.veyra.client.SecretMediaExport.open(currentAccount, messageObject);
+                    if (export != null && export.getFile() != null && export.getFile().exists() && export.getFile().length() > 0) {
+                        path = export.getFile().getAbsolutePath();
+                    }
+                } catch (Throwable ignored) {}
+            }
+            if (TextUtils.isEmpty(path)) {
+                path = getMessageSavePath(messageObject);
+            }
+            final String finalPath = path;
+            final org.veyra.client.SecretMediaExport finalExport = export;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (TextUtils.isEmpty(finalPath)) {
+                    if (messageObject.getDocument() != null || (messageObject.messageOwner != null && messageObject.messageOwner.media != null)) {
+                        ArrayList<MessageObject> list = new ArrayList<>();
+                        list.add(messageObject);
+                        MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), list, count -> {
+                            if (getParentActivity() != null && count > 0) {
+                                BulletinFactory.createSaveToGalleryBulletin(ChatActivity.this, isVideo, false, themeDelegate).show();
+                            }
+                        });
+                    }
+                    if (finalExport != null) {
+                        try { finalExport.close(); } catch (Throwable ignore) {}
+                    }
+                    return;
+                }
+                if (messageObject.isLivePhoto()) {
+                    final TLRPC.Document videoDoc = MessageObject.getMedia(messageObject.messageOwner) != null
+                            ? MessageObject.getMedia(messageObject.messageOwner).document
+                            : null;
+                    String videoPath = null;
+                    if (videoDoc != null) {
+                        File videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, false);
+                        if (videoFile == null || !videoFile.exists()) {
+                            videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, true);
+                        }
+                        if (videoFile != null && videoFile.exists()) {
+                            videoPath = videoFile.getPath();
+                        }
+                    }
+                    if (!TextUtils.isEmpty(videoPath)) {
+                        MediaController.saveFile(finalPath, videoPath, getParentActivity(), uri -> {
+                            if (finalExport != null) {
+                                try { finalExport.close(); } catch (Throwable ignore) {}
+                            }
+                        });
+                        BulletinFactory.createSaveToGalleryBulletin(this, false, true, themeDelegate).show();
+                        return;
+                    }
+                }
+                MediaController.saveFile(finalPath, getParentActivity(), isVideo ? 1 : 0, null, uri -> {
+                    if (finalExport != null) {
+                        try { finalExport.close(); } catch (Throwable ignore) {}
                     }
                 });
-            }
-            return;
-        }
-        if (messageObject.isLivePhoto()) {
-            final TLRPC.Document videoDoc = MessageObject.getMedia(messageObject.messageOwner) != null
-                    ? MessageObject.getMedia(messageObject.messageOwner).document
-                    : null;
-            String videoPath = null;
-            if (videoDoc != null) {
-                File videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, false);
-                if (videoFile == null || !videoFile.exists()) {
-                    videoFile = FileLoader.getInstance(currentAccount).getPathToAttach(videoDoc, true);
-                }
-                if (videoFile != null && videoFile.exists()) {
-                    videoPath = videoFile.getPath();
-                }
-            }
-            if (!TextUtils.isEmpty(videoPath)) {
-                MediaController.saveFile(path, videoPath, getParentActivity(), null);
-                BulletinFactory.createSaveToGalleryBulletin(this, false, true, themeDelegate).show();
-                return;
-            }
-        }
-        MediaController.saveFile(path, getParentActivity(), isVideo ? 1 : 0, null, null);
-        BulletinFactory.createSaveToGalleryBulletin(this, isVideo, false, themeDelegate).show();
+                BulletinFactory.createSaveToGalleryBulletin(this, isVideo, false, themeDelegate).show();
+            });
+        });
     }
 
     private void processSelectedOption(int option) {
