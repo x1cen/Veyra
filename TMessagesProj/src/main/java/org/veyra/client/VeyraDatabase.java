@@ -68,29 +68,42 @@ public final class VeyraDatabase {
 
                 // Migrate legacy entries from Telegram's cache4.db if any exist
                 if (telegramDb != null) {
+                    SQLiteCursor cursor = null;
+                    boolean inTx = false;
                     try {
                         telegramDb.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions (mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY (mid, uid));").stepThis().dispose();
-                        SQLiteCursor cursor = telegramDb.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
+                        cursor = telegramDb.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
                         if (cursor.next()) {
                             database.beginTransaction();
-                            boolean inTx = true;
-                            try {
-                                do {
-                                    int mid = cursor.intValue(0);
-                                    long uid = cursor.longValue(1);
-                                    saveDeletedIndex(uid, mid);
-                                } while (cursor.next());
-                                database.commitTransaction();
-                                inTx = false;
-                            } finally {
-                                if (inTx) {
-                                    database.commitTransaction();
-                                }
-                            }
+                            inTx = true;
+                            do {
+                                int mid = cursor.intValue(0);
+                                long uid = cursor.longValue(1);
+                                saveDeletedIndex(uid, mid);
+                            } while (cursor.next());
+                            database.commitTransaction();
+                            inTx = false;
+                            cursor.dispose();
+                            cursor = null;
+                            // Legacy rows are only dropped after the copy committed.
                             telegramDb.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
                         }
-                        cursor.dispose();
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    } finally {
+                        if (inTx) {
+                            try {
+                                database.executeFast("ROLLBACK").stepThis().dispose();
+                            } catch (Throwable t) {
+                                FileLog.e(t);
+                            }
+                            // Resets the wrapper's transaction flag; the native COMMIT is a no-op after ROLLBACK.
+                            database.commitTransaction();
+                        }
+                        if (cursor != null) {
+                            cursor.dispose();
+                        }
+                    }
                 }
 
                 loadAllIntoMemory();
