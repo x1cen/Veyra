@@ -33588,14 +33588,6 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         }
-        if (messageObject.isSecretMedia() || messageObject.isVoiceOnce() || messageObject.isRoundOnce() || messageObject.isSecret()) {
-            try {
-                org.veyra.client.SecretMediaExport export = org.veyra.client.SecretMediaExport.open(currentAccount, messageObject);
-                if (export != null && export.getFile() != null && export.getFile().exists() && export.getFile().length() > 0) {
-                    return export.getFile().getAbsolutePath();
-                }
-            } catch (Throwable ignored) {}
-        }
         return null;
     }
 
@@ -34048,62 +34040,96 @@ public class ChatActivity extends BaseFragment implements
                         }
                     });
                 } else {
-                    boolean video = selectedObject.isVideo() || selectedObject.isRoundVideo() || selectedObject.isRoundOnce();
-                    boolean photo = selectedObject.isPhoto();
-                    boolean gif = selectedObject.isGif();
-                    String fileName = FileLoader.getDocumentFileName(selectedObject.getDocument());
+                    final MessageObject saveObject = selectedObject;
+                    final boolean video = saveObject.isVideo() || saveObject.isRoundVideo() || saveObject.isRoundOnce();
+                    final boolean photo = saveObject.isPhoto();
+                    final boolean gif = saveObject.isGif();
+                    String fileName = FileLoader.getDocumentFileName(saveObject.getDocument());
                     if (TextUtils.isEmpty(fileName)) {
-                        fileName = selectedObject.getFileName();
+                        fileName = saveObject.getFileName();
                     }
-                    if (TextUtils.isEmpty(fileName) && (selectedObject.isVoice() || selectedObject.isVoiceOnce())) {
-                        fileName = "voice_" + selectedObject.getId() + ".ogg";
-                    } else if (TextUtils.isEmpty(fileName) && (selectedObject.isRoundVideo() || selectedObject.isRoundOnce())) {
-                        fileName = "round_" + selectedObject.getId() + ".mp4";
+                    if (TextUtils.isEmpty(fileName) && (saveObject.isVoice() || saveObject.isVoiceOnce())) {
+                        fileName = "voice_" + saveObject.getId() + ".ogg";
+                    } else if (TextUtils.isEmpty(fileName) && (saveObject.isRoundVideo() || saveObject.isRoundOnce())) {
+                        fileName = "round_" + saveObject.getId() + ".mp4";
                     }
-                    final boolean saveIsVoice = selectedObject.isVoice() || selectedObject.isVoiceOnce();
-                    String path = getMessageSavePath(selectedObject);
-                    if (TextUtils.isEmpty(path)) {
-                        ArrayList<MessageObject> messageObjects = new ArrayList<>();
-                        messageObjects.add(selectedObject);
-                        final boolean isVideoFinal = video;
-                        final boolean isPhotoFinal = photo;
-                        MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, count -> {
-                            if (getParentActivity() == null || fragmentView == null) {
+                    final String saveFileName = fileName;
+                    final boolean saveIsVoice = saveObject.isVoice() || saveObject.isVoiceOnce();
+                    final boolean saveIsSecret = saveObject.isSecretMedia() || saveObject.isVoiceOnce() || saveObject.isRoundOnce() || saveObject.isSecret();
+                    final String saveMime = saveObject.getDocument() != null ? saveObject.getDocument().mime_type : "";
+                    Utilities.globalQueue.postRunnable(() -> {
+                        String path = getMessageSavePath(saveObject);
+                        org.veyra.client.SecretMediaExport export = null;
+                        if (TextUtils.isEmpty(path) && saveIsSecret) {
+                            try {
+                                export = org.veyra.client.SecretMediaExport.open(currentAccount, saveObject);
+                                if (export != null && export.getFile() != null && export.getFile().exists() && export.getFile().length() > 0) {
+                                    path = export.getFile().getAbsolutePath();
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                        if (TextUtils.isEmpty(path) && export != null) {
+                            try { export.close(); } catch (Throwable ignore) {}
+                            export = null;
+                        }
+                        final String finalPath = path;
+                        final org.veyra.client.SecretMediaExport finalExport = export;
+                        AndroidUtilities.runOnUIThread(() -> {
+                            if (getParentActivity() == null) {
+                                if (finalExport != null) {
+                                    Utilities.globalQueue.postRunnable(finalExport::close);
+                                }
                                 return;
                             }
-                            if (count > 0) {
+                            if (TextUtils.isEmpty(finalPath)) {
+                                ArrayList<MessageObject> messageObjects = new ArrayList<>();
+                                messageObjects.add(saveObject);
+                                MediaController.saveFilesFromMessages(getParentActivity(), getAccountInstance(), messageObjects, count -> {
+                                    if (getParentActivity() == null || fragmentView == null) {
+                                        return;
+                                    }
+                                    if (count > 0) {
+                                        final BulletinFactory.FileType fileType;
+                                        if (photo) {
+                                            fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
+                                        } else if (video) {
+                                            fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
+                                        } else if (saveIsVoice) {
+                                            fileType = BulletinFactory.FileType.AUDIO;
+                                        } else {
+                                            fileType = BulletinFactory.FileType.UNKNOWN;
+                                        }
+                                        BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, themeDelegate).show();
+                                    }
+                                });
+                                return;
+                            }
+                            if (finalExport != null) {
+                                // saveFile only reports success; fall back to a delayed close (stale veyra_ttl_* exports are also purged on start)
+                                Utilities.globalQueue.postRunnable(finalExport::close, 10 * 60 * 1000);
+                            }
+                            MediaController.saveFile(finalPath, getParentActivity(), 2, saveFileName, saveMime, uri -> {
+                                if (finalExport != null) {
+                                    Utilities.globalQueue.postRunnable(finalExport::close);
+                                }
+                                if (getParentActivity() == null) {
+                                    return;
+                                }
                                 final BulletinFactory.FileType fileType;
-                                if (isPhotoFinal) {
+                                if (photo) {
                                     fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
-                                } else if (isVideoFinal) {
+                                } else if (video) {
                                     fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
+                                } else if (gif) {
+                                    fileType = BulletinFactory.FileType.GIF_TO_DOWNLOADS;
                                 } else if (saveIsVoice) {
                                     fileType = BulletinFactory.FileType.AUDIO;
                                 } else {
                                     fileType = BulletinFactory.FileType.UNKNOWN;
                                 }
                                 BulletinFactory.of(ChatActivity.this).createDownloadBulletin(fileType, themeDelegate).show();
-                            }
+                            });
                         });
-                        break;
-                    }
-                    MediaController.saveFile(path, getParentActivity(), 2, fileName, selectedObject.getDocument() != null ? selectedObject.getDocument().mime_type : "", uri -> {
-                        if (getParentActivity() == null) {
-                            return;
-                        }
-                        final BulletinFactory.FileType fileType;
-                        if (photo) {
-                            fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
-                        } else if (video) {
-                            fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
-                        } else if (gif) {
-                            fileType = BulletinFactory.FileType.GIF_TO_DOWNLOADS;
-                        } else if (saveIsVoice) {
-                            fileType = BulletinFactory.FileType.AUDIO;
-                        } else {
-                            fileType = BulletinFactory.FileType.UNKNOWN;
-                        }
-                        BulletinFactory.of(this).createDownloadBulletin(fileType, themeDelegate).show();
                     });
                 }
                 break;
