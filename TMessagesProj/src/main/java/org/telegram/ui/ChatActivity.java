@@ -26530,6 +26530,9 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
+        java.util.HashMap<Long, ArrayList<Integer>> veyraSelfDeleted = null;
+        java.util.HashMap<Long, ArrayList<Integer>> veyraPeerDeleted = null;
+        boolean veyraRowsChanged = false;
         int commentsDeleted = 0;
         for (int a = 0; a < size; a++) {
             Integer mid = markAsDeletedMessages.get(a);
@@ -26581,7 +26584,15 @@ public class ChatActivity extends BaseFragment implements
                     long targetDialogId = obj.getDialogId() != 0 ? obj.getDialogId() : ((loadIndex == 1 && mergeDialogId != 0) ? mergeDialogId : dialog_id);
                     boolean isSelfDel = org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, targetDialogId, mid);
                     if (isSelfDel) {
-                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessage(targetDialogId, mid);
+                        if (veyraSelfDeleted == null) {
+                            veyraSelfDeleted = new java.util.HashMap<>();
+                        }
+                        ArrayList<Integer> veyraIds = veyraSelfDeleted.get(targetDialogId);
+                        if (veyraIds == null) {
+                            veyraIds = new ArrayList<>();
+                            veyraSelfDeleted.put(targetDialogId, veyraIds);
+                        }
+                        veyraIds.add(mid);
                     }
                     if (!isSelfDel && !obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
                         obj.deleted = false;
@@ -26590,7 +26601,16 @@ public class ChatActivity extends BaseFragment implements
                         }
                         obj.forceUpdate = true;
                         obj.resetLayout();
-                        org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, targetDialogId, obj.getId());
+                        org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, targetDialogId, obj.getId());
+                        if (veyraPeerDeleted == null) {
+                            veyraPeerDeleted = new java.util.HashMap<>();
+                        }
+                        ArrayList<Integer> veyraPeerIds = veyraPeerDeleted.get(targetDialogId);
+                        if (veyraPeerIds == null) {
+                            veyraPeerIds = new ArrayList<>();
+                            veyraPeerDeleted.put(targetDialogId, veyraPeerIds);
+                        }
+                        veyraPeerIds.add(obj.getId());
                         if (chatListView != null) {
                             for (int v = 0, n = chatListView.getChildCount(); v < n; v++) {
                                 View child = chatListView.getChildAt(v);
@@ -26606,7 +26626,7 @@ public class ChatActivity extends BaseFragment implements
                         if (index != -1 && chatAdapter != null) {
                             chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                         }
-                        updateVisibleRows();
+                        veyraRowsChanged = true;
                         continue;
                     }
                     obj.deleted = true;
@@ -26727,6 +26747,30 @@ public class ChatActivity extends BaseFragment implements
                     updated = true;
                 }
             }
+        }
+        if (veyraRowsChanged) {
+            updateVisibleRows();
+        }
+        if (veyraSelfDeleted != null || veyraPeerDeleted != null) {
+            final java.util.HashMap<Long, ArrayList<Integer>> selfDeletedFinal = veyraSelfDeleted;
+            final java.util.HashMap<Long, ArrayList<Integer>> peerDeletedFinal = veyraPeerDeleted;
+            final int account = currentAccount;
+            Utilities.globalQueue.postRunnable(() -> {
+                org.veyra.client.VeyraDatabase db = org.veyra.client.VeyraDatabase.getInstance(account);
+                if (selfDeletedFinal != null) {
+                    for (java.util.Map.Entry<Long, ArrayList<Integer>> e : selfDeletedFinal.entrySet()) {
+                        db.deleteMessages(e.getKey(), e.getValue());
+                    }
+                }
+                if (peerDeletedFinal != null) {
+                    for (java.util.Map.Entry<Long, ArrayList<Integer>> e : peerDeletedFinal.entrySet()) {
+                        ArrayList<Integer> ids = e.getValue();
+                        for (int i = 0; i < ids.size(); i++) {
+                            db.saveDeletedIndex(e.getKey(), ids.get(i));
+                        }
+                    }
+                }
+            });
         }
         if (updatedReplies) {
             updateReplyMessageHeader(true);
