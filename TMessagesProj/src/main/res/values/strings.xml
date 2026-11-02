@@ -281,6 +281,13 @@
     <string name="DisappearingVideo">Secret Video</string>
     <string name="DisappearingGif">Secret GIF</string>
     <string name="SecretChatAcceptAuto">Accept Automatically</string>
+    <string name="VeyraSecretChatRequestTitle">New secret chat request</string>
+    <string name="VeyraSecretChatRequestSingle">%1$s wants to start a secret chat with you. Do you want to accept it?</string>
+    <string name="VeyraSecretChatRequestMultiple">%1$s wants to start a secret chat with you (%2$d more waiting). Do you want to accept it?</string>
+    <string name="VeyraSecretChatRequestAccept">Accept</string>
+    <string name="VeyraSecretChatRequestDecline">Decline</string>
+    <string name="VeyraSecretChatRequestAccepted">Secret chat with %1$s accepted</string>
+    <string name="VeyraSecretChatRequestDeclined">Secret chat request from %1$s declined</string>
     <string name="SearchMessages">Messages</string>
     <string name="SearchMessagesIn">Messages in %s</string>
     <string name="Search">Search</string>

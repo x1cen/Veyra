@@ -201,10 +201,6 @@ public class SecretChatHelper extends BaseController {
         TLRPC.EncryptedChat existingChat = getMessagesController().getEncryptedChatDB(newChat.id, false);
 
         if (newChat instanceof TLRPC.TL_encryptedChatRequested && existingChat == null) {
-            if (!SharedConfig.autoAcceptSecretChats) {
-                declineSecretChat(newChat.id, false);
-                return;
-            }
             long userId = newChat.participant_id;
             if (userId == getUserConfig().getClientUserId()) {
                 userId = newChat.admin_id;
@@ -214,26 +210,12 @@ public class SecretChatHelper extends BaseController {
                 user = usersDict.get(userId);
             }
             newChat.user_id = userId;
-            TLRPC.Dialog dialog = new TLRPC.TL_dialog();
-            dialog.id = dialog_id;
-            dialog.folder_id = newChat.folder_id;
-            dialog.unread_count = 0;
-            dialog.top_message = 0;
-            dialog.last_message_date = update.date;
-            getMessagesController().putEncryptedChat(newChat, false);
-            AndroidUtilities.runOnUIThread(() -> {
-                if (dialog.folder_id == 1) {
-                    SharedPreferences.Editor editor = MessagesController.getNotificationsSettings(currentAccount).edit();
-                    editor.putBoolean("dialog_bar_archived" + dialog_id, true);
-                    editor.commit();
-                }
-                getMessagesController().dialogs_dict.put(dialog.id, dialog);
-                getMessagesController().allDialogs.add(dialog);
-                getMessagesController().sortDialogs(null);
-                getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
-            });
-            getMessagesStorage().putEncryptedChat(newChat, user, dialog);
-            acceptSecretChat(newChat);
+            if (!SharedConfig.autoAcceptSecretChats) {
+                // Veyra: hold the request until the user accepts or declines it from the chat list alert.
+                org.veyra.client.VeyraSecretChatRequests.getInstance(currentAccount).add(newChat, user, update.date);
+                return;
+            }
+            acceptRequestedSecretChat(newChat, user, update.date);
         } else if (newChat instanceof TLRPC.TL_encryptedChat) {
             if (existingChat instanceof TLRPC.TL_encryptedChatWaiting && (existingChat.auth_key == null || existingChat.auth_key.length == 1)) {
                 newChat.a_or_b = existingChat.a_or_b;
@@ -267,6 +249,38 @@ public class SecretChatHelper extends BaseController {
         if (newChat instanceof TLRPC.TL_encryptedChatDiscarded && newChat.history_deleted) {
             AndroidUtilities.runOnUIThread(() -> getMessagesController().deleteDialog(dialog_id, 0));
         }
+        if (newChat instanceof TLRPC.TL_encryptedChatDiscarded) {
+            // Veyra: the requester cancelled before we answered; drop the pending alert.
+            org.veyra.client.VeyraSecretChatRequests.getInstance(currentAccount).remove(newChat.id);
+        }
+    }
+
+    // Veyra: creates the dialog for a requested secret chat and starts the key exchange.
+    public void acceptRequestedSecretChat(TLRPC.EncryptedChat newChat, TLRPC.User user, int date) {
+        long dialog_id = DialogObject.makeEncryptedDialogId(newChat.id);
+        if (user != null && getMessagesController().getUser(user.id) == null) {
+            getMessagesController().putUser(user, true);
+        }
+        TLRPC.Dialog dialog = new TLRPC.TL_dialog();
+        dialog.id = dialog_id;
+        dialog.folder_id = newChat.folder_id;
+        dialog.unread_count = 0;
+        dialog.top_message = 0;
+        dialog.last_message_date = date;
+        getMessagesController().putEncryptedChat(newChat, false);
+        AndroidUtilities.runOnUIThread(() -> {
+            if (dialog.folder_id == 1) {
+                SharedPreferences.Editor editor = MessagesController.getNotificationsSettings(currentAccount).edit();
+                editor.putBoolean("dialog_bar_archived" + dialog_id, true);
+                editor.commit();
+            }
+            getMessagesController().dialogs_dict.put(dialog.id, dialog);
+            getMessagesController().allDialogs.add(dialog);
+            getMessagesController().sortDialogs(null);
+            getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
+        });
+        getMessagesStorage().putEncryptedChat(newChat, user, dialog);
+        acceptSecretChat(newChat);
     }
 
     public void sendMessagesDeleteMessage(TLRPC.EncryptedChat encryptedChat, ArrayList<Long> random_ids, TLRPC.Message resendMessage) {

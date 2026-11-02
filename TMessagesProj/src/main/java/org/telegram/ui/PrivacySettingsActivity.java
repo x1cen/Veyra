@@ -578,6 +578,9 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 }
             } else if (position == secretAcceptRow) {
                 SharedConfig.toggleAutoAcceptSecretChats();
+                if (SharedConfig.autoAcceptSecretChats) {
+                    org.veyra.client.VeyraSecretChatRequests.acceptAllPending();
+                }
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(SharedConfig.autoAcceptSecretChats);
                 }

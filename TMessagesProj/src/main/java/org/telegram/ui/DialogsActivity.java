@@ -175,6 +175,7 @@ import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.UnconfirmedAuthHintCell;
+import org.telegram.ui.Cells.SecretChatRequestHintCell;
 import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
@@ -618,6 +619,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private ActiveGiftAuctionsHintCell activeGiftAuctionsHintCell;
     private DialogsHintCell dialogsHintCell;
     private UnconfirmedAuthHintCell authHintCell;
+    private SecretChatRequestHintCell secretChatRequestHintCell;
     private Long cacheSize, deviceSize;
     private CommunityRequestsCell communityPendingRequests;
 
@@ -2939,6 +2941,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             .add(NotificationCenter.storiesUpdated)
             .add(NotificationCenter.storiesEnabledUpdate)
             .add(NotificationCenter.unconfirmedAuthUpdate)
+            .add(NotificationCenter.secretChatRequestsUpdate)
             .add(NotificationCenter.premiumPromoUpdated)
             .add(NotificationCenter.starBalanceUpdated)
             .add(NotificationCenter.starSubscriptionsLoaded)
@@ -3212,6 +3215,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         AndroidUtilities.runOnUIThread(() -> Theme.createChatResources(context, false));
 
         authHintCell = null;
+        secretChatRequestHintCell = null;
         activeGiftAuctionsHintCell = null;
         dialogsHintCell = null;
         communityPendingRequests = null;
@@ -6336,7 +6340,33 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         checkCommunityPendingRequestsVisible(true);
         checkUnconfirmedAuthHintCellVisibility();
+        checkSecretChatRequestHintCellVisibility();
         checkActiveGiftAuctionsHintCellVisibility();
+    }
+
+    // Veyra: pending secret chat requests, shown only while auto-accept is off.
+    private void checkSecretChatRequestHintCellVisibility() {
+        if (fragmentView == null || topPanelLayout == null) {
+            return;
+        }
+
+        final boolean isVisible = !isInPreviewMode()
+            && folderId == 0 && communityId == 0 && initialDialogsType == DIALOGS_TYPE_DEFAULT
+            && !SharedConfig.autoAcceptSecretChats
+            && org.veyra.client.VeyraSecretChatRequests.getInstance(currentAccount).hasRequests()
+            && (rightSlidingDialogContainer == null || !rightSlidingDialogContainer.hasFragment())
+            && !animatorSearchVisible.getValue();
+
+        if (isVisible) {
+            if (secretChatRequestHintCell == null) {
+                secretChatRequestHintCell = new SecretChatRequestHintCell(getContext());
+                topPanelLayout.addView(secretChatRequestHintCell);
+            }
+            secretChatRequestHintCell.set(DialogsActivity.this, currentAccount);
+        }
+        if (secretChatRequestHintCell != null) {
+            topPanelLayout.setViewVisible(secretChatRequestHintCell, isVisible);
+        }
     }
 
     private void checkUnconfirmedAuthHintCellVisibility() {
@@ -10857,7 +10887,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             updateVisibleRows(0);
         } else if (id == NotificationCenter.storiesEnabledUpdate) {
             updateStoriesPosting();
-        } else if (id == NotificationCenter.unconfirmedAuthUpdate) {
+        } else if (id == NotificationCenter.unconfirmedAuthUpdate || id == NotificationCenter.secretChatRequestsUpdate) {
             updateDialogsHint();
         } else if (id == NotificationCenter.premiumPromoUpdated) {
             updateDialogsHint();
@@ -12566,6 +12596,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
         if (authHintCell != null) {
             SimpleThemeDescription.add(arrayList, authHintCell::updateColors, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhiteBlackText, Theme.key_windowBackgroundWhiteGrayText, Theme.key_windowBackgroundWhiteValueText, Theme.key_text_RedBold);
+        }
+        if (secretChatRequestHintCell != null) {
+            SimpleThemeDescription.add(arrayList, secretChatRequestHintCell::updateColors, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhiteBlackText, Theme.key_windowBackgroundWhiteGrayText, Theme.key_windowBackgroundWhiteValueText, Theme.key_text_RedBold);
         }
         if (activeGiftAuctionsHintCell != null) {
             SimpleThemeDescription.add(arrayList, activeGiftAuctionsHintCell::updateColors, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhiteBlackText, Theme.key_windowBackgroundWhiteGrayText, Theme.key_windowBackgroundWhiteValueText, Theme.key_text_RedBold);
