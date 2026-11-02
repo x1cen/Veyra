@@ -3558,13 +3558,8 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         protected boolean canCopy() {
-            if (chatActivity != null && chatActivity.getDialogId() == UserObject.VERIFY) {
-                return true;
-            }
-            return chatActivity == null || !(
-                !DialogObject.isEncryptedDialog(chatActivity.getDialogId()) && chatActivity.isPeerNoForwards() ||
-                selectedView != null && selectedView.getMessageObject() != null && (selectedView.getMessageObject().messageOwner != null && selectedView.getMessageObject().messageOwner.noforwards)
-            );
+            // Veyra: allow copying selected text in protected (noforwards) chats too.
+            return true;
         }
 
         @Override
