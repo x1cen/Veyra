@@ -162,6 +162,13 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     @Keep
     private int secretAcceptRow;
     private int secretDetailRow;
+    private int ghostSectionRow;
+    private int ghostModeRow;
+    private int ghostOnlineRow;
+    private int ghostTypingRow;
+    private int ghostReadRow;
+    private int ghostStoriesRow;
+    private int ghostDetailRow;
     private int rowCount;
 
     private final ArrayList<BotBiometry.Bot> biometryBots = new ArrayList<>();
@@ -574,6 +581,31 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(SharedConfig.autoAcceptSecretChats);
                 }
+            } else if (position == ghostModeRow) {
+                org.veyra.client.VeyraGhost.toggleGhostMode();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.ghostMode);
+                }
+            } else if (position == ghostOnlineRow) {
+                org.veyra.client.VeyraGhost.toggleHideOnline();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.hideOnline);
+                }
+            } else if (position == ghostTypingRow) {
+                org.veyra.client.VeyraGhost.toggleHideTyping();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.hideTyping);
+                }
+            } else if (position == ghostReadRow) {
+                org.veyra.client.VeyraGhost.toggleReadOnReply();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.readOnReply);
+                }
+            } else if (position == ghostStoriesRow) {
+                org.veyra.client.VeyraGhost.toggleHideStories();
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.hideStories);
+                }
             } else if (position == secretMapRow) {
                 AlertsCreator.showSecretLocationAlert(getParentActivity(), currentAccount, () -> {
                     listAdapter.notifyDataSetChanged();
@@ -803,6 +835,13 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         secretWebpageRow = rowCount++;
         secretAcceptRow = rowCount++;
         secretDetailRow = rowCount++;
+        ghostSectionRow = rowCount++;
+        ghostModeRow = rowCount++;
+        ghostOnlineRow = rowCount++;
+        ghostTypingRow = rowCount++;
+        ghostReadRow = rowCount++;
+        ghostStoriesRow = rowCount++;
+        ghostDetailRow = rowCount++;
         if (listAdapter != null && notify) {
             listAdapter.notifyDataSetChanged();
         }
@@ -1278,6 +1317,8 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                         headerCell.setText(getString("PrivacyBots", R.string.PrivacyBots));
                     } else if (position == contactsSectionRow) {
                         headerCell.setText(getString("Contacts", R.string.Contacts));
+                    } else if (position == ghostSectionRow) {
+                        headerCell.setText(getString("GhostMode", R.string.GhostMode));
                     } else if (position == newChatsHeaderRow) {
                         headerCell.setText(getString("NewChatsFromNonContacts", R.string.NewChatsFromNonContacts));
                     }
@@ -1288,6 +1329,16 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                         textCheckCell.setTextAndCheck(getString("SecretWebPage", R.string.SecretWebPage), getMessagesController().secretWebpagePreview == 1, true);
                     } else if (position == secretAcceptRow) {
                         textCheckCell.setTextAndCheck(LocaleController.getString(R.string.SecretChatAcceptAuto), SharedConfig.autoAcceptSecretChats, false);
+                    } else if (position == ghostModeRow) {
+                        textCheckCell.setTextAndCheck(getString("GhostMode", R.string.GhostMode), org.veyra.client.VeyraGhost.ghostMode, true);
+                    } else if (position == ghostOnlineRow) {
+                        textCheckCell.setTextAndCheck(getString("GhostHideOnline", R.string.GhostHideOnline), org.veyra.client.VeyraGhost.hideOnline, true);
+                    } else if (position == ghostTypingRow) {
+                        textCheckCell.setTextAndCheck(getString("GhostHideTyping", R.string.GhostHideTyping), org.veyra.client.VeyraGhost.hideTyping, true);
+                    } else if (position == ghostReadRow) {
+                        textCheckCell.setTextAndCheck(getString("GhostReadOnReply", R.string.GhostReadOnReply), org.veyra.client.VeyraGhost.readOnReply, true);
+                    } else if (position == ghostStoriesRow) {
+                        textCheckCell.setTextAndCheck(getString("GhostHideStories", R.string.GhostHideStories), org.veyra.client.VeyraGhost.hideStories, false);
                     } else if (position == contactsSyncRow) {
                         textCheckCell.setTextAndCheck(getString("SyncContacts", R.string.SyncContacts), newSync, true);
                     } else if (position == contactsSuggestRow) {
@@ -1403,11 +1454,11 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                     position == deleteAccountRow || position == webSessionsRow || position == groupsRow || position == paymentsClearRow ||
                     position == secretMapRow || position == contactsDeleteRow || position == botsBiometryRow) {
                 return 0;
-            } else if (position == privacyShadowRow || position == deleteAccountDetailRow || position == groupsDetailRow || position == sessionsDetailRow || position == secretDetailRow || position == botsDetailRow || position == contactsDetailRow || position == newChatsSectionRow) {
+            } else if (position == privacyShadowRow || position == deleteAccountDetailRow || position == groupsDetailRow || position == sessionsDetailRow || position == secretDetailRow || position == ghostDetailRow || position == botsDetailRow || position == contactsDetailRow || position == newChatsSectionRow) {
                 return 1;
-            } else if (position == securitySectionRow || position == advancedSectionRow || position == privacySectionRow || position == secretSectionRow || position == botsSectionRow || position == contactsSectionRow || position == newChatsHeaderRow) {
+            } else if (position == securitySectionRow || position == advancedSectionRow || position == privacySectionRow || position == secretSectionRow || position == ghostSectionRow || position == botsSectionRow || position == contactsSectionRow || position == newChatsHeaderRow) {
                 return 2;
-            } else if (position == secretWebpageRow || position == secretAcceptRow || position == contactsSyncRow || position == contactsSuggestRow || position == newChatsRow) {
+            } else if (position == secretWebpageRow || position == secretAcceptRow || position == ghostModeRow || position == ghostOnlineRow || position == ghostTypingRow || position == ghostReadRow || position == ghostStoriesRow || position == contactsSyncRow || position == contactsSuggestRow || position == newChatsRow) {
                 return 3;
             } else if (position == botsAndWebsitesShadowRow) {
                 return 4;

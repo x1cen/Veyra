@@ -1484,6 +1484,11 @@
     <string name="DeleteAllFromSelfBefore">Before...</string>
     <string name="DeleteAllFromSelfAdmin">With admin rights</string>
     <string name="DeleteAllFromSelfDone">All your messages are deleted</string>
+    <string name="GhostMode">Ghost Mode</string>
+    <string name="GhostHideOnline">Hide Online Status</string>
+    <string name="GhostHideTyping">Hide Typing Status</string>
+    <string name="GhostReadOnReply">Mark as Read on Reply</string>
+    <string name="GhostHideStories">Stealth Story Views</string>
     <string name="EditMessage">Edit Message</string>
     <string name="EditCaption">Edit Caption</string>
     <string name="EditMessageMedia">Tap to edit media</string>
