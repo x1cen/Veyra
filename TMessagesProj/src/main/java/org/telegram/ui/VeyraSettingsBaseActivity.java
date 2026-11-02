@@ -192,8 +192,7 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                     view = new CategoryCell(mContext);
                     break;
                 default:
-                    view = new View(mContext);
-                    view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(12)));
+                    view = new ShadowSectionCell(mContext);
                     break;
             }
             return new RecyclerListView.Holder(view);
