@@ -10953,6 +10953,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             }
             usernameRow = rowCount++;
+            idRow = rowCount++;
             if (actionsView == null) {
                 notificationsSimpleRow = rowCount++;
             }
@@ -10995,6 +10996,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     emptyRow = rowCount++;
                 }
             }
+            idRow = rowCount++;
             if (actionsView == null) {
                 if (infoHeaderRow != -1) {
                     notificationsDividerRow = rowCount++;
@@ -13787,6 +13789,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         } else if (isTopic && topicId != 0) {
                             displayId = topicId;
                             label = "Topic ID";
+                        } else if (dialogId != 0) {
+                            displayId = Math.abs(dialogId);
+                            label = dialogId < 0 ? "Chat ID" : "User ID";
                         }
                         String idText = String.valueOf(displayId);
                         String idValue = dc > 0 ? label + " (DC " + dc + ")" : label;
