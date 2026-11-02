@@ -122,9 +122,9 @@ jobs:
                 uses: actions/cache@v5
                 with:
                     path: ${{github.workspace}}/.ccache
-                    # Key on JNI C/C++ sources + CMakeLists ONLY — Java/Kotlin changes must NOT bust C cache
-                    key: ${{runner.os}}-ccache-ndk27-v2-${{hashFiles('TMessagesProj/jni/**/*.c', 'TMessagesProj/jni/**/*.cpp', 'TMessagesProj/jni/**/*.h', 'TMessagesProj/**/CMakeLists.txt')}}
+                    key: ${{runner.os}}-ccache-ndk27-v3-${{github.run_id}}
                     restore-keys: |
+                        ${{runner.os}}-ccache-ndk27-v3-
                         ${{runner.os}}-ccache-ndk27-v2-
                         ${{runner.os}}-ccache-ndk27-
 
@@ -173,7 +173,7 @@ jobs:
                 env:
                     VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64}}
                     VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD}}
-                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || 'veyra'}}
+                    VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || 'veyra' }}
                     VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD}}
                 run: |
                     if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
@@ -189,13 +189,13 @@ jobs:
             -   name: Build APK
                 run: |
                     echo "Target Architecture: ${TARGET_ARCH}"
-                    # --no-configuration-cache: config-cache conflicts with --parallel on some tasks in Telegram
-                    gradle :TMessagesProj_AppStandalone:assembleAfatStandalone \
+                    chmod +x gradlew
+                    ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandalone \
                         --parallel \
                         --build-cache \
                         --max-workers=4 \
                         --no-configuration-cache \
-                        2>&1 | tail -n 300; test ${PIPESTATUS[0]} -eq 0 || gradle :TMessagesProj_AppStandalone:assembleAfatStandalone --parallel --build-cache --max-workers=4 --no-configuration-cache
+                        --console=plain
 
             -   name: ccache stats
                 if: ${{always()}}
