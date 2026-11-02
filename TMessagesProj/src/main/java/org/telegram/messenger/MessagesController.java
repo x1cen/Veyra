@@ -19525,6 +19525,16 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
 
                 ImageLoader.saveMessageThumbs(message);
+                MessageObject oldObj = dialogMessagesByIds != null ? dialogMessagesByIds.get(message.id) : null;
+                if (oldObj != null && oldObj.messageOwner != null && !android.text.TextUtils.equals(oldObj.messageOwner.message, message.message)) {
+                    org.veyra.client.VeyraEditHistoryManager.logEdit(
+                            message.dialog_id,
+                            message.id,
+                            oldObj.messageOwner.edit_date > 0 ? oldObj.messageOwner.edit_date : oldObj.messageOwner.date,
+                            oldObj.messageOwner.message,
+                            oldObj.messageOwner
+                    );
+                }
                 AndroidUtilities.runOnUIThread(() -> {
                     getSendMessagesHelper().onMessageEdited(message);
                     if (!message.out && message.dialog_id == 777000

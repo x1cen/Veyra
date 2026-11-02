@@ -1250,6 +1250,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_EDIT_SCHEDULE_TIME = 102;
     public final static int OPTION_SPEED_PROMO = 103;
     public final static int OPTION_OPEN_PROFILE = 104;
+    public final static int OPTION_VIEW_EDIT_HISTORY = 105;
     public final static int OPTION_FACT_CHECK = 106;
     public final static int OPTION_EDIT_PRICE = 107;
     public final static int OPTION_GIFT = 108;
@@ -33744,6 +33745,15 @@ public class ChatActivity extends BaseFragment implements
                 presentFragment(fragment);
                 break;
             }
+            case OPTION_VIEW_EDIT_HISTORY: {
+                if (selectedObject != null) {
+                    presentFragment(new VeyraMessageHistoryActivity(dialog_id, selectedObject));
+                }
+                selectedObject = null;
+                selectedObjectToEditCaption = null;
+                selectedObjectGroup = null;
+                break;
+            }
             case OPTION_COPY: {
                 final TL_iv.RichMessage copyRichMessage = selectedObject.messageOwner != null ? selectedObject.messageOwner.rich_message : null;
                 if (selectedObject.isDice()) {
@@ -46725,6 +46735,11 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.Copy));
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
+                }
+                if (selectedObject != null && org.veyra.client.VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId())) {
+                    items.add("Edit History");
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_recent);
                 }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {
