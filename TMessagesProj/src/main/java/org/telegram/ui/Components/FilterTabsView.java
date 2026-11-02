@@ -1253,6 +1253,10 @@ public class FilterTabsView extends FrameLayout {
     }
 
     public CharSequence text(String t, ArrayList<TLRPC.MessageEntity> e)  {
+        if (org.veyra.client.VeyraUIConfig.tabsTitleType == org.veyra.client.VeyraUIConfig.TITLE_TYPE_ICON && e != null && !e.isEmpty()) {
+            CharSequence icon = new SpannableStringBuilder(t);
+            return MessageObject.replaceAnimatedEmoji(icon, e, textPaint.getFontMetricsInt());
+        }
         CharSequence title = new SpannableStringBuilder(t);
         title = Emoji.replaceEmoji(title, textPaint.getFontMetricsInt(), false);
         title = MessageObject.replaceAnimatedEmoji(title, e, textPaint.getFontMetricsInt());
