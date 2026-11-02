@@ -303,6 +303,7 @@ public final class VeyraEditHistoryManager {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(TABLE_NAME, null, null);
             db.delete(REACTION_TABLE_NAME, null, null);
+            removedReactionMessages.clear();
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -323,6 +324,7 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(REACTION_TABLE_NAME, null, null);
+            removedReactionMessages.clear();
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -334,6 +336,7 @@ public final class VeyraEditHistoryManager {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
             db.delete(REACTION_TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+            removedReactionMessages.remove(dialogId);
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -352,6 +355,7 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
             db.delete(REACTION_TABLE_NAME, "dialog_id = ?", new String[]{String.valueOf(dialogId)});
+            removedReactionMessages.remove(dialogId);
         } catch (Exception e) {
             FileLog.e(e);
         }
