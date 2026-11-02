@@ -2196,6 +2196,27 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private final static int gallery_menu_chromecast = 24;
     private final static int gallery_menu_create_sticker = 25;
     private final static int gallery_menu_delete2 = 26;
+    private final static int gallery_menu_qr = 35;
+
+    private ActionBarMenuSubItem qrItem;
+    private ArrayList<String> qrResults;
+
+    private void detectQr() {
+        if (menuItem == null) return;
+        menuItem.hideSubItem(gallery_menu_qr);
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            Bitmap bitmap = centerImage != null ? centerImage.getBitmap() : null;
+            if (bitmap == null) return;
+            ArrayList<String> results = org.veyra.client.VeyraQrHelper.readQr(bitmap);
+            org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> {
+                if (menuItem == null || qrItem == null) return;
+                qrResults = results;
+                if (qrResults != null && !qrResults.isEmpty()) {
+                    menuItem.showSubItem(gallery_menu_qr);
+                }
+            });
+        });
+    }
 
     private final static int ads_sponsor_info = 101;
     private final static int ads_about = 102;
@@ -5595,6 +5616,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     } else {
                         switchToPip(false);
                     }
+                } else if (id == gallery_menu_qr) {
+                    if (qrResults != null && !qrResults.isEmpty()) {
+                        org.veyra.client.VeyraQrHelper.showQrDialog(parentFragment, resourcesProvider, qrResults, true);
+                    }
                 } else if (id == gallery_menu_cancel_loading) {
                     if (currentMessageObject == null) {
                         return;
@@ -5926,6 +5951,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         menuItem.addSubItem(gallery_menu_hide_translation, R.drawable.msg_translate, getString(R.string.HideTranslation)).setColors(0xfffafafa, 0xfffafafa);
         menuItem.addSubItem(gallery_menu_delete, R.drawable.msg_delete, getString(R.string.Delete)).setColors(0xfffafafa, 0xfffafafa);
         menuItem.addSubItem(gallery_menu_cancel_loading, R.drawable.msg_cancel, getString(R.string.StopDownload)).setColors(0xfffafafa, 0xfffafafa);
+        qrItem = menuItem.addSubItem(gallery_menu_qr, R.drawable.msg_qrcode, "QR Code");
+        qrItem.setColors(0xfffafafa, 0xfffafafa);
+        menuItem.hideSubItem(gallery_menu_qr);
         menuItem.redrawPopup(0xf9222222);
         menuItem.hideSubItem(gallery_menu_translate);
         menuItem.hideSubItem(gallery_menu_hide_translation);
@@ -14030,6 +14058,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         menuItem.hideSubItem(gallery_menu_create_sticker);
         menuItem.hideSubItem(gallery_menu_reply);
         menuItem.hideSubItem(gallery_menu_report);
+        detectQr();
         menuItem.hideSubItem(gallery_menu_share);
         menuItem.hideSubItem(gallery_menu_openin);
         menuItem.hideSubItem(gallery_menu_savegif);
