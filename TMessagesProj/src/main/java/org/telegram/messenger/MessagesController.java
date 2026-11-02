@@ -10572,7 +10572,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.TL_messages_getMessagesViews req = new TLRPC.TL_messages_getMessagesViews();
                     req.peer = getInputPeer(key);
                     req.id = channelViewsToSend.valueAt(a);
-                    req.increment = a == 0;
+                    req.increment = a == 0 && !org.veyra.client.VeyraGhost.shouldHideChannelViews();
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         if (response != null) {
                             TLRPC.TL_messages_messageViews res = (TLRPC.TL_messages_messageViews) response;
@@ -14389,6 +14389,10 @@ public class MessagesController extends BaseController implements NotificationCe
         if (messageObject.getId() < 0) {
             markMessageAsRead(messageObject.getDialogId(), messageObject.messageOwner.random_id, Integer.MIN_VALUE);
         } else {
+            if (org.veyra.client.VeyraGhost.shouldHideMediaReceipt(messageObject)) {
+                // Veyra: played locally only. Mentions and view-once/self-destruct media are never skipped.
+                return;
+            }
             if (messageObject.messageOwner.peer_id.channel_id != 0) {
                 TLRPC.TL_channels_readMessageContents req = new TLRPC.TL_channels_readMessageContents();
                 req.channel = getInputChannel(messageObject.messageOwner.peer_id.channel_id);
@@ -21650,6 +21654,10 @@ public class MessagesController extends BaseController implements NotificationCe
             topicsController.markAllReactionsAsRead(-dialogId, topicId);
         }
         getMessagesStorage().updateUnreadReactionsCount(dialogId, topicId, 0);
+        if (org.veyra.client.VeyraGhost.shouldHideReadReactions()) {
+            // Veyra: cleared locally only; the request is not sent, so no fake response reaches update sync.
+            return;
+        }
         TLRPC.TL_messages_readReactions req = new TLRPC.TL_messages_readReactions();
         req.peer = getInputPeer(dialogId);
 

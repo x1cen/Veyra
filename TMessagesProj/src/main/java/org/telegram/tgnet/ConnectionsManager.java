@@ -441,14 +441,47 @@ public class ConnectionsManager extends BaseController {
                 return;
             }
         } else if (object instanceof TLRPC.TL_messages_readEncryptedHistory) {
-            if (org.veyra.client.VeyraGhost.isGhostActive() && org.veyra.client.VeyraGhost.readOnReply) {
+            long encDialogId = 0;
+            try {
+                encDialogId = org.telegram.messenger.DialogObject.makeEncryptedDialogId(((TLRPC.TL_messages_readEncryptedHistory) object).peer.chat_id);
+            } catch (Throwable ignore) {}
+            if (org.veyra.client.VeyraGhost.shouldHideSecretRead(encDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }
                 return;
             }
         } else if (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping) {
-            if (org.veyra.client.VeyraGhost.shouldHideTyping()) {
+            boolean hideTypingReq;
+            if (object instanceof TLRPC.TL_messages_setTyping) {
+                hideTypingReq = org.veyra.client.VeyraGhost.shouldHideTypingAction(((TLRPC.TL_messages_setTyping) object).action);
+            } else {
+                // typing == false is the secret-chat cancel; never block it.
+                hideTypingReq = ((TLRPC.TL_messages_setEncryptedTyping) object).typing && org.veyra.client.VeyraGhost.shouldHideTypingAction(null);
+            }
+            if (hideTypingReq) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        } else if (object instanceof TLRPC.TL_messages_readDiscussion) {
+            long peerDialogId = 0;
+            try {
+                peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readDiscussion) object).peer);
+            } catch (Throwable ignore) {}
+            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
+                if (onComplete != null) {
+                    AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
+                }
+                return;
+            }
+        } else if (object instanceof TLRPC.TL_messages_readSavedHistory) {
+            long peerDialogId = 0;
+            try {
+                peerDialogId = org.telegram.messenger.DialogObject.getPeerDialogId(((TLRPC.TL_messages_readSavedHistory) object).parent_peer);
+            } catch (Throwable ignore) {}
+            if (peerDialogId != 0 && org.veyra.client.VeyraGhost.shouldHideRead(peerDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }

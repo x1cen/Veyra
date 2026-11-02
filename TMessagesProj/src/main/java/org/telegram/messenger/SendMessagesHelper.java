@@ -1803,7 +1803,21 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (prevSize != 0 && unsentMessages.size() == 0) {
             checkUnsentMessages();
         }
+        if (org.veyra.client.VeyraGhost.shouldGoOfflineAfterMessage()) {
+            // Debounced: a burst of sends (albums, forwards) produces a single offline request.
+            AndroidUtilities.cancelRunOnUIThread(offlineAfterSendRunnable);
+            AndroidUtilities.runOnUIThread(offlineAfterSendRunnable, 1000);
+        }
     }
+
+    private final Runnable offlineAfterSendRunnable = () -> {
+        if (!org.veyra.client.VeyraGhost.shouldGoOfflineAfterMessage()) {
+            return;
+        }
+        TL_account.updateStatus req = new TL_account.updateStatus();
+        req.offline = true;
+        ConnectionsManager.getInstance(currentAccount).sendRequest(req, null);
+    };
 
     public void processForwardFromMyName(MessageObject messageObject, long did, long payStars, long monoForumPeerId, MessageSuggestionParams suggestionParams) {
         if (messageObject == null) {
