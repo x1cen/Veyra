@@ -3252,7 +3252,7 @@ public class AlertsCreator {
         AlertDialog dialog = new AlertDialog.Builder(context).setView(frameLayout)
                 .setPositiveButton(LocaleController.getString(R.string.Call), (dialogInterface, i) -> {
                     final TLRPC.UserFull userFull = fragment.getMessagesController().getUserFull(user.id);
-                    VoIPHelper.startCall(user, videoCall, userFull != null && userFull.video_calls_available, fragment.getParentActivity(), userFull, fragment.getAccountInstance());
+                    VoIPHelper.startCall(user, videoCall, userFull != null && userFull.video_calls_available, fragment.getParentActivity(), userFull, fragment.getAccountInstance(), true);
                 })
                 .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
                 .create();
