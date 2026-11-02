@@ -5,6 +5,7 @@ package org.veyra.client;
 import android.text.TextUtils;
 
 import org.telegram.messenger.FileLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
@@ -32,7 +33,7 @@ public final class SecretMediaExport implements AutoCloseable {
     @Override
     public void close() {
         if (temporary && file != null && file.exists() && !file.delete()) {
-            file.deleteOnExit();
+            FileLog.e("SecretMediaExport: failed to delete temp export " + file.getName() + ", startup cleanup will remove it");
         }
     }
 
