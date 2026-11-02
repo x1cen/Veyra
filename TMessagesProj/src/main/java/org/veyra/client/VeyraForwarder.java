@@ -482,7 +482,10 @@ public class VeyraForwarder {
                 expectedFileNames.add(FileLoader.getAttachFileName(msg.getDocument()));
             }
         }
-        final CountDownLatch latch = new CountDownLatch(Math.max(1, expectedFileNames.size()));
+        if (expectedFileNames.isEmpty()) {
+            return;
+        }
+        final CountDownLatch latch = new CountDownLatch(expectedFileNames.size());
         final NotificationCenter.NotificationCenterDelegate delegate = (id, account, args) -> {
             if (id == NotificationCenter.fileLoaded || id == NotificationCenter.fileLoadFailed) {
                 if (args != null && args.length > 0 && args[0] instanceof String) {
