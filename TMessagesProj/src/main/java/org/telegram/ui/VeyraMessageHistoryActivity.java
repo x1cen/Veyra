@@ -1,10 +1,8 @@
 package org.telegram.ui;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -14,7 +12,6 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,10 +27,8 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
-import org.veyra.client.VeyraUIConfig;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
@@ -45,7 +40,6 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
-import org.telegram.ui.Components.EmptyTextProgressView;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
@@ -53,7 +47,6 @@ import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.veyra.client.VeyraEditHistoryManager;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 public class VeyraMessageHistoryActivity extends BaseFragment {
@@ -66,11 +59,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private MessageObject currentMessageObject;
     private final int mode;
 
-    private TextView tabMessagesView;
-    private TextView tabReactionsView;
     private RecyclerListView messagesListView;
-    private RecyclerListView reactionsListView;
-    private FrameLayout reactionsContainer;
 
     public static class VersionEntry {
         public final int versionIndex;
@@ -94,26 +83,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         }
     }
 
-    public static class ReactionItem {
-        public final String emoji;
-        public final String title;
-        public final int date;
-        public final int count;
-        public final String action;
-        public final long userId;
-
-        public ReactionItem(String emoji, String title, int date, int count, String action, long userId) {
-            this.emoji = emoji;
-            this.title = title;
-            this.date = date;
-            this.count = count;
-            this.action = action;
-            this.userId = userId;
-        }
-    }
-
     private final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
-    private final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
 
     public VeyraMessageHistoryActivity(long dialogId, MessageObject messageObject) {
         this(dialogId, messageObject, MODE_ALL);
@@ -169,10 +139,9 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private void loadData() {
         if (currentMessageObject == null) return;
         final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
-        final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
         Utilities.globalQueue.postRunnable(() -> {
             try {
-                loadDataInternal(versionEntries, reactionItems);
+                loadDataInternal(versionEntries);
             } catch (Throwable e) {
                 FileLog.e(e);
             }
@@ -182,19 +151,14 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 }
                 this.versionEntries.clear();
                 this.versionEntries.addAll(versionEntries);
-                this.reactionItems.clear();
-                this.reactionItems.addAll(reactionItems);
                 if (messagesListView != null && messagesListView.getAdapter() != null) {
                     messagesListView.getAdapter().notifyDataSetChanged();
-                }
-                if (reactionsListView != null && reactionsListView.getAdapter() != null) {
-                    reactionsListView.getAdapter().notifyDataSetChanged();
                 }
             });
         });
     }
 
-    private void loadDataInternal(ArrayList<VersionEntry> versionEntries, ArrayList<ReactionItem> reactionItems) {
+    private void loadDataInternal(ArrayList<VersionEntry> versionEntries) {
         int messageId = currentMessageObject.getId();
 
         // 1. Load Edit History
@@ -222,58 +186,13 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
             String text = currentMessageObject.messageOwner != null ? currentMessageObject.messageOwner.message : "";
             versionEntries.add(new VersionEntry(0, 1, date, 0, currentMessageObject, text));
         }
-
-        // 2. Load Reaction History
-        List<VeyraEditHistoryManager.ReactionEntry> dbReactions = VeyraEditHistoryManager.getReactionHistory(currentAccount, dialogId, messageId);
-        long currentSelfId = UserConfig.getInstance(currentAccount).getClientUserId();
-        if (dbReactions != null && !dbReactions.isEmpty()) {
-            HashSet<String> seen = new HashSet<>();
-            for (int i = 0; i < dbReactions.size(); i++) {
-                VeyraEditHistoryManager.ReactionEntry entry = dbReactions.get(i);
-                // Ignore self reactions unless explicitly enabled in settings
-                if (!VeyraUIConfig.reactionHistoryIncludeSelf && entry.userId != 0 && entry.userId == currentSelfId) {
-                    continue;
-                }
-                // Avoid duplicate same-action entries
-                String act = entry.action != null ? entry.action : "add";
-                String key = entry.reaction + "_" + entry.userId + "_" + act;
-                if (!seen.add(key)) {
-                    continue;
-                }
-                String userName;
-                if (entry.userId != 0) {
-                    TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(entry.userId);
-                    userName = user != null ? UserObject.getUserName(user) : ("User " + entry.userId);
-                } else {
-                    userName = LocaleController.getString("Reactions", R.string.Reactions);
-                }
-                reactionItems.add(new ReactionItem(entry.reaction, userName, entry.date, entry.count, act, entry.userId));
-            }
-        }
-    }
-
-    private static String getReactionEmoji(TLRPC.Reaction reaction) {
-        if (reaction instanceof TLRPC.TL_reactionPaid) {
-            return "⭐️";
-        } else if (reaction instanceof TLRPC.TL_reactionEmoji) {
-            return ((TLRPC.TL_reactionEmoji) reaction).emoticon;
-        } else if (reaction instanceof TLRPC.TL_reactionCustomEmoji) {
-            return "⭐";
-        }
-        return "❤️";
     }
 
     @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        if (mode == MODE_MESSAGES) {
-            actionBar.setTitle(LocaleController.getString("VeyraHistoryMessages", R.string.VeyraHistoryMessages));
-        } else if (mode == MODE_REACTIONS) {
-            actionBar.setTitle(LocaleController.getString("VeyraHistoryReactions", R.string.VeyraHistoryReactions));
-        } else {
-            actionBar.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
-        }
+        actionBar.setTitle(LocaleController.getString("EditHistory", R.string.EditHistory));
 
         TLRPC.Chat chat = getMessagesController().getChat(-dialogId);
         TLRPC.User user = getMessagesController().getUser(dialogId);
@@ -323,102 +242,14 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         fragmentView = contentView;
 
-        LinearLayout rootLayout = new LinearLayout(context);
-        rootLayout.setOrientation(LinearLayout.VERTICAL);
-
-        // Content Area
-        FrameLayout contentArea = new FrameLayout(context);
-
-        // 1. Messages Timeline List (Native Chat Layout)
         messagesListView = new RecyclerListView(context);
         messagesListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         messagesListView.setAdapter(new VersionsAdapter());
         messagesListView.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(20));
         messagesListView.setClipToPadding(false);
 
-        // 2. Reactions List
-        reactionsContainer = new FrameLayout(context);
-        reactionsListView = new RecyclerListView(context);
-        reactionsListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        reactionsListView.setAdapter(new ReactionsAdapter());
-        reactionsListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
-        reactionsListView.setClipToPadding(false);
-        reactionsContainer.addView(reactionsListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        EmptyTextProgressView emptyView = new EmptyTextProgressView(context);
-        emptyView.setText(LocaleController.getString("VeyraNoReactionHistory", R.string.VeyraNoReactionHistory));
-        emptyView.showTextView();
-        reactionsContainer.addView(emptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        reactionsListView.setEmptyView(emptyView);
-
-        if (mode == MODE_ALL) {
-            LinearLayout tabBar = new LinearLayout(context);
-            tabBar.setOrientation(LinearLayout.HORIZONTAL);
-            tabBar.setGravity(Gravity.CENTER);
-            tabBar.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
-
-            GradientDrawable tabBarBg = new GradientDrawable();
-            tabBarBg.setCornerRadius(AndroidUtilities.dp(16));
-            tabBarBg.setColor(Theme.getColor(Theme.key_chat_inBubble));
-            tabBar.setBackground(tabBarBg);
-
-            tabMessagesView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabMessages", R.string.VeyraEditHistoryTabMessages));
-            tabReactionsView = createTabButton(context, LocaleController.getString("VeyraEditHistoryTabReactions", R.string.VeyraEditHistoryTabReactions));
-
-            tabBar.addView(tabMessagesView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 0, 0, 4, 0));
-            tabBar.addView(tabReactionsView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 4, 0, 0, 0));
-
-            tabMessagesView.setOnClickListener(v -> selectTab(0));
-            tabReactionsView.setOnClickListener(v -> selectTab(1));
-
-            rootLayout.addView(tabBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 20, 14, 20, 14));
-
-            contentArea.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            contentArea.addView(reactionsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            rootLayout.addView(contentArea, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            selectTab(0);
-        } else if (mode == MODE_MESSAGES) {
-            rootLayout.addView(messagesListView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        } else if (mode == MODE_REACTIONS) {
-            rootLayout.addView(reactionsContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        }
-
-        contentView.addView(rootLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        contentView.addView(messagesListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         return fragmentView;
-    }
-
-    private TextView createTabButton(Context context, String title) {
-        TextView tv = new TextView(context);
-        tv.setText(title);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        tv.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        tv.setGravity(Gravity.CENTER);
-        tv.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(8));
-        return tv;
-    }
-
-    private void selectTab(int index) {
-        boolean isMessages = (index == 0);
-        messagesListView.setVisibility(isMessages ? View.VISIBLE : View.GONE);
-        reactionsContainer.setVisibility(isMessages ? View.GONE : View.VISIBLE);
-
-        tabMessagesView.setBackground(createTabPillBg(isMessages));
-        tabMessagesView.setTextColor(Theme.getColor(isMessages ? Theme.key_featuredStickers_buttonText : Theme.key_dialogTextGray2));
-
-        tabReactionsView.setBackground(createTabPillBg(!isMessages));
-        tabReactionsView.setTextColor(Theme.getColor(!isMessages ? Theme.key_featuredStickers_buttonText : Theme.key_dialogTextGray2));
-    }
-
-    private Drawable createTabPillBg(boolean selected) {
-        GradientDrawable d = new GradientDrawable();
-        d.setCornerRadius(AndroidUtilities.dp(14));
-        if (selected) {
-            d.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-            d.setStroke(AndroidUtilities.dp(1), 0x44FFFFFF);
-        } else {
-            d.setColor(Color.TRANSPARENT);
-        }
-        return d;
     }
 
     private static String formatTimeDelta(int prevDate, int curDate) {
@@ -829,110 +660,6 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
                 }
                 return false;
             });
-        }
-    }
-
-    // --- Reactions Cards Adapter ---
-    private class ReactionsAdapter extends RecyclerListView.SelectionAdapter {
-
-        @Override
-        public int getItemCount() {
-            return reactionItems.size();
-        }
-
-        @Override
-        public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            int pos = holder.getAdapterPosition();
-            return pos >= 0 && pos < reactionItems.size() && reactionItems.get(pos).userId > 0;
-        }
-
-        @NonNull
-        @Override
-        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            Context context = parent.getContext();
-            LinearLayout card = new LinearLayout(context);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
-            card.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-            card.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(14), Theme.getColor(Theme.key_windowBackgroundWhite), Theme.getColor(Theme.key_listSelector)));
-
-            LinearLayout row = new LinearLayout(context);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-
-            TextView emojiView = new TextView(context);
-            emojiView.setId(1);
-            emojiView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24);
-            row.addView(emojiView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 12, 0));
-
-            LinearLayout center = new LinearLayout(context);
-            center.setOrientation(LinearLayout.VERTICAL);
-
-            TextView titleView = new TextView(context);
-            titleView.setId(2);
-            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            center.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
-
-            TextView actionView = new TextView(context);
-            actionView.setId(3);
-            actionView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            center.addView(actionView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
-
-            row.addView(center, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
-
-            TextView dateView = new TextView(context);
-            dateView.setId(4);
-            dateView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            dateView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-            dateView.setGravity(Gravity.END);
-            row.addView(dateView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
-
-            card.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-            RecyclerView.LayoutParams lp = (RecyclerView.LayoutParams) card.getLayoutParams();
-            lp.topMargin = AndroidUtilities.dp(4);
-            lp.bottomMargin = AndroidUtilities.dp(4);
-            card.setLayoutParams(lp);
-
-            return new RecyclerListView.Holder(card);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            ReactionItem item = reactionItems.get(position);
-            View card = holder.itemView;
-
-            TextView emojiView = card.findViewById(1);
-            TextView titleView = card.findViewById(2);
-            TextView actionView = card.findViewById(3);
-            TextView dateView = card.findViewById(4);
-
-            emojiView.setText(item.emoji);
-            titleView.setText(item.title);
-
-            boolean isRemove = "remove".equals(item.action);
-            actionView.setText(isRemove ? "- removed reaction" : "+ added reaction");
-            actionView.setTextColor(isRemove ? 0xFFFF4444 : 0xFF10B981);
-
-            if (item.userId > 0) {
-                card.setOnClickListener(v -> {
-                    Bundle args = new Bundle();
-                    args.putLong("user_id", item.userId);
-                    presentFragment(new ProfileActivity(args));
-                });
-            } else {
-                card.setOnClickListener(null);
-            }
-
-            if (item.date > 0) {
-                dateView.setText(LocaleController.formatDateTime(item.date, false));
-                dateView.setVisibility(View.VISIBLE);
-            } else {
-                dateView.setVisibility(View.GONE);
-            }
         }
     }
 }
