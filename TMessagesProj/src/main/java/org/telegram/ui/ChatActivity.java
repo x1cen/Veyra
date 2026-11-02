@@ -33642,7 +33642,7 @@ public class ChatActivity extends BaseFragment implements
                         return;
                     }
                 }
-                MediaController.saveFile(finalPath, getParentActivity(), isVideo ? 1 : 0, null, uri -> {
+                MediaController.saveFile(finalPath, getParentActivity(), isVideo ? 1 : 0, null, null, uri -> {
                     if (finalExport != null) {
                         try { finalExport.close(); } catch (Throwable ignore) {}
                     }

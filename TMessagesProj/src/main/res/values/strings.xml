@@ -1477,6 +1477,7 @@
     <string name="DeletedEditedMessage">deleted²</string>
     <string name="CopyCallback">Copy Callback Data</string>
     <string name="CopyInlineQuery">Copy Inline Query</string>
+    <string name="CopyID">Copy ID</string>
     <string name="EditMessage">Edit Message</string>
     <string name="EditCaption">Edit Caption</string>
     <string name="EditMessageMedia">Tap to edit media</string>

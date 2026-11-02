@@ -423,7 +423,7 @@ public class VeyraForwarder {
         return getMessageFilePath(currentAccount, message, null);
     }
 
-    private static File getMessageFilePath(int currentAccount, MessageObject message, List<SecretMediaExport> openedExports) {
+    private static File getMessageFilePath(int currentAccount, MessageObject message, java.util.List<SecretMediaExport> openedExports) {
         if (message == null || message.messageOwner == null) return null;
         if (message.messageOwner instanceof TLRPC.TL_message_secret || message.isSecret()) {
             try {

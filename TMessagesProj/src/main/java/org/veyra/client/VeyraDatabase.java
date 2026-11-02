@@ -73,6 +73,7 @@ public final class VeyraDatabase {
                         SQLiteCursor cursor = telegramDb.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
                         if (cursor.next()) {
                             database.beginTransaction();
+                            boolean inTx = true;
                             try {
                                 do {
                                     int mid = cursor.intValue(0);
@@ -80,8 +81,9 @@ public final class VeyraDatabase {
                                     saveDeletedIndex(uid, mid);
                                 } while (cursor.next());
                                 database.commitTransaction();
+                                inTx = false;
                             } finally {
-                                if (database.inTransaction()) {
+                                if (inTx) {
                                     database.commitTransaction();
                                 }
                             }
