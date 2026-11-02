@@ -17608,7 +17608,7 @@ public class MessagesController extends BaseController implements NotificationCe
             ArrayList<Integer> selfDelIds = new ArrayList<>();
             for (int b = 0; b < ids.size(); b++) {
                 int mid = ids.get(b);
-                if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)) {
                     selfDelIds.add(mid);
                 } else {
                     retainedIds.add(mid);
@@ -21283,7 +21283,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     ArrayList<Integer> retainedList = new ArrayList<>();
                     for (int i = 0; i < arrayList.size(); i++) {
                         int mid = arrayList.get(i);
-                        if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(key, mid)) {
+                        if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, key, mid)) {
                             selfDelList.add(mid);
                         } else {
                             retainedList.add(mid);

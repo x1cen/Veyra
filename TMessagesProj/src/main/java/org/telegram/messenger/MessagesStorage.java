@@ -14465,7 +14465,7 @@ public class MessagesStorage extends BaseController {
                         ArrayList<Integer> retainedList = new ArrayList<>();
                         for (int i = 0; i < mids.size(); i++) {
                             int mid = mids.get(i);
-                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)) {
                                 selfDelList.add(mid);
                             } else {
                                 retainedList.add(mid);
@@ -14532,13 +14532,13 @@ public class MessagesStorage extends BaseController {
             if (dialogId != 0) {
                 for (int m = 0; m < messages.size(); m++) {
                     int mid = messages.get(m);
-                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialogId, mid)) {
+                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)) {
                         continue;
                     }
                     try {
                         org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(dialogId, mid);
                     } catch (Throwable ignored) {}
-                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(dialogId, mid);
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, dialogId, mid);
                 }
                 if (!dialogsToUpdate.contains(dialogId)) {
                     dialogsToUpdate.add(dialogId);
@@ -14553,7 +14553,7 @@ public class MessagesStorage extends BaseController {
                 try {
                     long did = cursor.longValue(0);
                     int mid = cursor.intValue(1);
-                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, mid)) {
+                    if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, did, mid)) {
                         continue;
                     }
                     byte[] dataBytes = null;
@@ -14575,7 +14575,7 @@ public class MessagesStorage extends BaseController {
                     try {
                         org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedMessage(did, mid, msgDate, dataBytes);
                     } catch (Throwable ignored) {}
-                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, mid);
+                    org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, did, mid);
                     if (!dialogsToUpdate.contains(did)) {
                         dialogsToUpdate.add(did);
                     }
@@ -14730,7 +14730,7 @@ public class MessagesStorage extends BaseController {
                                 deletedMessages.add(message);
                             }
                             data.reuse();
-                            if ((DialogObject.isEncryptedDialog(did) || deleteFiles) && org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, mid)) {
+                            if ((DialogObject.isEncryptedDialog(did) || deleteFiles) && org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, did, mid)) {
                                 addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, false);
                             }
 
@@ -14977,10 +14977,10 @@ public class MessagesStorage extends BaseController {
                     ArrayList<Integer> toDeleteFromDb = new ArrayList<>();
                     for (int m = 0; m < mids.size(); m++) {
                         int msgId = mids.get(m);
-                        if (msgId > 0 && !org.veyra.client.VeyraAntiDelete.isSelfDeleted(did, msgId)) {
+                        if (msgId > 0 && !org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, did, msgId)) {
                             try {
                                 org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(did, msgId);
-                                org.veyra.client.VeyraAntiDelete.addDeletedMessage(did, msgId);
+                                org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, did, msgId);
                             } catch (Throwable ignored) {}
                             continue;
                         }
