@@ -8148,6 +8148,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     AndroidUtilities.runOnUIThread(() -> {
                         ArrayList<Integer> toDel = new ArrayList<>();
                         toDel.add(delMid);
+                        org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(currentAccount, newMsgObj.dialog_id, toDel);
                         getMessagesController().deleteMessages(toDel, null, null, newMsgObj.dialog_id, 0, true, 0);
                     });
                 }
