@@ -49,7 +49,12 @@ public final class SecretMediaExport implements AutoCloseable {
             File keyFile = findKeyFile(found);
             if (keyFile != null && keyFile.isFile()) {
                 File tmp = File.createTempFile("veyra_ttl_", "." + extension(message, found), FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
-                decryptCtrCopy(found, keyFile, tmp);
+                try {
+                    decryptCtrCopy(found, keyFile, tmp);
+                } catch (IOException | RuntimeException e) {
+                    tmp.delete();
+                    throw e;
+                }
                 return new SecretMediaExport(tmp, true);
             }
         }
