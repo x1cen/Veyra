@@ -3641,6 +3641,17 @@ public class AndroidUtilities {
         return false;
     }
 
+    public static String getTextOrBase64(byte[] data) {
+        if (data == null) {
+            return "";
+        }
+        try {
+            return java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(data)).toString();
+        } catch (Exception e) {
+            return android.util.Base64.encodeToString(data, android.util.Base64.NO_PADDING | android.util.Base64.NO_WRAP);
+        }
+    }
+
     public static void addMediaToGallery(String fromPath) {
         if (fromPath == null) {
             return;
