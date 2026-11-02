@@ -19532,6 +19532,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.Message oldMessage = getMessagesStorage().getMessageInternal(editDialogId, editMessageId);
                     if (oldMessage != null && !android.text.TextUtils.equals(oldMessage.message, editNewText)) {
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
+                                currentAccount,
                                 editDialogId,
                                 editMessageId,
                                 oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date,
