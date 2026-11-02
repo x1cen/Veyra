@@ -24,6 +24,17 @@ public class VeyraSettingsRow {
     public int icon;
     public int iconColorTop;
     public int iconColorBottom;
+    public BooleanSupplier enabledSupplier;
+
+    public boolean isEnabled() {
+        return enabledSupplier == null || enabledSupplier.getAsBoolean();
+    }
+
+    // Row stays visible but greyed out and unclickable while the supplier returns false.
+    public VeyraSettingsRow enabledWhen(BooleanSupplier supplier) {
+        enabledSupplier = supplier;
+        return this;
+    }
 
     public static VeyraSettingsRow header(String title) {
         VeyraSettingsRow row = new VeyraSettingsRow();

@@ -89,36 +89,34 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 val -> { VeyraGhost.toggleGhostMode(); reloadRows(); },
                 true
         ));
-        if (VeyraGhost.ghostMode) {
-            r.add(VeyraSettingsRow.toggle(
-                    "Hide Online Status",
-                    "Appear offline to other users at all times",
-                    () -> VeyraGhost.hideOnline,
-                    val -> VeyraGhost.toggleHideOnline(),
-                    true
-            ));
-            r.add(VeyraSettingsRow.toggle(
-                    "Hide Typing Status",
-                    "Don't send typing, voice recording, or upload actions",
-                    () -> VeyraGhost.hideTyping,
-                    val -> VeyraGhost.toggleHideTyping(),
-                    true
-            ));
-            r.add(VeyraSettingsRow.toggle(
-                    "Mark as Read on Reply",
-                    "Keep messages unread until you reply to the conversation",
-                    () -> VeyraGhost.readOnReply,
-                    val -> VeyraGhost.toggleReadOnReply(),
-                    true
-            ));
-            r.add(VeyraSettingsRow.toggle(
-                    "Stealth Story Views",
-                    "View stories anonymously without appearing in viewer list",
-                    () -> VeyraGhost.hideStories,
-                    val -> VeyraGhost.toggleHideStories(),
-                    false
-            ));
-        }
+        r.add(VeyraSettingsRow.toggle(
+                "Hide Online Status",
+                "Appear offline to other users at all times",
+                () -> VeyraGhost.hideOnline,
+                val -> VeyraGhost.toggleHideOnline(),
+                true
+        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle(
+                "Hide Typing Status",
+                "Don't send typing, voice recording, or upload actions",
+                () -> VeyraGhost.hideTyping,
+                val -> VeyraGhost.toggleHideTyping(),
+                true
+        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle(
+                "Mark as Read on Reply",
+                "Keep messages unread until you reply to the conversation",
+                () -> VeyraGhost.readOnReply,
+                val -> VeyraGhost.toggleReadOnReply(),
+                true
+        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle(
+                "Stealth Story Views",
+                "View stories anonymously without appearing in viewer list",
+                () -> VeyraGhost.hideStories,
+                val -> VeyraGhost.toggleHideStories(),
+                false
+        ).enabledWhen(() -> VeyraGhost.ghostMode));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Account"));

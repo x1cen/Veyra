@@ -112,6 +112,9 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                 return;
             }
             VeyraSettingsRow row = rows.get(position);
+            if (!row.isEnabled()) {
+                return;
+            }
             if (row.type == VeyraSettingsRow.Type.TOGGLE && row.getter != null && row.setter != null) {
                 if (row.onClick != null) {
                     boolean isRightSide = LocaleController.isRTL ? x <= AndroidUtilities.dp(76) : x >= view.getMeasuredWidth() - AndroidUtilities.dp(76);
@@ -164,7 +167,11 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
             if (position < 0 || position >= rows.size()) {
                 return false;
             }
-            VeyraSettingsRow.Type type = rows.get(position).type;
+            VeyraSettingsRow r = rows.get(position);
+            if (!r.isEnabled()) {
+                return false;
+            }
+            VeyraSettingsRow.Type type = r.type;
             return type == VeyraSettingsRow.Type.TOGGLE || type == VeyraSettingsRow.Type.DETAIL ||
                     type == VeyraSettingsRow.Type.BUTTON || type == VeyraSettingsRow.Type.CATEGORY;
         }
@@ -226,6 +233,7 @@ public abstract class VeyraSettingsBaseActivity extends BaseFragment {
                         } else {
                             checkCell.setTextAndCheck(row.title, checked, needDivider);
                         }
+                        checkCell.setEnabled(row.isEnabled(), null);
                         break;
                     }
                     case 3: {
