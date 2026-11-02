@@ -526,6 +526,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         final MessageObject messageObject = currentMessageObject;
         Utilities.globalQueue.postRunnable(() -> {
             SecretMediaExport export = null;
+            File source = null;
             File staged = null;
             try {
                 if (bitmapCopy != null) {
@@ -536,7 +537,8 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                     }
                 } else {
                     export = SecretMediaExport.open(currentAccount, messageObject);
-                    staged = stagePublicCopy(export.getFile());
+                    source = export.getFile();
+                    staged = stagePublicCopy(source);
                 }
 
                 if (staged == null || !staged.isFile() || staged.length() <= 0) {
@@ -564,9 +566,12 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 }
 
                 final File stagedFinal = staged;
+                final boolean stagedIsCopy = !staged.equals(source);
                 final SecretMediaExport exportFinal = export;
                 MediaController.saveFile(stagedFinal.getAbsolutePath(), parentActivity, saveType, name, messageObject.getMimeType(), uri -> AndroidUtilities.runOnUIThread(() -> {
-                    deleteQuietly(stagedFinal);
+                    if (stagedIsCopy) {
+                        deleteQuietly(stagedFinal);
+                    }
                     closeQuietly(exportFinal);
                     if (containerView == null) {
                         return;
@@ -581,7 +586,9 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 }));
             } catch (Exception e) {
                 FileLog.e(e);
-                deleteQuietly(staged);
+                if (staged != null && !staged.equals(source)) {
+                    deleteQuietly(staged);
+                }
                 closeQuietly(export);
                 AndroidUtilities.runOnUIThread(() -> {
                     if (containerView != null) {
