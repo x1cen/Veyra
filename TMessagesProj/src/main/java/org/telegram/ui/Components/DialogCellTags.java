@@ -124,7 +124,7 @@ public class DialogCellTags {
         ) {
             for (int i = 0; i < allFilters.size(); ++i) {
                 MessagesController.DialogFilter filter = allFilters.get(i);
-                if (filter == null || filter == currentFilter)
+                if (filter == null || filter == currentFilter || filter.color < 0)
                     continue;
                 if (filter.includesDialog(account, dialogId)) {
                     filters.add(filter);
