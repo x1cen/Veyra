@@ -251,10 +251,15 @@ public class VeyraMessageHelper extends BaseController {
             TLRPC.InputPeer peer = getMessagesController().getInputPeer(dialogId);
             TLRPC.InputPeer fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
             doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0);
+            boolean completed = false;
             try {
-                latch.await();
+                completed = latch.await(30, java.util.concurrent.TimeUnit.SECONDS);
             } catch (Exception e) {
                 FileLog.e(e);
+            }
+            if (!completed) {
+                FileLog.e("VeyraMessageHelper: self-message search timed out, delete aborted");
+                return;
             }
             if (!messageIds.isEmpty()) {
                 ArrayList<ArrayList<Integer>> lists = new ArrayList<>();
