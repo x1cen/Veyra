@@ -89,32 +89,82 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 val -> { VeyraGhost.toggleGhostMode(); reloadRows(); },
                 true
         ));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Online Status"));
         r.add(VeyraSettingsRow.toggle(
                 "Hide Online Status",
                 "Appear offline to other users at all times",
                 () -> VeyraGhost.hideOnline,
-                val -> VeyraGhost.toggleHideOnline(),
+                val -> { VeyraGhost.toggleHideOnline(); reloadRows(); },
                 true
         ).enabledWhen(() -> VeyraGhost.ghostMode));
         r.add(VeyraSettingsRow.toggle(
-                "Hide Typing Status",
-                "Don't send typing, voice recording, or upload actions",
+                "Go Offline After Sending",
+                "Sending a message briefly shows you online; switch back to offline right after",
+                () -> VeyraGhost.offlineAfterMessage,
+                val -> VeyraGhost.toggleOfflineAfterMessage(),
+                false
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideOnline));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Typing & Actions"));
+        r.add(VeyraSettingsRow.toggle(
+                "Hide Typing & Actions",
+                "Don't show others what you're doing in a chat",
                 () -> VeyraGhost.hideTyping,
-                val -> VeyraGhost.toggleHideTyping(),
+                val -> { VeyraGhost.toggleHideTyping(); reloadRows(); },
                 true
         ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle("Typing", "Text, stickers and other actions",
+                () -> VeyraGhost.hideTypingText, val -> VeyraGhost.toggleHideTypingText(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        r.add(VeyraSettingsRow.toggle("Recording Voice", "Recording and uploading voice messages",
+                () -> VeyraGhost.hideTypingVoice, val -> VeyraGhost.toggleHideTypingVoice(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        r.add(VeyraSettingsRow.toggle("Recording Video", "Videos and video messages",
+                () -> VeyraGhost.hideTypingVideo, val -> VeyraGhost.toggleHideTypingVideo(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        r.add(VeyraSettingsRow.toggle("Uploading Files", "Photos and documents",
+                () -> VeyraGhost.hideTypingFiles, val -> VeyraGhost.toggleHideTypingFiles(), false
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Read Receipts"));
         r.add(VeyraSettingsRow.toggle(
-                "Mark as Read on Reply",
-                "Keep messages unread until you reply to the conversation",
-                () -> VeyraGhost.readOnReply,
-                val -> VeyraGhost.toggleReadOnReply(),
+                "Hide Read Receipts",
+                "Read messages without the sender seeing it",
+                () -> VeyraGhost.hideRead,
+                val -> { VeyraGhost.toggleHideRead(); reloadRows(); },
                 true
         ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle("Mark as Read on Reply", "Recommended. When you reply, the chat is marked as read",
+                () -> VeyraGhost.readOnReply, val -> VeyraGhost.toggleReadOnReply(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.toggle("Secret Chats", "Also hide read receipts in secret chats",
+                () -> VeyraGhost.hideSecretRead, val -> VeyraGhost.toggleHideSecretRead(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.toggle("Reactions", "Don't report that you've seen reactions to your messages",
+                () -> VeyraGhost.hideReadReactions, val -> VeyraGhost.toggleHideReadReactions(), true
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.toggle("Voice & Video Playback", "Don't report played voice and video messages. Mentions and view-once media are always reported",
+                () -> VeyraGhost.hideMediaReceipts, val -> VeyraGhost.toggleHideMediaReceipts(), false
+        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Views"));
         r.add(VeyraSettingsRow.toggle(
                 "Stealth Story Views",
                 "View stories anonymously without appearing in viewer list",
                 () -> VeyraGhost.hideStories,
                 val -> VeyraGhost.toggleHideStories(),
+                true
+        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        r.add(VeyraSettingsRow.toggle(
+                "Anonymous Channel Browsing",
+                "Reading channel posts doesn't increase their view count",
+                () -> VeyraGhost.hideChannelViews,
+                val -> VeyraGhost.toggleHideChannelViews(),
                 false
         ).enabledWhen(() -> VeyraGhost.ghostMode));
         r.add(VeyraSettingsRow.shadow());

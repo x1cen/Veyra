@@ -1495,6 +1495,7 @@
     <string name="GhostHideOnline">Hide Online Status</string>
     <string name="GhostHideTyping">Hide Typing Status</string>
     <string name="GhostReadOnReply">Mark as Read on Reply</string>
+    <string name="GhostHideRead">Hide Read Receipts</string>
     <string name="GhostHideStories">Stealth Story Views</string>
     <string name="EditHistory">Edit History</string>
     <string name="OriginalMessage">Original Message</string>

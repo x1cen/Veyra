@@ -603,9 +603,9 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                     ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.hideTyping);
                 }
             } else if (position == ghostReadRow) {
-                org.veyra.client.VeyraGhost.toggleReadOnReply();
+                org.veyra.client.VeyraGhost.toggleHideRead();
                 if (view instanceof TextCheckCell) {
-                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.readOnReply);
+                    ((TextCheckCell) view).setChecked(org.veyra.client.VeyraGhost.hideRead);
                 }
             } else if (position == ghostStoriesRow) {
                 org.veyra.client.VeyraGhost.toggleHideStories();
@@ -1342,7 +1342,7 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
                     } else if (position == ghostTypingRow) {
                         textCheckCell.setTextAndCheck(getString("GhostHideTyping", R.string.GhostHideTyping), org.veyra.client.VeyraGhost.hideTyping, true);
                     } else if (position == ghostReadRow) {
-                        textCheckCell.setTextAndCheck(getString("GhostReadOnReply", R.string.GhostReadOnReply), org.veyra.client.VeyraGhost.readOnReply, true);
+                        textCheckCell.setTextAndCheck(getString("GhostHideRead", R.string.GhostHideRead), org.veyra.client.VeyraGhost.hideRead, true);
                     } else if (position == ghostStoriesRow) {
                         textCheckCell.setTextAndCheck(getString("GhostHideStories", R.string.GhostHideStories), org.veyra.client.VeyraGhost.hideStories, false);
                     } else if (position == contactsSyncRow) {
