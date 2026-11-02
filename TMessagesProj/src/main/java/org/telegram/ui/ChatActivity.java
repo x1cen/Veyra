@@ -40521,60 +40521,67 @@ public class ChatActivity extends BaseFragment implements
         }
 
         @Override
-        public void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
-            if (isQuickRepliesOrWelcomeMessagesMode()) return;
-            if (getParentActivity() == null || cell == null || button == null) return;
-
-            try {
-                cell.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
-            } catch (Exception ignore) {}
-
-            Utilities.Callback<String> copyCallback = (text) -> {
-                AndroidUtilities.addToClipboard(text);
-                BulletinFactory.of(ChatActivity.this).createCopyBulletin(formatString(R.string.ExactTextCopied, text)).show();
-            };
-
-            ItemOptions options = ItemOptions.makeOptions(ChatActivity.this, cell, true);
-            if (cell.lastPressedBotButtonRect != null && !cell.lastPressedBotButtonRect.isEmpty()) {
-                options.setCustomScrimBounds(new RectF(cell.lastPressedBotButtonRect));
-            }
-            if (LocaleController.isRTL) {
-                options.setGravity(Gravity.LEFT);
-            }
-            String buttonText = button.getText();
-            if (!TextUtils.isEmpty(buttonText)) {
-                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(buttonText));
-            }
+        public boolean didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
+            if (isQuickRepliesOrWelcomeMessagesMode()) return false;
+            if (getParentActivity() == null || button == null) return false;
 
             final TL_keyboard.TL_inlineButtonTypeUrl buttonTypeUrl = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrl.class);
-            if (buttonTypeUrl != null) {
-                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(buttonTypeUrl.url));
-                options.add(R.drawable.msg_openprofile, LocaleController.getString(R.string.Open), () -> openClickableLink(null, buttonTypeUrl.url, true, cell, cell.getMessageObject(), false));
-            }
-            final TL_keyboard.TL_inlineButtonTypeUrlAuth buttonTypeUrlAuth = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUrlAuth.class);
-            if (buttonTypeUrlAuth != null) {
-                options.add(R.drawable.msg_link, LocaleController.getString(R.string.CopyLink), () -> copyCallback.run(buttonTypeUrlAuth.url));
-            }
-            final TL_keyboard.TL_inlineButtonTypeCallback buttonTypeCallback = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCallback.class);
-            if (buttonTypeCallback != null && buttonTypeCallback.data != null) {
-                final String callbackData = AndroidUtilities.getTextOrBase64(buttonTypeCallback.data);
-                if (!TextUtils.isEmpty(callbackData)) {
-                    options.add(R.drawable.msg_copy, LocaleController.getString(R.string.CopyCallback), () -> copyCallback.run(callbackData));
-                }
-            }
-            final TL_keyboard.TL_inlineButtonTypeSwitchInline buttonTypeSwitchInline = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeSwitchInline.class);
-            if (buttonTypeSwitchInline != null && !TextUtils.isEmpty(buttonTypeSwitchInline.query)) {
-                options.add(R.drawable.msg_copy, LocaleController.getString(R.string.CopyInlineQuery), () -> copyCallback.run(buttonTypeSwitchInline.query));
-            }
-            final TL_keyboard.TL_inlineButtonTypeUserProfile buttonTypeUserProfile = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class);
-            if (buttonTypeUserProfile != null) {
-                options.add(R.drawable.msg_copy, LocaleController.getString(R.string.CopyID), () -> copyCallback.run(String.valueOf(buttonTypeUserProfile.user_id)));
-            }
             final TL_keyboard.TL_inlineButtonTypeCopy buttonTypeCopy = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCopy.class);
-            if (buttonTypeCopy != null && !TextUtils.isEmpty(buttonTypeCopy.copy_text)) {
-                options.add(R.drawable.msg_copy, getString(R.string.Copy), () -> copyCallback.run(buttonTypeCopy.copy_text));
+
+            final String url = button.getUrl();
+            final TL_keyboard.TL_inlineButtonTypeCallback buttonTypeCallback = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeCallback.class);
+            final TL_keyboard.TL_inlineButtonTypeSwitchInline buttonTypeSwitchInline = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeSwitchInline.class);
+            final TL_keyboard.TL_inlineButtonTypeUserProfile buttonTypeUserProfile = TLKeyboardHelper.getType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class);
+
+            if (bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE &&
+                    buttonTypeUrl == null && buttonTypeCopy == null &&
+                    url == null && buttonTypeCallback == null && buttonTypeSwitchInline == null && buttonTypeUserProfile == null &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeSwitchInline.class) &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeCallback.class) &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeGame.class) &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeBuy.class) &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUrlAuth.class) &&
+                    !TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeUserProfile.class)) {
+                return false;
             }
-            options.show();
+
+            if (buttonTypeCopy != null) {
+                didLongPressCopyButton(buttonTypeCopy.copy_text);
+                return true;
+            }
+            if (buttonTypeUrl != null) {
+                openClickableLink(null, buttonTypeUrl.url, true, cell, cell != null ? cell.getMessageObject() : null, false);
+                return true;
+            }
+            if (url != null) {
+                openClickableLink(null, url, true, cell, cell != null ? cell.getMessageObject() : null, false);
+                return true;
+            } else {
+                BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity(), false, themeDelegate);
+                builder.setTitle(button.getText());
+                builder.setItems(new CharSequence[]{
+                        LocaleController.getString(R.string.Copy),
+                        buttonTypeCallback != null ? LocaleController.getString(R.string.CopyCallback) : null,
+                        buttonTypeSwitchInline != null ? LocaleController.getString(R.string.CopyInlineQuery) : null,
+                        buttonTypeUserProfile != null ? LocaleController.getString(R.string.CopyID) : null
+                }, (dialog, which) -> {
+                    if (which == 0) {
+                        AndroidUtilities.addToClipboard(button.getText());
+                    } else if (which == 1 && buttonTypeCallback != null) {
+                        AndroidUtilities.addToClipboard(AndroidUtilities.getTextOrBase64(buttonTypeCallback.data));
+                    } else if (which == 2 && buttonTypeSwitchInline != null) {
+                        AndroidUtilities.addToClipboard(buttonTypeSwitchInline.query);
+                    } else if (which == 3 && buttonTypeUserProfile != null) {
+                        AndroidUtilities.addToClipboard(String.valueOf(buttonTypeUserProfile.user_id));
+                    }
+                    createUndoView();
+                    if (undoView != null) {
+                        undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
+                    }
+                });
+                showDialog(builder.create());
+                return true;
+            }
         }
 
         @Override

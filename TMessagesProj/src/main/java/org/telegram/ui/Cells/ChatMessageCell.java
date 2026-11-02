@@ -696,7 +696,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         default void didPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
         }
 
-        default void didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
+        default boolean didLongPressBotButton(ChatMessageCell cell, TL_keyboard.KeyboardButtonProto button) {
+            return false;
         }
 
         default void didPressCustomBotButton(ChatMessageCell cell, BotInlineKeyboard.ButtonCustom button) {
@@ -4688,37 +4689,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     button.selectorDrawable.setHotspot(x, y);
                     button.selectorDrawable.setState(pressedState);
                     button.setPressed(!button.isLocked);
-                    final int longPressedBotButton = pressedBotButton;
-                    postDelayed(() -> {
-                        if (longPressedBotButton == pressedBotButton) {
-                            BotButton button2 = botButtons.get(pressedBotButton);
-                            if (button2 != null) {
-                                if (button2.selectorDrawable != null) {
-                                    button2.selectorDrawable.setState(StateSet.NOTHING);
-                                }
-                                button2.setPressed(false);
-                                if (!currentMessageObject.scheduled) {
-                                    final int wfb = getWidthForButtons();
-                                    final int ax = currentMessageObject.isOutOwner() ? getMeasuredWidth() - wfb - dp(10) : backgroundDrawableLeft + dp(mediaBackground ? 1 : 7);
-                                    final int by = button2.y + layoutHeight - dp(2);
-                                    lastPressedBotButtonRect.set(button2.x * wfb + ax, by, button2.x * wfb + ax + button2.width * wfb, by + button2.height);
-                                    if (button2.buttonCustom != null) {
-                                        cancelCheckLongPress();
-                                        if (delegate != null) {
-                                            delegate.didLongPressCustomBotButton(this, button2.buttonCustom);
-                                        }
-                                    } else if (button2.button != null) {
-                                        cancelCheckLongPress();
-                                        if (delegate != null) {
-                                            delegate.didLongPressBotButton(this, button2.button);
-                                        }
-                                    }
-                                }
-                            }
-                            pressedBotButton = -1;
-                            invalidateOutbounds();
-                        }
-                    }, ViewConfiguration.getLongPressTimeout() - 1);
                     break;
                 }
             }
@@ -12272,6 +12242,23 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
         resetPressedLink(-1);
+        if (pressedBotButton != -1 && pressedBotButton < botButtons.size()) {
+            BotButton button = botButtons.get(pressedBotButton);
+            if (button != null) {
+                if (button.selectorDrawable != null) {
+                    button.selectorDrawable.setState(StateSet.NOTHING);
+                }
+                button.setPressed(false);
+                if (button.button != null && delegate != null && delegate.didLongPressBotButton(this, button.button)) {
+                    pressedBotButton = -1;
+                    return true;
+                } else if (button.buttonCustom != null && delegate != null) {
+                    delegate.didLongPressCustomBotButton(this, button.buttonCustom);
+                    pressedBotButton = -1;
+                    return true;
+                }
+            }
+        }
         if (buttonPressed != 0 || miniButtonPressed != 0 || videoButtonPressed != 0 || pressedBotButton != -1) {
             buttonPressed = 0;
             miniButtonPressed = 0;
