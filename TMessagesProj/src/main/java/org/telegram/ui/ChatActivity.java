@@ -34060,6 +34060,7 @@ public class ChatActivity extends BaseFragment implements
                     } else if (TextUtils.isEmpty(fileName) && (selectedObject.isRoundVideo() || selectedObject.isRoundOnce())) {
                         fileName = "round_" + selectedObject.getId() + ".mp4";
                     }
+                    final boolean saveIsVoice = selectedObject.isVoice() || selectedObject.isVoiceOnce();
                     String path = getMessageSavePath(selectedObject);
                     if (TextUtils.isEmpty(path)) {
                         ArrayList<MessageObject> messageObjects = new ArrayList<>();
@@ -34076,7 +34077,7 @@ public class ChatActivity extends BaseFragment implements
                                     fileType = BulletinFactory.FileType.PHOTO_TO_DOWNLOADS;
                                 } else if (isVideoFinal) {
                                     fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
-                                } else if (selectedObject.isVoice() || selectedObject.isVoiceOnce()) {
+                                } else if (saveIsVoice) {
                                     fileType = BulletinFactory.FileType.AUDIO;
                                 } else {
                                     fileType = BulletinFactory.FileType.UNKNOWN;
@@ -34097,7 +34098,7 @@ public class ChatActivity extends BaseFragment implements
                             fileType = BulletinFactory.FileType.VIDEO_TO_DOWNLOADS;
                         } else if (gif) {
                             fileType = BulletinFactory.FileType.GIF_TO_DOWNLOADS;
-                        } else if (selectedObject.isVoice() || selectedObject.isVoiceOnce()) {
+                        } else if (saveIsVoice) {
                             fileType = BulletinFactory.FileType.AUDIO;
                         } else {
                             fileType = BulletinFactory.FileType.UNKNOWN;
