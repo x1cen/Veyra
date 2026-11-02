@@ -2877,13 +2877,13 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
         if (this.allowScreenshots != allowScreenshots) {
             this.allowScreenshots = allowScreenshots;
 
+            boolean secure = org.telegram.messenger.FlagSecureReason.isScreenProtectionActive();
             if (surfaceView != null) {
-                surfaceView.setSecure(!allowScreenshots);
+                surfaceView.setSecure(secure);
             }
             if (liveView != null) {
-                liveView.setSecure(!allowScreenshots);
+                liveView.setSecure(secure);
             }
-            boolean secure = org.telegram.messenger.FlagSecureReason.isScreenProtectionActive();
             if (ATTACH_TO_FRAGMENT) {
                 if (fragment.getParentActivity() != null) {
                     if (!secure) {
