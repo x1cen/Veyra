@@ -7861,7 +7861,7 @@ public class MessagesStorage extends BaseController {
         return ref.get();
     }
 
-    private TLRPC.Message getMessageInternal(long dialogId, long msgId) {
+    TLRPC.Message getMessageInternal(long dialogId, long msgId) {
         SQLiteCursor cursor = null;
         TLRPC.Message result = null;
         try {

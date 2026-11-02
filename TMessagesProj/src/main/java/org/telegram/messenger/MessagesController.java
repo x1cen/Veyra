@@ -19525,16 +19525,21 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
 
                 ImageLoader.saveMessageThumbs(message);
-                MessageObject oldObj = dialogMessagesByIds != null ? dialogMessagesByIds.get(message.id) : null;
-                if (oldObj != null && oldObj.messageOwner != null && !android.text.TextUtils.equals(oldObj.messageOwner.message, message.message)) {
-                    org.veyra.client.VeyraEditHistoryManager.logEdit(
-                            message.dialog_id,
-                            message.id,
-                            oldObj.messageOwner.edit_date > 0 ? oldObj.messageOwner.edit_date : oldObj.messageOwner.date,
-                            oldObj.messageOwner.message,
-                            oldObj.messageOwner
-                    );
-                }
+                final long editDialogId = message.dialog_id;
+                final int editMessageId = message.id;
+                final String editNewText = message.message;
+                getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                    TLRPC.Message oldMessage = getMessagesStorage().getMessageInternal(editDialogId, editMessageId);
+                    if (oldMessage != null && !android.text.TextUtils.equals(oldMessage.message, editNewText)) {
+                        org.veyra.client.VeyraEditHistoryManager.logEdit(
+                                editDialogId,
+                                editMessageId,
+                                oldMessage.edit_date > 0 ? oldMessage.edit_date : oldMessage.date,
+                                oldMessage.message,
+                                oldMessage
+                        );
+                    }
+                });
                 AndroidUtilities.runOnUIThread(() -> {
                     getSendMessagesHelper().onMessageEdited(message);
                     if (!message.out && message.dialog_id == 777000
