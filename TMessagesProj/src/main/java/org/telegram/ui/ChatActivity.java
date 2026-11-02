@@ -46807,7 +46807,7 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
                 }
-                if (selectedObject != null && org.veyra.client.VeyraEditHistoryManager.hasHistory(selectedObject.getDialogId(), selectedObject.getId())) {
+                if (selectedObject != null && org.veyra.client.VeyraEditHistoryManager.hasHistory(currentAccount, selectedObject.getDialogId(), selectedObject.getId())) {
                     items.add("Edit History");
                     options.add(OPTION_VIEW_EDIT_HISTORY);
                     icons.add(R.drawable.msg_recent);
