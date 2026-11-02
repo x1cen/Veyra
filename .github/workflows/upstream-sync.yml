@@ -1,106 +1,181 @@
-name: Upstream Telegram Sync & Release Automation
+name: Upstream Telegram Sync
+
+# Keeps the upstream mirror branch equal to DrKLO/Telegram master and merges it into master.
+# Merge (not rebase) is used on purpose: no force push is needed, and GITHUB_TOKEN can push it
+# because upstream commits never touch .github/workflows.
 
 on:
-    schedule:
-        # Check every day at 04:00 UTC
-        - cron: '0 4 * * *'
-    workflow_dispatch:
-        inputs:
-            force-check:
-                description: 'Force check even if no new tag'
-                type: boolean
-                default: false
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch: {}
 
 permissions:
-    contents: write
-    issues: write
-    actions: write
+  contents: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
 
 jobs:
-    sync:
-        name: Check & Sync Upstream Telegram
-        runs-on: ubuntu-latest
-        steps:
-            -   name: Checkout master branch
-                uses: actions/checkout@v6
-                with:
-                    ref: master
-                    fetch-depth: 0
-                    token: ${{ secrets.GITHUB_TOKEN }}
+  sync:
+    name: Sync upstream and merge into master
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_URL: https://github.com/DrKLO/Telegram.git
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-            -   name: Configure Git Identity
-                run: |
-                    git config --global user.name "x1cen"
-                    git config --global user.email "253544026+x1cen@users.noreply.github.com"
+      - name: Configure Git identity
+        run: |
+          git config user.name "x1cen"
+          git config user.email "253544026+x1cen@users.noreply.github.com"
 
-            -   name: Setup Upstream Remote
-                run: |
-                    git remote add upstream https://github.com/DrKLO/Telegram.git || git remote set-url upstream https://github.com/DrKLO/Telegram.git
-                    git fetch upstream master --tags
+      - name: Fetch upstream
+        id: fetch
+        run: |
+          git remote add upstream "$UPSTREAM_URL"
+          git fetch --no-tags upstream master
+          SHA=$(git rev-parse upstream/master)
+          VERSION=$(git show upstream/master:gradle.properties | sed -n 's/^APP_VERSION_NAME=//p' | tr -d '\r')
+          OLD_VERSION=$(git show HEAD:gradle.properties | sed -n 's/^APP_VERSION_NAME=//p' | tr -d '\r')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short=${SHA:0:9}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "old_version=${OLD_VERSION:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "DrKLO/master: $SHA ($VERSION), master version: $OLD_VERSION"
 
-            -   name: Check for Upstream Updates
-                id: check_upstream
-                run: |
-                    UPSTREAM_HEAD=$(git rev-parse upstream/master)
-                    MASTER_MERGE_BASE=$(git merge-base master upstream/master || echo "")
-                    LATEST_TAG=$(git describe --tags --abbrev=0 upstream/master 2>/dev/null || echo "latest")
-                    
-                    echo "UPSTREAM_HEAD=$UPSTREAM_HEAD" >> $GITHUB_OUTPUT
-                    echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+      - name: Fast-forward upstream mirror branch
+        env:
+          SHA: ${{ steps.fetch.outputs.sha }}
+        run: |
+          MIRROR=$(git rev-parse -q --verify origin/upstream || true)
+          if [ "$MIRROR" = "$SHA" ]; then
+            echo "upstream mirror already at $SHA"
+            exit 0
+          fi
+          if [ -n "$MIRROR" ] && ! git merge-base --is-ancestor "$MIRROR" "$SHA"; then
+            echo "::error::origin/upstream ($MIRROR) is not an ancestor of DrKLO/master ($SHA); refusing to overwrite it."
+            exit 1
+          fi
+          git push origin "$SHA:refs/heads/upstream"
 
-                    if [ "$UPSTREAM_HEAD" = "$MASTER_MERGE_BASE" ] && [ "${{ inputs.force-check }}" != "true" ]; then
-                        echo "STATUS=UP_TO_DATE" >> $GITHUB_OUTPUT
-                        echo "Master branch is already up-to-date with upstream/master ($UPSTREAM_HEAD)."
-                    else
-                        echo "STATUS=NEW_COMMITS" >> $GITHUB_OUTPUT
-                        echo "New commits detected in upstream/master. Target tag: $LATEST_TAG"
-                    fi
+      - name: Merge upstream into master
+        id: merge
+        env:
+          SHA: ${{ steps.fetch.outputs.sha }}
+          SHORT: ${{ steps.fetch.outputs.short }}
+          VERSION: ${{ steps.fetch.outputs.version }}
+        run: |
+          if git merge-base --is-ancestor "$SHA" HEAD; then
+            echo "master already contains $SHA"
+            echo "status=up_to_date" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git merge --no-ff --no-edit -m "chore(upstream): merge Telegram $VERSION ($SHORT)" "$SHA"; then
+            git push origin HEAD:master
+            echo "status=merged" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > "$RUNNER_TEMP/conflicts.txt"
+            git merge --abort
+            echo "status=conflict" >> "$GITHUB_OUTPUT"
+          fi
 
-            -   name: Attempt Merge into master
-                id: merge_attempt
-                if: steps.check_upstream.outputs.STATUS == 'NEW_COMMITS'
-                env:
-                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                    LATEST_TAG: ${{ steps.check_upstream.outputs.LATEST_TAG }}
-                run: |
-                    git checkout master
-                    echo "Attempting merge of upstream/master into master..."
-                    if git merge --no-commit --no-ff upstream/master; then
-                        echo "HAS_CONFLICT=false" >> $GITHUB_OUTPUT
-                        git commit -m "chore(upstream): sync upstream ${LATEST_TAG}"
-                        git push origin master
-                        echo "Successfully merged upstream into master."
-                    else
-                        echo "HAS_CONFLICT=true" >> $GITHUB_OUTPUT
-                        CONFLICTING_FILES=$(git status --porcelain | grep '^UU\|^AA\|^DD\|^DU\|^UD' | awk '{print $2}')
-                        echo "Merge conflict detected!"
-                        git merge --abort
-                        
-                        BRANCH_NAME="sync/conflict-${LATEST_TAG}-$(date +%s)"
-                        git checkout -b "$BRANCH_NAME"
-                        git merge -s ours upstream/master -m "chore: baseline before conflict resolution for ${LATEST_TAG}"
-                        git push origin "$BRANCH_NAME"
+      - name: Trigger release build on new upstream version
+        if: steps.merge.outputs.status == 'merged' && steps.fetch.outputs.version != steps.fetch.outputs.old_version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.fetch.outputs.version }}
+        run: |
+          gh workflow run veyra-build.yml --ref master \
+            -f arch=all \
+            -f prerelease=false \
+            -f veyra-version="$VERSION" \
+            -f veyra-changes="Automated sync with Telegram upstream $VERSION"
 
-                        gh issue create \
-                            --title "⚠️ [Upstream Sync Conflict] Telegram ${LATEST_TAG}" \
-                            --body "An upstream update from Telegram (${LATEST_TAG}) was detected and attempted to be merged into master, but encountered merge conflicts. Conflicting files:\n${CONFLICTING_FILES}\n\nPlease inspect branch: ${BRANCH_NAME}" \
-                            --label "bug" || true
-                    fi
+      - name: Open issue on merge conflict
+        if: steps.merge.outputs.status == 'conflict'
+        uses: actions/github-script@v8
+        env:
+          SHA: ${{ steps.fetch.outputs.sha }}
+          SHORT: ${{ steps.fetch.outputs.short }}
+          VERSION: ${{ steps.fetch.outputs.version }}
+        with:
+          script: |
+            const fs = require('fs');
+            const env = process.env;
+            const { owner, repo } = context.repo;
+            const bt = String.fromCharCode(96);
+            const code = s => bt + s + bt;
+            const fence = bt.repeat(3);
+            const files = fs.readFileSync(env.RUNNER_TEMP + '/conflicts.txt', 'utf8').split('\n').filter(Boolean);
+            const title = 'Upstream merge conflict: Telegram ' + env.VERSION + ' (' + env.SHORT + ')';
+            const runUrl = context.serverUrl + '/' + owner + '/' + repo + '/actions/runs/' + context.runId;
+            const open = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: 'upstream-sync', per_page: 100 });
+            const existing = open.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: 'Still conflicting. Run: ' + runUrl });
+              return;
+            }
+            const body = [
+              'Merging DrKLO/Telegram ' + code(env.SHA) + ' into ' + code('master') + ' hit conflicts.',
+              '',
+              '### Conflicting files',
+              files.length ? files.map(f => '- ' + code(f)).join('\n') : '- (see run log)',
+              '',
+              '### Resolve locally',
+              fence + 'bash',
+              'git checkout master && git pull',
+              'git fetch https://github.com/DrKLO/Telegram.git master',
+              'git merge FETCH_HEAD',
+              '# fix the files above, then:',
+              'git add <files> && git commit',
+              'git push origin master',
+              fence,
+              '',
+              'The next sync run closes this issue automatically once master contains upstream.',
+              '',
+              'Run: ' + runUrl
+            ].join('\n');
+            await github.rest.issues.create({ owner, repo, title, body, labels: ['upstream-sync', 'rebase-conflict'] });
 
-            -   name: Apply to veyra & Trigger Stable Release
-                if: steps.check_upstream.outputs.STATUS == 'NEW_COMMITS' && steps.merge_attempt.outputs.HAS_CONFLICT == 'false'
-                env:
-                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                    LATEST_TAG: ${{ steps.check_upstream.outputs.LATEST_TAG }}
-                run: |
-                    echo "No conflicts! Merging master into veyra release branch..."
-                    git checkout veyra
-                    git merge master -m "chore(release): merge master into veyra for ${LATEST_TAG} release"
-                    git push origin veyra
+      - name: Close resolved sync issues
+        if: steps.merge.outputs.status == 'merged' || steps.merge.outputs.status == 'up_to_date'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const open = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: 'upstream-sync', per_page: 100 });
+            for (const i of open) {
+              if (i.pull_request) continue;
+              await github.rest.issues.createComment({ owner, repo, issue_number: i.number, body: 'master now contains the latest upstream. Closing.' });
+              await github.rest.issues.update({ owner, repo, issue_number: i.number, state: 'closed' });
+            }
 
-                    echo "Triggering stable release build on master branch..."
-                    gh workflow run veyra-build.yml \
-                        --ref master \
-                        -f arch=all \
-                        -f prerelease=false \
-                        -f veyra-changes="Automated sync with Telegram upstream ${LATEST_TAG}"
+      - name: Open issue on sync failure
+        if: failure() && steps.merge.outputs.status != 'conflict'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const title = 'Upstream sync workflow failed';
+            const runUrl = context.serverUrl + '/' + owner + '/' + repo + '/actions/runs/' + context.runId;
+            const open = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: 'upstream-sync', per_page: 100 });
+            const existing = open.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: 'Failed again: ' + runUrl });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, labels: ['upstream-sync', 'bug'], body: 'The upstream sync job failed outside the merge step (fetch, mirror push, master push, or build trigger).\n\nRun: ' + runUrl });
+            }
+
+      - name: Fail run on conflict
+        if: steps.merge.outputs.status == 'conflict'
+        run: |
+          echo "::error::Upstream merge conflict; an issue was opened."
+          exit 1
