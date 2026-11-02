@@ -22,6 +22,16 @@ public class VeyraUIConfig {
     public static boolean askBeforeCall = true;
     public static int downloadSpeedBoost = 1; // 0 = off, 1 = average, 2 = extreme
 
+    // Edit History & Privacy
+    public static boolean editHistoryEnabled = true;
+    public static boolean editHistoryDropOldest = true;
+    public static int editHistoryLimit = 20;
+    public static boolean reactionHistoryEnabled = true;
+    public static boolean reactionHistoryIncludeSelf = true;
+    public static int reactionHistoryLimit = 20;
+    public static boolean reactionHistoryDropOldest = true;
+    public static boolean hidePhoneNumber = false;
+
     static {
         load();
     }
@@ -44,7 +54,28 @@ public class VeyraUIConfig {
             ignoreBlocked = prefs.getBoolean("ignoreBlocked", false);
             askBeforeCall = prefs.getBoolean("askBeforeCall", true);
             downloadSpeedBoost = prefs.getInt("downloadSpeedBoost", 1);
+            editHistoryEnabled = prefs.getBoolean("editHistoryEnabled", true);
+            editHistoryLimit = prefs.getInt("editHistoryLimit", 20);
+            hidePhoneNumber = prefs.getBoolean("hidePhoneNumber", false);
         }
+    }
+
+    public static boolean isChatTypeAllowedForEditHistory(long dialogId) {
+        return editHistoryEnabled;
+    }
+
+    public static boolean isChatTypeAllowedForReactionHistory(long dialogId) {
+        return reactionHistoryEnabled;
+    }
+
+    public static void toggleEditHistory() {
+        editHistoryEnabled = !editHistoryEnabled;
+        save("editHistoryEnabled", editHistoryEnabled);
+    }
+
+    public static void toggleHidePhoneNumber() {
+        hidePhoneNumber = !hidePhoneNumber;
+        save("hidePhoneNumber", hidePhoneNumber);
     }
 
     public static void setTabsTitleType(int val) {

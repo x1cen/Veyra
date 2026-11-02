@@ -21,6 +21,8 @@ public class VeyraSettingsActivity extends UniversalFragment {
     public static final int ITEM_GHOST_TYPING = 3;
     public static final int ITEM_GHOST_READ = 4;
     public static final int ITEM_GHOST_STORIES = 5;
+    public static final int ITEM_EDIT_HISTORY = 6;
+    public static final int ITEM_HIDE_PHONE = 7;
 
     public static final int ITEM_TABS_TITLE_TYPE = 10;
     public static final int ITEM_TABS_BOTTOM = 11;
@@ -50,7 +52,9 @@ public class VeyraSettingsActivity extends UniversalFragment {
             items.add(UItem.asCheck(ITEM_GHOST_READ, "Mark as Read on Reply").setChecked(VeyraGhost.readOnReply));
             items.add(UItem.asCheck(ITEM_GHOST_STORIES, "Stealth Story Views").setChecked(VeyraGhost.hideStories));
         }
-        items.add(UItem.asShadow("Prevents read receipts, online status broadcasts, typing events, and story views."));
+        items.add(UItem.asCheck(ITEM_EDIT_HISTORY, "Message Edit History Log").setChecked(VeyraUIConfig.editHistoryEnabled));
+        items.add(UItem.asCheck(ITEM_HIDE_PHONE, "Hide My Phone Number").setChecked(VeyraUIConfig.hidePhoneNumber));
+        items.add(UItem.asShadow("Prevents read receipts, hides typing, logs message edit history, and protects phone number."));
 
         // --- Folder Tabs Section ---
         items.add(UItem.asHeader("Folder Tabs"));
@@ -119,6 +123,14 @@ public class VeyraSettingsActivity extends UniversalFragment {
                 break;
             case ITEM_GHOST_STORIES:
                 VeyraGhost.toggleHideStories();
+                if (listView != null && listView.adapter != null) listView.adapter.update(true);
+                break;
+            case ITEM_EDIT_HISTORY:
+                VeyraUIConfig.toggleEditHistory();
+                if (listView != null && listView.adapter != null) listView.adapter.update(true);
+                break;
+            case ITEM_HIDE_PHONE:
+                VeyraUIConfig.toggleHidePhoneNumber();
                 if (listView != null && listView.adapter != null) listView.adapter.update(true);
                 break;
 
