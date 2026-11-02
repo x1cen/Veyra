@@ -7706,10 +7706,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         long displayId = 0;
         if (userId != 0) {
             displayId = userId;
-        } else if (chatId != 0) {
-            displayId = chatId;
         } else if (isTopic && topicId != 0) {
             displayId = topicId;
+        } else if (chatId != 0) {
+            displayId = chatId;
         } else if (dialogId != 0) {
             displayId = Math.abs(dialogId);
         } else {
@@ -13779,6 +13779,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                     dc = getConnectionsManager().getCurrentDatacenterId();
                                 }
                             }
+                        } else if (isTopic && topicId != 0) {
+                            displayId = topicId;
+                            label = "Topic ID";
                         } else if (chatId != 0) {
                             displayId = chatId;
                             TLRPC.Chat c = currentChat != null ? currentChat : getMessagesController().getChat(chatId);
@@ -13790,9 +13793,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                     dc = chatInfo.stats_dc;
                                 }
                             }
-                        } else if (isTopic && topicId != 0) {
-                            displayId = topicId;
-                            label = "Topic ID";
                         } else if (dialogId != 0) {
                             displayId = Math.abs(dialogId);
                             label = dialogId < 0 ? "Chat ID" : "User ID";
