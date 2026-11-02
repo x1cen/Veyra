@@ -24,6 +24,38 @@
 
 ---
 
+## Building from Source
+
+### Prerequisites
+* **JDK**: 21 (OpenJDK / Amazon Corretto)
+* **Android SDK**: API 35 / 36 (Build Tools `35.0.0`+)
+* **Android NDK**: `27.2.12479018`
+* **CMake**: `3.22.1`
+
+### Local Build
+1. Clone the repository with submodules:
+   ```bash
+   git clone --recursive https://github.com/x1cen/Veyra.git
+   cd Veyra
+   ```
+
+2. Set your SDK and CMake paths in `local.properties`:
+   ```properties
+   sdk.dir=/path/to/android-sdk
+   cmake.dir=/path/to/android-sdk/cmake/3.22.1
+   ```
+
+3. Compile standalone release APKs:
+   ```bash
+   ./gradlew :TMessagesProj_AppStandalone:assembleAfatStandaloneRelease --parallel
+   ```
+   Outputs will be placed under `TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/` (`universal` and per-ABI APKs: `arm64-v8a`, `armeabi-v7a`, `x86_64`).
+
+### Automated CI/CD
+Automated multi-architecture packaging, signing, and release publishing are handled via GitHub Actions in [`.github/workflows/veyra-build.yml`](.github/workflows/veyra-build.yml).
+
+---
+
 ## Donations & Support
 
 If you find Veyra useful and would like to support ongoing maintenance and development:
