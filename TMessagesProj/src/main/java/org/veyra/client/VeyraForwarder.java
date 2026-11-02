@@ -137,37 +137,32 @@ public class VeyraForwarder {
                         videoEditedInfo.startTime = -1;
                         videoEditedInfo.endTime = -1;
 
-                        TLRPC.TL_document doc = new TLRPC.TL_document();
-                        doc.id = 0;
-                        doc.access_hash = 0;
-                        doc.file_reference = new byte[0];
-                        doc.size = (int) itemPath.length();
-                        doc.dc_id = 0;
-                        TLRPC.Document origDoc = msg.getDocument();
-                        doc.mime_type = origDoc != null && origDoc.mime_type != null ? origDoc.mime_type : "video/mp4";
-                        doc.attributes = origDoc != null && origDoc.attributes != null ? new ArrayList<>(origDoc.attributes) : new ArrayList<>();
-
-                        SendMessagesHelper.SendMessageParams sendParams = SendMessagesHelper.SendMessageParams.of(
-                                doc,
-                                videoEditedInfo,
+                        // Local-path send: roundVideo without edits skips conversion and
+                        // produces a fresh round_message document (no TL_document wrapper).
+                        SendMessagesHelper.prepareSendingVideo(
+                                accountInstance,
                                 itemPath.getAbsolutePath(),
+                                videoEditedInfo,
+                                null,
+                                null,
                                 peer,
                                 null,
                                 replyToTopMsg,
                                 null,
                                 null,
                                 null,
+                                0,
                                 null,
                                 notify,
                                 scheduleDate,
                                 0,
-                                0,
-                                null,
-                                null,
                                 false,
-                                false
+                                false,
+                                null,
+                                null,
+                                0,
+                                0
                         );
-                        AndroidUtilities.runOnUIThread(() -> SendMessagesHelper.getInstance(currentAccount).sendMessage(sendParams));
                         try {
                             Thread.sleep(200);
                         } catch (InterruptedException ignored) {}
