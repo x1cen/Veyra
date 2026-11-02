@@ -247,9 +247,9 @@ public class VeyraMessageHelper extends BaseController {
     private void deleteUserHistoryWithSearch(BaseFragment fragment, final long dialogId, int replyMessageId, final long mergeDialogId, int before, SearchMessagesResultCallback callback) {
         Utilities.globalQueue.postRunnable(() -> {
             ArrayList<Integer> messageIds = new ArrayList<>();
-            var latch = new CountDownLatch(1);
-            var peer = getMessagesController().getInputPeer(dialogId);
-            var fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
+            CountDownLatch latch = new CountDownLatch(1);
+            TLRPC.InputPeer peer = getMessagesController().getInputPeer(dialogId);
+            TLRPC.InputPeer fromId = MessagesController.getInputPeer(getUserConfig().getCurrentUser());
             doSearchMessages(fragment, latch, messageIds, peer, replyMessageId, fromId, before, Integer.MAX_VALUE, 0);
             try {
                 latch.await();
@@ -280,7 +280,7 @@ public class VeyraMessageHelper extends BaseController {
     }
 
     private void doSearchMessages(BaseFragment fragment, CountDownLatch latch, ArrayList<Integer> messageIds, TLRPC.InputPeer peer, int replyMessageId, TLRPC.InputPeer fromId, int before, int offsetId, long hash) {
-        var req = new TLRPC.TL_messages_search();
+        TLRPC.TL_messages_search req = new TLRPC.TL_messages_search();
         req.peer = peer;
         req.limit = 100;
         req.q = "";
@@ -294,12 +294,13 @@ public class VeyraMessageHelper extends BaseController {
         }
         req.hash = hash;
         getConnectionsManager().sendRequest(req, (response, error) -> {
-            if (response instanceof TLRPC.messages_Messages res) {
+            if (response instanceof TLRPC.messages_Messages) {
+                TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
                 if (response instanceof TLRPC.TL_messages_messagesNotModified || res.messages.isEmpty()) {
                     latch.countDown();
                     return;
                 }
-                var newOffsetId = offsetId;
+                int newOffsetId = offsetId;
                 for (TLRPC.Message message : res.messages) {
                     newOffsetId = Math.min(newOffsetId, message.id);
                     if (!message.out || message.post || message.date >= before) {

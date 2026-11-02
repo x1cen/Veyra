@@ -55,11 +55,11 @@ public class VeyraQrHelper {
                 return;
             }
         }
-        var context = fragment.getParentActivity();
-        var ll = new LinearLayout(context);
+        android.content.Context context = fragment.getParentActivity();
+        LinearLayout ll = new LinearLayout(context);
         ll.setOrientation(LinearLayout.VERTICAL);
 
-        var dialog = new AlertDialog.Builder(context, resourcesProvider)
+        AlertDialog dialog = new AlertDialog.Builder(context, resourcesProvider)
                 .setView(ll)
                 .create();
         if (dark) {
