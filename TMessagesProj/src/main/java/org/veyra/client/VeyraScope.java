@@ -9,23 +9,21 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 // Veyra: reusable per-feature scope model shared by Ghost read-hiding, anti-delete, and
 // edit/reaction history. Each feature owns one instance keyed by a unique prefs prefix.
 //
 // Decision model (isInScope):
-//   - master switch off (default)   -> feature applies everywhere;
-//   - chat in the Excluded list     -> never in scope;
-//   - chat in the Included list     -> always in scope (wins over Skip Own/Admin and per-type);
-//   - Skip Own/Admin on + you own or admin the group/channel -> out of scope;
-//   - otherwise                     -> the per-type switch for the chat's bucket decides.
+//   - master switch off (default) -> feature applies everywhere;
+//   - chat has a manual override (ticked/unticked in Included Chats) -> the override wins;
+//   - otherwise the default from Chat Types and Skip Own/Admin decides.
 //
-// Included and Excluded are mutually exclusive: putting a chat in one removes it from the
-// other, so a chat can never be ticked in both lists.
+// A chat holds at most one override (included or not included), so it can never be in
+// two contradicting states. An override equal to the default is dropped, so chats keep
+// following Chat Types. clearOverrides() re-syncs the whole list with Chat Types.
 public class VeyraScope {
 
     public static final int PEER_PRIVATE = 0;
@@ -43,7 +41,7 @@ public class VeyraScope {
     public static final int SCOPE_ANTI_DELETE = 1;
     public static final int SCOPE_HISTORY = 2;
 
-    private static final java.util.HashMap<Integer, VeyraScope> REGISTRY = new java.util.HashMap<>();
+    private static final HashMap<Integer, VeyraScope> REGISTRY = new HashMap<>();
 
     public static VeyraScope byId(int id) {
         return REGISTRY.get(id);
@@ -65,8 +63,7 @@ public class VeyraScope {
     public boolean limitEnabled;
     public boolean skipOwnAdmin;
     private final boolean[] peerEnabled = new boolean[PEER_COUNT];
-    private final Set<Long> included = Collections.synchronizedSet(new LinkedHashSet<Long>());
-    private final Set<Long> excluded = Collections.synchronizedSet(new LinkedHashSet<Long>());
+    private final ConcurrentHashMap<Long, Boolean> overrides = new ConcurrentHashMap<>();
 
     public VeyraScope(int id, String key, boolean[] peerDefaults, boolean skipOwnAdminDefault) {
         this.id = id;
@@ -88,39 +85,64 @@ public class VeyraScope {
         for (int i = 0; i < PEER_COUNT; i++) {
             peerEnabled[i] = p.getBoolean(key + "_peer" + i, peerDefaults[i]);
         }
-        loadSet(p.getString(key + "_incl", ""), included);
-        loadSet(p.getString(key + "_excl", ""), excluded);
+        overrides.clear();
+        String raw = p.getString(key + "_ovr", null);
+        if (raw != null) {
+            parseOverrides(raw);
+        } else {
+            // Migration from the previous Include/Exclude lists.
+            addLegacy(p.getString(key + "_incl", ""), true);
+            addLegacy(p.getString(key + "_excl", ""), false);
+            if (!overrides.isEmpty()) {
+                saveOverrides();
+            }
+            p.edit().remove(key + "_incl").remove(key + "_excl").apply();
+        }
     }
 
-    private static void loadSet(String raw, Set<Long> set) {
-        set.clear();
+    private void parseOverrides(String raw) {
+        if (raw.length() == 0) {
+            return;
+        }
+        String[] parts = raw.split(",");
+        for (int i = 0; i < parts.length; i++) {
+            String[] kv = parts[i].split(":");
+            if (kv.length != 2) {
+                continue;
+            }
+            try {
+                overrides.put(Long.parseLong(kv[0].trim()), "1".equals(kv[1].trim()));
+            } catch (NumberFormatException ignore) {
+            }
+        }
+    }
+
+    private void addLegacy(String raw, boolean value) {
         if (raw == null || raw.length() == 0) {
             return;
         }
         String[] parts = raw.split(",");
         for (int i = 0; i < parts.length; i++) {
             try {
-                set.add(Long.parseLong(parts[i].trim()));
+                overrides.put(Long.parseLong(parts[i].trim()), value);
             } catch (NumberFormatException ignore) {
             }
         }
     }
 
-    private void saveSet(String suffix, Set<Long> set) {
+    private void saveOverrides() {
         SharedPreferences p = prefs();
         if (p == null) {
             return;
         }
         StringBuilder sb = new StringBuilder();
-        synchronized (set) {
-            for (Long id : set) {
-                if (sb.length() > 0) {
-                    sb.append(",");
-                }
-                sb.append(id);
+        for (Map.Entry<Long, Boolean> e : overrides.entrySet()) {
+            if (sb.length() > 0) {
+                sb.append(",");
             }
+            sb.append(e.getKey()).append(":").append(e.getValue() ? "1" : "0");
         }
-        p.edit().putString(key + suffix, sb.toString()).apply();
+        p.edit().putString(key + "_ovr", sb.toString()).apply();
     }
 
     public void setLimitEnabled(boolean val) {
@@ -154,67 +176,59 @@ public class VeyraScope {
         }
     }
 
-    public ArrayList<Long> getIncluded() {
-        synchronized (included) {
-            return new ArrayList<>(included);
-        }
+    public Boolean getOverride(long dialogId) {
+        return overrides.get(dialogId);
     }
 
-    public ArrayList<Long> getExcluded() {
-        synchronized (excluded) {
-            return new ArrayList<>(excluded);
-        }
+    public int getOverrideCount() {
+        return overrides.size();
     }
 
-    public boolean isIncluded(long dialogId) {
-        return included.contains(dialogId);
+    public ArrayList<Long> getOverrideIds() {
+        return new ArrayList<>(overrides.keySet());
     }
 
-    public boolean isExcluded(long dialogId) {
-        return excluded.contains(dialogId);
+    // "Sync with Chat Types": drop every manual change so all chats follow Chat Types again.
+    public void clearOverrides() {
+        overrides.clear();
+        saveOverrides();
     }
 
-    // Replaces the whole Included list, enforcing mutual exclusivity against Excluded.
-    public void setIncluded(List<Long> ids) {
-        synchronized (included) {
-            included.clear();
-            if (ids != null) {
-                included.addAll(ids);
+    // What Chat Types and Skip Own/Admin say for this chat, ignoring manual overrides.
+    public boolean isDefaultIncluded(int account, long dialogId, boolean unknownDefault) {
+        if (dialogId < 0 && skipOwnAdmin && !DialogObject.isEncryptedDialog(dialogId)) {
+            try {
+                TLRPC.Chat chat = MessagesController.getInstance(account).getChat(-dialogId);
+                if (chat != null && ChatObject.hasAdminRights(chat)) {
+                    return false;
+                }
+            } catch (Throwable ignore) {
             }
         }
-        if (ids != null) {
-            synchronized (excluded) {
-                excluded.removeAll(ids);
-            }
+        int type = classify(account, dialogId);
+        if (type < 0) {
+            return unknownDefault;
         }
-        saveSet("_incl", included);
-        saveSet("_excl", excluded);
+        return peerEnabled[type];
     }
 
-    // Replaces the whole Excluded list, enforcing mutual exclusivity against Included.
-    public void setExcluded(List<Long> ids) {
-        synchronized (excluded) {
-            excluded.clear();
-            if (ids != null) {
-                excluded.addAll(ids);
-            }
+    public boolean isIncluded(int account, long dialogId, boolean unknownDefault) {
+        Boolean o = overrides.get(dialogId);
+        if (o != null) {
+            return o;
         }
-        if (ids != null) {
-            synchronized (included) {
-                included.removeAll(ids);
-            }
-        }
-        saveSet("_excl", excluded);
-        saveSet("_incl", included);
+        return isDefaultIncluded(account, dialogId, unknownDefault);
     }
 
-    public void remove(long dialogId) {
-        boolean changed = included.remove(dialogId);
-        changed = excluded.remove(dialogId) || changed;
-        if (changed) {
-            saveSet("_incl", included);
-            saveSet("_excl", excluded);
+    // Tick/untick one chat. Matching the default removes the override, so the chat keeps
+    // following Chat Types; anything else is stored as a manual override.
+    public void setIncluded(int account, long dialogId, boolean included) {
+        if (included == isDefaultIncluded(account, dialogId, true)) {
+            overrides.remove(dialogId);
+        } else {
+            overrides.put(dialogId, included);
         }
+        saveOverrides();
     }
 
     // Classify a dialog into one of the PEER_* buckets. Returns -1 when it can't be
@@ -261,42 +275,19 @@ public class VeyraScope {
         }
     }
 
-    // unknownDefault: returned when the chat can't be classified yet. Ghost passes true to keep
-    // hiding (privacy-safe); anti-delete and history pass true to keep data (data-safe).
+    // unknownDefault: returned when the chat can't be classified yet. All three features pass
+    // true: Ghost keeps hiding (privacy-safe), anti-delete and history keep data (data-safe).
     public boolean isInScope(int account, long dialogId, boolean unknownDefault) {
         if (!limitEnabled) {
             return true;
         }
-        if (excluded.contains(dialogId)) {
-            return false;
-        }
-        if (included.contains(dialogId)) {
-            return true;
-        }
-        if (dialogId < 0 && skipOwnAdmin && !DialogObject.isEncryptedDialog(dialogId)) {
-            try {
-                TLRPC.Chat chat = MessagesController.getInstance(account).getChat(-dialogId);
-                if (chat != null && ChatObject.hasAdminRights(chat)) {
-                    return false;
-                }
-            } catch (Throwable ignore) {
-            }
-        }
-        int type = classify(account, dialogId);
-        if (type < 0) {
-            return unknownDefault;
-        }
-        return peerEnabled[type];
+        return isIncluded(account, dialogId, unknownDefault);
     }
 
     // Per-feature instances. peerDefaults = {Private, SmallGroup, LargeGroup, Channel, Bot}.
-    // Ghost read-hiding: hide where "Seen by" is actually shown (private + small groups);
-    // large groups, channels and bots never show a seen list, so they're off by default.
     public static final VeyraScope GHOST_READ = new VeyraScope(
             SCOPE_GHOST_READ, "ghostRead",
             new boolean[]{true, true, false, false, false}, false);
-    // Anti-delete and history: keep/log where data is worth keeping (private + small groups +
-    // bots), skip big groups/channels and chats you own or admin (the admin log covers those).
     public static final VeyraScope ANTI_DELETE = new VeyraScope(
             SCOPE_ANTI_DELETE, "antiDelete",
             new boolean[]{true, true, false, false, true}, true);

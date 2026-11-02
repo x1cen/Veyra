@@ -1,5 +1,6 @@
 package org.telegram.ui;
 
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.veyra.client.VeyraScope;
 
 import java.util.ArrayList;
@@ -7,8 +8,8 @@ import java.util.List;
 
 // Veyra: advanced per-feature scope screen, shared by Ghost read-hiding, anti-delete and
 // edit/reaction history. Each feature passes its scope id; the screen edits that VeyraScope
-// instance: master limit switch, per-chat-type toggles, skip own/admin, and the mutually
-// exclusive Always Include / Always Exclude chat lists (picked via the native folder picker).
+// instance: master limit switch, per-chat-type toggles, skip own/admin, and one Included
+// Chats list whose ticks start from Chat Types and can be changed per chat.
 public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
 
     private final int scopeId;
@@ -48,7 +49,7 @@ public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.header("Scope"));
         r.add(VeyraSettingsRow.toggle(
                 "Limit Scope",
-                actionVerb() + " everywhere when off. Turn on to restrict by the chat types and lists below",
+                actionVerb() + " everywhere when off. Turn on to restrict to the chats ticked in Included Chats",
                 () -> scope.limitEnabled,
                 val -> { scope.setLimitEnabled(val); reloadRows(); },
                 false
@@ -60,32 +61,34 @@ public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(typeToggle("Small Groups", "Up to " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (shows a Seen list)", VeyraScope.PEER_SMALL_GROUP, true));
         r.add(typeToggle("Large Groups", "Over " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (no Seen list)", VeyraScope.PEER_LARGE_GROUP, true));
         r.add(typeToggle("Channels", null, VeyraScope.PEER_CHANNEL, true));
-        r.add(typeToggle("Bots", null, VeyraScope.PEER_BOT, false));
-        r.add(VeyraSettingsRow.shadow());
-
-        r.add(VeyraSettingsRow.header("Owner & Admin"));
+        r.add(typeToggle("Bots", null, VeyraScope.PEER_BOT, true));
         r.add(VeyraSettingsRow.toggle(
                 "Skip Chats I Own or Admin",
-                "Don't apply in groups and channels where you're owner or admin",
+                "Untick groups and channels where you're owner or admin by default",
                 () -> scope.skipOwnAdmin,
                 val -> scope.setSkipOwnAdmin(val),
                 false
         ).enabledWhen(() -> scope.limitEnabled));
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header("Exceptions"));
+        r.add(VeyraSettingsRow.header("Included Chats"));
         r.add(VeyraSettingsRow.detail(
-                "Always Include",
-                () -> countLabel(scope.getIncluded().size()),
+                "Included Chats",
+                () -> {
+                    int n = scope.getOverrideCount();
+                    if (n == 0) return "Follows Chat Types";
+                    if (n == 1) return "1 manual change";
+                    return n + " manual changes";
+                },
                 true,
-                () -> openPicker(true)
+                () -> presentFragment(new VeyraIncludedChatsActivity(scopeId))
         ).enabledWhen(() -> scope.limitEnabled));
-        r.add(VeyraSettingsRow.detail(
-                "Always Exclude",
-                () -> countLabel(scope.getExcluded().size()),
+        r.add(VeyraSettingsRow.button(
+                "Sync with Chat Types",
                 false,
-                () -> openPicker(false)
-        ).enabledWhen(() -> scope.limitEnabled));
+                false,
+                this::showSyncAlert
+        ).enabledWhen(() -> scope.limitEnabled && scope.getOverrideCount() > 0));
         r.add(VeyraSettingsRow.shadow());
         return r;
     }
@@ -99,26 +102,18 @@ public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
         ).enabledWhen(() -> scope.limitEnabled);
     }
 
-    private String countLabel(int n) {
-        if (n == 0) return "None";
-        if (n == 1) return "1 chat";
-        return n + " chats";
-    }
-
-    // A chat added to one list is automatically dropped from the other (VeyraScope enforces it),
-    // so a chat can never sit in both Include and Exclude at once.
-    private void openPicker(boolean include) {
-        ArrayList<Long> current = include ? scope.getIncluded() : scope.getExcluded();
-        UsersSelectActivity fragment = new UsersSelectActivity(include, current, 0);
-        fragment.noChatTypes = true;
-        fragment.setDelegate((ids, flags) -> {
-            if (include) {
-                scope.setIncluded(ids);
-            } else {
-                scope.setExcluded(ids);
-            }
+    private void showSyncAlert() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Sync with Chat Types");
+        builder.setMessage("Remove all manual changes? Every chat will be ticked again based on Chat Types.");
+        builder.setPositiveButton("Sync", (dialog, which) -> {
+            scope.clearOverrides();
             reloadRows();
         });
-        presentFragment(fragment);
+        builder.setNegativeButton("Cancel", null);
+        showDialog(builder.create());
     }
 }
