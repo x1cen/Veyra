@@ -56,19 +56,28 @@ public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header("Chat Types"));
-        r.add(typeToggle("Private Chats", null, VeyraScope.PEER_PRIVATE, true));
-        r.add(typeToggle("Small Groups", "Up to " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (shows a Seen list)", VeyraScope.PEER_SMALL_GROUP, true));
-        r.add(typeToggle("Large Groups", "Over " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (no Seen list)", VeyraScope.PEER_LARGE_GROUP, true));
-        r.add(typeToggle("Channels", null, VeyraScope.PEER_CHANNEL, true));
-        r.add(typeToggle("Bots", null, VeyraScope.PEER_BOT, true));
-        r.add(VeyraSettingsRow.toggle(
-                "Skip Chats I Own or Admin",
-                "Untick groups and channels where you're owner or admin by default",
-                () -> scope.skipOwnAdmin,
-                val -> scope.setSkipOwnAdmin(val),
-                false
-        ).enabledWhen(() -> scope.limitEnabled));
+        String small = "Up to " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (shows a Seen list)";
+        String large = "Over " + VeyraScope.LARGE_GROUP_MIN_MEMBERS + " members (no Seen list)";
+
+        r.add(VeyraSettingsRow.header("Chats"));
+        r.add(opt("Private Chats", null, VeyraScope.OPT_PRIVATE, false));
+        r.add(opt("Bots", null, VeyraScope.OPT_BOTS, false));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Groups"));
+        r.add(opt("Private Groups", "Groups without a public link", VeyraScope.OPT_PRIVATE_GROUPS, true));
+        r.add(subOpt("Small Groups", small, VeyraScope.OPT_PRIVATE_GROUPS_SMALL, VeyraScope.OPT_PRIVATE_GROUPS));
+        r.add(subOpt("Large Groups", large, VeyraScope.OPT_PRIVATE_GROUPS_LARGE, VeyraScope.OPT_PRIVATE_GROUPS));
+        r.add(opt("Public Groups", "Groups with a public @username link", VeyraScope.OPT_PUBLIC_GROUPS, true));
+        r.add(subOpt("Small Groups", small, VeyraScope.OPT_PUBLIC_GROUPS_SMALL, VeyraScope.OPT_PUBLIC_GROUPS));
+        r.add(subOpt("Large Groups", large, VeyraScope.OPT_PUBLIC_GROUPS_LARGE, VeyraScope.OPT_PUBLIC_GROUPS));
+        r.add(opt("Skip Groups I Own or Admin", "Untick groups where you're owner or admin by default", VeyraScope.OPT_SKIP_GROUPS_OWN_ADMIN, false));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Channels"));
+        r.add(opt("Private Channels", "Channels without a public link", VeyraScope.OPT_PRIVATE_CHANNELS, false));
+        r.add(opt("Public Channels", "Channels with a public @username link", VeyraScope.OPT_PUBLIC_CHANNELS, false));
+        r.add(opt("Skip Channels I Own or Admin", "Untick channels where you're owner or admin by default", VeyraScope.OPT_SKIP_CHANNELS_OWN_ADMIN, false));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Included Chats"));
@@ -93,13 +102,24 @@ public class VeyraScopeSettingsActivity extends VeyraSettingsBaseActivity {
         return r;
     }
 
-    private VeyraSettingsRow typeToggle(String title, String subtitle, int peerType, boolean divider) {
+    // Top-level option. Parents reload rows so their sub-options enable/disable right away.
+    private VeyraSettingsRow opt(String title, String subtitle, String key, boolean isParent) {
         return VeyraSettingsRow.toggle(
                 title, subtitle,
-                () -> scope.isPeerEnabled(peerType),
-                val -> scope.setPeerEnabled(peerType, val),
-                divider
+                () -> scope.isOn(key),
+                val -> { scope.setOn(key, val); if (isParent) reloadRows(); },
+                true
         ).enabledWhen(() -> scope.limitEnabled);
+    }
+
+    // Sub-option: only tickable while its parent option is on.
+    private VeyraSettingsRow subOpt(String title, String subtitle, String key, String parentKey) {
+        return VeyraSettingsRow.toggle(
+                title, subtitle,
+                () -> scope.isOn(key),
+                val -> scope.setOn(key, val),
+                true
+        ).enabledWhen(() -> scope.limitEnabled && scope.isOn(parentKey));
     }
 
     private void showSyncAlert() {

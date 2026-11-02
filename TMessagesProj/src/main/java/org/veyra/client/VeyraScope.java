@@ -19,19 +19,48 @@ import java.util.concurrent.ConcurrentHashMap;
 // Decision model (isInScope):
 //   - master switch off (default) -> feature applies everywhere;
 //   - chat has a manual override (ticked/unticked in Included Chats) -> the override wins;
-//   - otherwise the default from Chat Types and Skip Own/Admin decides.
+//   - otherwise the Chat Types options decide (isDefaultIncluded).
 //
-// A chat holds at most one override (included or not included), so it can never be in
-// two contradicting states. An override equal to the default is dropped, so chats keep
-// following Chat Types. clearOverrides() re-syncs the whole list with Chat Types.
+// Chat Types:
+//   Private Chats, Bots;
+//   Private Groups / Public Groups (parents), each with Small / Large sub-options that only
+//   count while the parent is on; Skip Groups I Own or Admin;
+//   Private Channels / Public Channels; Skip Channels I Own or Admin.
 public class VeyraScope {
 
+    public static final String OPT_PRIVATE = "private";
+    public static final String OPT_BOTS = "bots";
+    public static final String OPT_PRIVATE_GROUPS = "privGroups";
+    public static final String OPT_PRIVATE_GROUPS_SMALL = "privGroupsSmall";
+    public static final String OPT_PRIVATE_GROUPS_LARGE = "privGroupsLarge";
+    public static final String OPT_PUBLIC_GROUPS = "pubGroups";
+    public static final String OPT_PUBLIC_GROUPS_SMALL = "pubGroupsSmall";
+    public static final String OPT_PUBLIC_GROUPS_LARGE = "pubGroupsLarge";
+    public static final String OPT_PRIVATE_CHANNELS = "privChannels";
+    public static final String OPT_PUBLIC_CHANNELS = "pubChannels";
+    public static final String OPT_SKIP_GROUPS_OWN_ADMIN = "skipGroupsOwnAdmin";
+    public static final String OPT_SKIP_CHANNELS_OWN_ADMIN = "skipChannelsOwnAdmin";
+
+    private static final String[] ALL_OPTS = {
+            OPT_PRIVATE, OPT_BOTS,
+            OPT_PRIVATE_GROUPS, OPT_PRIVATE_GROUPS_SMALL, OPT_PRIVATE_GROUPS_LARGE,
+            OPT_PUBLIC_GROUPS, OPT_PUBLIC_GROUPS_SMALL, OPT_PUBLIC_GROUPS_LARGE,
+            OPT_PRIVATE_CHANNELS, OPT_PUBLIC_CHANNELS,
+            OPT_SKIP_GROUPS_OWN_ADMIN, OPT_SKIP_CHANNELS_OWN_ADMIN
+    };
+
+    // Buckets returned by classify(); group size is reported separately by groupSize().
     public static final int PEER_PRIVATE = 0;
-    public static final int PEER_SMALL_GROUP = 1;
-    public static final int PEER_LARGE_GROUP = 2;
-    public static final int PEER_CHANNEL = 3;
-    public static final int PEER_BOT = 4;
-    public static final int PEER_COUNT = 5;
+    public static final int PEER_BOT = 1;
+    public static final int PEER_PRIVATE_GROUP = 2;
+    public static final int PEER_PUBLIC_GROUP = 3;
+    public static final int PEER_PRIVATE_CHANNEL = 4;
+    public static final int PEER_PUBLIC_CHANNEL = 5;
+    public static final int PEER_COUNT = 6;
+
+    public static final int SIZE_UNKNOWN = 0;
+    public static final int SIZE_SMALL = 1;
+    public static final int SIZE_LARGE = 2;
 
     // Matches Telegram's chatReadMarkSizeThreshold: the member count above which the
     // "Seen by" list is no longer shown.
@@ -56,23 +85,37 @@ public class VeyraScope {
         return prefs;
     }
 
+    // All options off except the listed ones.
+    private static HashMap<String, Boolean> defs(String... onKeys) {
+        HashMap<String, Boolean> m = new HashMap<>();
+        for (int i = 0; i < ALL_OPTS.length; i++) {
+            m.put(ALL_OPTS[i], false);
+        }
+        for (int i = 0; i < onKeys.length; i++) {
+            m.put(onKeys[i], true);
+        }
+        return m;
+    }
+
     public final int id;
     private final String key;
-    private final boolean[] peerDefaults;
+    private final HashMap<String, Boolean> defaults;
 
     public boolean limitEnabled;
-    public boolean skipOwnAdmin;
-    private final boolean[] peerEnabled = new boolean[PEER_COUNT];
+    private final ConcurrentHashMap<String, Boolean> options = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Boolean> overrides = new ConcurrentHashMap<>();
 
-    public VeyraScope(int id, String key, boolean[] peerDefaults, boolean skipOwnAdminDefault) {
+    public VeyraScope(int id, String key, HashMap<String, Boolean> defaults) {
         this.id = id;
         this.key = key;
-        this.peerDefaults = peerDefaults;
-        this.skipOwnAdmin = skipOwnAdminDefault;
-        System.arraycopy(peerDefaults, 0, peerEnabled, 0, PEER_COUNT);
+        this.defaults = defaults;
+        options.putAll(defaults);
         load();
         REGISTRY.put(id, this);
+    }
+
+    private String optKey(String opt) {
+        return key + "_o_" + opt;
     }
 
     public void load() {
@@ -81,22 +124,73 @@ public class VeyraScope {
             return;
         }
         limitEnabled = p.getBoolean(key + "_limit", false);
-        skipOwnAdmin = p.getBoolean(key + "_skipOwnAdmin", skipOwnAdmin);
-        for (int i = 0; i < PEER_COUNT; i++) {
-            peerEnabled[i] = p.getBoolean(key + "_peer" + i, peerDefaults[i]);
+        SharedPreferences.Editor ed = p.edit();
+        boolean migrated = false;
+        for (int i = 0; i < ALL_OPTS.length; i++) {
+            String opt = ALL_OPTS[i];
+            Boolean def = defaults.get(opt);
+            boolean value = def != null && def;
+            if (p.contains(optKey(opt))) {
+                value = p.getBoolean(optKey(opt), value);
+            } else {
+                Boolean legacy = legacyValue(p, opt);
+                if (legacy != null) {
+                    value = legacy;
+                    ed.putBoolean(optKey(opt), value);
+                    migrated = true;
+                }
+            }
+            options.put(opt, value);
+        }
+        if (migrated) {
+            for (int i = 0; i < 5; i++) {
+                ed.remove(key + "_peer" + i);
+            }
+            ed.remove(key + "_skipOwnAdmin");
+            ed.apply();
         }
         overrides.clear();
         String raw = p.getString(key + "_ovr", null);
         if (raw != null) {
             parseOverrides(raw);
         } else {
-            // Migration from the previous Include/Exclude lists.
+            // Migration from the earlier Include/Exclude lists.
             addLegacy(p.getString(key + "_incl", ""), true);
             addLegacy(p.getString(key + "_excl", ""), false);
             if (!overrides.isEmpty()) {
                 saveOverrides();
             }
             p.edit().remove(key + "_incl").remove(key + "_excl").apply();
+        }
+    }
+
+    // Maps the previous Private/SmallGroup/LargeGroup/Channel/Bot switches onto the new options.
+    private Boolean legacyValue(SharedPreferences p, String opt) {
+        String k0 = key + "_peer0", k1 = key + "_peer1", k2 = key + "_peer2", k3 = key + "_peer3", k4 = key + "_peer4";
+        String ks = key + "_skipOwnAdmin";
+        switch (opt) {
+            case OPT_PRIVATE:
+                return p.contains(k0) ? p.getBoolean(k0, true) : null;
+            case OPT_BOTS:
+                return p.contains(k4) ? p.getBoolean(k4, false) : null;
+            case OPT_PRIVATE_GROUPS_SMALL:
+            case OPT_PUBLIC_GROUPS_SMALL:
+                return p.contains(k1) ? p.getBoolean(k1, true) : null;
+            case OPT_PRIVATE_GROUPS_LARGE:
+            case OPT_PUBLIC_GROUPS_LARGE:
+                return p.contains(k2) ? p.getBoolean(k2, false) : null;
+            case OPT_PRIVATE_GROUPS:
+            case OPT_PUBLIC_GROUPS:
+                if (!p.contains(k1) && !p.contains(k2)) return null;
+                return p.getBoolean(k1, false) || p.getBoolean(k2, false);
+            case OPT_PRIVATE_CHANNELS:
+            case OPT_PUBLIC_CHANNELS:
+                return p.contains(k3) ? p.getBoolean(k3, false) : null;
+            case OPT_SKIP_GROUPS_OWN_ADMIN:
+            case OPT_SKIP_CHANNELS_OWN_ADMIN:
+                return p.contains(ks) ? p.getBoolean(ks, false) : null;
+            default:
+                return null;
         }
     }
 
@@ -153,26 +247,16 @@ public class VeyraScope {
         }
     }
 
-    public void setSkipOwnAdmin(boolean val) {
-        skipOwnAdmin = val;
-        SharedPreferences p = prefs();
-        if (p != null) {
-            p.edit().putBoolean(key + "_skipOwnAdmin", val).apply();
-        }
+    public boolean isOn(String opt) {
+        Boolean v = options.get(opt);
+        return v != null && v;
     }
 
-    public boolean isPeerEnabled(int peerType) {
-        return peerType >= 0 && peerType < PEER_COUNT && peerEnabled[peerType];
-    }
-
-    public void setPeerEnabled(int peerType, boolean val) {
-        if (peerType < 0 || peerType >= PEER_COUNT) {
-            return;
-        }
-        peerEnabled[peerType] = val;
+    public void setOn(String opt, boolean val) {
+        options.put(opt, val);
         SharedPreferences p = prefs();
         if (p != null) {
-            p.edit().putBoolean(key + "_peer" + peerType, val).apply();
+            p.edit().putBoolean(optKey(opt), val).apply();
         }
     }
 
@@ -194,22 +278,52 @@ public class VeyraScope {
         saveOverrides();
     }
 
-    // What Chat Types and Skip Own/Admin say for this chat, ignoring manual overrides.
+    // What the Chat Types options say for this chat, ignoring manual overrides.
     public boolean isDefaultIncluded(int account, long dialogId, boolean unknownDefault) {
-        if (dialogId < 0 && skipOwnAdmin && !DialogObject.isEncryptedDialog(dialogId)) {
-            try {
-                TLRPC.Chat chat = MessagesController.getInstance(account).getChat(-dialogId);
-                if (chat != null && ChatObject.hasAdminRights(chat)) {
-                    return false;
-                }
-            } catch (Throwable ignore) {
-            }
-        }
-        int type = classify(account, dialogId);
-        if (type < 0) {
+        if (dialogId == 0) {
             return unknownDefault;
         }
-        return peerEnabled[type];
+        if (DialogObject.isEncryptedDialog(dialogId)) {
+            return isOn(OPT_PRIVATE);
+        }
+        try {
+            MessagesController mc = MessagesController.getInstance(account);
+            if (dialogId > 0) {
+                TLRPC.User user = mc.getUser(dialogId);
+                if (user != null && user.bot) {
+                    return isOn(OPT_BOTS);
+                }
+                return isOn(OPT_PRIVATE);
+            }
+            TLRPC.Chat chat = mc.getChat(-dialogId);
+            if (chat == null) {
+                return unknownDefault;
+            }
+            boolean isPublic = ChatObject.isPublic(chat);
+            boolean ownOrAdmin = ChatObject.hasAdminRights(chat);
+            if (ChatObject.isChannelAndNotMegaGroup(chat)) {
+                if (ownOrAdmin && isOn(OPT_SKIP_CHANNELS_OWN_ADMIN)) {
+                    return false;
+                }
+                return isOn(isPublic ? OPT_PUBLIC_CHANNELS : OPT_PRIVATE_CHANNELS);
+            }
+            if (ownOrAdmin && isOn(OPT_SKIP_GROUPS_OWN_ADMIN)) {
+                return false;
+            }
+            if (!isOn(isPublic ? OPT_PUBLIC_GROUPS : OPT_PRIVATE_GROUPS)) {
+                return false;
+            }
+            int size = groupSize(account, dialogId);
+            if (size == SIZE_UNKNOWN) {
+                return unknownDefault;
+            }
+            if (isPublic) {
+                return isOn(size == SIZE_LARGE ? OPT_PUBLIC_GROUPS_LARGE : OPT_PUBLIC_GROUPS_SMALL);
+            }
+            return isOn(size == SIZE_LARGE ? OPT_PRIVATE_GROUPS_LARGE : OPT_PRIVATE_GROUPS_SMALL);
+        } catch (Throwable ignore) {
+            return unknownDefault;
+        }
     }
 
     public boolean isIncluded(int account, long dialogId, boolean unknownDefault) {
@@ -231,8 +345,7 @@ public class VeyraScope {
         saveOverrides();
     }
 
-    // Classify a dialog into one of the PEER_* buckets. Returns -1 when it can't be
-    // classified yet (chat or member count not loaded), so the caller picks the safe default.
+    // Bucket of a dialog, or -1 when the chat isn't loaded yet.
     public static int classify(int account, long dialogId) {
         if (dialogId == 0) {
             return -1;
@@ -240,24 +353,36 @@ public class VeyraScope {
         if (DialogObject.isEncryptedDialog(dialogId)) {
             return PEER_PRIVATE;
         }
-        if (dialogId > 0) {
-            try {
-                TLRPC.User user = MessagesController.getInstance(account).getUser(dialogId);
-                if (user != null && user.bot) {
-                    return PEER_BOT;
-                }
-            } catch (Throwable ignore) {
+        try {
+            MessagesController mc = MessagesController.getInstance(account);
+            if (dialogId > 0) {
+                TLRPC.User user = mc.getUser(dialogId);
+                return user != null && user.bot ? PEER_BOT : PEER_PRIVATE;
             }
-            return PEER_PRIVATE;
+            TLRPC.Chat chat = mc.getChat(-dialogId);
+            if (chat == null) {
+                return -1;
+            }
+            boolean isPublic = ChatObject.isPublic(chat);
+            if (ChatObject.isChannelAndNotMegaGroup(chat)) {
+                return isPublic ? PEER_PUBLIC_CHANNEL : PEER_PRIVATE_CHANNEL;
+            }
+            return isPublic ? PEER_PUBLIC_GROUP : PEER_PRIVATE_GROUP;
+        } catch (Throwable ignore) {
+            return -1;
+        }
+    }
+
+    // SIZE_SMALL / SIZE_LARGE for groups, SIZE_UNKNOWN when the member count isn't loaded.
+    public static int groupSize(int account, long dialogId) {
+        if (dialogId >= 0) {
+            return SIZE_UNKNOWN;
         }
         try {
             MessagesController mc = MessagesController.getInstance(account);
             TLRPC.Chat chat = mc.getChat(-dialogId);
             if (chat == null) {
-                return -1;
-            }
-            if (ChatObject.isChannelAndNotMegaGroup(chat)) {
-                return PEER_CHANNEL;
+                return SIZE_UNKNOWN;
             }
             int count = chat.participants_count;
             if (count <= 0) {
@@ -267,11 +392,11 @@ public class VeyraScope {
                 }
             }
             if (count <= 0) {
-                return -1;
+                return SIZE_UNKNOWN;
             }
-            return count > LARGE_GROUP_MIN_MEMBERS ? PEER_LARGE_GROUP : PEER_SMALL_GROUP;
+            return count > LARGE_GROUP_MIN_MEMBERS ? SIZE_LARGE : SIZE_SMALL;
         } catch (Throwable ignore) {
-            return -1;
+            return SIZE_UNKNOWN;
         }
     }
 
@@ -284,14 +409,19 @@ public class VeyraScope {
         return isIncluded(account, dialogId, unknownDefault);
     }
 
-    // Per-feature instances. peerDefaults = {Private, SmallGroup, LargeGroup, Channel, Bot}.
-    public static final VeyraScope GHOST_READ = new VeyraScope(
-            SCOPE_GHOST_READ, "ghostRead",
-            new boolean[]{true, true, false, false, false}, false);
-    public static final VeyraScope ANTI_DELETE = new VeyraScope(
-            SCOPE_ANTI_DELETE, "antiDelete",
-            new boolean[]{true, true, false, false, true}, true);
-    public static final VeyraScope HISTORY = new VeyraScope(
-            SCOPE_HISTORY, "history",
-            new boolean[]{true, true, false, false, true}, true);
+    // Per-feature instances (declared last so ALL_OPTS and REGISTRY are initialized first).
+    public static final VeyraScope GHOST_READ = new VeyraScope(SCOPE_GHOST_READ, "ghostRead", defs(
+            OPT_PRIVATE,
+            OPT_PRIVATE_GROUPS, OPT_PRIVATE_GROUPS_SMALL,
+            OPT_PUBLIC_GROUPS, OPT_PUBLIC_GROUPS_SMALL));
+    public static final VeyraScope ANTI_DELETE = new VeyraScope(SCOPE_ANTI_DELETE, "antiDelete", defs(
+            OPT_PRIVATE, OPT_BOTS,
+            OPT_PRIVATE_GROUPS, OPT_PRIVATE_GROUPS_SMALL,
+            OPT_PUBLIC_GROUPS, OPT_PUBLIC_GROUPS_SMALL,
+            OPT_SKIP_GROUPS_OWN_ADMIN, OPT_SKIP_CHANNELS_OWN_ADMIN));
+    public static final VeyraScope HISTORY = new VeyraScope(SCOPE_HISTORY, "history", defs(
+            OPT_PRIVATE, OPT_BOTS,
+            OPT_PRIVATE_GROUPS, OPT_PRIVATE_GROUPS_SMALL,
+            OPT_PUBLIC_GROUPS, OPT_PUBLIC_GROUPS_SMALL,
+            OPT_SKIP_GROUPS_OWN_ADMIN, OPT_SKIP_CHANNELS_OWN_ADMIN));
 }

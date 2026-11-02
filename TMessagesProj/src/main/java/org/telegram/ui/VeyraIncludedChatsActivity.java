@@ -153,13 +153,23 @@ public class VeyraIncludedChatsActivity extends BaseFragment {
 
     private String getStatus(long did) {
         String type;
-        switch (VeyraScope.classify(currentAccount, did)) {
+        int peer = VeyraScope.classify(currentAccount, did);
+        switch (peer) {
             case VeyraScope.PEER_PRIVATE: type = "Private Chat"; break;
-            case VeyraScope.PEER_SMALL_GROUP: type = "Small Group"; break;
-            case VeyraScope.PEER_LARGE_GROUP: type = "Large Group"; break;
-            case VeyraScope.PEER_CHANNEL: type = "Channel"; break;
             case VeyraScope.PEER_BOT: type = "Bot"; break;
-            default: type = "Group"; break;
+            case VeyraScope.PEER_PRIVATE_GROUP: type = "Private Group"; break;
+            case VeyraScope.PEER_PUBLIC_GROUP: type = "Public Group"; break;
+            case VeyraScope.PEER_PRIVATE_CHANNEL: type = "Private Channel"; break;
+            case VeyraScope.PEER_PUBLIC_CHANNEL: type = "Public Channel"; break;
+            default: type = "Chat"; break;
+        }
+        if (peer == VeyraScope.PEER_PRIVATE_GROUP || peer == VeyraScope.PEER_PUBLIC_GROUP) {
+            int size = VeyraScope.groupSize(currentAccount, did);
+            if (size == VeyraScope.SIZE_SMALL) {
+                type += " \u2022 Small";
+            } else if (size == VeyraScope.SIZE_LARGE) {
+                type += " \u2022 Large";
+            }
         }
         if (scope.getOverride(did) != null) {
             return type + " \u2022 Manual";
