@@ -131,9 +131,6 @@ public class VeyraAntiDelete {
     }
 
     public static void addDeletedMessage(int account, long dialogId, int messageId) {
-        if (dialogId > 0) {
-            getPeerDeletedChats(account).add(dialogId);
-        }
         java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> deletedMessagesByDialog = getDeletedMap(account);
         deletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>())).add(messageId);
         if (dialogId != 0) {
