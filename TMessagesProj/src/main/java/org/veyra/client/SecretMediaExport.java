@@ -36,6 +36,34 @@ public final class SecretMediaExport implements AutoCloseable {
         }
     }
 
+    // Removes decrypted exports left behind when the process died before the delayed cleanup ran.
+    public static void cleanupStaleExports() {
+        java.util.ArrayList<File> dirs = new java.util.ArrayList<>();
+        try {
+            dirs.add(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE));
+        } catch (Throwable ignore) {}
+        try {
+            dirs.add(org.telegram.messenger.ApplicationLoader.applicationContext.getExternalCacheDir());
+        } catch (Throwable ignore) {}
+        try {
+            dirs.add(org.telegram.messenger.ApplicationLoader.applicationContext.getCacheDir());
+        } catch (Throwable ignore) {}
+        for (File dir : dirs) {
+            if (dir == null || !dir.isDirectory()) {
+                continue;
+            }
+            File[] files = dir.listFiles();
+            if (files == null) {
+                continue;
+            }
+            for (File f : files) {
+                if (f.isFile() && f.getName().startsWith("veyra_ttl_")) {
+                    f.delete();
+                }
+            }
+        }
+    }
+
     public static SecretMediaExport open(int account, MessageObject message) throws IOException {
         if (message == null || message.messageOwner == null) {
             throw new IOException("no message");

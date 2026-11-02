@@ -246,6 +246,13 @@ public class ApplicationLoader extends Application {
 
         SharedConfig.loadConfig();
         SharedPrefsHelper.init(applicationContext);
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                org.veyra.client.SecretMediaExport.cleanupStaleExports();
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        }, 10000);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
             UserConfig.getInstance(a).loadConfig();
             MessagesController.getInstance(a);
