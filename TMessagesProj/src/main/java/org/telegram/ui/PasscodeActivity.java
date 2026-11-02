@@ -1177,7 +1177,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                     if (position == fingerprintRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.UnlockFingerprint), SharedConfig.useFingerprintLock, false);
                     } else if (position == captureRow) {
-                        textCell.setTextAndCheck(LocaleController.getString(R.string.ScreenCaptureShowContent), !SharedConfig.allowScreenCapture, false);
+                        textCell.setTextAndCheck(LocaleController.getString(R.string.DisableSharingInfoHeader1), !SharedConfig.allowScreenCapture, false);
                     } else if (position == walletFingerprintRow) {
                         textCell.setTextAndCheck(LocaleController.getString(R.string.WalletConfirmWithFingerprint), GramWallet.getInstance(currentAccount).canSend() && GramWallet.getInstance(currentAccount).needsFingerprint(), false);
                     } else if (position == walletPasscodeRow) {
@@ -1246,7 +1246,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                         cell.setText(LocaleController.getString(R.string.WalletLockInfo));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
                     } else if (position == captureDetailRow) {
-                        cell.setText(LocaleController.getString(R.string.ScreenCaptureInfo));
+                        cell.setText(LocaleController.getString(R.string.ScreenProtectionInfo));
                         cell.getTextView().setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
                     }
                     break;
