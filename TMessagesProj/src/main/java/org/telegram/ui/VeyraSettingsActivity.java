@@ -205,6 +205,23 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ));
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header("Anti-Delete"));
+        r.add(VeyraSettingsRow.toggle(
+                "Limit Anti-Delete Scope",
+                "Only keep deleted messages from private chats and groups up to " + VeyraUIConfig.SCOPE_LARGE_GROUP_MIN_MEMBERS + " members. Off keeps them everywhere",
+                () -> VeyraUIConfig.limitAntiDeleteScope,
+                val -> { VeyraUIConfig.toggleLimitAntiDeleteScope(); reloadRows(); },
+                false
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Skip Chats I Own or Admin",
+                "Don't keep deleted messages in groups and channels where you're owner or admin (the admin log already records them)",
+                () -> VeyraUIConfig.antiDeleteSkipOwnAdmin,
+                val -> VeyraUIConfig.toggleAntiDeleteSkipOwnAdmin(),
+                true
+        ).enabledWhen(() -> VeyraUIConfig.limitAntiDeleteScope));
+        r.add(VeyraSettingsRow.shadow());
+
         r.add(VeyraSettingsRow.header("Behavior"));
         r.add(VeyraSettingsRow.toggle(
                 "Hide Keyboard on Scroll",

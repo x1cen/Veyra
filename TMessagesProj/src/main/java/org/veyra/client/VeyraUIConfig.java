@@ -2,6 +2,10 @@ package org.veyra.client;
 
 import android.content.SharedPreferences;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.ChatObject;
+import org.telegram.messenger.DialogObject;
+import org.telegram.messenger.MessagesController;
+import org.telegram.tgnet.TLRPC;
 
 public class VeyraUIConfig {
     private static SharedPreferences prefs;
@@ -32,6 +36,11 @@ public class VeyraUIConfig {
     public static boolean reactionHistoryDropOldest = true;
     public static boolean hidePhoneNumber = false;
 
+    // Scope limiting (data minimization). All masters default OFF = feature applies everywhere.
+    public static final int SCOPE_LARGE_GROUP_MIN_MEMBERS = 100;
+    public static boolean limitAntiDeleteScope = false;
+    public static boolean antiDeleteSkipOwnAdmin = true;
+
     static {
         load();
     }
@@ -57,6 +66,8 @@ public class VeyraUIConfig {
             editHistoryEnabled = prefs.getBoolean("editHistoryEnabled", true);
             editHistoryLimit = prefs.getInt("editHistoryLimit", 20);
             hidePhoneNumber = prefs.getBoolean("hidePhoneNumber", false);
+            limitAntiDeleteScope = prefs.getBoolean("limitAntiDeleteScope", false);
+            antiDeleteSkipOwnAdmin = prefs.getBoolean("antiDeleteSkipOwnAdmin", true);
         }
     }
 
@@ -76,6 +87,62 @@ public class VeyraUIConfig {
     public static void toggleHidePhoneNumber() {
         hidePhoneNumber = !hidePhoneNumber;
         save("hidePhoneNumber", hidePhoneNumber);
+    }
+
+    public static void toggleLimitAntiDeleteScope() {
+        limitAntiDeleteScope = !limitAntiDeleteScope;
+        save("limitAntiDeleteScope", limitAntiDeleteScope);
+    }
+
+    public static void toggleAntiDeleteSkipOwnAdmin() {
+        antiDeleteSkipOwnAdmin = !antiDeleteSkipOwnAdmin;
+        save("antiDeleteSkipOwnAdmin", antiDeleteSkipOwnAdmin);
+    }
+
+    // Classifies whether a feature limited to "private chats and small groups (optionally
+    // skipping chats you own or administer)" should apply to this chat. In-scope = feature
+    // applies. Unknown member counts stay in scope, so a limited feature never silently drops
+    // data for a chat it cannot classify yet.
+    public static boolean isPrivateOrSmallGroupScope(int account, long dialogId, boolean skipOwnAdmin) {
+        if (dialogId == 0) {
+            return false;
+        }
+        if (DialogObject.isEncryptedDialog(dialogId)) {
+            return true;
+        }
+        if (dialogId > 0) {
+            return true;
+        }
+        try {
+            MessagesController mc = MessagesController.getInstance(account);
+            TLRPC.Chat chat = mc.getChat(-dialogId);
+            if (chat == null) {
+                return false;
+            }
+            if (ChatObject.isChannelAndNotMegaGroup(chat)) {
+                return false;
+            }
+            if (skipOwnAdmin && ChatObject.hasAdminRights(chat)) {
+                return false;
+            }
+            int count = chat.participants_count;
+            if (count <= 0) {
+                TLRPC.ChatFull full = mc.getChatFull(-dialogId);
+                if (full != null) {
+                    count = full.participants_count;
+                }
+            }
+            return count <= SCOPE_LARGE_GROUP_MIN_MEMBERS;
+        } catch (Throwable ignore) {
+            return false;
+        }
+    }
+
+    public static boolean isAntiDeleteInScope(int account, long dialogId) {
+        if (!limitAntiDeleteScope) {
+            return true;
+        }
+        return isPrivateOrSmallGroupScope(account, dialogId, antiDeleteSkipOwnAdmin);
     }
 
     public static void setTabsTitleType(int val) {
