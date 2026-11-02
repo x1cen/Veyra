@@ -237,7 +237,7 @@ public class VeyraForwarder {
                         );
                     });
                 } else {
-                    File itemPath = getMessageFilePath(currentAccount, msg);
+                    File itemPath = getMessageFilePath(currentAccount, msg, openedExports);
                     if (itemPath != null && itemPath.exists()) {
                         String mime = "image/webp";
                         if (itemPath.getName().endsWith(".tgs")) {
@@ -289,7 +289,7 @@ public class VeyraForwarder {
                         break;
                     }
 
-                    File itemPath = getMessageFilePath(currentAccount, item);
+                    File itemPath = getMessageFilePath(currentAccount, item, openedExports);
                     if (itemPath != null && itemPath.exists()) {
                         SendMessagesHelper.SendingMediaInfo info = new SendMessagesHelper.SendingMediaInfo();
                         info.path = itemPath.getAbsolutePath();
@@ -340,7 +340,7 @@ public class VeyraForwarder {
                     } catch (InterruptedException ignored) {}
                 }
             } else if (isDocumentOrAudio(msg)) {
-                File itemPath = getMessageFilePath(currentAccount, msg);
+                File itemPath = getMessageFilePath(currentAccount, msg, openedExports);
                 if (itemPath != null && itemPath.exists()) {
                     SendMessagesHelper.SendingMediaInfo info = new SendMessagesHelper.SendingMediaInfo();
                     info.path = itemPath.getAbsolutePath();
@@ -411,10 +411,16 @@ public class VeyraForwarder {
             }
         }
         } finally {
-            for (SecretMediaExport exp : openedExports) {
-                try {
-                    exp.close();
-                } catch (Throwable ignore) {}
+            // Sends are posted to the UI thread and upload later; delay cleanup so decrypted files outlive the upload.
+            if (!openedExports.isEmpty()) {
+                final ArrayList<SecretMediaExport> toClose = new ArrayList<>(openedExports);
+                Utilities.globalQueue.postRunnable(() -> {
+                    for (SecretMediaExport exp : toClose) {
+                        try {
+                            exp.close();
+                        } catch (Throwable ignore) {}
+                    }
+                }, 30 * 60 * 1000L);
             }
         }
     }
