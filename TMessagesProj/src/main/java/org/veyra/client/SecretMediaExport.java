@@ -158,16 +158,26 @@ public final class SecretMediaExport implements AutoCloseable {
             if (k3.isFile() && k3.length() >= 48) return k3;
         }
 
-        String prefix = name.contains(".") ? name.substring(0, name.indexOf('.')) : name;
+        String base = baseName(name);
         File[] files = internalDir.listFiles();
         if (files != null) {
             for (File f : files) {
-                if (f.getName().startsWith(prefix) && f.getName().endsWith(".key") && f.length() >= 48) {
+                String fn = f.getName();
+                if (fn.endsWith(".key") && f.length() >= 48 && base.equals(baseName(fn))) {
                     return f;
                 }
             }
         }
         return null;
+    }
+
+    // File name without trailing .enc/.key extensions, used to match a media file to its own key.
+    private static String baseName(String fileName) {
+        String s = fileName;
+        while (s.endsWith(".enc") || s.endsWith(".key")) {
+            s = s.substring(0, s.length() - 4);
+        }
+        return s;
     }
 
     private static void decryptCtrCopy(File enc, File keyFile, File out) throws IOException {
