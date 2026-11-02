@@ -91,20 +91,6 @@ jobs:
                         /usr/local/lib/android/sdk/cmake/3.22.1
                     key: ndk27-cmake322-${{ runner.os }}-v2
 
-            -   name: Cache Aether Core
-                uses: actions/cache@v5
-                with:
-                    path: |
-                        TMessagesProj/jni/arm64-v8a/libaether.so
-                        TMessagesProj/jni/armeabi-v7a/libaether.so
-                        TMessagesProj/jni/x86_64/libaether.so
-                        TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so
-                        TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a/libaether.so
-                        TMessagesProj_AppStandalone/src/main/jniLibs/x86_64/libaether.so
-                    # Key on aether version only — jni source changes must NOT bust aether binary cache
-                    key: aether-v2.3.0-bins
-                    restore-keys: |
-                        aether-v2.3.0-bins
 
             -   name: Pin CMake 3.22.1 and NDK 27.2.12479018
                 run: |
@@ -186,9 +172,9 @@ jobs:
                 if: ${{ (inputs.multi-pass || 'Korben Dallas') == 'Korben Dallas' }}
                 env:
                     VEYRA_KEYSTORE_BASE64: ${{secrets.VEYRA_KEYSTORE_BASE64}}
-                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD || 'veyra_release_pass_2026'}}
+                    VEYRA_RELEASE_STORE_PASSWORD: ${{secrets.VEYRA_RELEASE_STORE_PASSWORD}}
                     VEYRA_RELEASE_KEY_ALIAS: ${{secrets.VEYRA_RELEASE_KEY_ALIAS || 'veyra'}}
-                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD || 'veyra_release_pass_2026'}}
+                    VEYRA_RELEASE_KEY_PASSWORD: ${{secrets.VEYRA_RELEASE_KEY_PASSWORD}}
                 run: |
                     if [ -n "$VEYRA_KEYSTORE_BASE64" ]; then
                         mv "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore" "${GITHUB_WORKSPACE}/TMessagesProj/config/release.keystore.old"
@@ -199,37 +185,6 @@ jobs:
                         sed -i "s/RELEASE_KEY_PASSWORD=.*/RELEASE_KEY_PASSWORD=$VEYRA_RELEASE_KEY_PASSWORD/g" "${GITHUB_WORKSPACE}/gradle.properties"
                     fi
 
-            -   name: Setup Aether Core
-                run: |
-                    if [ -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ] && [ -s "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" ]; then
-                      echo "Aether cached — ensure jniLibs copy..."
-                      mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a"
-                      cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so" 2>/dev/null || true
-                      if [ "${TARGET_ARCH}" = "all" ]; then
-                        mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/x86_64"
-                        cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/armeabi-v7a/libaether.so" 2>/dev/null || true
-                        cp -f "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/x86_64/libaether.so" 2>/dev/null || true
-                      fi
-                      ls -lh "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
-                      exit 0
-                    fi
-                    mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a"
-                    echo "Fetching Aether arm64 core..."
-                    curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-arm64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a" aether
-                    mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
-                    chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so"
-                    # Bundle as jniLibs so it extracts to nativeLibraryDir (executable, not noexec files/)
-                    mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a"
-                    cp "${GITHUB_WORKSPACE}/TMessagesProj/jni/arm64-v8a/libaether.so" "${GITHUB_WORKSPACE}/TMessagesProj_AppStandalone/src/main/jniLibs/arm64-v8a/libaether.so"
-                    if [ "${TARGET_ARCH}" = "all" ]; then
-                        mkdir -p "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64"
-                        curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-armv7.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a" aether
-                        mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so"
-                        chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/armeabi-v7a/libaether.so"
-                        curl -sL https://github.com/CluvexStudio/Aether/releases/download/v2.3.0/aether-android-x86_64.tar.gz | tar -xz -C "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64" aether
-                        mv "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/aether" "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so"
-                        chmod 755 "${GITHUB_WORKSPACE}/TMessagesProj/jni/x86_64/libaether.so"
-                    fi
 
             -   name: Build APK
                 run: |
@@ -313,7 +268,7 @@ jobs:
                 with:
                     tag_name: ${{env.TNAME}}
                     name: ${{env.RNAME}}
-                    prerelease: ${{ inputs.prerelease != '' && inputs.prerelease || (github.ref_name != 'main' && github.ref_name != 'veyra') }}
+                    prerelease: ${{ inputs.prerelease == true || (inputs.prerelease == '' && github.ref_name != 'main' && github.ref_name != 'veyra' && github.ref_name != 'master') }}
                     files: |
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/Veyra.*.apk
                         TMessagesProj_AppStandalone/build/outputs/apk/afat/standalone/SHA256SUMS.txt

@@ -1,8 +1,9 @@
 name: veyra-auto-rebase
 
 on:
-  schedule:
-    - cron: '0 6 * * *'
+  # schedule disabled to avoid conflict with upstream-sync.yml
+  # schedule:
+  #   - cron: '0 6 * * *'
   workflow_dispatch: {}
 
 permissions:

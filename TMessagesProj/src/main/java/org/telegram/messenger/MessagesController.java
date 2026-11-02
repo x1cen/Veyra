@@ -10833,10 +10833,7 @@ public class MessagesController extends BaseController implements NotificationCe
     private long lastCheckPromoInfoTime;
 
     private void checkPromoInfoInternal(boolean reset) {
-        if (promoDialog != null) {
-            AndroidUtilities.runOnUIThread(this::removePromoDialog);
-        }
-        promoDialog = null;
+        AndroidUtilities.runOnUIThread(this::removePromoDialog);
         promoDialogId = 0;
         promoDialogType = 0;
         if (true) return;

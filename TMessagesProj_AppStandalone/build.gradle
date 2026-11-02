@@ -113,7 +113,7 @@ android {
                 } else {
                     include "arm64-v8a", "armeabi-v7a", "x86_64"
                 }
-                universalApk false
+                universalApk true
             } else {
                 enable false
             }
@@ -160,7 +160,7 @@ android {
                 }
                 output.versionCodeOverride = defaultConfig.versionCode * 10 + abiCode
             } else {
-                outputFileName = "app.apk"
+                outputFileName = "app-universal.apk"
                 output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
             }
         }
@@ -188,9 +188,9 @@ android {
                 version '3.22.1'
                 def ccacheEnabled = System.getenv("CCACHE_DIR") != null || file('/usr/bin/ccache').exists() || file('/usr/local/bin/ccache').exists()
                 if (ccacheEnabled) {
-                    arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21', '-DCMAKE_C_COMPILER_LAUNCHER=ccache', '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+                    arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23', '-DCMAKE_C_COMPILER_LAUNCHER=ccache', '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
                 } else {
-                    arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21'
+                    arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23'
                 }
                 targets 'tmessages.49'
             }
