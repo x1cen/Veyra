@@ -1489,6 +1489,13 @@
     <string name="GhostHideTyping">Hide Typing Status</string>
     <string name="GhostReadOnReply">Mark as Read on Reply</string>
     <string name="GhostHideStories">Stealth Story Views</string>
+    <string name="EditHistory">Edit History</string>
+    <string name="OriginalMessage">Original Message</string>
+    <string name="VeyraHistoryMessages">Edited Messages</string>
+    <string name="VeyraHistoryReactions">Reactions History</string>
+    <string name="VeyraNoReactionHistory">No reactions history</string>
+    <string name="VeyraEditHistoryTabMessages">Messages</string>
+    <string name="VeyraEditHistoryTabReactions">Reactions</string>
     <string name="EditMessage">Edit Message</string>
     <string name="EditCaption">Edit Caption</string>
     <string name="EditMessageMedia">Tap to edit media</string>

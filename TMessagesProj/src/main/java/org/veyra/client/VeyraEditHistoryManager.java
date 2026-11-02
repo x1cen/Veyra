@@ -162,9 +162,8 @@ public final class VeyraEditHistoryManager {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
 
-            // Encrypt text before storing
-            String encryptedText = text != null ? VeyraKeyStore.encryptString(text) : "";
-            if (encryptedText == null) encryptedText = text; // fallback plain if keystore fails
+            // Store text
+            String encryptedText = text != null ? text : "";
 
             Cursor checkCursor = db.rawQuery("SELECT text FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ? ORDER BY id DESC LIMIT 1",
                     new String[]{String.valueOf(dialogId), String.valueOf(messageId)});
@@ -172,10 +171,7 @@ public final class VeyraEditHistoryManager {
                 if (checkCursor.moveToFirst()) {
                     String lastRaw = checkCursor.getString(0);
                     checkCursor.close();
-                    // Decrypt to compare
-                    String lastDecrypted = VeyraKeyStore.decryptString(lastRaw);
-                    if (lastDecrypted == null) lastDecrypted = lastRaw;
-                    if (text != null && text.equals(lastDecrypted)) {
+                    if (text != null && text.equals(lastRaw)) {
                         return; // no change
                     }
                 } else {
@@ -244,9 +240,7 @@ public final class VeyraEditHistoryManager {
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     int date = cursor.getInt(0);
-                    String raw = cursor.getString(1);
-                    String text = VeyraKeyStore.decryptString(raw);
-                    if (text == null) text = raw;
+                    String text = cursor.getString(1);
                     byte[] data = cursor.isNull(2) ? null : cursor.getBlob(2);
                     list.add(new EditEntry(dialogId, messageId, date, text, data));
                 }

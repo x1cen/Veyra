@@ -597,15 +597,17 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
             // 1. Service Pill Text
             String timeFormatted = entry.date > 0 ? LocaleController.formatDateTime(entry.date, false) : "";
+            String pillText;
             if (isOriginal) {
-                servicePill.setText(TextUtils.isEmpty(timeFormatted) ? LocaleController.getString("OriginalMessage", R.string.OriginalMessage) : (LocaleController.getString("OriginalMessage", R.string.OriginalMessage) + " • " + timeFormatted));
+                pillText = TextUtils.isEmpty(timeFormatted) ? LocaleController.getString("OriginalMessage", R.string.OriginalMessage) : (LocaleController.getString("OriginalMessage", R.string.OriginalMessage) + " • " + timeFormatted);
             } else if (isCurrent) {
-                servicePill.setText(TextUtils.isEmpty(timeFormatted) ? "Current Version" : ("Current Version • " + timeFormatted));
+                pillText = TextUtils.isEmpty(timeFormatted) ? "Current Version" : ("Current Version • " + timeFormatted);
             } else {
                 String delta = formatTimeDelta(entry.prevDate, entry.date);
                 String label = "Edit #" + entry.versionIndex + (!TextUtils.isEmpty(delta) ? (" (" + delta + ")") : "");
-                servicePill.setText(TextUtils.isEmpty(timeFormatted) ? label : (label + " • " + timeFormatted));
+                pillText = TextUtils.isEmpty(timeFormatted) ? label : (label + " • " + timeFormatted);
             }
+            servicePill.setText((CharSequence) pillText);
 
             // 2. Bubble Alignment & Avatar
             messageRow.setGravity(isOut ? (Gravity.END | Gravity.BOTTOM) : (Gravity.START | Gravity.BOTTOM));
