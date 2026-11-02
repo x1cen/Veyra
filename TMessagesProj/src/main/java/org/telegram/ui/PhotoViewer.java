@@ -2204,12 +2204,29 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private void detectQr() {
         if (menuItem == null) return;
         menuItem.hideSubItem(gallery_menu_qr);
+        qrResults = null;
+        Bitmap bitmap = centerImage != null ? centerImage.getBitmap() : null;
+        if (bitmap == null || bitmap.isRecycled()) return;
+        final Bitmap copy;
+        try {
+            copy = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return;
+        }
+        if (copy == null) return;
+        final int index = currentIndex;
+        final MessageObject messageObject = currentMessageObject;
         org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
-            Bitmap bitmap = centerImage != null ? centerImage.getBitmap() : null;
-            if (bitmap == null) return;
-            ArrayList<String> results = org.veyra.client.VeyraQrHelper.readQr(bitmap);
+            ArrayList<String> results;
+            try {
+                results = org.veyra.client.VeyraQrHelper.readQr(copy);
+            } finally {
+                copy.recycle();
+            }
             org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> {
                 if (menuItem == null || qrItem == null) return;
+                if (currentIndex != index || currentMessageObject != messageObject) return;
                 qrResults = results;
                 if (qrResults != null && !qrResults.isEmpty()) {
                     menuItem.showSubItem(gallery_menu_qr);
@@ -7795,6 +7812,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     containerView.requestLayout();
                 }
                 detectFaces();
+                detectQr();
             }
             if (imageReceiver == centerImage && set && placeProvider != null && placeProvider.scaleToFill() && !ignoreDidSetImage && sendPhotoType != SELECT_TYPE_AVATAR && sendPhotoType != SELECT_TYPE_STICKER) {
                 if (!wasLayout) {
@@ -16096,6 +16114,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
         }
         detectFaces();
+        detectQr();
         if (captionEdit != null) {
             long dialogId = 0;
             if (placeProvider != null)
