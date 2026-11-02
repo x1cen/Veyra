@@ -1506,6 +1506,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 if (mgr != null) {
                     mgr.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
                 }
+            } catch (SecurityException se) {
+                // Expected on Android 12+ without READ_PHONE_STATE permission
             } catch (Exception e) {
                 FileLog.e(e);
             }
