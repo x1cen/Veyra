@@ -42,10 +42,6 @@ public class VeyraGhost {
     public static boolean hideStories = true;
     public static boolean hideChannelViews = false;
 
-    // Scope limiting: when OFF (default) read receipts are hidden everywhere.
-    // When ON, hiding is kept only in private chats and small groups; large groups,
-    // channels and bots send read receipts normally (seen lists aren't shown there anyway).
-    public static boolean limitReadScope = false;
     public static final int LARGE_GROUP_MIN_MEMBERS = 100;
 
     private static final java.util.concurrent.ConcurrentHashMap<Long, Long> allowedReadDialogs = new java.util.concurrent.ConcurrentHashMap<>();
@@ -81,7 +77,6 @@ public class VeyraGhost {
         hideMediaReceipts = prefs.getBoolean("hideMediaReceipts", false);
         hideStories = prefs.getBoolean("hideStories", true);
         hideChannelViews = prefs.getBoolean("hideChannelViews", false);
-        limitReadScope = prefs.getBoolean("limitReadScope", false);
     }
 
     private static void save(String key, boolean val) {
@@ -120,42 +115,12 @@ public class VeyraGhost {
     public static void toggleHideMediaReceipts() { hideMediaReceipts = !hideMediaReceipts; save("hideMediaReceipts", hideMediaReceipts); }
     public static void toggleHideStories() { hideStories = !hideStories; save("hideStories", hideStories); }
     public static void toggleHideChannelViews() { hideChannelViews = !hideChannelViews; save("hideChannelViews", hideChannelViews); }
-    public static void toggleLimitReadScope() { limitReadScope = !limitReadScope; save("limitReadScope", limitReadScope); }
 
-    // When scope limiting is on, read-hiding is kept only for private chats and small
-    // groups; large groups, channels and bots are exempt (their seen lists aren't shown
-    // anyway). With limiting off (default) nothing is exempt and hiding applies everywhere.
+    // Read-hiding scope. Exempt = send read receipts normally (don't hide). A chat is exempt
+    // when it falls OUTSIDE the configured Ghost read scope. Unknown chats default to in-scope
+    // (keep hiding), so privacy is preserved when the chat can't be classified yet.
     public static boolean isReadExempt(int account, long dialogId) {
-        if (!limitReadScope) {
-            return false;
-        }
-        if (dialogId == 0 || org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
-            return false;
-        }
-        try {
-            org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(account);
-            if (dialogId > 0) {
-                TLRPC.User user = mc.getUser(dialogId);
-                return user != null && user.bot;
-            }
-            TLRPC.Chat chat = mc.getChat(-dialogId);
-            if (chat == null) {
-                return false;
-            }
-            if (org.telegram.messenger.ChatObject.isChannelAndNotMegaGroup(chat)) {
-                return true;
-            }
-            int count = chat.participants_count;
-            if (count <= 0) {
-                TLRPC.ChatFull full = mc.getChatFull(-dialogId);
-                if (full != null) {
-                    count = full.participants_count;
-                }
-            }
-            return count > LARGE_GROUP_MIN_MEMBERS;
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return !VeyraScope.GHOST_READ.isInScope(account, dialogId, true);
     }
 
     // The server keeps an account "online" for minutes after the last update; go offline right away when hiding starts.

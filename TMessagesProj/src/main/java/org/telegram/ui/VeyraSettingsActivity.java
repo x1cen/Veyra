@@ -6,6 +6,7 @@ import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.Components.IconBackgroundColors;
 import org.veyra.client.VeyraGhost;
+import org.veyra.client.VeyraScope;
 import org.veyra.client.VeyraUIConfig;
 
 import java.util.ArrayList;
@@ -150,12 +151,11 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Scope"));
-        r.add(VeyraSettingsRow.toggle(
-                "Limit to Private & Small Groups",
-                "Only hide read receipts in private chats and groups under " + VeyraGhost.LARGE_GROUP_MIN_MEMBERS + " members. Channels, large groups and bots send reads normally",
-                () -> VeyraGhost.limitReadScope,
-                val -> VeyraGhost.toggleLimitReadScope(),
-                false
+        r.add(VeyraSettingsRow.detail(
+                "Read Receipt Scope",
+                () -> VeyraScope.GHOST_READ.limitEnabled ? "Limited" : "Everywhere",
+                false,
+                () -> presentFragment(new VeyraScopeSettingsActivity(VeyraScope.SCOPE_GHOST_READ))
         ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 
@@ -196,20 +196,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 val -> VeyraUIConfig.toggleEditHistory(),
                 true
         ));
-        r.add(VeyraSettingsRow.toggle(
-                "Limit History Scope",
-                "Only log edits and reactions in private chats and groups up to " + VeyraUIConfig.SCOPE_LARGE_GROUP_MIN_MEMBERS + " members. Off logs everywhere",
-                () -> VeyraUIConfig.limitHistoryScope,
-                val -> { VeyraUIConfig.toggleLimitHistoryScope(); reloadRows(); },
-                false
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                "Skip Chats I Own or Admin",
-                "Don't log edits and reactions in groups and channels where you're owner or admin (the admin log already records them)",
-                () -> VeyraUIConfig.historySkipOwnAdmin,
-                val -> VeyraUIConfig.toggleHistorySkipOwnAdmin(),
-                true
-        ).enabledWhen(() -> VeyraUIConfig.limitHistoryScope));
+        r.add(VeyraSettingsRow.detail(
+                "History Scope",
+                () -> VeyraScope.HISTORY.limitEnabled ? "Limited" : "Everywhere",
+                false,
+                () -> presentFragment(new VeyraScopeSettingsActivity(VeyraScope.SCOPE_HISTORY))
+        ).enabledWhen(() -> VeyraUIConfig.editHistoryEnabled));
         r.add(VeyraSettingsRow.toggle(
                 "Ignore Blocked Messages in Groups",
                 "Blur media and collapse messages from blocked users",
@@ -220,20 +212,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Anti-Delete"));
-        r.add(VeyraSettingsRow.toggle(
-                "Limit Anti-Delete Scope",
-                "Only keep deleted messages from private chats and groups up to " + VeyraUIConfig.SCOPE_LARGE_GROUP_MIN_MEMBERS + " members. Off keeps them everywhere",
-                () -> VeyraUIConfig.limitAntiDeleteScope,
-                val -> { VeyraUIConfig.toggleLimitAntiDeleteScope(); reloadRows(); },
-                false
+        r.add(VeyraSettingsRow.detail(
+                "Anti-Delete Scope",
+                () -> VeyraScope.ANTI_DELETE.limitEnabled ? "Limited" : "Everywhere",
+                false,
+                () -> presentFragment(new VeyraScopeSettingsActivity(VeyraScope.SCOPE_ANTI_DELETE))
         ));
-        r.add(VeyraSettingsRow.toggle(
-                "Skip Chats I Own or Admin",
-                "Don't keep deleted messages in groups and channels where you're owner or admin (the admin log already records them)",
-                () -> VeyraUIConfig.antiDeleteSkipOwnAdmin,
-                val -> VeyraUIConfig.toggleAntiDeleteSkipOwnAdmin(),
-                true
-        ).enabledWhen(() -> VeyraUIConfig.limitAntiDeleteScope));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Behavior"));
