@@ -1705,6 +1705,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int charge_fee = 72;
 
     private final static int chat_menu_topic_create = 73;
+    private final static int delete_history = 91;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3871,6 +3872,8 @@ public class ChatActivity extends BaseFragment implements
                         return;
                     }
                     showDialog(AlertsCreator.createTTLAlert(getParentActivity(), currentEncryptedChat, themeDelegate).create());
+                } else if (id == delete_history) {
+                    org.veyra.client.VeyraMessageHelper.getInstance(currentAccount).createDeleteHistoryAlert(ChatActivity.this, currentChat, forumTopic, mergeDialogId, themeDelegate);
                 } else if (id == clear_history || id == delete_chat || id == auto_delete_timer) {
                     if (getParentActivity() == null) {
                         return;
@@ -4494,6 +4497,9 @@ public class ChatActivity extends BaseFragment implements
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
                     LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
+            }
+            if (currentChat != null && ((ChatObject.isMegagroup(currentChat) && !ChatObject.isMonoForum(currentChat)) || !ChatObject.isChannel(currentChat))) {
+                headerItem.lazilyAddSubItem(delete_history, R.drawable.msg_delete, LocaleController.getString(R.string.DeleteAllFromSelf));
             }
             boolean addedSettings = false;
             if (!isTopic) {
