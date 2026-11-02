@@ -46471,6 +46471,11 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
                 }
+                if (selectedObject != null && org.veyra.client.VeyraEditHistoryManager.hasHistory(currentAccount, selectedObject.getDialogId(), selectedObject.getId())) {
+                    items.add("Edit History");
+                    options.add(OPTION_VIEW_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_recent);
+                }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {
                         items.add(LocaleController.formatPluralString("ViewReplies", primaryMessage.getRepliesCount()));
@@ -46801,11 +46806,6 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.Copy));
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
-                }
-                if (selectedObject != null && org.veyra.client.VeyraEditHistoryManager.hasHistory(currentAccount, selectedObject.getDialogId(), selectedObject.getId())) {
-                    items.add("Edit History");
-                    options.add(OPTION_VIEW_EDIT_HISTORY);
-                    icons.add(R.drawable.msg_recent);
                 }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {
