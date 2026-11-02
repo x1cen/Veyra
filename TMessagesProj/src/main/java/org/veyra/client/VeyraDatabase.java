@@ -189,13 +189,25 @@ public final class VeyraDatabase {
                                 if (insertState == null) {
                                     insertState = telegramDb.executeFast("INSERT OR IGNORE INTO messages_v2 (mid, uid, read_state, send_state, date, data, out, ttl, media, replydata, imp, mention, forwards, replies_data, thread_reply_id, is_channel, reply_to_message_id, custom_params, group_id, reply_to_story_id) VALUES (?, ?, 0, 0, ?, ?, ?, 0, 0, NULL, 0, 0, 0, NULL, 0, ?, 0, NULL, NULL, 0)");
                                 }
+                                int outFlag = 0;
+                                long channelId = 0;
+                                try {
+                                    org.telegram.tgnet.TLRPC.Message parsed = org.telegram.tgnet.TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                                    if (parsed != null) {
+                                        outFlag = (org.telegram.messenger.MessageObject.isOut(parsed) || parsed.from_scheduled) ? 1 : 0;
+                                        channelId = org.telegram.messenger.MessageObject.getChannelId(parsed);
+                                    }
+                                } catch (Throwable ignored) {
+                                } finally {
+                                    data.position(0);
+                                }
                                 insertState.requery();
                                 insertState.bindInteger(1, mid);
                                 insertState.bindLong(2, uid);
                                 insertState.bindInteger(3, date);
                                 insertState.bindByteBuffer(4, data);
-                                insertState.bindInteger(5, (uid < 0 && (uid < -2000000000 || uid < -1000000000)) ? 1 : 0);
-                                insertState.bindLong(6, (uid < 0 && (uid < -2000000000 || uid < -1000000000)) ? -uid : 0);
+                                insertState.bindInteger(5, outFlag);
+                                insertState.bindLong(6, channelId);
                                 insertState.step();
                             } catch (Throwable ignored) {
                             } finally {
