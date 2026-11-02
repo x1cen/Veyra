@@ -149,15 +149,13 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 
-        r.add(VeyraSettingsRow.header("Always Send Read Receipts"));
-        r.add(VeyraSettingsRow.toggle("Channels", "Read receipts are sent normally in channels",
-                () -> VeyraGhost.alwaysReadChannels, val -> VeyraGhost.toggleAlwaysReadChannels(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
-        r.add(VeyraSettingsRow.toggle("Large Groups", "Groups with more than " + VeyraGhost.LARGE_GROUP_MIN_MEMBERS + " members",
-                () -> VeyraGhost.alwaysReadLargeGroups, val -> VeyraGhost.toggleAlwaysReadLargeGroups(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
-        r.add(VeyraSettingsRow.toggle("Bots", "Read receipts are sent normally in bot chats",
-                () -> VeyraGhost.alwaysReadBots, val -> VeyraGhost.toggleAlwaysReadBots(), false
+        r.add(VeyraSettingsRow.header("Scope"));
+        r.add(VeyraSettingsRow.toggle(
+                "Limit to Private & Small Groups",
+                "Only hide read receipts in private chats and groups under " + VeyraGhost.LARGE_GROUP_MIN_MEMBERS + " members. Channels, large groups and bots send reads normally",
+                () -> VeyraGhost.limitReadScope,
+                val -> VeyraGhost.toggleLimitReadScope(),
+                false
         ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 

@@ -42,10 +42,10 @@ public class VeyraGhost {
     public static boolean hideStories = true;
     public static boolean hideChannelViews = false;
 
-    // Low-value chats where read receipts are always sent even while hiding reads.
-    public static boolean alwaysReadChannels = true;
-    public static boolean alwaysReadLargeGroups = true;
-    public static boolean alwaysReadBots = true;
+    // Scope limiting: when OFF (default) read receipts are hidden everywhere.
+    // When ON, hiding is kept only in private chats and small groups; large groups,
+    // channels and bots send read receipts normally (seen lists aren't shown there anyway).
+    public static boolean limitReadScope = false;
     public static final int LARGE_GROUP_MIN_MEMBERS = 100;
 
     private static final java.util.concurrent.ConcurrentHashMap<Long, Long> allowedReadDialogs = new java.util.concurrent.ConcurrentHashMap<>();
@@ -81,9 +81,7 @@ public class VeyraGhost {
         hideMediaReceipts = prefs.getBoolean("hideMediaReceipts", false);
         hideStories = prefs.getBoolean("hideStories", true);
         hideChannelViews = prefs.getBoolean("hideChannelViews", false);
-        alwaysReadChannels = prefs.getBoolean("alwaysReadChannels", true);
-        alwaysReadLargeGroups = prefs.getBoolean("alwaysReadLargeGroups", true);
-        alwaysReadBots = prefs.getBoolean("alwaysReadBots", true);
+        limitReadScope = prefs.getBoolean("limitReadScope", false);
     }
 
     private static void save(String key, boolean val) {
@@ -122,22 +120,21 @@ public class VeyraGhost {
     public static void toggleHideMediaReceipts() { hideMediaReceipts = !hideMediaReceipts; save("hideMediaReceipts", hideMediaReceipts); }
     public static void toggleHideStories() { hideStories = !hideStories; save("hideStories", hideStories); }
     public static void toggleHideChannelViews() { hideChannelViews = !hideChannelViews; save("hideChannelViews", hideChannelViews); }
-    public static void toggleAlwaysReadChannels() { alwaysReadChannels = !alwaysReadChannels; save("alwaysReadChannels", alwaysReadChannels); }
-    public static void toggleAlwaysReadLargeGroups() { alwaysReadLargeGroups = !alwaysReadLargeGroups; save("alwaysReadLargeGroups", alwaysReadLargeGroups); }
-    public static void toggleAlwaysReadBots() { alwaysReadBots = !alwaysReadBots; save("alwaysReadBots", alwaysReadBots); }
+    public static void toggleLimitReadScope() { limitReadScope = !limitReadScope; save("limitReadScope", limitReadScope); }
 
-    // True when the dialog is a broadcast channel, a group above LARGE_GROUP_MIN_MEMBERS, or a bot and its exemption is on.
-    // Unknown chats or unknown member counts are not exempt, so privacy is kept when in doubt.
+    // When scope limiting is on, read-hiding is kept only for private chats and small
+    // groups; large groups, channels and bots are exempt (their seen lists aren't shown
+    // anyway). With limiting off (default) nothing is exempt and hiding applies everywhere.
     public static boolean isReadExempt(int account, long dialogId) {
+        if (!limitReadScope) {
+            return false;
+        }
         if (dialogId == 0 || org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
             return false;
         }
         try {
             org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(account);
             if (dialogId > 0) {
-                if (!alwaysReadBots) {
-                    return false;
-                }
                 TLRPC.User user = mc.getUser(dialogId);
                 return user != null && user.bot;
             }
@@ -146,10 +143,7 @@ public class VeyraGhost {
                 return false;
             }
             if (org.telegram.messenger.ChatObject.isChannelAndNotMegaGroup(chat)) {
-                return alwaysReadChannels;
-            }
-            if (!alwaysReadLargeGroups) {
-                return false;
+                return true;
             }
             int count = chat.participants_count;
             if (count <= 0) {
