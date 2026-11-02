@@ -30786,7 +30786,9 @@ public class ChatActivity extends BaseFragment implements
             hideHints(true);
             if (visibleMessage.isRoundVideo()) {
                 boolean result = MediaController.getInstance().playMessage(visibleMessage);
-                MediaController.getInstance().setVoiceMessagesPlaylist(result ? createVoiceMessagesPlaylist(visibleMessage, false) : null, false);
+                if (!org.veyra.client.VeyraUIConfig.disableVoiceAutoPlay) {
+                    MediaController.getInstance().setVoiceMessagesPlaylist(result ? createVoiceMessagesPlaylist(visibleMessage, false) : null, false);
+                }
                 return result;
             } else {
                 SharedConfig.setNoSoundHintShowed(true);
@@ -39768,7 +39770,9 @@ public class ChatActivity extends BaseFragment implements
                 return false;
             } else if (messageObject.isVoice() || messageObject.isRoundVideo()) {
                 boolean result = MediaController.getInstance().playMessage(messageObject, muted);
-                MediaController.getInstance().setVoiceMessagesPlaylist(result ? createVoiceMessagesPlaylist(messageObject, false) : null, false);
+                if (!org.veyra.client.VeyraUIConfig.disableVoiceAutoPlay) {
+                    MediaController.getInstance().setVoiceMessagesPlaylist(result ? createVoiceMessagesPlaylist(messageObject, false) : null, false);
+                }
                 return result;
             } else if (messageObject.isMusic()) {
                 return MediaController.getInstance().setPlaylist(chatAdapter.getMessages(), messageObject, mergeDialogId, !chatAdapter.isFiltered, null);
