@@ -1002,7 +1002,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             }
             SharedConfig.allowScreenCapture = true;
             SharedConfig.passcodeType = currentPasswordType;
-            SharedConfig.passcodeLength = currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN ? 8 : 4;
+            SharedConfig.passcodeLength = currentPasswordType == SharedConfig.PASSCODE_TYPE_PIN ? (firstPassword != null ? firstPassword.length() : 8) : 4;
             SharedConfig.saveConfig();
 
             passwordEditText.clearFocus();

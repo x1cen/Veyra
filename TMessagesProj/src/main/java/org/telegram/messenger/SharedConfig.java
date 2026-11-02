@@ -228,8 +228,8 @@ public class SharedConfig {
     @PasscodeType
     public static int passcodeType;
     public static String passcodeHash = "";
-    // Veyra: digit count of the stored PIN. PINs created before the 8-digit change have no stored value and are 4 digits.
-    public static int passcodeLength = 4;
+    // Veyra: digit count of the stored PIN. Default is 8 digits.
+    public static int passcodeLength = 8;
     public static long passcodeRetryInMs;
     public static long lastUptimeMillis;
     public static int badPasscodeTries;
@@ -527,8 +527,8 @@ public class SharedConfig {
             passcodeHash = preferences.getString("passcodeHash1", "");
             appLocked = preferences.getBoolean("appLocked", false);
             passcodeType = preferences.getInt("passcodeType", 0);
-            passcodeLength = preferences.getInt("passcodeLength", 4);
-            if (passcodeLength != 4 && passcodeLength != 8) passcodeLength = 4;
+            passcodeLength = preferences.getInt("passcodeLength", 8);
+            if (passcodeLength != 4 && passcodeLength != 8) passcodeLength = 8;
             passcodeRetryInMs = preferences.getLong("passcodeRetryInMs", 0);
             lastUptimeMillis = preferences.getLong("lastUptimeMillis", 0);
             badPasscodeTries = preferences.getInt("badPasscodeTries", 0);
@@ -879,7 +879,7 @@ public class SharedConfig {
         saveIncomingPhotos = false;
         appLocked = false;
         passcodeType = PASSCODE_TYPE_PIN;
-        passcodeLength = 4;
+        passcodeLength = 8;
         passcodeRetryInMs = 0;
         lastUptimeMillis = 0;
         badPasscodeTries = 0;

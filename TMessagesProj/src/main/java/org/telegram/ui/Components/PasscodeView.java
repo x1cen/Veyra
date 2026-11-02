@@ -168,7 +168,8 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
         }
 
         public void appendCharacter(String c) {
-            if (stringBuilder.length() >= SharedConfig.passcodeLength) {
+            int maxLen = Math.max(8, SharedConfig.passcodeLength);
+            if (stringBuilder.length() >= maxLen) {
                 return;
             }
             try {
@@ -717,8 +718,18 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordEditText.length() == SharedConfig.passcodeLength && SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
-                    processDone(false);
+                if (SharedConfig.passcodeType == SharedConfig.PASSCODE_TYPE_PIN) {
+                    int len = passwordEditText.length();
+                    if (len >= 4) {
+                        String currentInput = passwordEditText.getText().toString();
+                        if (SharedConfig.checkPasscode(currentInput)) {
+                            SharedConfig.passcodeLength = len;
+                            SharedConfig.saveConfig();
+                            processDone(false);
+                        } else if (len >= Math.max(8, SharedConfig.passcodeLength)) {
+                            processDone(false);
+                        }
+                    }
                 }
             }
         });
@@ -945,8 +956,16 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
                     }
                 }
                 // after the background step of the last digit, so a wrong code can turn the background back smoothly
-                if (passwordEditText2.length() == SharedConfig.passcodeLength) {
-                    processDone(false);
+                int len = passwordEditText2.length();
+                if (len >= 4) {
+                    String currentInput = passwordEditText2.getString();
+                    if (SharedConfig.checkPasscode(currentInput)) {
+                        SharedConfig.passcodeLength = len;
+                        SharedConfig.saveConfig();
+                        processDone(false);
+                    } else if (len >= Math.max(8, SharedConfig.passcodeLength)) {
+                        processDone(false);
+                    }
                 }
             });
             numberFrameLayouts.add(frameLayout);
