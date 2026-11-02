@@ -32,6 +32,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
+import org.telegram.messenger.Utilities;
 import org.veyra.client.VeyraUIConfig;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.NativeByteBuffer;
@@ -68,6 +69,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
     private TextView tabMessagesView;
     private TextView tabReactionsView;
     private RecyclerListView messagesListView;
+    private RecyclerListView reactionsListView;
     private FrameLayout reactionsContainer;
 
     public static class VersionEntry {
@@ -163,11 +165,36 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
         return true;
     }
 
+    // SQLite reads run on globalQueue; results are swapped in on the UI thread.
     private void loadData() {
-        versionEntries.clear();
-        reactionItems.clear();
-
         if (currentMessageObject == null) return;
+        final ArrayList<VersionEntry> versionEntries = new ArrayList<>();
+        final ArrayList<ReactionItem> reactionItems = new ArrayList<>();
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                loadDataInternal(versionEntries, reactionItems);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+            AndroidUtilities.runOnUIThread(() -> {
+                if (isFinished || finishing) {
+                    return;
+                }
+                this.versionEntries.clear();
+                this.versionEntries.addAll(versionEntries);
+                this.reactionItems.clear();
+                this.reactionItems.addAll(reactionItems);
+                if (messagesListView != null && messagesListView.getAdapter() != null) {
+                    messagesListView.getAdapter().notifyDataSetChanged();
+                }
+                if (reactionsListView != null && reactionsListView.getAdapter() != null) {
+                    reactionsListView.getAdapter().notifyDataSetChanged();
+                }
+            });
+        });
+    }
+
+    private void loadDataInternal(ArrayList<VersionEntry> versionEntries, ArrayList<ReactionItem> reactionItems) {
         int messageId = currentMessageObject.getId();
 
         // 1. Load Edit History
@@ -311,7 +338,7 @@ public class VeyraMessageHistoryActivity extends BaseFragment {
 
         // 2. Reactions List
         reactionsContainer = new FrameLayout(context);
-        RecyclerListView reactionsListView = new RecyclerListView(context);
+        reactionsListView = new RecyclerListView(context);
         reactionsListView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         reactionsListView.setAdapter(new ReactionsAdapter());
         reactionsListView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(24));
