@@ -19532,7 +19532,12 @@ public class MessagesController extends BaseController implements NotificationCe
                 final long editDialogId = message.dialog_id;
                 final int editMessageId = message.id;
                 final String editNewText = message.message;
+                final boolean editIsOutgoing = message.out;
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                    if (editIsOutgoing) {
+                        // Veyra: never log our own edits; only the other party's edits are tracked.
+                        return;
+                    }
                     TLRPC.Message oldMessage = getMessagesStorage().getMessageInternal(editDialogId, editMessageId);
                     if (oldMessage != null && !android.text.TextUtils.equals(oldMessage.message, editNewText)) {
                         org.veyra.client.VeyraEditHistoryManager.logEdit(
