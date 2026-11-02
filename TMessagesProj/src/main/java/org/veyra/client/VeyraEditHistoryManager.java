@@ -206,7 +206,7 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void logEdit(int account, long dialogId, int messageId, int date, String text, TLRPC.Message messageOwner) {
-        if (!VeyraUIConfig.isChatTypeAllowedForEditHistory(dialogId) || (TextUtils.isEmpty(text) && messageOwner == null)) {
+        if (!VeyraUIConfig.isChatTypeAllowedForEditHistory(dialogId) || !VeyraUIConfig.isHistoryInScope(account, dialogId) || (TextUtils.isEmpty(text) && messageOwner == null)) {
             return;
         }
         try {
@@ -472,7 +472,7 @@ public final class VeyraEditHistoryManager {
 
     public static void logReaction(int account, long dialogId, int messageId, int date, String reaction,
                                    int newCount, long userId, long selfUserId) {
-        if (!VeyraUIConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
+        if (!VeyraUIConfig.isChatTypeAllowedForReactionHistory(dialogId) || !VeyraUIConfig.isHistoryInScope(account, dialogId) || TextUtils.isEmpty(reaction)) {
             return;
         }
         // Ignore own reactions unless enabled in settings
@@ -556,7 +556,7 @@ public final class VeyraEditHistoryManager {
 
     public static void logReactionRemoved(int account, long dialogId, int messageId, int date, String reaction,
                                           long userId, long selfUserId) {
-        if (!VeyraUIConfig.isChatTypeAllowedForReactionHistory(dialogId) || TextUtils.isEmpty(reaction)) {
+        if (!VeyraUIConfig.isChatTypeAllowedForReactionHistory(dialogId) || !VeyraUIConfig.isHistoryInScope(account, dialogId) || TextUtils.isEmpty(reaction)) {
             return;
         }
         long currentSelfId = org.telegram.messenger.UserConfig.getInstance(account).getClientUserId();

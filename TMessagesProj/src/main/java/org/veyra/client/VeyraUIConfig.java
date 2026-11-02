@@ -40,6 +40,8 @@ public class VeyraUIConfig {
     public static final int SCOPE_LARGE_GROUP_MIN_MEMBERS = 100;
     public static boolean limitAntiDeleteScope = false;
     public static boolean antiDeleteSkipOwnAdmin = true;
+    public static boolean limitHistoryScope = false;
+    public static boolean historySkipOwnAdmin = true;
 
     static {
         load();
@@ -68,6 +70,8 @@ public class VeyraUIConfig {
             hidePhoneNumber = prefs.getBoolean("hidePhoneNumber", false);
             limitAntiDeleteScope = prefs.getBoolean("limitAntiDeleteScope", false);
             antiDeleteSkipOwnAdmin = prefs.getBoolean("antiDeleteSkipOwnAdmin", true);
+            limitHistoryScope = prefs.getBoolean("limitHistoryScope", false);
+            historySkipOwnAdmin = prefs.getBoolean("historySkipOwnAdmin", true);
         }
     }
 
@@ -143,6 +147,24 @@ public class VeyraUIConfig {
             return true;
         }
         return isPrivateOrSmallGroupScope(account, dialogId, antiDeleteSkipOwnAdmin);
+    }
+
+    public static void toggleLimitHistoryScope() {
+        limitHistoryScope = !limitHistoryScope;
+        save("limitHistoryScope", limitHistoryScope);
+    }
+
+    public static void toggleHistorySkipOwnAdmin() {
+        historySkipOwnAdmin = !historySkipOwnAdmin;
+        save("historySkipOwnAdmin", historySkipOwnAdmin);
+    }
+
+    // Scope gate for edit and reaction history logging (same model as anti-delete).
+    public static boolean isHistoryInScope(int account, long dialogId) {
+        if (!limitHistoryScope) {
+            return true;
+        }
+        return isPrivateOrSmallGroupScope(account, dialogId, historySkipOwnAdmin);
     }
 
     public static void setTabsTitleType(int val) {

@@ -197,6 +197,20 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 true
         ));
         r.add(VeyraSettingsRow.toggle(
+                "Limit History Scope",
+                "Only log edits and reactions in private chats and groups up to " + VeyraUIConfig.SCOPE_LARGE_GROUP_MIN_MEMBERS + " members. Off logs everywhere",
+                () -> VeyraUIConfig.limitHistoryScope,
+                val -> { VeyraUIConfig.toggleLimitHistoryScope(); reloadRows(); },
+                false
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Skip Chats I Own or Admin",
+                "Don't log edits and reactions in groups and channels where you're owner or admin (the admin log already records them)",
+                () -> VeyraUIConfig.historySkipOwnAdmin,
+                val -> VeyraUIConfig.toggleHistorySkipOwnAdmin(),
+                true
+        ).enabledWhen(() -> VeyraUIConfig.limitHistoryScope));
+        r.add(VeyraSettingsRow.toggle(
                 "Ignore Blocked Messages in Groups",
                 "Blur media and collapse messages from blocked users",
                 () -> VeyraUIConfig.ignoreBlocked,
