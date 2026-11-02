@@ -659,8 +659,17 @@ public class MessageObject {
         return emojiOnlyCount;
     }
 
+    public Boolean messageBlocked;
+
+    public boolean shouldBlockMessage() {
+        if (messageBlocked == null) {
+            messageBlocked = org.veyra.client.VeyraMessageFilter.shouldBlockMessage(this);
+        }
+        return messageBlocked;
+    }
+
     public boolean hasMediaSpoilers() {
-        return !isRepostPreview && (messageOwner.media != null && messageOwner.media.spoiler || needDrawBluredPreview()) || isHiddenSensitive();
+        return !isRepostPreview && (messageOwner.media != null && messageOwner.media.spoiler || needDrawBluredPreview() || shouldBlockMessage()) || isHiddenSensitive();
     }
 
     public Boolean isSensitiveCached;

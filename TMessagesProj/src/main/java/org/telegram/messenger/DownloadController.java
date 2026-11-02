@@ -862,6 +862,12 @@ public class DownloadController extends BaseController implements NotificationCe
         if (message == null || message.media instanceof TLRPC.TL_messageMediaStory) {
             return canPreloadStories() ? 2 : 0;
         }
+        if (org.veyra.client.VeyraUIConfig.ignoreBlocked) {
+            long fromId = MessageObject.getFromChatId(message);
+            if (fromId != 0 && getMessagesController().blockePeers.indexOfKey(fromId) >= 0) {
+                return 0;
+            }
+        }
         int type;
         boolean isVideo;
         if ((isVideo = MessageObject.isVideoMessage(message)) || MessageObject.isGifMessage(message) || MessageObject.isRoundVideoMessage(message) || MessageObject.isGameMessage(message)) {
