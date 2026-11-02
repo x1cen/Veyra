@@ -210,6 +210,22 @@ public class MessagePreviewParams {
             replyQuote = null;
         }
         hasSecretMessages = replyMessageObject != null && (replyMessageObject.isVoiceOnce() || replyMessageObject.isRoundOnce() || replyMessageObject.type == MessageObject.TYPE_GIFT_STARS);
+        // Veyra: protected content must not be replied to in another chat.
+        MessageObject protectedCheck = replyMessageObject != null ? replyMessageObject : (replyQuote != null ? replyQuote.message : null);
+        if (protectedCheck != null && protectedCheck.messageOwner != null) {
+            boolean isProtected = protectedCheck.messageOwner.noforwards;
+            if (!isProtected) {
+                MessagesController mc = MessagesController.getInstance(protectedCheck.currentAccount);
+                if (dialogId < 0) {
+                    isProtected = mc.isChatNoForwards(-dialogId);
+                } else if (dialogId > 0) {
+                    isProtected = mc.isUserNoForwards(dialogId);
+                }
+            }
+            if (isProtected) {
+                noforwards = true;
+            }
+        }
         if (replyMessageObject != null || replyQuote != null) {
             if (group != null) {
                 replyMessage = new Messages(null, 1, group.messages, dialogId, null);
