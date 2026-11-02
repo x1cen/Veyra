@@ -40,7 +40,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             case SECTION_PRIVACY: return "Privacy & Security";
             case SECTION_CHATS: return "Chats";
             case SECTION_MEDIA: return "Media";
-            case SECTION_APPEARANCE: return "Appearance";
             case SECTION_NETWORK: return "Data & Network";
             case SECTION_GENERAL: return "General";
             default: return "Veyra Settings";
@@ -54,7 +53,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             case SECTION_PRIVACY: buildPrivacy(r); break;
             case SECTION_CHATS: buildChats(r); break;
             case SECTION_MEDIA: buildMedia(r); break;
-            case SECTION_APPEARANCE: buildAppearance(r); break;
             case SECTION_NETWORK: buildNetwork(r); break;
             case SECTION_GENERAL: buildGeneral(r); break;
             default: buildMain(r); break;
@@ -74,7 +72,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(category(IconBackgroundColors.ORANGE, R.drawable.settings_chat, "Chats", "Messages, history, chat behavior", SECTION_CHATS));
         r.add(category(IconBackgroundColors.RED, R.drawable.msg_media, "Media", "Photos, videos, voice messages, playback", SECTION_MEDIA));
         r.add(VeyraSettingsRow.shadow());
-        r.add(category(IconBackgroundColors.PURPLE, R.drawable.msg_palette, "Appearance", "Interface, chat list, folders", SECTION_APPEARANCE));
         r.add(category(IconBackgroundColors.BLUE_DEEP, R.drawable.settings_data, "Data & Network", "Downloads, connection, proxy", SECTION_NETWORK));
         r.add(category(IconBackgroundColors.GRAY, R.drawable.settings_features, "General", "Calls, confirmations, other options", SECTION_GENERAL));
         r.add(VeyraSettingsRow.shadow());
@@ -235,52 +232,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 "Play only the selected voice note and do not auto-play next",
                 () -> VeyraUIConfig.disableVoiceAutoPlay,
                 val -> VeyraUIConfig.toggleDisableVoiceAutoPlay(),
-                false
-        ));
-        r.add(VeyraSettingsRow.shadow());
-    }
-
-    private void buildAppearance(List<VeyraSettingsRow> r) {
-        r.add(VeyraSettingsRow.header("Folders"));
-        r.add(VeyraSettingsRow.detail(
-                "Tab Titles",
-                () -> {
-                    switch (VeyraUIConfig.tabsTitleType) {
-                        case VeyraUIConfig.TITLE_TYPE_TEXT: return "Text Only";
-                        case VeyraUIConfig.TITLE_TYPE_ICON: return "Icons Only";
-                        default: return "Icons & Text";
-                    }
-                },
-                true,
-                () -> {
-                    Context context = getParentActivity();
-                    if (context == null) return;
-                    AlertDialog.Builder b = new AlertDialog.Builder(context);
-                    b.setTitle("Tab Titles");
-                    CharSequence[] options = new CharSequence[]{"Text Only", "Icons Only", "Icons & Text"};
-                    b.setItems(options, (d, which) -> {
-                        int val;
-                        if (which == 0) val = VeyraUIConfig.TITLE_TYPE_TEXT;
-                        else if (which == 1) val = VeyraUIConfig.TITLE_TYPE_ICON;
-                        else val = VeyraUIConfig.TITLE_TYPE_MIX;
-                        VeyraUIConfig.setTabsTitleType(val);
-                        reloadRows();
-                    });
-                    showDialog(b.create());
-                }
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                "Bottom Folder Tabs",
-                "Move folder tabs to the bottom navigation bar",
-                () -> VeyraUIConfig.bottomFilterTabs,
-                val -> VeyraUIConfig.toggleBottomFilterTabs(),
-                true
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                "Hide 'All Chats' Tab",
-                "Hide the default all-chats folder tab from the top bar",
-                () -> VeyraUIConfig.hideAllTab,
-                val -> VeyraUIConfig.toggleHideAllTab(),
                 false
         ));
         r.add(VeyraSettingsRow.shadow());
