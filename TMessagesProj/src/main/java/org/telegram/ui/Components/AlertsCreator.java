@@ -8185,8 +8185,10 @@ public class AlertsCreator {
                     thisDialogId = mergeDialogId;
                 }
                 if (!ids.isEmpty()) {
-                    org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(thisDialogId, ids);
-                    org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(thisDialogId, ids);
+                    if (mode != 1) {
+                        org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(currentAccount, thisDialogId, ids);
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(thisDialogId, ids);
+                    }
                     MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, thisDialogId, topicId, deleteForAll[0], mode);
                 }
                 for (MessageObject msg: ephemeralMessages) {
@@ -8210,8 +8212,10 @@ public class AlertsCreator {
                     }
                     if (!ids.isEmpty()) {
                         long targetDid = (a == 1 && mergeDialogId != 0) ? mergeDialogId : thisDialogId;
-                        org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(targetDid, ids);
-                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(targetDid, ids);
+                        if (mode != 1) {
+                            org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(currentAccount, targetDid, ids);
+                            org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(targetDid, ids);
+                        }
                         MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, targetDid, topicId, deleteForAll[0], mode);
                     }
                     selectedMessages[a].clear();

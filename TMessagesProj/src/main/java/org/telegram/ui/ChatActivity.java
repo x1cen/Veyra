@@ -26564,9 +26564,10 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
                     int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
-                    boolean isSelfDel = org.veyra.client.VeyraAntiDelete.isSelfDeleted(dialog_id, mid);
+                    long targetDialogId = obj.getDialogId() != 0 ? obj.getDialogId() : ((loadIndex == 1 && mergeDialogId != 0) ? mergeDialogId : dialog_id);
+                    boolean isSelfDel = org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, targetDialogId, mid);
                     if (isSelfDel) {
-                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessage(dialog_id, mid);
+                        org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessage(targetDialogId, mid);
                     }
                     if (!isSelfDel && !obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
                         obj.deleted = false;
@@ -26575,7 +26576,7 @@ public class ChatActivity extends BaseFragment implements
                         }
                         obj.forceUpdate = true;
                         obj.resetLayout();
-                        org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, dialog_id, obj.getId());
+                        org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, targetDialogId, obj.getId());
                         if (chatListView != null) {
                             for (int v = 0, n = chatListView.getChildCount(); v < n; v++) {
                                 View child = chatListView.getChildAt(v);

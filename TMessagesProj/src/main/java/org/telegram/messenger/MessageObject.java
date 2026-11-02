@@ -228,7 +228,7 @@ public class MessageObject {
     public boolean deletedByThanos;
 
     public boolean isDeleted() {
-        return deleted || (messageOwner != null && messageOwner.isDeleted) || org.veyra.client.VeyraAntiDelete.isMessageDeleted(getDialogId(), getId());
+        return deleted || (messageOwner != null && messageOwner.isDeleted) || org.veyra.client.VeyraAntiDelete.isMessageDeleted(currentAccount, getDialogId(), getId());
     }
 
     // Veyra: message was edited at least once before it was deleted. Derived from the stored
@@ -11819,7 +11819,7 @@ public class MessageObject {
         if (message == null) {
             return false;
         }
-        if (message.isDeleted || org.veyra.client.VeyraAntiDelete.isMessageDeleted(message.dialog_id, message.id)) {
+        if (message.isDeleted || org.veyra.client.VeyraAntiDelete.isMessageDeleted(currentAccount, message.dialog_id, message.id)) {
             return true;
         }
         if (ChatObject.isChannelAndNotMegaGroup(chat) && message.action instanceof TLRPC.TL_messageActionChatJoinedByRequest) {

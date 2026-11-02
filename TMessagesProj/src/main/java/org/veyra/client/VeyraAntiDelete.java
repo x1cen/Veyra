@@ -110,44 +110,49 @@ public class VeyraAntiDelete {
         return new GsonBuilder().disableHtmlEscaping().create().toJson(o);
     }
 
-    private static final java.util.Set<Long> peerDeletedChats = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-    private static final java.util.Map<Long, java.util.Set<Integer>> deletedMessagesByDialog = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, java.util.Set<Long>> peerDeletedChatsByAccount = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>>> deletedMessagesByAccount = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>>> selfDeletedMessagesByAccount = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static java.util.Set<Long> getPeerDeletedChats(int account) {
+        return peerDeletedChatsByAccount.computeIfAbsent(account, k -> java.util.Collections.synchronizedSet(new java.util.HashSet<>()));
+    }
+
+    private static java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> getDeletedMap(int account) {
+        return deletedMessagesByAccount.computeIfAbsent(account, k -> new java.util.concurrent.ConcurrentHashMap<>());
+    }
+
+    private static java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> getSelfDeletedMap(int account) {
+        return selfDeletedMessagesByAccount.computeIfAbsent(account, k -> new java.util.concurrent.ConcurrentHashMap<>());
+    }
 
     public static void addDeletedMessage(long dialogId, int messageId) {
+        addDeletedMessage(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static void addDeletedMessage(int account, long dialogId, int messageId) {
         if (dialogId > 0) {
-            peerDeletedChats.add(dialogId);
+            getPeerDeletedChats(account).add(dialogId);
         }
-        java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
-        if (set == null) {
-            set = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-            deletedMessagesByDialog.put(dialogId, set);
-        }
-        set.add(messageId);
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> deletedMessagesByDialog = getDeletedMap(account);
+        deletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>())).add(messageId);
         if (dialogId != 0) {
             long altId = -dialogId;
-            java.util.Set<Integer> altSet = deletedMessagesByDialog.get(altId);
-            if (altSet == null) {
-                altSet = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-                deletedMessagesByDialog.put(altId, altSet);
-            }
-            altSet.add(messageId);
+            deletedMessagesByDialog.computeIfAbsent(altId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>())).add(messageId);
         }
     }
 
     public static void saveDeletedMessageToDb(int account, long dialogId, int messageId) {
-        addDeletedMessage(dialogId, messageId);
+        addDeletedMessage(account, dialogId, messageId);
         VeyraDatabase.getInstance(account).saveDeletedIndex(dialogId, messageId);
-        org.telegram.messenger.MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
-            try {
-                org.telegram.SQLite.SQLiteDatabase db = org.telegram.messenger.MessagesStorage.getInstance(account).getDatabase();
-                if (db != null) {
-                    db.executeFast(String.format(java.util.Locale.US, "INSERT OR REPLACE INTO veyra_message_deletions (mid, uid, isdel) VALUES (%d, %d, 1);", messageId, dialogId)).stepThis().dispose();
-                }
-            } catch (Throwable ignored) {}
-        });
     }
 
     public static boolean isMessageDeleted(long dialogId, int messageId) {
+        return isMessageDeleted(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static boolean isMessageDeleted(int account, long dialogId, int messageId) {
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> deletedMessagesByDialog = getDeletedMap(account);
         java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
         if (set != null && set.contains(messageId)) {
             return true;
@@ -161,23 +166,34 @@ public class VeyraAntiDelete {
         return false;
     }
 
-    private static final java.util.Map<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = new java.util.concurrent.ConcurrentHashMap<>();
-
     public static void addSelfDeletedMessage(long dialogId, int messageId) {
-        java.util.Set<Integer> set = selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>()));
-        set.add(messageId);
+        addSelfDeletedMessage(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static void addSelfDeletedMessage(int account, long dialogId, int messageId) {
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = getSelfDeletedMap(account);
+        selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>())).add(messageId);
     }
 
     public static void addSelfDeletedMessages(long dialogId, java.util.List<Integer> messageIds) {
+        addSelfDeletedMessages(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageIds);
+    }
+
+    public static void addSelfDeletedMessages(int account, long dialogId, java.util.List<Integer> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) return;
-        java.util.Set<Integer> set = selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>()));
-        set.addAll(messageIds);
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = getSelfDeletedMap(account);
+        selfDeletedMessagesByDialog.computeIfAbsent(dialogId, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>())).addAll(messageIds);
     }
 
     public static boolean isSelfDeleted(long dialogId, int messageId) {
-        if (messageId <= 0) {
+        return isSelfDeleted(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static boolean isSelfDeleted(int account, long dialogId, int messageId) {
+        if (messageId <= 0 && !org.telegram.messenger.DialogObject.isEncryptedDialog(dialogId)) {
             return true;
         }
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = getSelfDeletedMap(account);
         java.util.Set<Integer> set = selfDeletedMessagesByDialog.get(dialogId);
         if (set != null && set.contains(messageId)) {
             return true;
@@ -192,6 +208,11 @@ public class VeyraAntiDelete {
     }
 
     public static void removeSelfDeletedMessage(long dialogId, int messageId) {
+        removeSelfDeletedMessage(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static void removeSelfDeletedMessage(int account, long dialogId, int messageId) {
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> selfDeletedMessagesByDialog = getSelfDeletedMap(account);
         java.util.Set<Integer> set = selfDeletedMessagesByDialog.get(dialogId);
         if (set != null) {
             set.remove(messageId);
@@ -205,6 +226,11 @@ public class VeyraAntiDelete {
     }
 
     public static void removeDeletedMessage(long dialogId, int messageId) {
+        removeDeletedMessage(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageId);
+    }
+
+    public static void removeDeletedMessage(int account, long dialogId, int messageId) {
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> deletedMessagesByDialog = getDeletedMap(account);
         java.util.Set<Integer> set = deletedMessagesByDialog.get(dialogId);
         if (set != null) {
             set.remove(messageId);
@@ -218,20 +244,33 @@ public class VeyraAntiDelete {
     }
 
     public static void removeDeletedMessages(long dialogId, java.util.List<Integer> messageIds) {
+        removeDeletedMessages(org.telegram.messenger.UserConfig.selectedAccount, dialogId, messageIds);
+    }
+
+    public static void removeDeletedMessages(int account, long dialogId, java.util.List<Integer> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) return;
         for (int i = 0; i < messageIds.size(); i++) {
-            removeDeletedMessage(dialogId, messageIds.get(i));
+            removeDeletedMessage(account, dialogId, messageIds.get(i));
         }
     }
 
     public static void markChatDeleted(long dialogId) {
+        markChatDeleted(org.telegram.messenger.UserConfig.selectedAccount, dialogId);
+    }
+
+    public static void markChatDeleted(int account, long dialogId) {
         if (dialogId > 0) {
-            peerDeletedChats.add(dialogId);
+            getPeerDeletedChats(account).add(dialogId);
         }
     }
 
     public static void removeChatDeleted(long dialogId) {
-        peerDeletedChats.remove(dialogId);
+        removeChatDeleted(org.telegram.messenger.UserConfig.selectedAccount, dialogId);
+    }
+
+    public static void removeChatDeleted(int account, long dialogId) {
+        getPeerDeletedChats(account).remove(dialogId);
+        java.util.concurrent.ConcurrentHashMap<Long, java.util.Set<Integer>> deletedMessagesByDialog = getDeletedMap(account);
         deletedMessagesByDialog.remove(dialogId);
         if (dialogId != 0) {
             deletedMessagesByDialog.remove(-dialogId);
@@ -239,44 +278,38 @@ public class VeyraAntiDelete {
     }
 
     public static void initFromDb(org.telegram.SQLite.SQLiteDatabase db) {
+        initFromDb(org.telegram.messenger.UserConfig.selectedAccount, db);
+    }
+
+    public static void initFromDb(int account, org.telegram.SQLite.SQLiteDatabase db) {
         try {
-            VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).init(db);
-        } catch (Throwable ignored) {}
-        if (db == null) return;
-        try {
-            db.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions (mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY (mid, uid));").stepThis().dispose();
-            org.telegram.SQLite.SQLiteCursor cursor = db.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
-            while (cursor.next()) {
-                int mid = cursor.intValue(0);
-                long uid = cursor.longValue(1);
-                addDeletedMessage(uid, mid);
-            }
-            cursor.dispose();
+            VeyraDatabase.getInstance(account).init(db);
         } catch (Throwable ignored) {}
     }
 
     public static boolean isChatDeleted(long dialogId, TLRPC.User user) {
+        return isChatDeleted(org.telegram.messenger.UserConfig.selectedAccount, dialogId, user);
+    }
+
+    public static boolean isChatDeleted(int account, long dialogId, TLRPC.User user) {
         if (user != null && (user.deleted || UserObject.isDeleted(user))) {
             return true;
         }
         if (dialogId > 0) {
-            return peerDeletedChats.contains(dialogId);
+            return getPeerDeletedChats(account).contains(dialogId);
         }
         return false;
     }
 
     public static void clearAll() {
-        peerDeletedChats.clear();
-        deletedMessagesByDialog.clear();
-        VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).clearAll();
-        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
-            .getStorageQueue().postRunnable(() -> {
-                try {
-                    org.telegram.SQLite.SQLiteDatabase db =
-                        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
-                    db.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
-                } catch (Exception ignored) {}
-            });
+        clearAll(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
+    public static void clearAll(int account) {
+        getPeerDeletedChats(account).clear();
+        getDeletedMap(account).clear();
+        getSelfDeletedMap(account).clear();
+        VeyraDatabase.getInstance(account).clearAll();
     }
 
     /**
@@ -284,16 +317,12 @@ public class VeyraAntiDelete {
      * Call this when the user manually clears a "Deleted Account" chat.
      */
     public static void clearDialog(long dialogId) {
-        removeChatDeleted(dialogId);
-        VeyraDatabase.getInstance(org.telegram.messenger.UserConfig.selectedAccount).deleteForDialog(dialogId);
-        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount)
-            .getStorageQueue().postRunnable(() -> {
-                try {
-                    org.telegram.SQLite.SQLiteDatabase db =
-                        org.telegram.messenger.MessagesStorage.getInstance(org.telegram.messenger.UserConfig.selectedAccount).getDatabase();
-                    db.executeFast("DELETE FROM veyra_message_deletions WHERE uid = " + dialogId).stepThis().dispose();
-                } catch (Exception ignored) {}
-            });
+        clearDialog(org.telegram.messenger.UserConfig.selectedAccount, dialogId);
+    }
+
+    public static void clearDialog(int account, long dialogId) {
+        removeChatDeleted(account, dialogId);
+        VeyraDatabase.getInstance(account).deleteForDialog(dialogId);
     }
 
     public static String toJsonNestedMaps(Map<Integer, Map<String, String>> map) {

@@ -71,10 +71,21 @@ public final class VeyraDatabase {
                     try {
                         telegramDb.executeFast("CREATE TABLE IF NOT EXISTS veyra_message_deletions (mid INTEGER, uid INTEGER, isdel INTEGER, PRIMARY KEY (mid, uid));").stepThis().dispose();
                         SQLiteCursor cursor = telegramDb.queryFinalized("SELECT mid, uid FROM veyra_message_deletions");
-                        while (cursor.next()) {
-                            int mid = cursor.intValue(0);
-                            long uid = cursor.longValue(1);
-                            saveDeletedIndex(uid, mid);
+                        if (cursor.next()) {
+                            database.beginTransaction();
+                            try {
+                                do {
+                                    int mid = cursor.intValue(0);
+                                    long uid = cursor.longValue(1);
+                                    saveDeletedIndex(uid, mid);
+                                } while (cursor.next());
+                                database.commitTransaction();
+                            } finally {
+                                if (database.inTransaction()) {
+                                    database.commitTransaction();
+                                }
+                            }
+                            telegramDb.executeFast("DELETE FROM veyra_message_deletions").stepThis().dispose();
                         }
                         cursor.dispose();
                     } catch (Throwable ignored) {}
@@ -95,7 +106,7 @@ public final class VeyraDatabase {
                 while (cursor.next()) {
                     int mid = cursor.intValue(0);
                     long uid = cursor.longValue(1);
-                    VeyraAntiDelete.addDeletedMessage(uid, mid);
+                    VeyraAntiDelete.addDeletedMessage(currentAccount, uid, mid);
                 }
                 cursor.dispose();
             } catch (Throwable t) {
@@ -113,7 +124,7 @@ public final class VeyraDatabase {
                 FileLog.e(t);
             }
         }
-        VeyraAntiDelete.addDeletedMessage(uid, mid);
+        VeyraAntiDelete.addDeletedMessage(currentAccount, uid, mid);
     }
 
     public void saveDeletedMessage(long uid, int mid, int date, byte[] dataBytes) {
@@ -174,7 +185,7 @@ public final class VeyraDatabase {
                         if (data != null) {
                             try {
                                 if (insertState == null) {
-                                    insertState = telegramDb.executeFast("INSERT OR IGNORE INTO messages_v2 VALUES(?, ?, 0, 0, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, NULL)");
+                                    insertState = telegramDb.executeFast("INSERT OR IGNORE INTO messages_v2 (mid, uid, read_state, send_state, date, data, out, ttl, media, replydata, imp, mention, forwards, replies_data, thread_reply_id, is_channel, reply_to_message_id, custom_params, group_id, reply_to_story_id) VALUES (?, ?, 0, 0, ?, ?, ?, 0, 0, NULL, 0, 0, 0, NULL, 0, ?, 0, NULL, NULL, 0)");
                                 }
                                 insertState.requery();
                                 insertState.bindInteger(1, mid);
@@ -182,6 +193,7 @@ public final class VeyraDatabase {
                                 insertState.bindInteger(3, date);
                                 insertState.bindByteBuffer(4, data);
                                 insertState.bindInteger(5, (uid < 0 && (uid < -2000000000 || uid < -1000000000)) ? 1 : 0);
+                                insertState.bindLong(6, (uid < 0 && (uid < -2000000000 || uid < -1000000000)) ? -uid : 0);
                                 insertState.step();
                             } catch (Throwable ignored) {
                             } finally {
@@ -211,7 +223,7 @@ public final class VeyraDatabase {
                 FileLog.e(t);
             }
         }
-        VeyraAntiDelete.removeChatDeleted(uid);
+        VeyraAntiDelete.removeChatDeleted(currentAccount, uid);
     }
 
     public void deleteMessage(long uid, int mid) {
@@ -224,7 +236,7 @@ public final class VeyraDatabase {
                 FileLog.e(t);
             }
         }
-        VeyraAntiDelete.removeDeletedMessage(uid, mid);
+        VeyraAntiDelete.removeDeletedMessage(currentAccount, uid, mid);
     }
 
     public void deleteMessages(long uid, List<Integer> mids) {
@@ -240,7 +252,7 @@ public final class VeyraDatabase {
             }
         }
         for (int i = 0; i < mids.size(); i++) {
-            VeyraAntiDelete.removeDeletedMessage(uid, mids.get(i));
+            VeyraAntiDelete.removeDeletedMessage(currentAccount, uid, mids.get(i));
         }
     }
 

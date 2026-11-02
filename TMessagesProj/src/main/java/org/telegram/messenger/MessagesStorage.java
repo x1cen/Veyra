@@ -410,7 +410,7 @@ public class MessagesStorage extends BaseController {
         loadUnreadMessages();
         loadPendingTasks();
         try {
-            org.veyra.client.VeyraAntiDelete.initFromDb(database);
+            org.veyra.client.VeyraAntiDelete.initFromDb(currentAccount, database);
         } catch (Throwable ignored) {}
         try {
             openSync.countDown();
