@@ -11,16 +11,18 @@ import org.veyra.client.VeyraUIConfig;
 import java.util.ArrayList;
 import java.util.List;
 
-// Veyra: settings hub. SECTION_MAIN lists categories in the style of Telegram's main
-// settings screen; every other section is a sub-screen opened from that list.
+// Veyra: settings hub. SECTION_MAIN lists broad categories in the style of Telegram's main
+// settings screen. Categories are intentionally generic so new features fit into an existing
+// one instead of needing a new category.
 public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
     public static final int SECTION_MAIN = 0;
     public static final int SECTION_PRIVACY = 1;
     public static final int SECTION_CHATS = 2;
     public static final int SECTION_MEDIA = 3;
-    public static final int SECTION_FOLDERS = 4;
+    public static final int SECTION_APPEARANCE = 4;
     public static final int SECTION_NETWORK = 5;
+    public static final int SECTION_GENERAL = 6;
 
     private final int section;
 
@@ -35,11 +37,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     @Override
     protected String getScreenTitle() {
         switch (section) {
-            case SECTION_PRIVACY: return "Privacy & Ghost Mode";
+            case SECTION_PRIVACY: return "Privacy & Security";
             case SECTION_CHATS: return "Chats";
-            case SECTION_MEDIA: return "Media & Calls";
-            case SECTION_FOLDERS: return "Chat Folders";
+            case SECTION_MEDIA: return "Media";
+            case SECTION_APPEARANCE: return "Appearance";
             case SECTION_NETWORK: return "Data & Network";
+            case SECTION_GENERAL: return "General";
             default: return "Veyra Settings";
         }
     }
@@ -51,8 +54,9 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             case SECTION_PRIVACY: buildPrivacy(r); break;
             case SECTION_CHATS: buildChats(r); break;
             case SECTION_MEDIA: buildMedia(r); break;
-            case SECTION_FOLDERS: buildFolders(r); break;
+            case SECTION_APPEARANCE: buildAppearance(r); break;
             case SECTION_NETWORK: buildNetwork(r); break;
+            case SECTION_GENERAL: buildGeneral(r); break;
             default: buildMain(r); break;
         }
         return r;
@@ -66,12 +70,13 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
     private void buildMain(List<VeyraSettingsRow> r) {
         r.add(VeyraSettingsRow.shadow());
-        r.add(category(IconBackgroundColors.GREEN, R.drawable.settings_privacy, "Privacy & Ghost Mode", "Online status, typing, read receipts, phone number", SECTION_PRIVACY));
-        r.add(category(IconBackgroundColors.ORANGE, R.drawable.settings_chat, "Chats", "Keyboard, channel jump, edit history, blocked users", SECTION_CHATS));
-        r.add(category(IconBackgroundColors.RED, R.drawable.settings_calls, "Media & Calls", "Voice playback, call confirmation", SECTION_MEDIA));
+        r.add(category(IconBackgroundColors.GREEN, R.drawable.settings_privacy, "Privacy & Security", "Ghost mode, visibility, account protection", SECTION_PRIVACY));
+        r.add(category(IconBackgroundColors.ORANGE, R.drawable.settings_chat, "Chats", "Messages, history, chat behavior", SECTION_CHATS));
+        r.add(category(IconBackgroundColors.RED, R.drawable.msg_media, "Media", "Photos, videos, voice messages, playback", SECTION_MEDIA));
         r.add(VeyraSettingsRow.shadow());
-        r.add(category(IconBackgroundColors.BLUE_ALT, R.drawable.settings_folders, "Chat Folders", "Tab titles, tab position, All Chats tab", SECTION_FOLDERS));
-        r.add(category(IconBackgroundColors.BLUE_DEEP, R.drawable.settings_data, "Data & Network", "Download speed boost", SECTION_NETWORK));
+        r.add(category(IconBackgroundColors.PURPLE, R.drawable.msg_palette, "Appearance", "Interface, chat list, folders", SECTION_APPEARANCE));
+        r.add(category(IconBackgroundColors.BLUE_DEEP, R.drawable.settings_data, "Data & Network", "Downloads, connection, proxy", SECTION_NETWORK));
+        r.add(category(IconBackgroundColors.GRAY, R.drawable.settings_features, "General", "Calls, confirmations, other options", SECTION_GENERAL));
         r.add(VeyraSettingsRow.shadow());
     }
 
@@ -128,23 +133,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     }
 
     private void buildChats(List<VeyraSettingsRow> r) {
-        r.add(VeyraSettingsRow.header("Chat Behavior"));
-        r.add(VeyraSettingsRow.toggle(
-                "Hide Keyboard on Scroll",
-                "Dismiss keyboard automatically when dragging message list",
-                () -> VeyraUIConfig.hideKeyboardOnChatScroll,
-                val -> VeyraUIConfig.toggleHideKeyboardOnChatScroll(),
-                true
-        ));
-        r.add(VeyraSettingsRow.toggle(
-                "Disable Jump to Next Channel",
-                "Stop pull-to-jump to next unread channel at the bottom",
-                () -> VeyraUIConfig.disableJumpToNextChannel,
-                val -> VeyraUIConfig.toggleDisableJumpToNextChannel(),
-                false
-        ));
-        r.add(VeyraSettingsRow.shadow());
-
         r.add(VeyraSettingsRow.header("Messages"));
         r.add(VeyraSettingsRow.toggle(
                 "Message Edit History Log",
@@ -161,10 +149,27 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
         r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Behavior"));
+        r.add(VeyraSettingsRow.toggle(
+                "Hide Keyboard on Scroll",
+                "Dismiss keyboard automatically when dragging message list",
+                () -> VeyraUIConfig.hideKeyboardOnChatScroll,
+                val -> VeyraUIConfig.toggleHideKeyboardOnChatScroll(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Disable Jump to Next Channel",
+                "Stop pull-to-jump to next unread channel at the bottom",
+                () -> VeyraUIConfig.disableJumpToNextChannel,
+                val -> VeyraUIConfig.toggleDisableJumpToNextChannel(),
+                false
+        ));
+        r.add(VeyraSettingsRow.shadow());
     }
 
     private void buildMedia(List<VeyraSettingsRow> r) {
-        r.add(VeyraSettingsRow.header("Voice Messages"));
+        r.add(VeyraSettingsRow.header("Playback"));
         r.add(VeyraSettingsRow.toggle(
                 "Disable Voice Auto-Play",
                 "Play only the selected voice note and do not auto-play next",
@@ -173,20 +178,10 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
         r.add(VeyraSettingsRow.shadow());
-
-        r.add(VeyraSettingsRow.header("Calls"));
-        r.add(VeyraSettingsRow.toggle(
-                "Ask Before Calling",
-                "Show confirmation dialog before initiating voice or video calls",
-                () -> VeyraUIConfig.askBeforeCall,
-                val -> VeyraUIConfig.toggleAskBeforeCall(),
-                false
-        ));
-        r.add(VeyraSettingsRow.shadow());
     }
 
-    private void buildFolders(List<VeyraSettingsRow> r) {
-        r.add(VeyraSettingsRow.header("Folder Tabs"));
+    private void buildAppearance(List<VeyraSettingsRow> r) {
+        r.add(VeyraSettingsRow.header("Folders"));
         r.add(VeyraSettingsRow.detail(
                 "Tab Titles",
                 () -> {
@@ -255,6 +250,18 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                     });
                     showDialog(b.create());
                 }
+        ));
+        r.add(VeyraSettingsRow.shadow());
+    }
+
+    private void buildGeneral(List<VeyraSettingsRow> r) {
+        r.add(VeyraSettingsRow.header("Calls"));
+        r.add(VeyraSettingsRow.toggle(
+                "Ask Before Calling",
+                "Show confirmation dialog before initiating voice or video calls",
+                () -> VeyraUIConfig.askBeforeCall,
+                val -> VeyraUIConfig.toggleAskBeforeCall(),
+                false
         ));
         r.add(VeyraSettingsRow.shadow());
     }
