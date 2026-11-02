@@ -125,7 +125,10 @@ public class SecretChatHelper extends BaseController {
                             }
                             messageObject.forceUpdate = true;
                             messageObject.resetLayout();
-                            org.veyra.client.VeyraAntiDelete.saveDeletedMessageToDb(currentAccount, messageObject.getDialogId(), messageObject.getId());
+                            final long deletedDialogId = messageObject.getDialogId();
+                            final int deletedMessageId = messageObject.getId();
+                            org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, deletedDialogId, deletedMessageId);
+                            Utilities.globalQueue.postRunnable(() -> org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(deletedDialogId, deletedMessageId));
                         } else {
                             messageObject.deleted = true;
                         }
