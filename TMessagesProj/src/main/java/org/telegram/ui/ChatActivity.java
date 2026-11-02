@@ -33575,7 +33575,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         }
-        if (messageObject.photoThumbs != null && !messageObject.photoThumbs.isEmpty()) {
+        if (messageObject.isPhoto() && messageObject.photoThumbs != null && !messageObject.photoThumbs.isEmpty()) {
             TLRPC.PhotoSize size = FileLoader.getClosestPhotoSizeWithSize(messageObject.photoThumbs, AndroidUtilities.getPhotoSize(true), false, null, true);
             if (size != null) {
                 f = FileLoader.getInstance(currentAccount).getPathToAttach(size, null, false);
