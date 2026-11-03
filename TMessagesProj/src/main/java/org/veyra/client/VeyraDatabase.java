@@ -289,6 +289,7 @@ public final class VeyraDatabase {
             try {
                 database.executeFast("DELETE FROM veyra_deleted_index").stepThis().dispose();
                 database.executeFast("DELETE FROM veyra_deleted_messages").stepThis().dispose();
+                database.executeFast("VACUUM").stepThis().dispose();
             } catch (Throwable t) {
                 FileLog.e(t);
             }

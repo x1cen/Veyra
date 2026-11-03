@@ -377,6 +377,7 @@ public final class VeyraEditHistoryManager {
             db.delete(TABLE_NAME, accountWhere(account), accountArgs(account));
             db.delete(REACTION_TABLE_NAME, accountWhere(account), accountArgs(account));
             clearRemovedReactions(account);
+            db.execSQL("VACUUM");
         } catch (Exception e) {
             FileLog.e(e);
         }

@@ -1,14 +1,25 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.content.DialogInterface;
+import android.widget.TextView;
 
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.IconBackgroundColors;
+import org.veyra.client.VeyraAntiDelete;
+import org.veyra.client.VeyraDatabase;
+import org.veyra.client.VeyraEditHistoryManager;
 import org.veyra.client.VeyraGhost;
 import org.veyra.client.VeyraScope;
 import org.veyra.client.VeyraUIConfig;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -276,6 +287,65 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 }
         ));
         r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Storage"));
+        r.add(VeyraSettingsRow.detail(
+                "Veyra Database Size",
+                () -> AndroidUtilities.formatFileSize(getVeyraDataSize(currentAccount)),
+                true,
+                null
+        ));
+        r.add(VeyraSettingsRow.button(
+                "Clear Veyra Database",
+                true,
+                false,
+                this::showClearVeyraDatabaseAlert
+        ));
+        r.add(VeyraSettingsRow.shadow());
+    }
+
+    private long getVeyraDataSize(int account) {
+        long size = 0;
+        try {
+            File filesDir = ApplicationLoader.getFilesDirFixed();
+            if (account != 0) {
+                filesDir = new File(filesDir, "account" + account + "/");
+            }
+            File db1 = new File(filesDir, "veyra.db");
+            if (db1.exists()) size += db1.length();
+            File db1Wal = new File(filesDir, "veyra.db-wal");
+            if (db1Wal.exists()) size += db1Wal.length();
+            File db2 = ApplicationLoader.applicationContext.getDatabasePath("veyra_edit_history.db");
+            if (db2 != null && db2.exists()) size += db2.length();
+        } catch (Throwable ignored) {}
+        return size;
+    }
+
+    private void showClearVeyraDatabaseAlert() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Clear Veyra Database");
+        builder.setMessage("This will permanently delete all saved anti-deleted messages, edit history logs and reaction records for this account.");
+        builder.setPositiveButton("Clear", (dialog, which) -> {
+            try {
+                VeyraAntiDelete.clearAll(currentAccount);
+                VeyraDatabase.getInstance(currentAccount).clearAll();
+                VeyraEditHistoryManager.clearAll(currentAccount);
+            } catch (Throwable ignored) {}
+            reloadRows();
+            try {
+                BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Veyra database cleared").show();
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        AlertDialog alert = builder.create();
+        showDialog(alert);
+        TextView btn = (TextView) alert.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (btn != null) {
+            btn.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
     }
 
     private void buildGeneral(List<VeyraSettingsRow> r) {
