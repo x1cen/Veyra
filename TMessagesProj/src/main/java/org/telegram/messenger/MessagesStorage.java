@@ -14532,7 +14532,7 @@ public class MessagesStorage extends BaseController {
             ArrayList<Long> dialogsToUpdate = new ArrayList<>();
             if (dialogId != 0) {
                 if (!org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, dialogId)) {
-                    markMessagesAsDeletedInternal(dialogId, new ArrayList<>(messages), false, true, 0, 0);
+                    markMessagesAsDeletedInternal(dialogId, new ArrayList<>(messages), true, 0, 0);
                     return dialogsToUpdate;
                 }
                 for (int m = 0; m < messages.size(); m++) {
@@ -14607,7 +14607,7 @@ public class MessagesStorage extends BaseController {
                 for (int a = 0; a < outOfScopeByDialog.size(); a++) {
                     long did = outOfScopeByDialog.keyAt(a);
                     ArrayList<Integer> mids = outOfScopeByDialog.valueAt(a);
-                    markMessagesAsDeletedInternal(did, mids, false, true, 0, 0);
+                    markMessagesAsDeletedInternal(did, mids, true, 0, 0);
                     updateDialogsWithDeletedMessagesInternal(did, did < 0 ? -did : 0, mids, null);
                 }
             }
