@@ -4507,6 +4507,10 @@ public class MessagesStorage extends BaseController {
                         state6.dispose();
                         state6 = null;
                         updateWidgets(did);
+                        try {
+                            org.veyra.client.VeyraAntiDelete.clearDialog(currentAccount, did);
+                            org.veyra.client.VeyraEditHistoryManager.clearDialog(currentAccount, did);
+                        } catch (Throwable ignored) {}
                     }
                     cursor.dispose();
                     cursor = null;
@@ -4526,6 +4530,15 @@ public class MessagesStorage extends BaseController {
                 AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.needReloadRecentDialogsSearch));
                 resetAllUnreadCounters(false);
                 updateWidgets(did);
+                try {
+                    org.veyra.client.VeyraAntiDelete.clearDialog(currentAccount, did);
+                    org.veyra.client.VeyraEditHistoryManager.clearDialog(currentAccount, did);
+                    if (messagesOnly == 0) {
+                        org.veyra.client.VeyraScope.GHOST_READ.remove(did);
+                        org.veyra.client.VeyraScope.ANTI_DELETE.remove(did);
+                        org.veyra.client.VeyraScope.HISTORY.remove(did);
+                    }
+                } catch (Throwable ignored) {}
             } catch (Exception e) {
                 checkSQLException(e);
             } finally {

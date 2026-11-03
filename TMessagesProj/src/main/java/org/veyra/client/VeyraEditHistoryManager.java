@@ -419,9 +419,12 @@ public final class VeyraEditHistoryManager {
     public static void clearDialog(int account, long dialogId) {
         try {
             SQLiteDatabase db = getHelper().getWritableDatabase();
-            db.delete(TABLE_NAME, "dialog_id = ?" + accountClause(account), withAccount(account, String.valueOf(dialogId)));
-            db.delete(REACTION_TABLE_NAME, "dialog_id = ?" + accountClause(account), withAccount(account, String.valueOf(dialogId)));
+            db.delete(TABLE_NAME, "(dialog_id = ? OR dialog_id = ?)" + accountClause(account), withAccount(account, String.valueOf(dialogId), String.valueOf(-dialogId)));
+            db.delete(REACTION_TABLE_NAME, "(dialog_id = ? OR dialog_id = ?)" + accountClause(account), withAccount(account, String.valueOf(dialogId), String.valueOf(-dialogId)));
             clearRemovedReactions(account, dialogId);
+            if (dialogId != 0) {
+                clearRemovedReactions(account, -dialogId);
+            }
         } catch (Exception e) {
             FileLog.e(e);
         }
