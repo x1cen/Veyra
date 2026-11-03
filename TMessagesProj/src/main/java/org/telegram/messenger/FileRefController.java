@@ -1385,6 +1385,15 @@ public class FileRefController extends BaseController {
                         break;
                     }
                 }
+                if (result == null) {
+                    ArrayList<TLRPC.Document> recentGifs = getMediaDataController().getRecentGifs();
+                    for (int b = 0, size2 = recentGifs.size(); b < size2; b++) {
+                        result = getFileReference(recentGifs.get(b), null, requester.location, needReplacement, locationReplacement);
+                        if (result != null) {
+                            break;
+                        }
+                    }
+                }
                 if (cache) {
                     getMediaDataController().processLoadedRecentDocuments(MediaDataController.TYPE_IMAGE, savedGifs.gifs, true, 0, true);
                 }
