@@ -12039,6 +12039,9 @@ public class MessageObject {
                 }
                 if (!mediaExists) {
                     mediaExists = file.exists();
+                    if (!mediaExists && type == TYPE_GIF) {
+                        mediaExists = FileLoader.getInstance(currentAccount).getPathToMessage(messageOwner, true, useFileDatabaseQueue).exists();
+                    }
                 }
             }
         }
@@ -12049,6 +12052,9 @@ public class MessageObject {
                     mediaExists = FileLoader.getInstance(currentAccount).getPathToAttach(document, null, true, useFileDatabaseQueue).exists();
                 } else {
                     mediaExists = FileLoader.getInstance(currentAccount).getPathToAttach(document, null, false, useFileDatabaseQueue).exists();
+                    if (!mediaExists && (type == TYPE_GIF || isGifDocument(document))) {
+                        mediaExists = FileLoader.getInstance(currentAccount).getPathToAttach(document, null, true, useFileDatabaseQueue).exists();
+                    }
                 }
             } else if (type == MessageObject.TYPE_TEXT) {
                 TLRPC.PhotoSize currentPhotoObject = FileLoader.getClosestPhotoSizeWithSize(photoThumbs, AndroidUtilities.getPhotoSize());
