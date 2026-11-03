@@ -278,6 +278,12 @@ public class VeyraScope {
         saveOverrides();
     }
 
+    public void remove(long dialogId) {
+        if (overrides.remove(dialogId) != null) {
+            saveOverrides();
+        }
+    }
+
     public static TLRPC.User findUser(int account, long userId) {
         if (userId == 0) return null;
         TLRPC.User user = null;
