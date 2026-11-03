@@ -9100,44 +9100,54 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
             final String newAttachPath = newEMedia != null ? newEMedia.attachPath : newMsg.attachPath;
 
-            if (newAttachPath != null && newAttachPath.startsWith(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE).getAbsolutePath()) && !MessageObject.isGifDocument(sentMedia.document)) {
+            if (newAttachPath != null && newAttachPath.startsWith(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE).getAbsolutePath())) {
                 File cacheFile = new File(newAttachPath);
-                File cacheFile2 = FileLoader.getInstance(currentAccount).getPathToAttach(sentMedia.document, sentMedia.ttl_seconds != 0);
-                if (!cacheFile.renameTo(cacheFile2)) {
-                    if (cacheFile.exists()) {
+                boolean isGif = MessageObject.isGifDocument(sentMedia.document) || MessageObject.isGifDocument(newMedia.document);
+                TLRPC.Document targetDoc = newMedia.document != null ? newMedia.document : sentMedia.document;
+                File cacheFile2 = FileLoader.getInstance(currentAccount).getPathToAttach(targetDoc, isGif || sentMedia.ttl_seconds != 0);
+                if (cacheFile.exists()) {
+                    try {
+                        File parent = cacheFile2.getParentFile();
+                        if (parent != null && !parent.exists()) {
+                            parent.mkdirs();
+                        }
+                    } catch (Throwable ignored) {}
+                    boolean renamed = cacheFile.renameTo(cacheFile2);
+                    if (!renamed) {
+                        try {
+                            AndroidUtilities.copyFile(cacheFile, cacheFile2);
+                            cacheFile.delete();
+                            renamed = true;
+                        } catch (Throwable ignored) {}
+                    }
+                    if (renamed) {
+                        if (newEMedia != null) {
+                            newEMedia.attachPath = cacheFile2.getAbsolutePath();
+                        } else {
+                            sentMessage.attachPath = cacheFile2.getAbsolutePath();
+                        }
+                        newMsg.attachPath = cacheFile2.getAbsolutePath();
+                        newMsgObj.attachPathExists = true;
+                        newMsgObj.mediaExists = true;
+                        sentMessage.message = newMsg.message;
+                        if (originalPath != null && originalPath.startsWith("http")) {
+                            getMessagesStorage().addRecentLocalFile(originalPath, cacheFile2.toString(), newMedia.document);
+                        }
+                    } else {
                         if (newEMedia != null) {
                             newEMedia.attachPath = newAttachPath;
                         } else {
                             sentMessage.attachPath = newAttachPath;
                         }
-                    } else {
-                        if (newEMedia != null) {
-
-                        } else {
-                            newMsgObj.attachPathExists = false;
-                        }
+                        sentMessage.message = newMsg.message;
                     }
+                } else {
                     if (newEMedia != null) {
-
+                        newEMedia.attachPath = newAttachPath;
                     } else {
-                        newMsgObj.mediaExists = cacheFile2.exists();
+                        sentMessage.attachPath = newAttachPath;
                     }
                     sentMessage.message = newMsg.message;
-                } else {
-                    if (MessageObject.isVideoMessage(sentMessage)) {
-                        newMsgObj.attachPathExists = true;
-                    } else {
-                        newMsgObj.mediaExists = newMsgObj.attachPathExists;
-                        newMsgObj.attachPathExists = false;
-                        if (newEMedia != null) {
-                            newEMedia.attachPath = "";
-                        } else {
-                            newMsg.attachPath = "";
-                        }
-                        if (originalPath != null && originalPath.startsWith("http")) {
-                            getMessagesStorage().addRecentLocalFile(originalPath, cacheFile2.toString(), newMedia.document);
-                        }
-                    }
                 }
             } else {
                 if (newEMedia != null) {
