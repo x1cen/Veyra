@@ -21300,7 +21300,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int i = 0; i < arrayList.size(); i++) {
                         int mid = arrayList.get(i);
                         if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, key, mid)
-                                || !org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, key)) {
+                                || (key != 0 && !org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, key))) {
                             selfDelList.add(mid);
                         } else {
                             retainedList.add(mid);

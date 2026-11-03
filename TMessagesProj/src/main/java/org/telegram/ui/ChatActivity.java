@@ -26577,8 +26577,10 @@ public class ChatActivity extends BaseFragment implements
                 }
                     int index = chatAdapter != null && chatAdapter.isFiltered && filteredMessagesDict != null ? chatAdapter.filteredMessages.indexOf(filteredMessagesDict.get(mid)) : messages.indexOf(obj);
                     long targetDialogId = obj.getDialogId() != 0 ? obj.getDialogId() : ((loadIndex == 1 && mergeDialogId != 0) ? mergeDialogId : dialog_id);
+                    long fromId = obj.getFromChatId();
                     boolean isSelfDel = org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, targetDialogId, mid);
-                    if (isSelfDel) {
+                    boolean inScope = org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, targetDialogId, fromId);
+                    if (isSelfDel || !inScope) {
                         if (veyraSelfDeleted == null) {
                             veyraSelfDeleted = new java.util.HashMap<>();
                         }
@@ -26589,7 +26591,7 @@ public class ChatActivity extends BaseFragment implements
                         }
                         veyraIds.add(mid);
                     }
-                    if (!isSelfDel && !obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
+                    if (!isSelfDel && inScope && !obj.isOutOwner() && !obj.scheduled && chatMode != MODE_SCHEDULED && chatMode != MODE_QUICK_REPLIES) {
                         obj.deleted = false;
                         if (obj.messageOwner != null) {
                             obj.messageOwner.isDeleted = true;

@@ -278,6 +278,49 @@ public class VeyraScope {
         saveOverrides();
     }
 
+    public static TLRPC.User findUser(int account, long userId) {
+        if (userId == 0) return null;
+        TLRPC.User user = null;
+        try {
+            user = MessagesController.getInstance(account).getUser(userId);
+        } catch (Throwable ignored) {}
+        if (user == null) {
+            try {
+                org.telegram.messenger.MessagesStorage storage = org.telegram.messenger.MessagesStorage.getInstance(account);
+                if (storage != null) {
+                    if (Thread.currentThread() == storage.getStorageQueue()) {
+                        user = storage.getUser(userId);
+                    } else {
+                        user = storage.getUserSync(userId);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return user;
+    }
+
+    public static TLRPC.Chat findChat(int account, long chatId) {
+        if (chatId == 0) return null;
+        if (chatId < 0) chatId = -chatId;
+        TLRPC.Chat chat = null;
+        try {
+            chat = MessagesController.getInstance(account).getChat(chatId);
+        } catch (Throwable ignored) {}
+        if (chat == null) {
+            try {
+                org.telegram.messenger.MessagesStorage storage = org.telegram.messenger.MessagesStorage.getInstance(account);
+                if (storage != null) {
+                    if (Thread.currentThread() == storage.getStorageQueue()) {
+                        chat = storage.getChat(chatId);
+                    } else {
+                        chat = storage.getChatSync(chatId);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return chat;
+    }
+
     // What the Chat Types options say for this chat, ignoring manual overrides.
     public boolean isDefaultIncluded(int account, long dialogId, boolean unknownDefault) {
         if (dialogId == 0) {
@@ -287,15 +330,14 @@ public class VeyraScope {
             return isOn(OPT_PRIVATE);
         }
         try {
-            MessagesController mc = MessagesController.getInstance(account);
             if (dialogId > 0) {
-                TLRPC.User user = mc.getUser(dialogId);
-                if (user != null && user.bot) {
-                    return isOn(OPT_BOTS);
+                TLRPC.User user = findUser(account, dialogId);
+                if (user != null) {
+                    return user.bot ? isOn(OPT_BOTS) : isOn(OPT_PRIVATE);
                 }
-                return isOn(OPT_PRIVATE);
+                return unknownDefault;
             }
-            TLRPC.Chat chat = mc.getChat(-dialogId);
+            TLRPC.Chat chat = findChat(account, -dialogId);
             if (chat == null) {
                 return unknownDefault;
             }
@@ -354,12 +396,14 @@ public class VeyraScope {
             return PEER_PRIVATE;
         }
         try {
-            MessagesController mc = MessagesController.getInstance(account);
             if (dialogId > 0) {
-                TLRPC.User user = mc.getUser(dialogId);
-                return user != null && user.bot ? PEER_BOT : PEER_PRIVATE;
+                TLRPC.User user = findUser(account, dialogId);
+                if (user != null) {
+                    return user.bot ? PEER_BOT : PEER_PRIVATE;
+                }
+                return -1;
             }
-            TLRPC.Chat chat = mc.getChat(-dialogId);
+            TLRPC.Chat chat = findChat(account, -dialogId);
             if (chat == null) {
                 return -1;
             }
@@ -379,13 +423,13 @@ public class VeyraScope {
             return SIZE_UNKNOWN;
         }
         try {
-            MessagesController mc = MessagesController.getInstance(account);
-            TLRPC.Chat chat = mc.getChat(-dialogId);
+            TLRPC.Chat chat = findChat(account, -dialogId);
             if (chat == null) {
                 return SIZE_UNKNOWN;
             }
             int count = chat.participants_count;
             if (count <= 0) {
+                MessagesController mc = MessagesController.getInstance(account);
                 TLRPC.ChatFull full = mc.getChatFull(-dialogId);
                 if (full != null) {
                     count = full.participants_count;
@@ -407,6 +451,22 @@ public class VeyraScope {
             return true;
         }
         return isIncluded(account, dialogId, unknownDefault);
+    }
+
+    public boolean isMessageInScope(int account, long dialogId, long fromId, boolean unknownDefault) {
+        if (!limitEnabled) {
+            return true;
+        }
+        if (!isIncluded(account, dialogId, unknownDefault)) {
+            return false;
+        }
+        if (fromId > 0) {
+            TLRPC.User sender = findUser(account, fromId);
+            if (sender != null && sender.bot && !isOn(OPT_BOTS)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // Per-feature instances (declared last so ALL_OPTS and REGISTRY are initialized first).

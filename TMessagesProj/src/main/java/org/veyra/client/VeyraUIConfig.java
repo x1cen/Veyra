@@ -82,6 +82,10 @@ public class VeyraUIConfig {
         return VeyraScope.ANTI_DELETE.isInScope(account, dialogId, true);
     }
 
+    public static boolean isAntiDeleteInScope(int account, long dialogId, long fromId) {
+        return VeyraScope.ANTI_DELETE.isMessageInScope(account, dialogId, fromId, true);
+    }
+
     // Scope gate for edit and reaction history logging (same model as anti-delete).
     public static boolean isHistoryInScope(int account, long dialogId) {
         return VeyraScope.HISTORY.isInScope(account, dialogId, true);

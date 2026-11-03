@@ -14465,7 +14465,8 @@ public class MessagesStorage extends BaseController {
                         ArrayList<Integer> retainedList = new ArrayList<>();
                         for (int i = 0; i < mids.size(); i++) {
                             int mid = mids.get(i);
-                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)) {
+                            if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)
+                                    || !org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, dialogId)) {
                                 selfDelList.add(mid);
                             } else {
                                 retainedList.add(mid);
@@ -14530,6 +14531,10 @@ public class MessagesStorage extends BaseController {
             String ids = TextUtils.join(",", messages);
             ArrayList<Long> dialogsToUpdate = new ArrayList<>();
             if (dialogId != 0) {
+                if (!org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, dialogId)) {
+                    markMessagesAsDeletedInternal(dialogId, new ArrayList<>(messages), false, true, 0, 0);
+                    return dialogsToUpdate;
+                }
                 for (int m = 0; m < messages.size(); m++) {
                     int mid = messages.get(m);
                     if (org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, dialogId, mid)) {
@@ -14549,6 +14554,7 @@ public class MessagesStorage extends BaseController {
             } else {
                 cursor = database.queryFinalized(String.format(Locale.US, "SELECT uid, mid, data FROM messages_v2 WHERE mid IN(%s) AND is_channel = 0", ids));
             }
+            LongSparseArray<ArrayList<Integer>> outOfScopeByDialog = null;
             while (cursor.next()) {
                 try {
                     long did = cursor.longValue(0);
@@ -14558,6 +14564,7 @@ public class MessagesStorage extends BaseController {
                     }
                     byte[] dataBytes = null;
                     int msgDate = 0;
+                    long fromId = 0;
                     try {
                         NativeByteBuffer data = cursor.byteBufferValue(2);
                         if (data != null) {
@@ -14568,9 +14575,23 @@ public class MessagesStorage extends BaseController {
                             data.reuse();
                             if (msg != null) {
                                 msgDate = msg.date;
+                                fromId = MessageObject.getPeerId(msg.from_id);
                             }
                         }
                     } catch (Throwable ignore) {}
+
+                    if (!org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, did, fromId)) {
+                        if (outOfScopeByDialog == null) {
+                            outOfScopeByDialog = new LongSparseArray<>();
+                        }
+                        ArrayList<Integer> arr = outOfScopeByDialog.get(did);
+                        if (arr == null) {
+                            arr = new ArrayList<>();
+                            outOfScopeByDialog.put(did, arr);
+                        }
+                        arr.add(mid);
+                        continue;
+                    }
 
                     try {
                         org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedMessage(did, mid, msgDate, dataBytes);
@@ -14582,6 +14603,14 @@ public class MessagesStorage extends BaseController {
                 } catch (Exception e) {}
             }
             cursor.dispose();
+            if (outOfScopeByDialog != null) {
+                for (int a = 0; a < outOfScopeByDialog.size(); a++) {
+                    long did = outOfScopeByDialog.keyAt(a);
+                    ArrayList<Integer> mids = outOfScopeByDialog.valueAt(a);
+                    markMessagesAsDeletedInternal(did, mids, false, true, 0, 0);
+                    updateDialogsWithDeletedMessagesInternal(did, did < 0 ? -did : 0, mids, null);
+                }
+            }
             updateWidgets(dialogsToUpdate);
             return dialogsToUpdate;
         } catch (Exception e) {
@@ -14978,7 +15007,8 @@ public class MessagesStorage extends BaseController {
                     ArrayList<Integer> toDeleteFromDb = new ArrayList<>();
                     for (int m = 0; m < mids.size(); m++) {
                         int msgId = mids.get(m);
-                        if (msgId > 0 && !org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, did, msgId)) {
+                        if (msgId > 0 && !org.veyra.client.VeyraAntiDelete.isSelfDeleted(currentAccount, did, msgId)
+                                && org.veyra.client.VeyraUIConfig.isAntiDeleteInScope(currentAccount, did)) {
                             try {
                                 org.veyra.client.VeyraDatabase.getInstance(currentAccount).saveDeletedIndex(did, msgId);
                                 org.veyra.client.VeyraAntiDelete.addDeletedMessage(currentAccount, did, msgId);
