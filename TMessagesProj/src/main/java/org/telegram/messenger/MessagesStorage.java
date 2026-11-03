@@ -1536,6 +1536,11 @@ public class MessagesStorage extends BaseController {
                 database.executeFast("PRAGMA journal_size_limit = -1").stepThis().dispose();
 
                 getMessagesController().getTopicsController().databaseCleared();
+                try {
+                    org.veyra.client.VeyraAntiDelete.clearAll(currentAccount);
+                    org.veyra.client.VeyraDatabase.getInstance(currentAccount).clearAll();
+                    org.veyra.client.VeyraEditHistoryManager.clearAll(currentAccount);
+                } catch (Throwable ignored) {}
                 AndroidUtilities.runOnUIThread(() -> {
                     getMessagesController().getSavedMessagesController().cleanup();
                 });
@@ -15033,6 +15038,10 @@ public class MessagesStorage extends BaseController {
                     }
                     String delIds = toDeleteFromDb.isEmpty() ? null : TextUtils.join(",", toDeleteFromDb);
                     if (delIds != null) {
+                        try {
+                            org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(did, toDeleteFromDb);
+                            org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(currentAccount, did, toDeleteFromDb);
+                        } catch (Throwable ignored) {}
                         database.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
                         database.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();
                         database.executeFast(String.format(Locale.US, "DELETE FROM polls_v2 WHERE mid IN(%s) AND uid = %d", delIds, did)).stepThis().dispose();

@@ -26757,6 +26757,7 @@ public class ChatActivity extends BaseFragment implements
                 if (selfDeletedFinal != null) {
                     for (java.util.Map.Entry<Long, ArrayList<Integer>> e : selfDeletedFinal.entrySet()) {
                         db.deleteMessages(e.getKey(), e.getValue());
+                        org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(account, e.getKey(), e.getValue());
                     }
                 }
                 if (peerDeletedFinal != null) {

@@ -16135,6 +16135,11 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         getUserConfig().clearConfig();
         SharedPrefsHelper.cleanupAccount(currentAccount);
+        try {
+            org.veyra.client.VeyraAntiDelete.clearAll(currentAccount);
+            org.veyra.client.VeyraDatabase.getInstance(currentAccount).clearAll();
+            org.veyra.client.VeyraEditHistoryManager.clearAll(currentAccount);
+        } catch (Throwable ignored) {}
 
         boolean shouldHandle = true;
         ArrayList<NotificationCenter.NotificationCenterDelegate> observers = getNotificationCenter().getObservers(NotificationCenter.appDidLogout);

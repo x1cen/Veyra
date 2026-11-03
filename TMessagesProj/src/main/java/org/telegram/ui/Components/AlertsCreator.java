@@ -8188,6 +8188,7 @@ public class AlertsCreator {
                     if (mode != 1) {
                         org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(currentAccount, thisDialogId, ids);
                         org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(thisDialogId, ids);
+                        org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(currentAccount, thisDialogId, ids);
                     }
                     MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, thisDialogId, topicId, deleteForAll[0], mode);
                 }
@@ -8215,6 +8216,7 @@ public class AlertsCreator {
                         if (mode != 1) {
                             org.veyra.client.VeyraAntiDelete.addSelfDeletedMessages(currentAccount, targetDid, ids);
                             org.veyra.client.VeyraDatabase.getInstance(currentAccount).deleteMessages(targetDid, ids);
+                            org.veyra.client.VeyraEditHistoryManager.deleteHistoryBatch(currentAccount, targetDid, ids);
                         }
                         MessagesController.getInstance(currentAccount).deleteMessages(ids, random_ids, encryptedChat, targetDid, topicId, deleteForAll[0], mode);
                     }
