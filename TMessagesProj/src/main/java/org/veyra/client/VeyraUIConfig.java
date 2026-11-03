@@ -91,6 +91,10 @@ public class VeyraUIConfig {
         return VeyraScope.HISTORY.isInScope(account, dialogId, true);
     }
 
+    public static boolean isHistoryInScope(int account, long dialogId, long fromId) {
+        return VeyraScope.HISTORY.isMessageInScope(account, dialogId, fromId, true);
+    }
+
     public static void setTabsTitleType(int val) {
         tabsTitleType = val;
         save("tabsTitleType", val);

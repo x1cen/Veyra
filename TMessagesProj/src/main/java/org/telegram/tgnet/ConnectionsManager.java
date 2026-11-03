@@ -445,7 +445,7 @@ public class ConnectionsManager extends BaseController {
             try {
                 encDialogId = org.telegram.messenger.DialogObject.makeEncryptedDialogId(((TLRPC.TL_messages_readEncryptedHistory) object).peer.chat_id);
             } catch (Throwable ignore) {}
-            if (org.veyra.client.VeyraGhost.shouldHideSecretRead(encDialogId)) {
+            if (org.veyra.client.VeyraGhost.shouldHideSecretRead(currentAccount, encDialogId)) {
                 if (onComplete != null) {
                     AndroidUtilities.runOnUIThread(() -> onComplete.run(new TLRPC.TL_boolTrue(), null));
                 }

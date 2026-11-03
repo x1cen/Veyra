@@ -202,6 +202,10 @@ public class VeyraGhost {
         return hideSecretRead && shouldHideRead(encryptedDialogId);
     }
 
+    public static boolean shouldHideSecretRead(int account, long encryptedDialogId) {
+        return hideSecretRead && shouldHideRead(account, encryptedDialogId);
+    }
+
     public static boolean shouldHideReadReactions() {
         return ghostMode && hideRead && hideReadReactions;
     }

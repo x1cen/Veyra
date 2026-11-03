@@ -97,15 +97,14 @@ public class VeyraIncludedChatsActivity extends BaseFragment {
         if (did == 0 || seen.contains(did) || DialogObject.isEncryptedDialog(did)) {
             return;
         }
-        MessagesController mc = getMessagesController();
         TLObject obj = null;
         if (did > 0) {
-            TLRPC.User user = mc.getUser(did);
+            TLRPC.User user = VeyraScope.findUser(currentAccount, did);
             if (user != null && !UserObject.isUserSelf(user) && !UserObject.isDeleted(user)) {
                 obj = user;
             }
         } else {
-            TLRPC.Chat chat = mc.getChat(-did);
+            TLRPC.Chat chat = VeyraScope.findChat(currentAccount, -did);
             if (chat != null) {
                 obj = chat;
             }

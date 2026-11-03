@@ -357,6 +357,11 @@ public class VeyraScope {
             }
             int size = groupSize(account, dialogId);
             if (size == SIZE_UNKNOWN) {
+                boolean small = isOn(isPublic ? OPT_PUBLIC_GROUPS_SMALL : OPT_PRIVATE_GROUPS_SMALL);
+                boolean large = isOn(isPublic ? OPT_PUBLIC_GROUPS_LARGE : OPT_PRIVATE_GROUPS_LARGE);
+                if (small == large) {
+                    return small;
+                }
                 return unknownDefault;
             }
             if (isPublic) {
