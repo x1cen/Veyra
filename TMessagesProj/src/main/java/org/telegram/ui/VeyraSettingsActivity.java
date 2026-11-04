@@ -250,6 +250,58 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     }
 
     private void buildMedia(List<VeyraSettingsRow> r) {
+        r.add(VeyraSettingsRow.header("Confirm Before Sending"));
+        r.add(VeyraSettingsRow.toggle(
+                "Photos & Videos",
+                "Ask for confirmation before sending photos and videos",
+                () -> VeyraUIConfig.confirmSendPhotoVideo,
+                val -> VeyraUIConfig.toggleConfirmSendPhotoVideo(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Voice Messages",
+                "Review voice notes and ask for confirmation before sending",
+                () -> VeyraUIConfig.confirmSendVoice,
+                val -> VeyraUIConfig.toggleConfirmSendVoice(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Video Messages",
+                "Ask for confirmation before sending round video messages",
+                () -> VeyraUIConfig.confirmSendRoundVideo,
+                val -> VeyraUIConfig.toggleConfirmSendRoundVideo(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "GIFs",
+                "Ask for confirmation before sending GIFs",
+                () -> VeyraUIConfig.confirmSendGif,
+                val -> VeyraUIConfig.toggleConfirmSendGif(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Stickers",
+                "Ask for confirmation before sending stickers",
+                () -> VeyraUIConfig.confirmSendSticker,
+                val -> VeyraUIConfig.toggleConfirmSendSticker(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Files & Documents",
+                "Ask for confirmation before sending files and documents",
+                () -> VeyraUIConfig.confirmSendDocument,
+                val -> VeyraUIConfig.toggleConfirmSendDocument(),
+                true
+        ));
+        r.add(VeyraSettingsRow.toggle(
+                "Audio & Music",
+                "Ask for confirmation before sending audio files",
+                () -> VeyraUIConfig.confirmSendAudio,
+                val -> VeyraUIConfig.toggleConfirmSendAudio(),
+                true
+        ));
+        r.add(VeyraSettingsRow.shadow());
+
         r.add(VeyraSettingsRow.header("Playback"));
         r.add(VeyraSettingsRow.toggle(
                 "Disable Voice Auto-Play",

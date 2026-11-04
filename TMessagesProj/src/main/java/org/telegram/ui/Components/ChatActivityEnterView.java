@@ -3008,8 +3008,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                                     });
                                     return true;
                                 }
-                                delegate.needStartRecordVideo(1, true, 0, 0, voiceOnce ? 0x7FFFFFFF : 0, effectId, 0);
-                                sendButton.setEffect(effectId = 0);
+                                if (org.veyra.client.VeyraUIConfig.confirmSendRoundVideo) {
+                                    delegate.needStartRecordVideo(3, true, 0, 0, voiceOnce ? 0x7FFFFFFF : 0, effectId, 0);
+                                    sendButton.setEffect(effectId = 0);
+                                } else {
+                                    delegate.needStartRecordVideo(1, true, 0, 0, voiceOnce ? 0x7FFFFFFF : 0, effectId, 0);
+                                    sendButton.setEffect(effectId = 0);
+                                }
                             } else {
                                 if (recordingAudioVideo && isInScheduleMode()) {
                                     AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), (notify, scheduleDate, scheduleRepeatPeriod) -> MediaController.getInstance().stopRecording(1, notify, scheduleDate, false, 0), () -> MediaController.getInstance().stopRecording(0, false, 0, false, 0), resourcesProvider);
@@ -3035,15 +3040,21 @@ public class ChatActivityEnterView extends FrameLayout implements
                                     });
                                     return true;
                                 }
-                                MediaController.getInstance().stopRecording(isInScheduleMode() ? 3 : 1, true, 0, voiceOnce, 0);
+                                if (org.veyra.client.VeyraUIConfig.confirmSendVoice) {
+                                    MediaController.getInstance().stopRecording(2, true, 0, voiceOnce, 0);
+                                } else {
+                                    MediaController.getInstance().stopRecording(isInScheduleMode() ? 3 : 1, true, 0, voiceOnce, 0);
+                                }
                                 delegate.needStartRecordAudio(0);
                             }
-                            recordingAudioVideo = false;
-                            messageTransitionIsRunning = false;
-                            AndroidUtilities.runOnUIThread(moveToSendStateRunnable = () -> {
-                                moveToSendStateRunnable = null;
-                                updateRecordInterface(RECORD_STATE_SENDING, true);
-                            }, 200);
+                            if (!org.veyra.client.VeyraUIConfig.confirmSendVoice) {
+                                recordingAudioVideo = false;
+                                messageTransitionIsRunning = false;
+                                AndroidUtilities.runOnUIThread(moveToSendStateRunnable = () -> {
+                                    moveToSendStateRunnable = null;
+                                    updateRecordInterface(RECORD_STATE_SENDING, true);
+                                }, 200);
+                            }
                         }
                         getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
@@ -3154,14 +3165,20 @@ public class ChatActivityEnterView extends FrameLayout implements
                                     AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), (notify, scheduleDate, scheduleRepeatPeriod) -> MediaController.getInstance().stopRecording(1, notify, scheduleDate, false, 0), () -> MediaController.getInstance().stopRecording(0, false, 0, false, 0), resourcesProvider);
                                 }
                                 delegate.needStartRecordAudio(0);
-                                MediaController.getInstance().stopRecording(isInScheduleMode() ? 3 : 1, true, 0, voiceOnce, 0);
+                                if (org.veyra.client.VeyraUIConfig.confirmSendVoice) {
+                                    MediaController.getInstance().stopRecording(2, true, 0, voiceOnce, 0);
+                                } else {
+                                    MediaController.getInstance().stopRecording(isInScheduleMode() ? 3 : 1, true, 0, voiceOnce, 0);
+                                }
                             }
-                            recordingAudioVideo = false;
-                            messageTransitionIsRunning = false;
-                            AndroidUtilities.runOnUIThread(moveToSendStateRunnable = () -> {
-                                moveToSendStateRunnable = null;
-                                updateRecordInterface(RECORD_STATE_SENDING, true);
-                            }, shouldDrawBackground ? 500 : 0);
+                            if (!org.veyra.client.VeyraUIConfig.confirmSendVoice) {
+                                recordingAudioVideo = false;
+                                messageTransitionIsRunning = false;
+                                AndroidUtilities.runOnUIThread(moveToSendStateRunnable = () -> {
+                                    moveToSendStateRunnable = null;
+                                    updateRecordInterface(RECORD_STATE_SENDING, true);
+                                }, shouldDrawBackground ? 500 : 0);
+                            }
                         }
                     }
                     return true;
@@ -7295,10 +7312,26 @@ public class ChatActivityEnterView extends FrameLayout implements
                     emojiView.hideSearchKeyboard();
                 }
             }
-            if (allowConfirmFinal && showConfirmAlert(() -> {
-                sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, payStars, false);
-            })) {
-                return;
+            if (allowConfirmFinal) {
+                if (videoToSendMessageObject != null && org.veyra.client.VeyraUIConfig.confirmSendRoundVideo) {
+                    org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), parentFragment,
+                            "Send Video Message?",
+                            "Are you sure you want to send this video message?",
+                            () -> sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, payStars, false));
+                    return;
+                }
+                if (audioToSend != null && org.veyra.client.VeyraUIConfig.confirmSendVoice) {
+                    org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), parentFragment,
+                            "Send Voice Message?",
+                            "Are you sure you want to send this voice message?",
+                            () -> sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, payStars, false));
+                    return;
+                }
+                if (showConfirmAlert(() -> {
+                    sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, payStars, false);
+                })) {
+                    return;
+                }
             }
             dismissSendPreviewSent = true;
             if (videoToSendMessageObject != null) {
@@ -12340,7 +12373,12 @@ public class ChatActivityEnterView extends FrameLayout implements
                                 delegate.onMessageSend(null, notify, scheduleDate, 0, 0);
                             }
                         };
-                        if (!showConfirmAlert(runnable)) {
+                        if (org.veyra.client.VeyraUIConfig.confirmSendGif) {
+                            org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), parentFragment,
+                                    "Send GIF?",
+                                    "Are you sure you want to send this GIF?",
+                                    runnable);
+                        } else if (!showConfirmAlert(runnable)) {
                             runnable.run();
                         }
                     });
@@ -12614,7 +12652,12 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                     MediaDataController.getInstance(currentAccount).addRecentSticker(MediaDataController.TYPE_IMAGE, parent, sticker, (int) (System.currentTimeMillis() / 1000), false);
                 };
-                if (!showConfirmAlert(runnable)) {
+                if (org.veyra.client.VeyraUIConfig.confirmSendSticker) {
+                    org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), parentFragment,
+                            "Send Sticker?",
+                            "Are you sure you want to send this sticker?",
+                            runnable);
+                } else if (!showConfirmAlert(runnable)) {
                     runnable.run();
                 }
             });

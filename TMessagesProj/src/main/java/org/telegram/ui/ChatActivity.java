@@ -14075,6 +14075,19 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public void didSelectFiles(ArrayList<String> files, String caption, ArrayList<TLRPC.MessageEntity> captionEntities, ArrayList<MessageObject> fmessages, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long effectId, boolean invertMedia, long payStars) {
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+        if (org.veyra.client.VeyraUIConfig.confirmSendDocument) {
+            String title = files.size() > 1 ? "Send Files?" : "Send File?";
+            String message = files.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d files?", files.size()) : "Are you sure you want to send this file?";
+            org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> didSelectFilesInternal(files, caption, captionEntities, fmessages, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars));
+            return;
+        }
+        didSelectFilesInternal(files, caption, captionEntities, fmessages, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars);
+    }
+
+    private void didSelectFilesInternal(ArrayList<String> files, String caption, ArrayList<TLRPC.MessageEntity> captionEntities, ArrayList<MessageObject> fmessages, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long effectId, boolean invertMedia, long payStars) {
         fillEditingMediaWithCaption(caption, null);
         if (checkSlowModeAlert()) {
             if (!fmessages.isEmpty() && !TextUtils.isEmpty(caption)) {
@@ -14095,6 +14108,19 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public void didSelectPhotos(ArrayList<SendMessagesHelper.SendingMediaInfo> photos, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long payStars) {
+        if (photos == null || photos.isEmpty()) {
+            return;
+        }
+        if (org.veyra.client.VeyraUIConfig.confirmSendPhotoVideo) {
+            String title = photos.size() > 1 ? "Send Media?" : (photos.get(0).isVideo ? "Send Video?" : "Send Photo?");
+            String message = photos.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d media items?", photos.size()) : (photos.get(0).isVideo ? "Are you sure you want to send this video?" : "Are you sure you want to send this photo?");
+            org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> didSelectPhotosInternal(photos, notify, scheduleDate, scheduleRepeatPeriod, payStars));
+            return;
+        }
+        didSelectPhotosInternal(photos, notify, scheduleDate, scheduleRepeatPeriod, payStars);
+    }
+
+    private void didSelectPhotosInternal(ArrayList<SendMessagesHelper.SendingMediaInfo> photos, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long payStars) {
         fillEditingMediaWithCaption(photos.get(0).caption, photos.get(0).entities);
         SendMessagesHelper.prepareSendingMedia(getAccountInstance(), photos, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, true, false, editingMessageObject, notify, scheduleDate, scheduleRepeatPeriod, chatMode, photos.get(0).updateStickersOrder, null, getMessageChatSendParams(), 0, false, payStars, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
         afterMessageSend();
@@ -35901,6 +35927,19 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public void sendAudio(ArrayList<MessageObject> audios, CharSequence caption, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long effectId, boolean invertMedia, long payStars) {
+        if (audios == null || audios.isEmpty()) {
+            return;
+        }
+        if (org.veyra.client.VeyraUIConfig.confirmSendAudio) {
+            String title = audios.size() > 1 ? "Send Audio Files?" : "Send Audio?";
+            String message = audios.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d audio files?", audios.size()) : "Are you sure you want to send this audio file?";
+            org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> sendAudioInternal(audios, caption, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars));
+            return;
+        }
+        sendAudioInternal(audios, caption, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars);
+    }
+
+    private void sendAudioInternal(ArrayList<MessageObject> audios, CharSequence caption, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long effectId, boolean invertMedia, long payStars) {
         if (checkSlowModeAlert()) {
             fillEditingMediaWithCaption(caption, null);
             SendMessagesHelper.prepareSendingAudioDocuments(getAccountInstance(), audios, caption != null ? caption : null, dialog_id, replyingMessageObject, getThreadMessage(), null, notify, scheduleDate, scheduleRepeatPeriod, editingMessageObject, getMessageChatSendParams(), effectId, invertMedia, payStars);

@@ -22,6 +22,15 @@ public class VeyraUIConfig {
     public static boolean askBeforeCall = true;
     public static int downloadSpeedBoost = 1; // 0 = off, 1 = average, 2 = extreme
 
+    // Media send confirmation
+    public static boolean confirmSendPhotoVideo = true;
+    public static boolean confirmSendVoice = true;
+    public static boolean confirmSendRoundVideo = true;
+    public static boolean confirmSendGif = true;
+    public static boolean confirmSendSticker = true;
+    public static boolean confirmSendDocument = true;
+    public static boolean confirmSendAudio = true;
+
     // Edit History & Privacy
     public static boolean editHistoryEnabled = true;
     public static boolean editHistoryDropOldest = true;
@@ -53,6 +62,13 @@ public class VeyraUIConfig {
             disableJumpToNextChannel = prefs.getBoolean("disableJumpToNextChannel", false);
             ignoreBlocked = prefs.getBoolean("ignoreBlocked", false);
             askBeforeCall = prefs.getBoolean("askBeforeCall", true);
+            confirmSendPhotoVideo = prefs.getBoolean("confirmSendPhotoVideo", true);
+            confirmSendVoice = prefs.getBoolean("confirmSendVoice", true);
+            confirmSendRoundVideo = prefs.getBoolean("confirmSendRoundVideo", true);
+            confirmSendGif = prefs.getBoolean("confirmSendGif", true);
+            confirmSendSticker = prefs.getBoolean("confirmSendSticker", true);
+            confirmSendDocument = prefs.getBoolean("confirmSendDocument", true);
+            confirmSendAudio = prefs.getBoolean("confirmSendAudio", true);
             downloadSpeedBoost = prefs.getInt("downloadSpeedBoost", 1);
             editHistoryEnabled = prefs.getBoolean("editHistoryEnabled", true);
             editHistoryLimit = prefs.getInt("editHistoryLimit", 20);
@@ -133,6 +149,41 @@ public class VeyraUIConfig {
     public static void toggleAskBeforeCall() {
         askBeforeCall = !askBeforeCall;
         save("askBeforeCall", askBeforeCall);
+    }
+
+    public static void toggleConfirmSendPhotoVideo() {
+        confirmSendPhotoVideo = !confirmSendPhotoVideo;
+        save("confirmSendPhotoVideo", confirmSendPhotoVideo);
+    }
+
+    public static void toggleConfirmSendVoice() {
+        confirmSendVoice = !confirmSendVoice;
+        save("confirmSendVoice", confirmSendVoice);
+    }
+
+    public static void toggleConfirmSendRoundVideo() {
+        confirmSendRoundVideo = !confirmSendRoundVideo;
+        save("confirmSendRoundVideo", confirmSendRoundVideo);
+    }
+
+    public static void toggleConfirmSendGif() {
+        confirmSendGif = !confirmSendGif;
+        save("confirmSendGif", confirmSendGif);
+    }
+
+    public static void toggleConfirmSendSticker() {
+        confirmSendSticker = !confirmSendSticker;
+        save("confirmSendSticker", confirmSendSticker);
+    }
+
+    public static void toggleConfirmSendDocument() {
+        confirmSendDocument = !confirmSendDocument;
+        save("confirmSendDocument", confirmSendDocument);
+    }
+
+    public static void toggleConfirmSendAudio() {
+        confirmSendAudio = !confirmSendAudio;
+        save("confirmSendAudio", confirmSendAudio);
     }
 
     public static void setDownloadSpeedBoost(int val) {
