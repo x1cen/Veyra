@@ -12,7 +12,7 @@ import java.util.List;
 public class VeyraFakeIdentity {
 
     public static final int DEFAULT_API_ID = 6;
-    public static final String DEFAULT_API_HASH = "eb0663abfb5223dd426480f7e3d3d8cb";
+    public static final String DEFAULT_API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e";
     public static final String DEFAULT_APP_VERSION = "11.12.0";
 
     public static class DeviceSpec {
