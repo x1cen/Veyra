@@ -1984,6 +1984,17 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private HashMap<String, List<CountrySelectActivity.Country>> codesMap = new HashMap<>();
         private HashMap<String, List<String>> phoneFormatMap = new HashMap<>();
 
+        private boolean skipCustomScreens = false;
+
+        public void proceedSendCode(final Bundle params) {
+            skipCustomScreens = true;
+            try {
+                onNextPressed(null);
+            } finally {
+                skipCustomScreens = false;
+            }
+        }
+
         private boolean ignoreSelection = false;
         private boolean ignoreOnTextChange = false;
         private boolean ignoreOnPhoneChange = false;
@@ -3236,11 +3247,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (currentCountry != null) {
                 params.putString("country", currentCountry.code);
             }
-            if (fakeIdentity && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+            if (!skipCustomScreens && fakeIdentity && activityMode != MODE_CHANGE_PHONE_NUMBER) {
                 setPage(VIEW_FAKE_IDENTITY, true, params, false);
                 return;
             }
-            if (useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+            if (!skipCustomScreens && useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
                 setPage(VIEW_CREDENTIALS, true, params, false);
                 return;
             }
@@ -10575,45 +10586,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 ConnectionsManager.getInstance(currentAccount).setDeviceParams(customId, Build.MANUFACTURER + " " + Build.MODEL, "SDK " + Build.VERSION.SDK_INT, "11.12.0", "en", "en");
             } catch (Throwable ignored) {}
 
-            final String phone = currentParams.getString("phoneFormated");
-            if (phone == null || phone.isEmpty()) {
-                setPage(VIEW_PHONE_INPUT, true, null, true);
-                return;
-            }
-
-            nextPressed = true;
-            needShowProgress(0);
-
-            TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
-            sendCode.api_hash = hashStr;
-            sendCode.api_id = customId;
-            sendCode.phone_number = phone;
-            TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
-            settings.allow_firebase = false;
-            sendCode.settings = settings;
-
-            ConnectionsManager.getInstance(currentAccount).sendRequest(sendCode, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                nextPressed = false;
-                needHideProgress(false);
-                if (error == null) {
-                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
-                        TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
-                        if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
-                            TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
-                            if (authorization.terms_of_service != null) {
-                                currentTermsOfService = authorization.terms_of_service;
-                            }
-                            setPage(VIEW_REGISTER, true, currentParams, false);
-                        } else {
-                            onAuthSuccess((TLRPC.TL_auth_authorization) auth);
-                        }
-                    } else {
-                        fillNextCodeParams(currentParams, (TLRPC.auth_SentCode) response);
-                    }
-                } else {
-                    AlertsCreator.processError(currentAccount, error, LoginActivity.this, sendCode);
-                }
-            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+            ((PhoneView) views[VIEW_PHONE_INPUT]).proceedSendCode(currentParams);
         }
     }
 
@@ -10842,6 +10815,429 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     AlertsCreator.processError(currentAccount, error, LoginActivity.this, sendCode);
                 }
             }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+        }
+    }
+
+    public class LoginActivityFakeIdentityView extends SlideView {
+
+        private ScrollView scrollView;
+        private LinearLayout contentLayout;
+        private TextView titleView;
+        private TextView subtitleView;
+
+        private OutlineTextContainerView platformOutlineView;
+        private TextView platformTextView;
+
+        private LinearLayout sideBySideLayout;
+        private OutlineTextContainerView deviceModelOutlineView;
+        private TextView deviceModelTextView;
+        private OutlineTextContainerView systemVersionOutlineView;
+        private EditTextBoldCursor systemVersionField;
+
+        private OutlineTextContainerView appVersionOutlineView;
+        private TextView appVersionTextView;
+
+        private OutlineTextContainerView apiIdOutlineView;
+        private EditTextBoldCursor apiIdField;
+        private OutlineTextContainerView apiHashOutlineView;
+        private EditTextBoldCursor apiHashField;
+
+        private TextView warningTextView;
+        private FrameLayout regenerateCircleButton;
+
+        private int selectedPlatformIndex = 3; // default iOS Official (index 3)
+        private org.veyra.client.VeyraFakeIdentity.GeneratedProfile currentProfile;
+        private Bundle currentParams;
+
+        public LoginActivityFakeIdentityView(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+
+            FrameLayout rootFrame = new FrameLayout(context);
+            addView(rootFrame, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+            scrollView = new ScrollView(context);
+            scrollView.setVerticalScrollBarEnabled(false);
+            rootFrame.addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+            contentLayout = new LinearLayout(context);
+            contentLayout.setOrientation(VERTICAL);
+            contentLayout.setPadding(0, 0, 0, AndroidUtilities.dp(140));
+            scrollView.addView(contentLayout, LayoutHelper.createScroll(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            titleView.setTypeface(AndroidUtilities.bold());
+            titleView.setText("Fake Identity");
+            titleView.setGravity(Gravity.CENTER);
+            titleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            contentLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 20, 32, 0));
+
+            subtitleView = new TextView(context);
+            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            subtitleView.setGravity(Gravity.CENTER);
+            subtitleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            subtitleView.setText("Select target operating system and disguise your device identity before logging in.");
+            subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
+            contentLayout.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 8, 32, 16));
+
+            // 1. Target Operating System
+            platformOutlineView = new OutlineTextContainerView(context);
+            platformOutlineView.setText("Target Operating System");
+
+            LinearLayout platformRow = new LinearLayout(context);
+            platformRow.setOrientation(HORIZONTAL);
+            platformRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            platformTextView = new TextView(context);
+            platformTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            platformTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            platformTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            platformRow.addView(platformTextView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            ImageView platformChevron = new ImageView(context);
+            platformChevron.setImageResource(R.drawable.arrow_more);
+            platformChevron.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
+            platformRow.addView(platformChevron, LayoutHelper.createLinear(24, 24, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+
+            platformOutlineView.addView(platformRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            OnClickListener platformClickListener = v -> showPlatformSelectDialog();
+            platformOutlineView.setOnClickListener(platformClickListener);
+            platformRow.setOnClickListener(platformClickListener);
+            platformTextView.setOnClickListener(platformClickListener);
+
+            contentLayout.addView(platformOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 6, 20, 10));
+
+            // 2. Side-by-side: Device Model & System Version
+            sideBySideLayout = new LinearLayout(context);
+            sideBySideLayout.setOrientation(HORIZONTAL);
+
+            // Left: Device Model (Searchable)
+            deviceModelOutlineView = new OutlineTextContainerView(context);
+            deviceModelOutlineView.setText("Device Model");
+
+            LinearLayout deviceModelRow = new LinearLayout(context);
+            deviceModelRow.setOrientation(HORIZONTAL);
+            deviceModelRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            deviceModelTextView = new TextView(context);
+            deviceModelTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            deviceModelTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            deviceModelTextView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(4), AndroidUtilities.dp(14));
+            deviceModelTextView.setSingleLine(true);
+            deviceModelTextView.setEllipsize(TextUtils.TruncateAt.END);
+            deviceModelRow.addView(deviceModelTextView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            ImageView searchIcon = new ImageView(context);
+            searchIcon.setImageResource(R.drawable.smiles_tab_search);
+            searchIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
+            deviceModelRow.addView(searchIcon, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
+
+            deviceModelOutlineView.addView(deviceModelRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            OnClickListener deviceClickListener = v -> showDeviceSearchDialog();
+            deviceModelOutlineView.setOnClickListener(deviceClickListener);
+            deviceModelRow.setOnClickListener(deviceClickListener);
+            deviceModelTextView.setOnClickListener(deviceClickListener);
+
+            sideBySideLayout.addView(deviceModelOutlineView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 0, 0, 4, 0));
+
+            // Right: System Version
+            systemVersionOutlineView = new OutlineTextContainerView(context);
+            systemVersionOutlineView.setText("System Version");
+
+            systemVersionField = new EditTextBoldCursor(context);
+            systemVersionField.setCursorSize(AndroidUtilities.dp(18));
+            systemVersionField.setCursorWidth(1.5f);
+            systemVersionField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            systemVersionField.setMaxLines(1);
+            systemVersionField.setInputType(EditorInfo.TYPE_CLASS_TEXT);
+            systemVersionField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            systemVersionField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            systemVersionField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            systemVersionField.setBackground(null);
+            systemVersionField.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(14));
+            systemVersionField.setOnFocusChangeListener((v, hasFocus) -> systemVersionOutlineView.animateSelection(hasFocus ? 1f : 0f));
+
+            systemVersionOutlineView.attachEditText(systemVersionField);
+            systemVersionOutlineView.addView(systemVersionField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            sideBySideLayout.addView(systemVersionOutlineView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 4, 0, 0, 0));
+
+            contentLayout.addView(sideBySideLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+
+            // 3. App Version (read-only)
+            appVersionOutlineView = new OutlineTextContainerView(context);
+            appVersionOutlineView.setText("App Version (Read-Only)");
+
+            appVersionTextView = new TextView(context);
+            appVersionTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            appVersionTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            appVersionTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            appVersionOutlineView.addView(appVersionTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            contentLayout.addView(appVersionOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+
+            // 4. App ID (editable)
+            apiIdOutlineView = new OutlineTextContainerView(context);
+            apiIdOutlineView.setText("App ID");
+
+            apiIdField = new EditTextBoldCursor(context);
+            apiIdField.setCursorSize(AndroidUtilities.dp(18));
+            apiIdField.setCursorWidth(1.5f);
+            apiIdField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            apiIdField.setMaxLines(1);
+            apiIdField.setInputType(EditorInfo.TYPE_CLASS_NUMBER);
+            apiIdField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            apiIdField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            apiIdField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            apiIdField.setBackground(null);
+            apiIdField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            apiIdField.setOnFocusChangeListener((v, hasFocus) -> apiIdOutlineView.animateSelection(hasFocus ? 1f : 0f));
+
+            apiIdOutlineView.attachEditText(apiIdField);
+            apiIdOutlineView.addView(apiIdField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            contentLayout.addView(apiIdOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+
+            // 5. App HASH (editable)
+            apiHashOutlineView = new OutlineTextContainerView(context);
+            apiHashOutlineView.setText("App HASH");
+
+            apiHashField = new EditTextBoldCursor(context);
+            apiHashField.setCursorSize(AndroidUtilities.dp(18));
+            apiHashField.setCursorWidth(1.5f);
+            apiHashField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            apiHashField.setMaxLines(1);
+            apiHashField.setInputType(EditorInfo.TYPE_CLASS_TEXT);
+            apiHashField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            apiHashField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            apiHashField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            apiHashField.setBackground(null);
+            apiHashField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            apiHashField.setOnFocusChangeListener((v, hasFocus) -> apiHashOutlineView.animateSelection(hasFocus ? 1f : 0f));
+
+            apiHashOutlineView.attachEditText(apiHashField);
+            apiHashOutlineView.addView(apiHashField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            contentLayout.addView(apiHashOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 8));
+
+            // 6. Warning Text
+            warningTextView = new TextView(context);
+            warningTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            warningTextView.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+            warningTextView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            warningTextView.setText("⚠️ تغییر این مقادیر باید به شکل آگاهانه اتفاق بیفتد؛ در غیر این‌صورت ممکن است موجب رد اتصال یا بن شدن اکانت توسط سرورهای تلگرام شود.");
+            contentLayout.addView(warningTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 16));
+
+            // 7. Circular Regenerate Button (floats directly above Next FAB)
+            regenerateCircleButton = new FrameLayout(context);
+            regenerateCircleButton.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(48), Theme.getColor(Theme.key_chats_actionBackground), Theme.getColor(Theme.key_chats_actionPressedBackground)));
+            if (Build.VERSION.SDK_INT >= 21) {
+                regenerateCircleButton.setElevation(AndroidUtilities.dp(4));
+            }
+            ImageView regenImg = new ImageView(context);
+            regenImg.setImageResource(R.drawable.msg_retry);
+            regenImg.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chats_actionIcon), PorterDuff.Mode.SRC_IN));
+            regenerateCircleButton.addView(regenImg, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
+
+            regenerateCircleButton.setOnClickListener(v -> {
+                regenerateProfile();
+                AndroidUtilities.shakeView(sideBySideLayout);
+            });
+
+            rootFrame.addView(regenerateCircleButton, LayoutHelper.createFrame(48, 48, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 20, 84));
+
+            regenerateProfile();
+        }
+
+        private void showPlatformSelectDialog() {
+            if (getParentActivity() == null) return;
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle("Target Operating System");
+            CharSequence[] names = new CharSequence[org.veyra.client.VeyraFakeIdentity.PLATFORMS.size()];
+            for (int i = 0; i < org.veyra.client.VeyraFakeIdentity.PLATFORMS.size(); i++) {
+                names[i] = org.veyra.client.VeyraFakeIdentity.PLATFORMS.get(i).name;
+            }
+            builder.setItems(names, (dialog, which) -> {
+                selectedPlatformIndex = which;
+                regenerateProfile();
+            });
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(builder.create());
+        }
+
+        private void showDeviceSearchDialog() {
+            if (getParentActivity() == null) return;
+            final List<org.veyra.client.VeyraFakeIdentity.DeviceSpec> devices = org.veyra.client.VeyraFakeIdentity.getDevicesForPlatform(selectedPlatformIndex);
+            if (devices.isEmpty()) return;
+
+            final Context context = getParentActivity();
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Select Device Model");
+
+            LinearLayout dialogLayout = new LinearLayout(context);
+            dialogLayout.setOrientation(VERTICAL);
+            dialogLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), 0);
+
+            EditText searchInput = new EditText(context);
+            searchInput.setHint("Search brand or model...");
+            searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            searchInput.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10));
+            searchInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            searchInput.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+            searchInput.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_windowBackgroundGray)));
+            dialogLayout.addView(searchInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+            android.widget.ListView listView = new android.widget.ListView(context);
+            listView.setDivider(null);
+            final ArrayList<org.veyra.client.VeyraFakeIdentity.DeviceSpec> filtered = new ArrayList<>(devices);
+            final android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, new ArrayList<>()) {
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+                    TextView tv = (TextView) super.getView(position, convertView, parent);
+                    tv.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+                    tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+                    tv.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
+                    return tv;
+                }
+            };
+            final Runnable updateList = () -> {
+                adapter.clear();
+                for (int i = 0; i < filtered.size(); i++) {
+                    adapter.add(filtered.get(i).model);
+                }
+                adapter.notifyDataSetChanged();
+            };
+            updateList.run();
+
+            listView.setAdapter(adapter);
+            dialogLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(280)));
+
+            builder.setView(dialogLayout);
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            final AlertDialog dialog = builder.create();
+
+            listView.setOnItemClickListener((parent, view, position, id) -> {
+                if (position >= 0 && position < filtered.size()) {
+                    org.veyra.client.VeyraFakeIdentity.DeviceSpec chosen = filtered.get(position);
+                    deviceModelTextView.setText(chosen.model);
+                    systemVersionField.setText(chosen.systemVersion);
+                    appVersionTextView.setText(chosen.appVersion);
+                    if (currentProfile != null) {
+                        currentProfile.deviceModel = chosen.model;
+                        currentProfile.systemVersion = chosen.systemVersion;
+                        currentProfile.appVersion = chosen.appVersion;
+                    }
+                    dialog.dismiss();
+                }
+            });
+
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    String q = s != null ? s.toString().trim().toLowerCase() : "";
+                    filtered.clear();
+                    for (int i = 0; i < devices.size(); i++) {
+                        org.veyra.client.VeyraFakeIdentity.DeviceSpec spec = devices.get(i);
+                        if (q.isEmpty() || spec.model.toLowerCase().contains(q) || spec.manufacturer.toLowerCase().contains(q)) {
+                            filtered.add(spec);
+                        }
+                    }
+                    updateList.run();
+                }
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+
+            showDialog(dialog);
+        }
+
+        private void regenerateProfile() {
+            currentProfile = org.veyra.client.VeyraFakeIdentity.generateProfile(selectedPlatformIndex);
+            if (currentProfile != null) {
+                platformTextView.setText(currentProfile.platformName);
+                deviceModelTextView.setText(currentProfile.deviceModel);
+                systemVersionField.setText(currentProfile.systemVersion);
+                appVersionTextView.setText(currentProfile.appVersion);
+                apiIdField.setText(String.valueOf(currentProfile.apiId));
+                apiHashField.setText(currentProfile.apiHash);
+            }
+        }
+
+        @Override
+        public String getHeaderName() {
+            return "Fake Identity";
+        }
+
+        @Override
+        public void setParams(Bundle params, boolean restore) {
+            if (params != null) {
+                currentParams = params;
+            }
+        }
+
+        @Override
+        public boolean needBackButton() {
+            return true;
+        }
+
+        @Override
+        public boolean onBackPressed(boolean sync) {
+            setPage(VIEW_PHONE_INPUT, true, null, true);
+            return true;
+        }
+
+        @Override
+        public void onNextPressed(String buttonType) {
+            if (getParentActivity() == null || currentParams == null || currentProfile == null) {
+                return;
+            }
+
+            String idStr = apiIdField.getText() != null ? apiIdField.getText().toString().trim() : "";
+            String hashStr = apiHashField.getText() != null ? apiHashField.getText().toString().trim() : "";
+            String sysVer = systemVersionField.getText() != null ? systemVersionField.getText().toString().trim() : "";
+            String devModel = deviceModelTextView.getText() != null ? deviceModelTextView.getText().toString().trim() : "";
+
+            int customId = 0;
+            try {
+                customId = Integer.parseInt(idStr);
+            } catch (Exception ignored) {}
+
+            if (customId <= 0) {
+                AndroidUtilities.shakeView(apiIdOutlineView);
+                Toast.makeText(getParentActivity(), "Please enter a valid numeric App ID", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (hashStr.isEmpty()) {
+                AndroidUtilities.shakeView(apiHashOutlineView);
+                Toast.makeText(getParentActivity(), "App HASH cannot be empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            currentProfile.apiId = customId;
+            currentProfile.apiHash = hashStr;
+            if (!devModel.isEmpty()) currentProfile.deviceModel = devModel;
+            if (!sysVer.isEmpty()) currentProfile.systemVersion = sysVer;
+
+            org.veyra.client.VeyraFakeIdentity.saveProfile(currentAccount, currentProfile);
+            BuildVars.APP_ID = customId;
+            BuildVars.APP_HASH = hashStr;
+
+            try {
+                ConnectionsManager.getInstance(currentAccount).setDeviceParams(
+                        customId,
+                        currentProfile.deviceModel,
+                        currentProfile.systemVersion,
+                        currentProfile.appVersion,
+                        currentProfile.langCode,
+                        currentProfile.langCode
+                );
+            } catch (Throwable ignored) {}
+
+            ((PhoneView) views[VIEW_PHONE_INPUT]).proceedSendCode(currentParams);
         }
     }
 
