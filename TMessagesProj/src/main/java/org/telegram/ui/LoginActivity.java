@@ -10586,7 +10586,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             titleView.setGravity(Gravity.CENTER);
             titleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
             titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 24, 32, 0));
+            addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 64, 32, 0));
 
             subtitleView = new TextView(context);
             subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -10613,11 +10613,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             apiIdField.setBackground(null);
             apiIdField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
 
-            int savedId = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
-            if (savedId != BuildVars.APP_ID && savedId > 0) {
-                apiIdField.setText(String.valueOf(savedId));
-            }
-
             apiIdOutlineView.attachEditText(apiIdField);
             apiIdOutlineView.addView(apiIdField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
             addView(apiIdOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 24, 8, 24, 12));
@@ -10638,11 +10633,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             apiHashField.setOnFocusChangeListener((v, hasFocus) -> apiHashOutlineView.animateSelection(hasFocus ? 1f : 0f));
             apiHashField.setBackground(null);
             apiHashField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
-
-            String savedHash = org.veyra.client.VeyraUIConfig.getApiHash(currentAccount);
-            if (!BuildVars.APP_HASH.equals(savedHash) && savedHash != null && !savedHash.isEmpty()) {
-                apiHashField.setText(savedHash);
-            }
 
             apiHashField.setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -10673,6 +10663,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         public void setParams(Bundle params, boolean restore) {
             if (params != null) {
                 currentParams = params;
+            }
+            if (!restore) {
+                if (apiIdField != null) apiIdField.setText("");
+                if (apiHashField != null) apiHashField.setText("");
             }
         }
 
@@ -10766,7 +10760,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
             contentLayout = new LinearLayout(context);
             contentLayout.setOrientation(VERTICAL);
-            contentLayout.setPadding(0, 0, 0, AndroidUtilities.dp(140));
+            contentLayout.setPadding(0, AndroidUtilities.dp(54), 0, AndroidUtilities.dp(140));
             scrollView.addView(contentLayout, LayoutHelper.createScroll(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
 
             titleView = new TextView(context);
@@ -10776,7 +10770,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             titleView.setGravity(Gravity.CENTER);
             titleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
             titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            contentLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 20, 32, 0));
+            contentLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 12, 32, 0));
 
             subtitleView = new TextView(context);
             subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
