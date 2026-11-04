@@ -2012,15 +2012,196 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private HashMap<String, List<CountrySelectActivity.Country>> codesMap = new HashMap<>();
         private HashMap<String, List<String>> phoneFormatMap = new HashMap<>();
 
-        private boolean skipCustomScreens = false;
-
         public void proceedSendCode(final Bundle params) {
-            skipCustomScreens = true;
-            try {
-                onNextPressed(null);
-            } finally {
-                skipCustomScreens = false;
+            sendCodeToServer(params);
+        }
+
+        public void sendCodeToServer(final Bundle params) {
+            String phone = params != null ? params.getString("phoneFormated") : null;
+            if (phone == null || phone.isEmpty()) {
+                phone = PhoneFormat.stripExceptNumbers(codeField.getText().toString()) + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
             }
+
+            boolean simcardAvailable = AndroidUtilities.isSimAvailable();
+            boolean allowCall = true;
+            boolean allowCancelCall = true;
+            boolean allowReadCallLog = true;
+            boolean allowReadPhoneNumbers = true;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && simcardAvailable && getParentActivity() != null) {
+                allowCall = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
+                allowCancelCall = getParentActivity().checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
+                allowReadCallLog = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    allowReadPhoneNumbers = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED;
+                }
+            }
+
+            TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
+            settings.allow_flashcall = simcardAvailable && allowCall && allowCancelCall && allowReadCallLog;
+            settings.allow_missed_call = simcardAvailable && allowCall;
+            settings.allow_app_hash = settings.allow_firebase = PushListenerController.GooglePushListenerServiceProvider.INSTANCE.hasServices();
+            if (forceDisableSafetyNet || TextUtils.isEmpty(BuildVars.SAFETYNET_KEY)) {
+                settings.allow_firebase = false;
+            }
+
+            ArrayList<TLRPC.TL_auth_authorization> loginTokens = AuthTokensHelper.getSavedLogInTokens();
+            if (loginTokens != null) {
+                for (int i = 0; i < loginTokens.size(); i++) {
+                    if (loginTokens.get(i).future_auth_token == null) {
+                        continue;
+                    }
+                    if (settings.logout_tokens == null) {
+                        settings.logout_tokens = new ArrayList<>();
+                    }
+                    if (BuildVars.DEBUG_VERSION) {
+                        FileLog.d("login token to check " + new String(loginTokens.get(i).future_auth_token, StandardCharsets.UTF_8));
+                    }
+                    settings.logout_tokens.add(loginTokens.get(i).future_auth_token);
+                    if (settings.logout_tokens.size() >= 20) {
+                        break;
+                    }
+                }
+            }
+            ArrayList<TLRPC.TL_auth_loggedOut> tokens = AuthTokensHelper.getSavedLogOutTokens();
+            if (tokens != null) {
+                for (int i = 0; i < tokens.size(); i++) {
+                    if (settings.logout_tokens == null) {
+                        settings.logout_tokens = new ArrayList<>();
+                    }
+                    settings.logout_tokens.add(tokens.get(i).future_auth_token);
+                    if (settings.logout_tokens.size() >= 20) {
+                        break;
+                    }
+                }
+                AuthTokensHelper.saveLogOutTokens(tokens);
+            }
+            if (settings.logout_tokens != null) {
+                settings.flags |= 64;
+            }
+            SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+            preferences.edit().remove("sms_hash_code").apply();
+            if (settings.allow_app_hash) {
+                preferences.edit().putString("sms_hash", BuildVars.getSmsHash()).apply();
+            } else {
+                preferences.edit().remove("sms_hash").apply();
+            }
+            if (settings.allow_flashcall) {
+                try {
+                    final Set<String> numbers = getUserPhoneNumbers();
+                    if (!numbers.isEmpty()) {
+                        settings.unknown_number = false;
+                        settings.current_number = numbers.stream().anyMatch(number -> PhoneNumberUtils.compare(phone, number));
+                    } else {
+                        settings.unknown_number = true;
+                        if (UserConfig.getActivatedAccountsCount() > 0) {
+                            settings.allow_flashcall = false;
+                        } else {
+                            settings.current_number = false;
+                        }
+                    }
+                } catch (Exception e) {
+                    settings.unknown_number = true;
+                    FileLog.e(e);
+                }
+            }
+
+            TLObject req;
+            if (activityMode == MODE_CHANGE_PHONE_NUMBER) {
+                TL_account.sendChangePhoneCode changePhoneCode = new TL_account.sendChangePhoneCode();
+                changePhoneCode.phone_number = phone;
+                changePhoneCode.settings = settings;
+                req = changePhoneCode;
+            } else {
+                ConnectionsManager.getInstance(currentAccount).cleanup(false);
+
+                TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
+                sendCode.api_hash = org.veyra.client.VeyraUIConfig.getApiHash(currentAccount);
+                sendCode.api_id = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
+                sendCode.phone_number = phone;
+                sendCode.settings = settings;
+                req = sendCode;
+            }
+
+            final Bundle finalParams = params != null ? params : new Bundle();
+            if (!finalParams.containsKey("phone")) {
+                finalParams.putString("phone", "+" + codeField.getText() + " " + phoneField.getText());
+            }
+            if (!finalParams.containsKey("phoneFormated")) {
+                finalParams.putString("phoneFormated", phone);
+            }
+            if (currentCountry != null && !finalParams.containsKey("country")) {
+                finalParams.putString("country", currentCountry.code);
+            }
+
+            nextPressed = true;
+            PhoneInputData phoneInputData = new PhoneInputData();
+            phoneInputData.phoneNumber = finalParams.getString("phone");
+            phoneInputData.country = currentCountry;
+            phoneInputData.patterns = phoneFormatMap.get(codeField.getText().toString());
+            int reqId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                nextPressed = false;
+                if (error == null) {
+                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
+                        final TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
+                        if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
+                            final TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
+                            if (authorization.terms_of_service != null) {
+                                currentTermsOfService = authorization.terms_of_service;
+                            }
+                            setPage(VIEW_REGISTER, true, finalParams, false);
+                        } else {
+                            onAuthSuccess((TLRPC.TL_auth_authorization) auth);
+                        }
+                    } else {
+                        fillNextCodeParams(finalParams, (TLRPC.auth_SentCode) response);
+                    }
+                } else {
+                    if (error.text != null) {
+                        if (error.text.contains("SESSION_PASSWORD_NEEDED")) {
+                            TL_account.getPassword req2 = new TL_account.getPassword();
+                            ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {
+                                nextPressed = false;
+                                showDoneButton(false, true);
+                                if (error1 == null) {
+                                    TL_account.Password password = (TL_account.Password) response1;
+                                    if (!TwoStepVerificationActivity.canHandleCurrentPassword(password, true)) {
+                                        AlertsCreator.showUpdateAppAlert(getParentActivity(), getString("UpdateAppAlert", R.string.UpdateAppAlert), true);
+                                        return;
+                                    }
+                                    Bundle bundle = new Bundle();
+                                    SerializedData data = new SerializedData(password.getObjectSize());
+                                    password.serializeToStream(data);
+                                    bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
+                                    bundle.putString("phoneFormated", finalParams.getString("phoneFormated"));
+                                    setPage(VIEW_PASSWORD, true, bundle, false);
+                                } else {
+                                    needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), error1.text);
+                                }
+                            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+                        } else if (error.text.contains("PHONE_NUMBER_INVALID")) {
+                            needShowInvalidAlert(LoginActivity.this, finalParams.getString("phoneFormated"), phoneInputData, false);
+                        } else if (error.text.contains("PHONE_PASSWORD_FLOOD")) {
+                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("FloodWait", R.string.FloodWait));
+                        } else if (error.text.contains("PHONE_NUMBER_FLOOD")) {
+                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("PhoneNumberFlood", R.string.PhoneNumberFlood));
+                        } else if (error.text.contains("PHONE_NUMBER_BANNED")) {
+                            needShowInvalidAlert(LoginActivity.this, finalParams.getString("phoneFormated"), phoneInputData, true);
+                        } else if (error.text.contains("PHONE_CODE_EMPTY") || error.text.contains("PHONE_CODE_INVALID")) {
+                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString(R.string.InvalidCode));
+                        } else if (error.text.contains("PHONE_CODE_EXPIRED")) {
+                            onBackPressed(true);
+                            setPage(VIEW_PHONE_INPUT, true, null, true);
+                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("CodeExpired", R.string.CodeExpired));
+                        } else if (error.text.startsWith("FLOOD_WAIT")) {
+                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("FloodWait", R.string.FloodWait));
+                        } else if (error.code != -1000) {
+                            AlertsCreator.processError(currentAccount, error, LoginActivity.this, req, phoneInputData.phoneNumber);
+                        }
+                    }
+                }
+            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+            needShowProgress(reqId);
         }
 
         private boolean ignoreSelection = false;
@@ -2970,6 +3151,27 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 onFieldError(phoneOutlineView, false);
                 return;
             }
+            String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
+            if (fakeIdentity && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+                final Bundle params = new Bundle();
+                params.putString("phone", "+" + codeField.getText() + " " + phoneField.getText());
+                params.putString("phoneFormated", phone);
+                if (currentCountry != null) {
+                    params.putString("country", currentCountry.code);
+                }
+                setPage(VIEW_FAKE_IDENTITY, true, params, false);
+                return;
+            }
+            if (useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+                final Bundle params = new Bundle();
+                params.putString("phone", "+" + codeField.getText() + " " + phoneField.getText());
+                params.putString("phoneFormated", phone);
+                if (currentCountry != null) {
+                    params.putString("country", currentCountry.code);
+                }
+                setPage(VIEW_CREDENTIALS, true, params, false);
+                return;
+            }
             String phoneNumber = "+" + codeField.getText() + " " + phoneField.getText();
             if (!confirmedNumber) {
                 if (AndroidUtilities.displaySize.x > AndroidUtilities.displaySize.y && !isCustomKeyboardVisible() && sizeNotifierFrameLayout.measureKeyboardHeight() > AndroidUtilities.dp(20)) {
@@ -2997,6 +3199,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     @Override
                     public void onDismiss(PhoneNumberConfirmView confirmView) {
                         phoneNumberConfirmView = null;
+                        if (currentViewNum == VIEW_FAKE_IDENTITY && regenerateCircleButton != null) {
+                            regenerateCircleButton.setVisibility(View.VISIBLE);
+                        }
                     }
 
                     private void onConfirm(PhoneNumberConfirmView confirmView) {
@@ -3071,6 +3276,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         });
                     }
                 });
+                if (regenerateCircleButton != null) {
+                    regenerateCircleButton.setVisibility(View.GONE);
+                }
                 phoneNumberConfirmView.show();
                 return;
             } else confirmedNumber = false;
@@ -3246,23 +3454,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 }
             }
 
-            TLObject req;
-            if (activityMode == MODE_CHANGE_PHONE_NUMBER) {
-                TL_account.sendChangePhoneCode changePhoneCode = new TL_account.sendChangePhoneCode();
-                changePhoneCode.phone_number = phone;
-                changePhoneCode.settings = settings;
-                req = changePhoneCode;
-            } else {
-                ConnectionsManager.getInstance(currentAccount).cleanup(false);
-
-                TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
-                sendCode.api_hash = org.veyra.client.VeyraUIConfig.getApiHash(currentAccount);
-                sendCode.api_id = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
-                sendCode.phone_number = phone;
-                sendCode.settings = settings;
-                req = sendCode;
-            }
-
             final Bundle params = new Bundle();
             params.putString("phone", "+" + codeField.getText() + " " + phoneField.getText());
             try {
@@ -3275,85 +3466,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (currentCountry != null) {
                 params.putString("country", currentCountry.code);
             }
-            if (!skipCustomScreens && fakeIdentity && activityMode != MODE_CHANGE_PHONE_NUMBER) {
-                setPage(VIEW_FAKE_IDENTITY, true, params, false);
-                return;
-            }
-            if (!skipCustomScreens && useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
-                setPage(VIEW_CREDENTIALS, true, params, false);
-                return;
-            }
-            nextPressed = true;
-            PhoneInputData phoneInputData = new PhoneInputData();
-            phoneInputData.phoneNumber = "+" + codeField.getText() + " " + phoneField.getText();
-            phoneInputData.country = currentCountry;
-            phoneInputData.patterns = phoneFormatMap.get(codeField.getText().toString());
-            int reqId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                nextPressed = false;
-                if (error == null) {
-                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
-                        final TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
-                        if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
-                            final TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
-                            if (authorization.terms_of_service != null) {
-                                currentTermsOfService = authorization.terms_of_service;
-                            }
-                            setPage(VIEW_REGISTER, true, params, false);
-                        } else {
-                            onAuthSuccess((TLRPC.TL_auth_authorization) auth);
-                        }
-                    } else {
-                        fillNextCodeParams(params, (TLRPC.auth_SentCode) response);
-                    }
-                } else {
-                    if (error.text != null) {
-                        if (error.text.contains("SESSION_PASSWORD_NEEDED")) {
-                            TL_account.getPassword req2 = new TL_account.getPassword();
-                            ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (response1, error1) -> AndroidUtilities.runOnUIThread(() -> {
-                                nextPressed = false;
-                                showDoneButton(false, true);
-                                if (error1 == null) {
-                                    TL_account.Password password = (TL_account.Password) response1;
-                                    if (!TwoStepVerificationActivity.canHandleCurrentPassword(password, true)) {
-                                        AlertsCreator.showUpdateAppAlert(getParentActivity(), getString("UpdateAppAlert", R.string.UpdateAppAlert), true);
-                                        return;
-                                    }
-                                    Bundle bundle = new Bundle();
-                                    SerializedData data = new SerializedData(password.getObjectSize());
-                                    password.serializeToStream(data);
-                                    bundle.putString("password", Utilities.bytesToHex(data.toByteArray()));
-                                    bundle.putString("phoneFormated", phone);
-                                    setPage(VIEW_PASSWORD, true, bundle, false);
-                                } else {
-                                    needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), error1.text);
-                                }
-                            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
-                        } else if (error.text.contains("PHONE_NUMBER_INVALID")) {
-                            needShowInvalidAlert(LoginActivity.this, phone, phoneInputData, false);
-                        } else if (error.text.contains("PHONE_PASSWORD_FLOOD")) {
-                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("FloodWait", R.string.FloodWait));
-                        } else if (error.text.contains("PHONE_NUMBER_FLOOD")) {
-                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("PhoneNumberFlood", R.string.PhoneNumberFlood));
-                        } else if (error.text.contains("PHONE_NUMBER_BANNED")) {
-                                needShowInvalidAlert(LoginActivity.this, phone, phoneInputData, true);
-                        } else if (error.text.contains("PHONE_CODE_EMPTY") || error.text.contains("PHONE_CODE_INVALID")) {
-                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString(R.string.InvalidCode));
-                        } else if (error.text.contains("PHONE_CODE_EXPIRED")) {
-                            onBackPressed(true);
-                            setPage(VIEW_PHONE_INPUT, true, null, true);
-                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("CodeExpired", R.string.CodeExpired));
-                        } else if (error.text.startsWith("FLOOD_WAIT")) {
-                            needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("FloodWait", R.string.FloodWait));
-                        } else if (error.code != -1000) {
-                            AlertsCreator.processError(currentAccount, error, LoginActivity.this, req, phoneInputData.phoneNumber);
-                        }
-                    }
-                }
-                if (!isRequestingFirebaseSms) {
-                    needHideProgress(false);
-                }
-            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagTryDifferentDc | ConnectionsManager.RequestFlagEnableUnauthorized);
-            needShowProgress(reqId);
+            sendCodeToServer(params);
         }
 
         private boolean numberFilled;
