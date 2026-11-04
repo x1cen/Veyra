@@ -35,6 +35,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     public static final int SECTION_APPEARANCE = 4;
     public static final int SECTION_NETWORK = 5;
     public static final int SECTION_GENERAL = 6;
+    public static final int SECTION_GHOST = 7;
+    public static final int SECTION_CONFIRM_SEND = 8;
 
     private final int section;
 
@@ -54,6 +56,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             case SECTION_MEDIA: return "Media";
             case SECTION_NETWORK: return "Data & Network";
             case SECTION_GENERAL: return "General";
+            case SECTION_GHOST: return "Ghost Mode";
+            case SECTION_CONFIRM_SEND: return "Confirm Before Sending";
             default: return "Veyra Settings";
         }
     }
@@ -67,6 +71,8 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
             case SECTION_MEDIA: buildMedia(r); break;
             case SECTION_NETWORK: buildNetwork(r); break;
             case SECTION_GENERAL: buildGeneral(r); break;
+            case SECTION_GHOST: buildGhost(r); break;
+            case SECTION_CONFIRM_SEND: buildConfirmSend(r); break;
             default: buildMain(r); break;
         }
         return r;
@@ -91,15 +97,38 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
     private void buildPrivacy(List<VeyraSettingsRow> r) {
         r.add(VeyraSettingsRow.header("Ghost Mode"));
-        r.add(VeyraSettingsRow.toggle(
+        r.add(VeyraSettingsRow.toggleWithAction(
                 "Ghost Mode",
-                "Master switch for all ghost mode features",
+                VeyraGhost.ghostMode ? "Enabled. Tap to configure options" : "Disabled. Tap to enable",
                 () -> VeyraGhost.ghostMode,
-                val -> { VeyraGhost.toggleGhostMode(); reloadRows(); },
-                true
+                val -> {
+                    VeyraGhost.toggleGhostMode();
+                    reloadRows();
+                },
+                false,
+                () -> {
+                    if (VeyraGhost.ghostMode) {
+                        presentFragment(new VeyraSettingsActivity(SECTION_GHOST));
+                    } else {
+                        VeyraGhost.toggleGhostMode();
+                        reloadRows();
+                    }
+                }
         ));
         r.add(VeyraSettingsRow.shadow());
 
+        r.add(VeyraSettingsRow.header("Account"));
+        r.add(VeyraSettingsRow.toggle(
+                "Hide My Phone Number",
+                "Mask your phone number in accounts list and profile screen",
+                () -> VeyraUIConfig.hidePhoneNumber,
+                val -> VeyraUIConfig.toggleHidePhoneNumber(),
+                false
+        ));
+        r.add(VeyraSettingsRow.shadow());
+    }
+
+    private void buildGhost(List<VeyraSettingsRow> r) {
         r.add(VeyraSettingsRow.header("Online Status"));
         r.add(VeyraSettingsRow.toggle(
                 "Hide Online Status",
@@ -107,14 +136,14 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraGhost.hideOnline,
                 val -> { VeyraGhost.toggleHideOnline(); reloadRows(); },
                 true
-        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        ));
         r.add(VeyraSettingsRow.toggle(
                 "Go Offline After Sending",
                 "Sending a message briefly shows you online; switch back to offline right after",
                 () -> VeyraGhost.offlineAfterMessage,
                 val -> VeyraGhost.toggleOfflineAfterMessage(),
                 false
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideOnline));
+        ).enabledWhen(() -> VeyraGhost.hideOnline));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Typing & Actions"));
@@ -124,19 +153,19 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraGhost.hideTyping,
                 val -> { VeyraGhost.toggleHideTyping(); reloadRows(); },
                 true
-        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        ));
         r.add(VeyraSettingsRow.toggle("Typing", "Text, stickers and other actions",
                 () -> VeyraGhost.hideTypingText, val -> VeyraGhost.toggleHideTypingText(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        ).enabledWhen(() -> VeyraGhost.hideTyping));
         r.add(VeyraSettingsRow.toggle("Recording Voice", "Recording and uploading voice messages",
                 () -> VeyraGhost.hideTypingVoice, val -> VeyraGhost.toggleHideTypingVoice(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        ).enabledWhen(() -> VeyraGhost.hideTyping));
         r.add(VeyraSettingsRow.toggle("Recording Video", "Videos and video messages",
                 () -> VeyraGhost.hideTypingVideo, val -> VeyraGhost.toggleHideTypingVideo(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        ).enabledWhen(() -> VeyraGhost.hideTyping));
         r.add(VeyraSettingsRow.toggle("Uploading Files", "Photos and documents",
                 () -> VeyraGhost.hideTypingFiles, val -> VeyraGhost.toggleHideTypingFiles(), false
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideTyping));
+        ).enabledWhen(() -> VeyraGhost.hideTyping));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Read Receipts"));
@@ -146,19 +175,19 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraGhost.hideRead,
                 val -> { VeyraGhost.toggleHideRead(); reloadRows(); },
                 true
-        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        ));
         r.add(VeyraSettingsRow.toggle("Mark as Read on Reply", "Recommended. When you reply, the chat is marked as read",
                 () -> VeyraGhost.readOnReply, val -> VeyraGhost.toggleReadOnReply(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        ).enabledWhen(() -> VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.toggle("Secret Chats", "Also hide read receipts in secret chats",
                 () -> VeyraGhost.hideSecretRead, val -> VeyraGhost.toggleHideSecretRead(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        ).enabledWhen(() -> VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.toggle("Reactions", "Don't report that you've seen reactions to your messages",
                 () -> VeyraGhost.hideReadReactions, val -> VeyraGhost.toggleHideReadReactions(), true
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        ).enabledWhen(() -> VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.toggle("Voice & Video Playback", "Don't report played voice and video messages. Mentions and view-once media are always reported",
                 () -> VeyraGhost.hideMediaReceipts, val -> VeyraGhost.toggleHideMediaReceipts(), false
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        ).enabledWhen(() -> VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Scope"));
@@ -167,7 +196,7 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraScope.GHOST_READ.limitEnabled ? "Limited" : "Everywhere",
                 false,
                 () -> presentFragment(new VeyraScopeSettingsActivity(VeyraScope.SCOPE_GHOST_READ))
-        ).enabledWhen(() -> VeyraGhost.ghostMode && VeyraGhost.hideRead));
+        ).enabledWhen(() -> VeyraGhost.hideRead));
         r.add(VeyraSettingsRow.shadow());
 
         r.add(VeyraSettingsRow.header("Views"));
@@ -177,22 +206,12 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 () -> VeyraGhost.hideStories,
                 val -> VeyraGhost.toggleHideStories(),
                 true
-        ).enabledWhen(() -> VeyraGhost.ghostMode));
+        ));
         r.add(VeyraSettingsRow.toggle(
                 "Anonymous Channel Browsing",
                 "Reading channel posts doesn't increase their view count",
                 () -> VeyraGhost.hideChannelViews,
                 val -> VeyraGhost.toggleHideChannelViews(),
-                false
-        ).enabledWhen(() -> VeyraGhost.ghostMode));
-        r.add(VeyraSettingsRow.shadow());
-
-        r.add(VeyraSettingsRow.header("Account"));
-        r.add(VeyraSettingsRow.toggle(
-                "Hide My Phone Number",
-                "Mask your phone number in accounts list and profile screen",
-                () -> VeyraUIConfig.hidePhoneNumber,
-                val -> VeyraUIConfig.toggleHidePhoneNumber(),
                 false
         ));
         r.add(VeyraSettingsRow.shadow());
@@ -251,6 +270,39 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
 
     private void buildMedia(List<VeyraSettingsRow> r) {
         r.add(VeyraSettingsRow.header("Confirm Before Sending"));
+        r.add(VeyraSettingsRow.toggleWithAction(
+                "Confirm Before Sending",
+                VeyraUIConfig.confirmBeforeSending ? "Enabled. Tap to configure media types" : "Disabled. Tap to enable",
+                () -> VeyraUIConfig.confirmBeforeSending,
+                val -> {
+                    VeyraUIConfig.toggleConfirmBeforeSending();
+                    reloadRows();
+                },
+                false,
+                () -> {
+                    if (VeyraUIConfig.confirmBeforeSending) {
+                        presentFragment(new VeyraSettingsActivity(SECTION_CONFIRM_SEND));
+                    } else {
+                        VeyraUIConfig.toggleConfirmBeforeSending();
+                        reloadRows();
+                    }
+                }
+        ));
+        r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Playback"));
+        r.add(VeyraSettingsRow.toggle(
+                "Disable Voice Auto-Play",
+                "Play only the selected voice note and do not auto-play next",
+                () -> VeyraUIConfig.disableVoiceAutoPlay,
+                val -> VeyraUIConfig.toggleDisableVoiceAutoPlay(),
+                false
+        ));
+        r.add(VeyraSettingsRow.shadow());
+    }
+
+    private void buildConfirmSend(List<VeyraSettingsRow> r) {
+        r.add(VeyraSettingsRow.header("Media Confirmation Types"));
         r.add(VeyraSettingsRow.toggle(
                 "Photos & Videos",
                 "Ask for confirmation before sending photos and videos",
@@ -298,16 +350,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 "Ask for confirmation before sending audio files",
                 () -> VeyraUIConfig.confirmSendAudio,
                 val -> VeyraUIConfig.toggleConfirmSendAudio(),
-                true
-        ));
-        r.add(VeyraSettingsRow.shadow());
-
-        r.add(VeyraSettingsRow.header("Playback"));
-        r.add(VeyraSettingsRow.toggle(
-                "Disable Voice Auto-Play",
-                "Play only the selected voice note and do not auto-play next",
-                () -> VeyraUIConfig.disableVoiceAutoPlay,
-                val -> VeyraUIConfig.toggleDisableVoiceAutoPlay(),
                 false
         ));
         r.add(VeyraSettingsRow.shadow());

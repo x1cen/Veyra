@@ -23,6 +23,7 @@ public class VeyraUIConfig {
     public static int downloadSpeedBoost = 1; // 0 = off, 1 = average, 2 = extreme
 
     // Media send confirmation
+    public static boolean confirmBeforeSending = true;
     public static boolean confirmSendPhotoVideo = true;
     public static boolean confirmSendVoice = true;
     public static boolean confirmSendRoundVideo = true;
@@ -62,6 +63,7 @@ public class VeyraUIConfig {
             disableJumpToNextChannel = prefs.getBoolean("disableJumpToNextChannel", false);
             ignoreBlocked = prefs.getBoolean("ignoreBlocked", false);
             askBeforeCall = prefs.getBoolean("askBeforeCall", true);
+            confirmBeforeSending = prefs.getBoolean("confirmBeforeSending", true);
             confirmSendPhotoVideo = prefs.getBoolean("confirmSendPhotoVideo", true);
             confirmSendVoice = prefs.getBoolean("confirmSendVoice", true);
             confirmSendRoundVideo = prefs.getBoolean("confirmSendRoundVideo", true);
@@ -149,6 +151,11 @@ public class VeyraUIConfig {
     public static void toggleAskBeforeCall() {
         askBeforeCall = !askBeforeCall;
         save("askBeforeCall", askBeforeCall);
+    }
+
+    public static void toggleConfirmBeforeSending() {
+        confirmBeforeSending = !confirmBeforeSending;
+        save("confirmBeforeSending", confirmBeforeSending);
     }
 
     public static void toggleConfirmSendPhotoVideo() {

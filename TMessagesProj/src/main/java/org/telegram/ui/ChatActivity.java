@@ -14078,7 +14078,7 @@ public class ChatActivity extends BaseFragment implements
         if (files == null || files.isEmpty()) {
             return;
         }
-        if (org.veyra.client.VeyraUIConfig.confirmSendDocument) {
+        if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendDocument) {
             String title = files.size() > 1 ? "Send Files?" : "Send File?";
             String message = files.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d files?", files.size()) : "Are you sure you want to send this file?";
             org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> didSelectFilesInternal(files, caption, captionEntities, fmessages, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars));
@@ -14111,7 +14111,7 @@ public class ChatActivity extends BaseFragment implements
         if (photos == null || photos.isEmpty()) {
             return;
         }
-        if (org.veyra.client.VeyraUIConfig.confirmSendPhotoVideo) {
+        if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendPhotoVideo) {
             String title = photos.size() > 1 ? "Send Media?" : (photos.get(0).isVideo ? "Send Video?" : "Send Photo?");
             String message = photos.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d media items?", photos.size()) : (photos.get(0).isVideo ? "Are you sure you want to send this video?" : "Are you sure you want to send this photo?");
             org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> didSelectPhotosInternal(photos, notify, scheduleDate, scheduleRepeatPeriod, payStars));
@@ -35930,7 +35930,7 @@ public class ChatActivity extends BaseFragment implements
         if (audios == null || audios.isEmpty()) {
             return;
         }
-        if (org.veyra.client.VeyraUIConfig.confirmSendAudio) {
+        if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendAudio) {
             String title = audios.size() > 1 ? "Send Audio Files?" : "Send Audio?";
             String message = audios.size() > 1 ? String.format(java.util.Locale.US, "Are you sure you want to send %d audio files?", audios.size()) : "Are you sure you want to send this audio file?";
             org.veyra.client.VeyraMediaConfirm.showConfirm(getParentActivity(), this, title, message, () -> sendAudioInternal(audios, caption, notify, scheduleDate, scheduleRepeatPeriod, effectId, invertMedia, payStars));
