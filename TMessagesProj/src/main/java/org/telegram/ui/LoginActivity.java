@@ -10728,19 +10728,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private TextView addSpecRow(Context context, LinearLayout parent, String label) {
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(HORIZONTAL);
-            row.setPadding(0, AndroidUtilities.dp(3), 0, AndroidUtilities.dp(3));
+            row.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4));
 
             TextView labelView = new TextView(context);
             labelView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             labelView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
             labelView.setText(label);
-            row.addView(labelView, LayoutHelper.createLinear(AndroidUtilities.dp(110), LayoutHelper.WRAP_CONTENT));
+            row.addView(labelView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP, 0, 0, 16, 0));
 
             TextView valView = new TextView(context);
             valView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             valView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             valView.setTypeface(AndroidUtilities.bold());
-            row.addView(valView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+            valView.setGravity(Gravity.RIGHT | Gravity.END);
+            row.addView(valView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, Gravity.RIGHT | Gravity.END, 0, 0, 0, 0));
 
             parent.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
             return valView;
