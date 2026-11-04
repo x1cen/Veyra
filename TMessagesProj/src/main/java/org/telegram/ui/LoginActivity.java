@@ -2017,10 +2017,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
 
         public void sendCodeToServer(final Bundle params) {
-            String phone = params != null ? params.getString("phoneFormated") : null;
-            if (phone == null || phone.isEmpty()) {
-                phone = PhoneFormat.stripExceptNumbers(codeField.getText().toString()) + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
+            String tempPhone = params != null ? params.getString("phoneFormated") : null;
+            if (tempPhone == null || tempPhone.isEmpty()) {
+                tempPhone = PhoneFormat.stripExceptNumbers(codeField.getText().toString()) + PhoneFormat.stripExceptNumbers(phoneField.getText().toString());
             }
+            final String phone = tempPhone;
 
             boolean simcardAvailable = AndroidUtilities.isSimAvailable();
             boolean allowCall = true;
@@ -3356,7 +3357,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 needHideProgress(false);
                 return;
             }
-            phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
             if (activityMode == MODE_LOGIN) {
                 if (getParentActivity() instanceof LaunchActivity) {
                     for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
