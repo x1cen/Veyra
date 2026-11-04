@@ -10657,6 +10657,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             // 1. Target Operating System
             platformOutlineView = new OutlineTextContainerView(context);
             platformOutlineView.setText("Target Operating System");
+            platformOutlineView.setForceUseCenter(true);
 
             LinearLayout platformRow = new LinearLayout(context);
             platformRow.setOrientation(HORIZONTAL);
@@ -10665,22 +10666,23 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             platformTextView = new TextView(context);
             platformTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
             platformTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            platformTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
-            platformRow.addView(platformTextView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+            platformTextView.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            platformTextView.setGravity(Gravity.CENTER_VERTICAL);
+            platformRow.addView(platformTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f));
 
             ImageView platformChevron = new ImageView(context);
             platformChevron.setImageResource(R.drawable.arrow_more);
             platformChevron.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
             platformRow.addView(platformChevron, LayoutHelper.createLinear(24, 24, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
 
-            platformOutlineView.addView(platformRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            platformOutlineView.addView(platformRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
             OnClickListener platformClickListener = v -> showPlatformSelectDialog();
             platformOutlineView.setOnClickListener(platformClickListener);
             platformRow.setOnClickListener(platformClickListener);
             platformTextView.setOnClickListener(platformClickListener);
 
-            contentLayout.addView(platformOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 6, 20, 10));
+            contentLayout.addView(platformOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 6, 16, 6));
 
             // 2. Side-by-side: Device Model & System Version
             sideBySideLayout = new LinearLayout(context);
@@ -10689,6 +10691,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             // Left: Device Model (Searchable)
             deviceModelOutlineView = new OutlineTextContainerView(context);
             deviceModelOutlineView.setText("Device Model");
+            deviceModelOutlineView.setForceUseCenter(true);
 
             LinearLayout deviceModelRow = new LinearLayout(context);
             deviceModelRow.setOrientation(HORIZONTAL);
@@ -10697,28 +10700,30 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             deviceModelTextView = new TextView(context);
             deviceModelTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             deviceModelTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            deviceModelTextView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(4), AndroidUtilities.dp(14));
+            deviceModelTextView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(4), 0);
+            deviceModelTextView.setGravity(Gravity.CENTER_VERTICAL);
             deviceModelTextView.setSingleLine(true);
             deviceModelTextView.setEllipsize(TextUtils.TruncateAt.END);
-            deviceModelRow.addView(deviceModelTextView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+            deviceModelRow.addView(deviceModelTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f));
 
             ImageView searchIcon = new ImageView(context);
             searchIcon.setImageResource(R.drawable.smiles_tab_search);
             searchIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
             deviceModelRow.addView(searchIcon, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
 
-            deviceModelOutlineView.addView(deviceModelRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            deviceModelOutlineView.addView(deviceModelRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
             OnClickListener deviceClickListener = v -> showDeviceSearchDialog();
             deviceModelOutlineView.setOnClickListener(deviceClickListener);
             deviceModelRow.setOnClickListener(deviceClickListener);
             deviceModelTextView.setOnClickListener(deviceClickListener);
 
-            sideBySideLayout.addView(deviceModelOutlineView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 0, 0, 4, 0));
+            sideBySideLayout.addView(deviceModelOutlineView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 0, 0, 4, 0));
 
             // Right: System Version
             systemVersionOutlineView = new OutlineTextContainerView(context);
             systemVersionOutlineView.setText("System Version");
+            systemVersionOutlineView.setForceUseCenter(true);
 
             systemVersionField = new EditTextBoldCursor(context);
             systemVersionField.setCursorSize(AndroidUtilities.dp(18));
@@ -10730,31 +10735,35 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             systemVersionField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
             systemVersionField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
             systemVersionField.setBackground(null);
-            systemVersionField.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(14));
+            systemVersionField.setGravity(Gravity.CENTER_VERTICAL);
+            systemVersionField.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), 0);
             systemVersionField.setOnFocusChangeListener((v, hasFocus) -> systemVersionOutlineView.animateSelection(hasFocus ? 1f : 0f));
 
             systemVersionOutlineView.attachEditText(systemVersionField);
-            systemVersionOutlineView.addView(systemVersionField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            systemVersionOutlineView.addView(systemVersionField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
-            sideBySideLayout.addView(systemVersionOutlineView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, 4, 0, 0, 0));
+            sideBySideLayout.addView(systemVersionOutlineView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f, 4, 0, 0, 0));
 
-            contentLayout.addView(sideBySideLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+            contentLayout.addView(sideBySideLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 4, 16, 6));
 
             // 3. App Version (read-only)
             appVersionOutlineView = new OutlineTextContainerView(context);
             appVersionOutlineView.setText("App Version (Read-Only)");
+            appVersionOutlineView.setForceUseCenter(true);
 
             appVersionTextView = new TextView(context);
             appVersionTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             appVersionTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-            appVersionTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
-            appVersionOutlineView.addView(appVersionTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            appVersionTextView.setGravity(Gravity.CENTER_VERTICAL);
+            appVersionTextView.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            appVersionOutlineView.addView(appVersionTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
-            contentLayout.addView(appVersionOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+            contentLayout.addView(appVersionOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 4, 16, 6));
 
             // 4. App ID (editable)
             apiIdOutlineView = new OutlineTextContainerView(context);
             apiIdOutlineView.setText("App ID");
+            apiIdOutlineView.setForceUseCenter(true);
 
             apiIdField = new EditTextBoldCursor(context);
             apiIdField.setCursorSize(AndroidUtilities.dp(18));
@@ -10766,16 +10775,18 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             apiIdField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
             apiIdField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
             apiIdField.setBackground(null);
-            apiIdField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            apiIdField.setGravity(Gravity.CENTER_VERTICAL);
+            apiIdField.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
             apiIdField.setOnFocusChangeListener((v, hasFocus) -> apiIdOutlineView.animateSelection(hasFocus ? 1f : 0f));
 
             apiIdOutlineView.attachEditText(apiIdField);
-            apiIdOutlineView.addView(apiIdField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
-            contentLayout.addView(apiIdOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 10));
+            apiIdOutlineView.addView(apiIdField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+            contentLayout.addView(apiIdOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 4, 16, 6));
 
             // 5. App HASH (editable)
             apiHashOutlineView = new OutlineTextContainerView(context);
             apiHashOutlineView.setText("App HASH");
+            apiHashOutlineView.setForceUseCenter(true);
 
             apiHashField = new EditTextBoldCursor(context);
             apiHashField.setCursorSize(AndroidUtilities.dp(18));
@@ -10787,22 +10798,24 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             apiHashField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
             apiHashField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
             apiHashField.setBackground(null);
-            apiHashField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+            apiHashField.setGravity(Gravity.CENTER_VERTICAL);
+            apiHashField.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
             apiHashField.setOnFocusChangeListener((v, hasFocus) -> apiHashOutlineView.animateSelection(hasFocus ? 1f : 0f));
 
             apiHashOutlineView.attachEditText(apiHashField);
-            apiHashOutlineView.addView(apiHashField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
-            contentLayout.addView(apiHashOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 20, 4, 20, 8));
+            apiHashOutlineView.addView(apiHashField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+            contentLayout.addView(apiHashOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 4, 16, 6));
 
-            // 6. Warning Text
+            // 6. Warning Text (English, no emoji, styled like Telegram Privacy & Security under-checkbox text)
             warningTextView = new TextView(context);
-            warningTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            warningTextView.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+            warningTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            warningTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText4));
             warningTextView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
-            warningTextView.setText("⚠️ تغییر این مقادیر باید به شکل آگاهانه اتفاق بیفتد؛ در غیر این‌صورت ممکن است موجب رد اتصال یا بن شدن اکانت توسط سرورهای تلگرام شود.");
-            contentLayout.addView(warningTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 16));
+            warningTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+            warningTextView.setText("Changing these values must be done consciously. Inappropriate values may lead to connection refusal or an account ban by Telegram servers.");
+            contentLayout.addView(warningTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT), 20, 6, 20, 16));
 
-            // 7. Circular Regenerate Button (floats directly above Next FAB)
+            // 7. Circular Regenerate Button (centered exactly on the vertical axis above Next FAB)
             regenerateCircleButton = new FrameLayout(context);
             regenerateCircleButton.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(48), Theme.getColor(Theme.key_chats_actionBackground), Theme.getColor(Theme.key_chats_actionPressedBackground)));
             if (Build.VERSION.SDK_INT >= 21) {
@@ -10818,7 +10831,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 AndroidUtilities.shakeView(sideBySideLayout);
             });
 
-            rootFrame.addView(regenerateCircleButton, LayoutHelper.createFrame(48, 48, Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 20, 84));
+            int btnSize = 48;
+            int containerMargin = AndroidUtilities.isTablet() ? 26 : 18;
+            int rightMargin = LocaleController.isRTL ? 0 : Math.max(0, 48 - (btnSize / 2) - containerMargin);
+            int leftMargin = LocaleController.isRTL ? Math.max(0, 48 - (btnSize / 2) - containerMargin) : 0;
+            rootFrame.addView(regenerateCircleButton, LayoutHelper.createFrame(btnSize, btnSize, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, leftMargin, 0, rightMargin, 80));
 
             regenerateProfile();
         }
