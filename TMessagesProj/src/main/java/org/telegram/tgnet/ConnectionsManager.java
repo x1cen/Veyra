@@ -253,9 +253,18 @@ public class ConnectionsManager extends BaseController {
         if (systemVersion.trim().length() == 0) {
             systemVersion = "SDK Unknown";
         }
+        if (org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount)) {
+            deviceModel = org.veyra.client.VeyraFakeIdentity.getDeviceModel(currentAccount, deviceModel);
+            systemVersion = org.veyra.client.VeyraFakeIdentity.getSystemVersion(currentAccount, systemVersion);
+            appVersion = org.veyra.client.VeyraFakeIdentity.getAppVersion(currentAccount, appVersion);
+            systemLangCode = org.veyra.client.VeyraFakeIdentity.getSystemLangCode(currentAccount, systemLangCode);
+            langCode = "en";
+        }
         getUserConfig().loadConfig();
         String pushString = getRegId();
-        String fingerprint = AndroidUtilities.getCertificateSHA256Fingerprint();
+        String fingerprint = org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount) ?
+                org.veyra.client.VeyraFakeIdentity.getFingerprint(currentAccount, AndroidUtilities.getCertificateSHA256Fingerprint()) :
+                AndroidUtilities.getCertificateSHA256Fingerprint();
 
         int timezoneOffset = (TimeZone.getDefault().getRawOffset() + TimeZone.getDefault().getDSTSavings()) / 1000;
         SharedPreferences mainPreferences;
@@ -269,7 +278,55 @@ public class ConnectionsManager extends BaseController {
         if (getUserConfig().getCurrentUser() != null) {
             userPremium = getUserConfig().getCurrentUser().premium;
         }
-        init(SharedConfig.buildVersion(), TLRPC.LAYER, BuildVars.APP_ID, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+        int apiId = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
+        init(SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+    }
+
+    public void reapplyIdentity() {
+        String deviceModel;
+        String systemLangCode;
+        String langCode;
+        String appVersion;
+        String systemVersion;
+        File config = ApplicationLoader.getFilesDirFixed();
+        if (currentAccount != 0) {
+            config = new File(config, "account" + currentAccount);
+            config.mkdirs();
+        }
+        String configPath = config.toString();
+        boolean enablePushConnection = isPushConnectionEnabled();
+        try {
+            systemLangCode = LocaleController.getSystemLocaleStringIso639().toLowerCase();
+            langCode = LocaleController.getLocaleStringIso639().toLowerCase();
+            deviceModel = Build.MANUFACTURER + Build.MODEL;
+            PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
+            appVersion = pInfo.versionName + " (" + pInfo.versionCode + ")";
+            systemVersion = "SDK " + Build.VERSION.SDK_INT;
+        } catch (Exception e) {
+            systemLangCode = "en";
+            langCode = "";
+            deviceModel = "Android unknown";
+            appVersion = "App version unknown";
+            systemVersion = "SDK " + Build.VERSION.SDK_INT;
+        }
+        if (org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount)) {
+            deviceModel = org.veyra.client.VeyraFakeIdentity.getDeviceModel(currentAccount, deviceModel);
+            systemVersion = org.veyra.client.VeyraFakeIdentity.getSystemVersion(currentAccount, systemVersion);
+            appVersion = org.veyra.client.VeyraFakeIdentity.getAppVersion(currentAccount, appVersion);
+            systemLangCode = org.veyra.client.VeyraFakeIdentity.getSystemLangCode(currentAccount, systemLangCode);
+            langCode = "en";
+        }
+        String pushString = getRegId();
+        String fingerprint = org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount) ?
+                org.veyra.client.VeyraFakeIdentity.getFingerprint(currentAccount, AndroidUtilities.getCertificateSHA256Fingerprint()) :
+                AndroidUtilities.getCertificateSHA256Fingerprint();
+        int timezoneOffset = (TimeZone.getDefault().getRawOffset() + TimeZone.getDefault().getDSTSavings()) / 1000;
+        int apiId = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
+        boolean userPremium = false;
+        if (getUserConfig().getCurrentUser() != null) {
+            userPremium = getUserConfig().getCurrentUser().premium;
+        }
+        init(SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
     }
 
     private String getRegId() {

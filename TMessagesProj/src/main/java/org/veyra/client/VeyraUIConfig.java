@@ -191,6 +191,38 @@ public class VeyraUIConfig {
         save("downloadSpeedBoost", val);
     }
 
+    public static int getApiId(int account) {
+        if (ApplicationLoader.applicationContext == null) return org.telegram.messenger.BuildVars.APP_ID;
+        SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences("veyra_credentials_" + account, 0);
+        int customId = p.getInt("api_id", 0);
+        return customId > 0 ? customId : org.telegram.messenger.BuildVars.APP_ID;
+    }
+
+    public static String getApiHash(int account) {
+        if (ApplicationLoader.applicationContext == null) return org.telegram.messenger.BuildVars.APP_HASH;
+        SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences("veyra_credentials_" + account, 0);
+        String customHash = p.getString("api_hash", null);
+        return (customHash != null && customHash.trim().length() == 32) ? customHash.trim() : org.telegram.messenger.BuildVars.APP_HASH;
+    }
+
+    public static boolean hasCustomCredentials(int account) {
+        if (ApplicationLoader.applicationContext == null) return false;
+        SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences("veyra_credentials_" + account, 0);
+        return p.getInt("api_id", 0) > 0 && p.getString("api_hash", "").trim().length() == 32;
+    }
+
+    public static void setCustomCredentials(int account, int apiId, String apiHash) {
+        if (ApplicationLoader.applicationContext == null) return;
+        SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences("veyra_credentials_" + account, 0);
+        p.edit().putInt("api_id", apiId).putString("api_hash", apiHash).apply();
+    }
+
+    public static void clearCustomCredentials(int account) {
+        if (ApplicationLoader.applicationContext == null) return;
+        SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences("veyra_credentials_" + account, 0);
+        p.edit().clear().apply();
+    }
+
     private static void save(String key, boolean val) {
         ensurePrefs();
         if (prefs != null) prefs.edit().putBoolean(key, val).apply();

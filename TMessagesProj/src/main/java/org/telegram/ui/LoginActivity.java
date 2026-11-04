@@ -258,7 +258,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             VIEW_CODE_FRAGMENT_SMS = 15,
             VIEW_CODE_WORD = 16,
             VIEW_CODE_PHRASE = 17,
-            VIEW_PAY = 18;
+            VIEW_PAY = 18,
+            VIEW_CREDENTIALS = 19;
 
     public final static int COUNTRY_STATE_NOT_SET_OR_VALID = 0,
             COUNTRY_STATE_EMPTY = 1,
@@ -319,7 +320,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
     @ViewNumber
     private int currentViewNum;
-    private final SlideView[] views = new SlideView[19];
+    private final SlideView[] views = new SlideView[20];
     private CustomPhoneKeyboardView keyboardView;
     private ValueAnimator keyboardAnimator;
     private boolean paid;
@@ -333,7 +334,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
     private boolean checkPermissions = true;
     private boolean checkShowPermissions = true;
     private boolean newAccount;
-    private boolean syncContacts = true;
+    private boolean syncContacts = false;
+    private boolean fakeIdentity = false;
+    private boolean useMyOwnCredentials = false;
     private boolean testBackend = false;
 
     @ActivityMode
@@ -685,10 +688,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         views[VIEW_CODE_WORD] = new LoginActivityPhraseView(context, AUTH_TYPE_WORD);
         views[VIEW_CODE_PHRASE] = new LoginActivityPhraseView(context, AUTH_TYPE_PHRASE);
         views[VIEW_PAY] = new LoginPayView(context);
+        views[VIEW_CREDENTIALS] = new LoginActivityCredentialsView(context);
 
         for (int a = 0; a < views.length; a++) {
             views[a].setVisibility(a == 0 ? View.VISIBLE : View.GONE);
-            final boolean needsTopMargin = a != VIEW_PAY;
+            final boolean needsTopMargin = a != VIEW_PAY && a != VIEW_CREDENTIALS;
             slideViewsContainer.addView(views[a], LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER, AndroidUtilities.isTablet() ? 26 : 18, needsTopMargin ? 30 : 0, AndroidUtilities.isTablet() ? 26 : 18, 0));
         }
 
@@ -700,7 +704,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
         if (savedInstanceState != null) {
             currentViewNum = savedInstanceState.getInt("currentViewNum", 0);
-            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;
+            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;
             if (currentViewNum >= VIEW_CODE_MESSAGE && currentViewNum <= VIEW_CODE_CALL) {
                 int time = savedInstanceState.getInt("open");
                 if (time != 0 && Math.abs(System.currentTimeMillis() / 1000 - time) >= 24 * 60 * 60) {
@@ -1501,7 +1505,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
     public void setPage(@ViewNumber int page, boolean animated, Bundle params, boolean back) {
         boolean needFloatingButton = page == VIEW_PHONE_INPUT || page == VIEW_REGISTER || page == VIEW_PASSWORD ||
-                page == VIEW_NEW_PASSWORD_STAGE_1 || page == VIEW_NEW_PASSWORD_STAGE_2 || page == VIEW_ADD_EMAIL || page == VIEW_CODE_PHRASE || page == VIEW_CODE_WORD;
+                page == VIEW_NEW_PASSWORD_STAGE_1 || page == VIEW_NEW_PASSWORD_STAGE_2 || page == VIEW_ADD_EMAIL || page == VIEW_CODE_PHRASE || page == VIEW_CODE_WORD || page == VIEW_CREDENTIALS;
         if (page == currentViewNum) {
             animated = false;
         }
@@ -1966,6 +1970,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private View codeDividerView;
         private ImageView chevronRight;
         private CheckBoxCell syncContactsBox;
+        private CheckBoxCell fakeIdentityBox;
+        private CheckBoxCell credentialsBox;
         private CheckBoxCell testBackendCheckBox;
 
         @CountryState
@@ -2473,6 +2479,48 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.contacts_sync_off, getString("SyncContactsOff", R.string.SyncContactsOff)).show();
                     }
                 });
+
+                fakeIdentityBox = new CheckBoxCell(context, 2);
+                fakeIdentityBox.setText("Fake Identity", "", fakeIdentity = org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount), false);
+                addView(fakeIdentityBox, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 16, 0, 16 + (LocaleController.isRTL && AndroidUtilities.isSmallScreen() ? 56 : 0), 0));
+                bottomMargin -= 24;
+                fakeIdentityBox.setOnClickListener(v -> {
+                    if (getParentActivity() == null) {
+                        return;
+                    }
+                    CheckBoxCell cell = (CheckBoxCell) v;
+                    fakeIdentity = !fakeIdentity;
+                    cell.setChecked(fakeIdentity, true);
+                    org.veyra.client.VeyraFakeIdentity.setEnabled(currentAccount, fakeIdentity);
+                    if (fakeIdentity) {
+                        org.veyra.client.VeyraFakeIdentity.generateAndApply(currentAccount);
+                        String fakeModel = org.veyra.client.VeyraFakeIdentity.getDeviceModel(currentAccount, "Pixel");
+                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.fire_on, "Fake Identity: " + fakeModel).show();
+                    } else {
+                        try {
+                            getConnectionsManager().reapplyIdentity();
+                        } catch (Throwable ignored) {}
+                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.contacts_sync_off, "Fake Identity disabled").show();
+                    }
+                });
+
+                credentialsBox = new CheckBoxCell(context, 2);
+                credentialsBox.setText("Use My Own Credentials", "", useMyOwnCredentials, false);
+                addView(credentialsBox, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 16, 0, 16 + (LocaleController.isRTL && AndroidUtilities.isSmallScreen() ? 56 : 0), 0));
+                bottomMargin -= 24;
+                credentialsBox.setOnClickListener(v -> {
+                    if (getParentActivity() == null) {
+                        return;
+                    }
+                    CheckBoxCell cell = (CheckBoxCell) v;
+                    useMyOwnCredentials = !useMyOwnCredentials;
+                    cell.setChecked(useMyOwnCredentials, true);
+                    if (useMyOwnCredentials) {
+                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.info, "Custom API credentials enabled").show();
+                    } else {
+                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.contacts_sync_off, "Using default Telegram credentials").show();
+                    }
+                });
             }
 
             final boolean allowTestBackend = (BuildVars.DEBUG_VERSION || TEST_BACKEND_IN_STORE && !BuildConfig.BUNDLE) || getConnectionsManager().isTestBackend();
@@ -2696,6 +2744,14 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (syncContactsBox != null) {
                 syncContactsBox.setSquareCheckBoxColor(Theme.key_checkboxSquareUnchecked, Theme.key_checkboxSquareBackground, Theme.key_checkboxSquareCheck);
                 syncContactsBox.updateTextColor();
+            }
+            if (fakeIdentityBox != null) {
+                fakeIdentityBox.setSquareCheckBoxColor(Theme.key_checkboxSquareUnchecked, Theme.key_checkboxSquareBackground, Theme.key_checkboxSquareCheck);
+                fakeIdentityBox.updateTextColor();
+            }
+            if (credentialsBox != null) {
+                credentialsBox.setSquareCheckBoxColor(Theme.key_checkboxSquareUnchecked, Theme.key_checkboxSquareBackground, Theme.key_checkboxSquareCheck);
+                credentialsBox.updateTextColor();
             }
             if (testBackendCheckBox != null) {
                 testBackendCheckBox.setSquareCheckBoxColor(Theme.key_checkboxSquareUnchecked, Theme.key_checkboxSquareBackground, Theme.key_checkboxSquareCheck);
@@ -3155,8 +3211,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 ConnectionsManager.getInstance(currentAccount).cleanup(false);
 
                 TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
-                sendCode.api_hash = BuildVars.APP_HASH;
-                sendCode.api_id = BuildVars.APP_ID;
+                sendCode.api_hash = org.veyra.client.VeyraUIConfig.getApiHash(currentAccount);
+                sendCode.api_id = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
                 sendCode.phone_number = phone;
                 sendCode.settings = settings;
                 req = sendCode;
@@ -3173,6 +3229,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             params.putString("phoneFormated", phone);
             if (currentCountry != null) {
                 params.putString("country", currentCountry.code);
+            }
+            if (useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+                setPage(VIEW_CREDENTIALS, true, params, false);
+                return;
             }
             nextPressed = true;
             PhoneInputData phoneInputData = new PhoneInputData();
@@ -3373,6 +3433,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             fillNumber();
             if (syncContactsBox != null) {
                 syncContactsBox.setChecked(syncContacts, false);
+            }
+            if (fakeIdentityBox != null) {
+                fakeIdentityBox.setChecked(fakeIdentity = org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount), false);
+            }
+            if (credentialsBox != null) {
+                credentialsBox.setChecked(useMyOwnCredentials, false);
             }
             AndroidUtilities.runOnUIThread(() -> {
                 if (phoneField != null) {
@@ -10331,6 +10397,213 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         public void onHide() {
             super.onHide();
             stopPoll();
+        }
+    }
+
+    public class LoginActivityCredentialsView extends SlideView {
+
+        private TextView titleView;
+        private TextView subtitleView;
+        private OutlineTextContainerView apiIdOutlineView;
+        private EditTextBoldCursor apiIdField;
+        private OutlineTextContainerView apiHashOutlineView;
+        private EditTextBoldCursor apiHashField;
+        private TextView helpView;
+
+        private Bundle currentParams;
+        private boolean nextPressed;
+
+        public LoginActivityCredentialsView(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            titleView.setTypeface(AndroidUtilities.bold());
+            titleView.setText("Custom API Credentials");
+            titleView.setGravity(Gravity.CENTER);
+            titleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 24, 32, 0));
+
+            subtitleView = new TextView(context);
+            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            subtitleView.setGravity(Gravity.CENTER);
+            subtitleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            subtitleView.setText("Enter your App API ID and API HASH from my.telegram.org");
+            subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
+            addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 8, 32, 20));
+
+            apiIdOutlineView = new OutlineTextContainerView(context);
+            apiIdOutlineView.setText("API ID");
+
+            apiIdField = new EditTextBoldCursor(context);
+            apiIdField.setCursorSize(AndroidUtilities.dp(20));
+            apiIdField.setCursorWidth(1.5f);
+            apiIdField.setImeOptions(EditorInfo.IME_ACTION_NEXT | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+            apiIdField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+            apiIdField.setMaxLines(1);
+            apiIdField.setInputType(EditorInfo.TYPE_CLASS_NUMBER);
+            apiIdField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            apiIdField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            apiIdField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            apiIdField.setOnFocusChangeListener((v, hasFocus) -> apiIdOutlineView.animateSelection(hasFocus ? 1f : 0f));
+            apiIdField.setBackground(null);
+            apiIdField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+
+            int savedId = org.veyra.client.VeyraUIConfig.getApiId(currentAccount);
+            if (savedId != BuildVars.APP_ID && savedId > 0) {
+                apiIdField.setText(String.valueOf(savedId));
+            }
+
+            apiIdOutlineView.attachEditText(apiIdField);
+            apiIdOutlineView.addView(apiIdField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            addView(apiIdOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 24, 8, 24, 12));
+
+            apiHashOutlineView = new OutlineTextContainerView(context);
+            apiHashOutlineView.setText("API HASH");
+
+            apiHashField = new EditTextBoldCursor(context);
+            apiHashField.setCursorSize(AndroidUtilities.dp(20));
+            apiHashField.setCursorWidth(1.5f);
+            apiHashField.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+            apiHashField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+            apiHashField.setMaxLines(1);
+            apiHashField.setInputType(EditorInfo.TYPE_CLASS_TEXT);
+            apiHashField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            apiHashField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            apiHashField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            apiHashField.setOnFocusChangeListener((v, hasFocus) -> apiHashOutlineView.animateSelection(hasFocus ? 1f : 0f));
+            apiHashField.setBackground(null);
+            apiHashField.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+
+            String savedHash = org.veyra.client.VeyraUIConfig.getApiHash(currentAccount);
+            if (!BuildVars.APP_HASH.equals(savedHash) && savedHash != null && !savedHash.isEmpty()) {
+                apiHashField.setText(savedHash);
+            }
+
+            apiHashField.setOnEditorActionListener((v, actionId, event) -> {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    onNextPressed(null);
+                    return true;
+                }
+                return false;
+            });
+
+            apiHashOutlineView.attachEditText(apiHashField);
+            apiHashOutlineView.addView(apiHashField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+            addView(apiHashOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 24, 0, 24, 16));
+
+            helpView = new TextView(context);
+            helpView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            helpView.setGravity(Gravity.CENTER);
+            helpView.setText("These credentials will be used for authentication and MTProto connection.");
+            helpView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
+            addView(helpView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 0, 32, 0));
+        }
+
+        @Override
+        public String getHeaderName() {
+            return "API Credentials";
+        }
+
+        @Override
+        public void setParams(Bundle params, boolean restore) {
+            if (params != null) {
+                currentParams = params;
+            }
+        }
+
+        @Override
+        public boolean needBackButton() {
+            return true;
+        }
+
+        @Override
+        public boolean onBackPressed(boolean sync) {
+            setPage(VIEW_PHONE_INPUT, true, null, true);
+            return true;
+        }
+
+        @Override
+        public void onShow() {
+            super.onShow();
+            if (apiIdField != null) {
+                apiIdField.requestFocus();
+                AndroidUtilities.showKeyboard(apiIdField);
+            }
+        }
+
+        @Override
+        public void onNextPressed(String buttonType) {
+            if (nextPressed || getParentActivity() == null || currentParams == null) {
+                return;
+            }
+            String idStr = apiIdField.getText() != null ? apiIdField.getText().toString().trim() : "";
+            String hashStr = apiHashField.getText() != null ? apiHashField.getText().toString().trim() : "";
+            int customId = 0;
+            try {
+                customId = Integer.parseInt(idStr);
+            } catch (Exception ignored) {}
+
+            if (customId <= 0) {
+                AndroidUtilities.shakeView(apiIdOutlineView);
+                Toast.makeText(getParentActivity(), "Please enter a valid numeric API ID", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (hashStr.length() != 32) {
+                AndroidUtilities.shakeView(apiHashOutlineView);
+                Toast.makeText(getParentActivity(), "API HASH must be 32 hex characters", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            org.veyra.client.VeyraUIConfig.setCustomCredentials(currentAccount, customId, hashStr);
+            BuildVars.APP_ID = customId;
+            BuildVars.APP_HASH = hashStr;
+
+            try {
+                ConnectionsManager.getInstance(currentAccount).reapplyIdentity();
+            } catch (Throwable ignored) {}
+
+            final String phone = currentParams.getString("phoneFormated");
+            if (phone == null || phone.isEmpty()) {
+                setPage(VIEW_PHONE_INPUT, true, null, true);
+                return;
+            }
+
+            nextPressed = true;
+            needShowProgress(0);
+
+            TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
+            sendCode.api_hash = hashStr;
+            sendCode.api_id = customId;
+            sendCode.phone_number = phone;
+            TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
+            settings.allow_firebase = false;
+            sendCode.settings = settings;
+
+            ConnectionsManager.getInstance(currentAccount).sendRequest(sendCode, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                nextPressed = false;
+                needHideProgress(false);
+                if (error == null) {
+                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
+                        TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
+                        if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
+                            TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
+                            if (authorization.terms_of_service != null) {
+                                currentTermsOfService = authorization.terms_of_service;
+                            }
+                            setPage(VIEW_REGISTER, true, currentParams, false);
+                        } else {
+                            onAuthSuccess((TLRPC.TL_auth_authorization) auth);
+                        }
+                    } else {
+                        fillNextCodeParams(currentParams, (TLRPC.auth_SentCode) response);
+                    }
+                } else {
+                    AlertsCreator.processError(currentAccount, error, LoginActivity.this, sendCode);
+                }
+            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
         }
     }
 
