@@ -465,6 +465,29 @@ void setSystemLangCode(JNIEnv *env, jclass c, jint instanceNum, jstring langCode
     }
 }
 
+void setDeviceParams(JNIEnv *env, jclass c, jint instanceNum, jint apiId, jstring deviceModel, jstring systemVersion, jstring appVersion, jstring langCode, jstring systemLangCode) {
+    const char *deviceModelStr = env->GetStringUTFChars(deviceModel, 0);
+    const char *systemVersionStr = env->GetStringUTFChars(systemVersion, 0);
+    const char *appVersionStr = env->GetStringUTFChars(appVersion, 0);
+    const char *langCodeStr = env->GetStringUTFChars(langCode, 0);
+    const char *systemLangCodeStr = env->GetStringUTFChars(systemLangCode, 0);
+
+    ConnectionsManager::getInstance(instanceNum).setDeviceParams(
+        apiId,
+        std::string(deviceModelStr ? deviceModelStr : ""),
+        std::string(systemVersionStr ? systemVersionStr : ""),
+        std::string(appVersionStr ? appVersionStr : ""),
+        std::string(langCodeStr ? langCodeStr : "en"),
+        std::string(systemLangCodeStr ? systemLangCodeStr : "en")
+    );
+
+    if (deviceModelStr != 0) env->ReleaseStringUTFChars(deviceModel, deviceModelStr);
+    if (systemVersionStr != 0) env->ReleaseStringUTFChars(systemVersion, systemVersionStr);
+    if (appVersionStr != 0) env->ReleaseStringUTFChars(appVersion, appVersionStr);
+    if (langCodeStr != 0) env->ReleaseStringUTFChars(langCode, langCodeStr);
+    if (systemLangCodeStr != 0) env->ReleaseStringUTFChars(systemLangCode, systemLangCodeStr);
+}
+
 void init(JNIEnv *env, jclass c, jint instanceNum, jint version, jint layer, jint apiId, jstring deviceModel, jstring systemVersion, jstring appVersion, jstring langCode, jstring systemLangCode, jstring configPath, jstring logPath, jstring regId, jstring cFingerprint, jstring installerId, jstring packageId, jint timezoneOffset, jlong userId, jboolean userPremium, jboolean enablePushConnection, jboolean hasNetwork, jint networkType, jint performanceClass) {
     const char *deviceModelStr = env->GetStringUTFChars(deviceModel, 0);
     const char *systemVersionStr = env->GetStringUTFChars(systemVersion, 0);
@@ -544,6 +567,7 @@ static JNINativeMethod ConnectionsManagerMethods[] = {
         {"native_setLangCode", "(ILjava/lang/String;)V", (void *) setLangCode},
         {"native_setRegId", "(ILjava/lang/String;)V", (void *) setRegId},
         {"native_setSystemLangCode", "(ILjava/lang/String;)V", (void *) setSystemLangCode},
+        {"native_setDeviceParams", "(IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V", (void *) setDeviceParams},
         {"native_switchBackend", "(IZ)V", (void *) switchBackend},
         {"native_pauseNetwork", "(I)V", (void *) pauseNetwork},
         {"native_resumeNetwork", "(IZ)V", (void *) resumeNetwork},

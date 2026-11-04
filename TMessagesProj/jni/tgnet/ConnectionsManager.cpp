@@ -3845,6 +3845,22 @@ void ConnectionsManager::setSystemLangCode(std::string langCode) {
     });
 }
 
+void ConnectionsManager::setDeviceParams(int32_t apiId, std::string deviceModel, std::string systemVersion, std::string appVersion, std::string langCode, std::string systemLangCode) {
+    scheduleTask([this, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode] {
+        currentApiId = apiId;
+        currentDeviceModel = deviceModel;
+        currentSystemVersion = systemVersion;
+        currentAppVersion = appVersion;
+        currentLangCode = langCode;
+        lastInitSystemLangcode = currentSystemLangCode = systemLangCode;
+        for (auto & datacenter : datacenters) {
+            datacenter.second->resetInitVersion();
+        }
+        saveConfig();
+        updateDcSettings(0, false, false);
+    });
+}
+
 void ConnectionsManager::resumeNetwork(bool partial) {
     scheduleTask([&, partial] {
         if (lastMonotonicPauseTime != 0) {

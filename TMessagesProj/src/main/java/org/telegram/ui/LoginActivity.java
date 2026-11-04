@@ -259,7 +259,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             VIEW_CODE_WORD = 16,
             VIEW_CODE_PHRASE = 17,
             VIEW_PAY = 18,
-            VIEW_CREDENTIALS = 19;
+            VIEW_CREDENTIALS = 19,
+            VIEW_FAKE_IDENTITY = 20;
 
     public final static int COUNTRY_STATE_NOT_SET_OR_VALID = 0,
             COUNTRY_STATE_EMPTY = 1,
@@ -320,7 +321,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
     @ViewNumber
     private int currentViewNum;
-    private final SlideView[] views = new SlideView[20];
+    private final SlideView[] views = new SlideView[21];
     private CustomPhoneKeyboardView keyboardView;
     private ValueAnimator keyboardAnimator;
     private boolean paid;
@@ -689,10 +690,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         views[VIEW_CODE_PHRASE] = new LoginActivityPhraseView(context, AUTH_TYPE_PHRASE);
         views[VIEW_PAY] = new LoginPayView(context);
         views[VIEW_CREDENTIALS] = new LoginActivityCredentialsView(context);
+        views[VIEW_FAKE_IDENTITY] = new LoginActivityFakeIdentityView(context);
 
         for (int a = 0; a < views.length; a++) {
             views[a].setVisibility(a == 0 ? View.VISIBLE : View.GONE);
-            final boolean needsTopMargin = a != VIEW_PAY && a != VIEW_CREDENTIALS;
+            final boolean needsTopMargin = a != VIEW_PAY && a != VIEW_CREDENTIALS && a != VIEW_FAKE_IDENTITY;
             slideViewsContainer.addView(views[a], LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER, AndroidUtilities.isTablet() ? 26 : 18, needsTopMargin ? 30 : 0, AndroidUtilities.isTablet() ? 26 : 18, 0));
         }
 
@@ -1505,7 +1507,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
     public void setPage(@ViewNumber int page, boolean animated, Bundle params, boolean back) {
         boolean needFloatingButton = page == VIEW_PHONE_INPUT || page == VIEW_REGISTER || page == VIEW_PASSWORD ||
-                page == VIEW_NEW_PASSWORD_STAGE_1 || page == VIEW_NEW_PASSWORD_STAGE_2 || page == VIEW_ADD_EMAIL || page == VIEW_CODE_PHRASE || page == VIEW_CODE_WORD || page == VIEW_CREDENTIALS;
+                page == VIEW_NEW_PASSWORD_STAGE_1 || page == VIEW_NEW_PASSWORD_STAGE_2 || page == VIEW_ADD_EMAIL || page == VIEW_CODE_PHRASE || page == VIEW_CODE_WORD || page == VIEW_CREDENTIALS || page == VIEW_FAKE_IDENTITY;
         if (page == currentViewNum) {
             animated = false;
         }
@@ -2481,7 +2483,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 });
 
                 fakeIdentityBox = new CheckBoxCell(context, 2);
-                fakeIdentityBox.setText("Fake Identity", "", fakeIdentity = org.veyra.client.VeyraFakeIdentity.isEnabled(currentAccount), false);
+                fakeIdentityBox.setText("Fake Identity", "", fakeIdentity, false);
                 addView(fakeIdentityBox, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 16, 0, 16 + (LocaleController.isRTL && AndroidUtilities.isSmallScreen() ? 56 : 0), 0));
                 bottomMargin -= 24;
                 fakeIdentityBox.setOnClickListener(v -> {
@@ -2493,13 +2495,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     cell.setChecked(fakeIdentity, true);
                     org.veyra.client.VeyraFakeIdentity.setEnabled(currentAccount, fakeIdentity);
                     if (fakeIdentity) {
-                        org.veyra.client.VeyraFakeIdentity.generateAndApply(currentAccount);
-                        String fakeModel = org.veyra.client.VeyraFakeIdentity.getDeviceModel(currentAccount, "Pixel");
-                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.fire_on, "Fake Identity: " + fakeModel).show();
+                        useMyOwnCredentials = false;
+                        if (credentialsBox != null) {
+                            credentialsBox.setChecked(false, true);
+                        }
+                        BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.fire_on, "Fake Identity enabled").show();
                     } else {
-                        try {
-                            getConnectionsManager().reapplyIdentity();
-                        } catch (Throwable ignored) {}
                         BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.contacts_sync_off, "Fake Identity disabled").show();
                     }
                 });
@@ -2516,6 +2517,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     useMyOwnCredentials = !useMyOwnCredentials;
                     cell.setChecked(useMyOwnCredentials, true);
                     if (useMyOwnCredentials) {
+                        fakeIdentity = false;
+                        org.veyra.client.VeyraFakeIdentity.setEnabled(currentAccount, false);
+                        if (fakeIdentityBox != null) {
+                            fakeIdentityBox.setChecked(false, true);
+                        }
                         BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.info, "Custom API credentials enabled").show();
                     } else {
                         BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.contacts_sync_off, "Using default Telegram credentials").show();
@@ -3229,6 +3235,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             params.putString("phoneFormated", phone);
             if (currentCountry != null) {
                 params.putString("country", currentCountry.code);
+            }
+            if (fakeIdentity && activityMode != MODE_CHANGE_PHONE_NUMBER) {
+                setPage(VIEW_FAKE_IDENTITY, true, params, false);
+                return;
             }
             if (useMyOwnCredentials && activityMode != MODE_CHANGE_PHONE_NUMBER) {
                 setPage(VIEW_CREDENTIALS, true, params, false);
@@ -10562,7 +10572,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             BuildVars.APP_HASH = hashStr;
 
             try {
-                ConnectionsManager.getInstance(currentAccount).reapplyIdentity();
+                ConnectionsManager.getInstance(currentAccount).setDeviceParams(customId, Build.MANUFACTURER + " " + Build.MODEL, "SDK " + Build.VERSION.SDK_INT, "11.12.0", "en", "en");
             } catch (Throwable ignored) {}
 
             final String phone = currentParams.getString("phoneFormated");
@@ -10577,6 +10587,233 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
             sendCode.api_hash = hashStr;
             sendCode.api_id = customId;
+            sendCode.phone_number = phone;
+            TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
+            settings.allow_firebase = false;
+            sendCode.settings = settings;
+
+            ConnectionsManager.getInstance(currentAccount).sendRequest(sendCode, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                nextPressed = false;
+                needHideProgress(false);
+                if (error == null) {
+                    if (response instanceof TLRPC.TL_auth_sentCodeSuccess) {
+                        TLRPC.auth_Authorization auth = ((TLRPC.TL_auth_sentCodeSuccess) response).authorization;
+                        if (auth instanceof TLRPC.TL_auth_authorizationSignUpRequired) {
+                            TLRPC.TL_auth_authorizationSignUpRequired authorization = (TLRPC.TL_auth_authorizationSignUpRequired) auth;
+                            if (authorization.terms_of_service != null) {
+                                currentTermsOfService = authorization.terms_of_service;
+                            }
+                            setPage(VIEW_REGISTER, true, currentParams, false);
+                        } else {
+                            onAuthSuccess((TLRPC.TL_auth_authorization) auth);
+                        }
+                    } else {
+                        fillNextCodeParams(currentParams, (TLRPC.auth_SentCode) response);
+                    }
+                } else {
+                    AlertsCreator.processError(currentAccount, error, LoginActivity.this, sendCode);
+                }
+            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
+        }
+    }
+
+    public class LoginActivityFakeIdentityView extends SlideView {
+
+        private TextView titleView;
+        private TextView subtitleView;
+        private OutlineTextContainerView platformOutlineView;
+        private TextView platformTextView;
+        private LinearLayout cardView;
+        private TextView deviceModelValueView;
+        private TextView systemVersionValueView;
+        private TextView appVersionValueView;
+        private TextView apiIdValueView;
+        private ImageView regenerateIcon;
+
+        private int selectedPlatformIndex = 4; // default iOS Official
+        private org.veyra.client.VeyraFakeIdentity.GeneratedProfile currentProfile;
+        private Bundle currentParams;
+        private boolean nextPressed;
+
+        public LoginActivityFakeIdentityView(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            titleView.setTypeface(AndroidUtilities.bold());
+            titleView.setText("Fake Identity");
+            titleView.setGravity(Gravity.CENTER);
+            titleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 24, 32, 0));
+
+            subtitleView = new TextView(context);
+            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            subtitleView.setGravity(Gravity.CENTER);
+            subtitleView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            subtitleView.setText("Select target operating system and disguise your device identity before logging in.");
+            subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
+            addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 8, 32, 20));
+
+            platformOutlineView = new OutlineTextContainerView(context);
+            platformOutlineView.setText("Target Operating System");
+
+            platformTextView = new TextView(context);
+            platformTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            platformTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            platformTextView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+            platformTextView.setGravity(Gravity.CENTER_VERTICAL);
+            platformOutlineView.addView(platformTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
+
+            OnClickListener selectPlatformListener = v -> {
+                if (getParentActivity() == null) return;
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle("Select Operating System");
+                CharSequence[] names = new CharSequence[org.veyra.client.VeyraFakeIdentity.PLATFORMS.size()];
+                for (int i = 0; i < org.veyra.client.VeyraFakeIdentity.PLATFORMS.size(); i++) {
+                    names[i] = org.veyra.client.VeyraFakeIdentity.PLATFORMS.get(i).name;
+                }
+                builder.setItems(names, (dialog, which) -> {
+                    selectedPlatformIndex = which;
+                    regenerateProfile();
+                });
+                builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                showDialog(builder.create());
+            };
+            platformOutlineView.setOnClickListener(selectPlatformListener);
+            platformTextView.setOnClickListener(selectPlatformListener);
+
+            addView(platformOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 24, 8, 24, 16));
+
+            cardView = new LinearLayout(context);
+            cardView.setOrientation(VERTICAL);
+            cardView.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(12), Theme.getColor(Theme.key_windowBackgroundGray)));
+            cardView.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+
+            LinearLayout headerLayout = new LinearLayout(context);
+            headerLayout.setOrientation(HORIZONTAL);
+            headerLayout.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView cardHeader = new TextView(context);
+            cardHeader.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            cardHeader.setTypeface(AndroidUtilities.bold());
+            cardHeader.setText("Generated Device Specifications");
+            cardHeader.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            headerLayout.addView(cardHeader, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            regenerateIcon = new ImageView(context);
+            regenerateIcon.setImageResource(R.drawable.msg_retry);
+            regenerateIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+            int p = AndroidUtilities.dp(6);
+            regenerateIcon.setPadding(p, p, p, p);
+            regenerateIcon.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 1));
+            regenerateIcon.setOnClickListener(v -> {
+                regenerateProfile();
+                AndroidUtilities.shakeView(cardView);
+            });
+            headerLayout.addView(regenerateIcon, LayoutHelper.createLinear(32, 32, Gravity.CENTER_VERTICAL));
+            cardView.addView(headerLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+            deviceModelValueView = addSpecRow(context, cardView, "Device Model:");
+            systemVersionValueView = addSpecRow(context, cardView, "System Version:");
+            appVersionValueView = addSpecRow(context, cardView, "App Version:");
+            apiIdValueView = addSpecRow(context, cardView, "API ID / Hash:");
+
+            addView(cardView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 24, 0, 24, 16));
+
+            regenerateProfile();
+        }
+
+        private TextView addSpecRow(Context context, LinearLayout parent, String label) {
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(HORIZONTAL);
+            row.setPadding(0, AndroidUtilities.dp(3), 0, AndroidUtilities.dp(3));
+
+            TextView labelView = new TextView(context);
+            labelView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            labelView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            labelView.setText(label);
+            row.addView(labelView, LayoutHelper.createLinear(AndroidUtilities.dp(110), LayoutHelper.WRAP_CONTENT));
+
+            TextView valView = new TextView(context);
+            valView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            valView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            valView.setTypeface(AndroidUtilities.bold());
+            row.addView(valView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            parent.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            return valView;
+        }
+
+        private void regenerateProfile() {
+            currentProfile = org.veyra.client.VeyraFakeIdentity.generateProfile(selectedPlatformIndex);
+            if (currentProfile != null) {
+                platformTextView.setText(currentProfile.platformName);
+                deviceModelValueView.setText(currentProfile.deviceModel);
+                systemVersionValueView.setText(currentProfile.systemVersion);
+                appVersionValueView.setText(currentProfile.appVersion);
+                String hashSnippet = currentProfile.apiHash.length() >= 8 ? (currentProfile.apiHash.substring(0, 6) + "..." + currentProfile.apiHash.substring(currentProfile.apiHash.length() - 4)) : currentProfile.apiHash;
+                apiIdValueView.setText(currentProfile.apiId + " (" + hashSnippet + ")");
+            }
+        }
+
+        @Override
+        public String getHeaderName() {
+            return "Fake Identity";
+        }
+
+        @Override
+        public void setParams(Bundle params, boolean restore) {
+            if (params != null) {
+                currentParams = params;
+            }
+        }
+
+        @Override
+        public boolean needBackButton() {
+            return true;
+        }
+
+        @Override
+        public boolean onBackPressed(boolean sync) {
+            setPage(VIEW_PHONE_INPUT, true, null, true);
+            return true;
+        }
+
+        @Override
+        public void onNextPressed(String buttonType) {
+            if (nextPressed || getParentActivity() == null || currentParams == null || currentProfile == null) {
+                return;
+            }
+
+            org.veyra.client.VeyraFakeIdentity.saveProfile(currentAccount, currentProfile);
+            BuildVars.APP_ID = currentProfile.apiId;
+            BuildVars.APP_HASH = currentProfile.apiHash;
+
+            try {
+                ConnectionsManager.getInstance(currentAccount).setDeviceParams(
+                        currentProfile.apiId,
+                        currentProfile.deviceModel,
+                        currentProfile.systemVersion,
+                        currentProfile.appVersion,
+                        currentProfile.langCode,
+                        currentProfile.langCode
+                );
+            } catch (Throwable ignored) {}
+
+            final String phone = currentParams.getString("phoneFormated");
+            if (phone == null || phone.isEmpty()) {
+                setPage(VIEW_PHONE_INPUT, true, null, true);
+                return;
+            }
+
+            nextPressed = true;
+            needShowProgress(0);
+
+            TLRPC.TL_auth_sendCode sendCode = new TLRPC.TL_auth_sendCode();
+            sendCode.api_hash = currentProfile.apiHash;
+            sendCode.api_id = currentProfile.apiId;
             sendCode.phone_number = phone;
             TLRPC.TL_codeSettings settings = new TLRPC.TL_codeSettings();
             settings.allow_firebase = false;
