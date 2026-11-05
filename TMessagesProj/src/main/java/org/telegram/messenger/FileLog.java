@@ -79,6 +79,8 @@ public class FileLog {
                     }
                 }
             }
+        } else if (BuildVars.LOGS_ENABLED && !localInstance.initied) {
+            localInstance.init();
         }
         return localInstance;
     }
@@ -360,6 +362,18 @@ public class FileLog {
 
     public static void ensureInitied() {
         getInstance().init();
+    }
+
+    public static void flush() {
+        try {
+            FileLog logger = getInstance();
+            if (logger.streamWriter != null) {
+                logger.streamWriter.flush();
+            }
+            if (logger.tlStreamWriter != null) {
+                logger.tlStreamWriter.flush();
+            }
+        } catch (Throwable ignored) {}
     }
 
     public static String getNetworkLogPath() {

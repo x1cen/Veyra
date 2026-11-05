@@ -13110,6 +13110,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     return;
                 }
 
+                FileLog.flush();
+
                 File zipFile = new File(dir, "logs.zip");
                 if (zipFile.exists()) {
                     zipFile.delete();
@@ -13119,7 +13121,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
                 File[] logFiles = dir.listFiles();
                 for (File f : logFiles) {
-                    files.add(f);
+                    if (f != null && !f.getName().equals("logs.zip")) {
+                        files.add(f);
+                    }
                 }
 
                 File filesDir = ApplicationLoader.getFilesDirFixed();

@@ -297,6 +297,17 @@ public class ApplicationLoader extends Application {
 
         super.onCreate();
 
+        if (applicationContext == null) {
+            applicationContext = getApplicationContext();
+        }
+        try {
+            SharedPreferences sharedPreferences = applicationContext.getSharedPreferences("systemConfig", Context.MODE_PRIVATE);
+            BuildVars.LOGS_ENABLED = sharedPreferences.getBoolean("logsEnabled", true);
+        } catch (Throwable ignored) {}
+        if (BuildVars.LOGS_ENABLED) {
+            FileLog.ensureInitied();
+        }
+
         // AndroidUtilities must be initialized before FileLog
         final String helloWorld = AndroidUtilities.getHelloWorld();
 
