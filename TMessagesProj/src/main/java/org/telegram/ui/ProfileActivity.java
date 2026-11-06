@@ -4599,6 +4599,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 sendLogs(getParentActivity(), true);
             } else if (position == clearLogsRow) {
                 FileLog.cleanupLogs();
+                try {
+                    String msg = LocaleController.isRTL ? "لاگ‌ها پاک شدند" : "Logs cleared";
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, msg).show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
             } else if (position == switchBackendRow) {
                 if (getParentActivity() == null) {
                     return;

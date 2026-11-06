@@ -106,6 +106,7 @@ import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FloatingDebug.FloatingDebugController;
@@ -365,6 +366,13 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         listView.setSections();
         listView.setPadding(0, AndroidUtilities.statusBarHeight + dp(12), 0, AndroidUtilities.navigationBarHeight + additionNavigationBarHeight);
         listView.setClipToPadding(false);
+
+        Bulletin.addDelegate(this, new Bulletin.Delegate() {
+            @Override
+            public int getBottomOffset(int tag) {
+                return AndroidUtilities.navigationBarHeight + (hasMainTabs ? additionNavigationBarHeight : 0);
+            }
+        });
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -514,6 +522,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        Bulletin.removeDelegate(this);
 
         getNotificationCenter().removeObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().removeObserver(this, NotificationCenter.starBalanceUpdated);
@@ -916,6 +925,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
             case 22:
                 FileLog.cleanupLogs();
+                try {
+                    String msg = LocaleController.isRTL ? "لاگ‌ها پاک شدند" : "Logs cleared";
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, msg).show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
                 break;
             case 23: {
                 if (MessagesController.getInstance(currentAccount).isFrozen()) {
