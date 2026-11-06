@@ -3585,7 +3585,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (pollButtons != null) {
             for (int a = 0; a < pollButtons.size(); a++) {
                 PollButton button = pollButtons.get(a);
-                button.selectorDrawable.setState(StateSet.NOTHING);
+                if (button.selectorDrawable != null) {
+                    button.selectorDrawable.setState(StateSet.NOTHING);
+                }
             }
         }
         if (pollAddButtonDrawable != null) {
@@ -3688,9 +3690,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 //                                selectorDrawable[0].setHotspot(x, y);
 //                                selectorDrawable[0].setState(pressedState);
 //                            }
-                            button.selectorDrawable.setHotspot(x, y);
-                            button.selectorDrawable.setState(pressedState);
-                            invalidate();
+                            if (button.selectorDrawable == null) {
+                                button.selectorDrawable = Theme.createRadSelectorDrawable(button.selectorDrawableColor = getThemedColor(Theme.key_listSelector), 0, 0);
+                                button.selectorDrawable.setCallback(this);
+                            }
+                            if (button.selectorDrawable != null) {
+                                button.selectorDrawable.setHotspot(x, y);
+                                button.selectorDrawable.setState(pressedState);
+                                invalidate();
+                            }
                         }
                         result = true;
                         break;
@@ -25720,12 +25728,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     continue;
                 }
                 canvas.save();
-                int selectorColor = Theme.multAlpha(color2, 0.12f);
-                if (button.selectorDrawableColor != selectorColor) {
-                    Theme.setSelectorDrawableColor(button.selectorDrawable, button.selectorDrawableColor = selectorColor, false);
+                if (button.selectorDrawable != null) {
+                    int selectorColor = Theme.multAlpha(color2, 0.12f);
+                    if (button.selectorDrawableColor != selectorColor) {
+                        Theme.setSelectorDrawableColor(button.selectorDrawable, button.selectorDrawableColor = selectorColor, false);
+                    }
+                    button.selectorDrawable.setBounds((int) (x - dp(8)), (int) (by + namesOffset - dp(13)), (int) (x + bwidth - dp(23)), (int) (by + namesOffset + bh + dp(13)));
+                    button.selectorDrawable.draw(canvas);
                 }
-                button.selectorDrawable.setBounds((int) (x - dp(8)), (int) (by + namesOffset - dp(13)), (int) (x + bwidth - dp(23)), (int) (by + namesOffset + bh + dp(13)));
-                button.selectorDrawable.draw(canvas);
                 canvas.restore();
 
                 if (button.pollButtonDrawable != null) {

@@ -29,6 +29,15 @@ public final class VeyraEditHistoryManager {
     // Account-less read/clear overloads keep the pre-v5 behaviour and match rows of every account.
     private static final int ACCOUNT_ANY = -1;
 
+    public static String getDatabaseName(int account) {
+        return account == 0 ? DB_NAME : ("veyra_edit_history_" + account + ".db");
+    }
+
+    public static java.io.File getDatabaseFile(int account) {
+        if (ApplicationLoader.applicationContext == null) return null;
+        return ApplicationLoader.applicationContext.getDatabasePath(getDatabaseName(account));
+    }
+
     public static class EditEntry {
         public final long dialogId;
         public final int messageId;
@@ -94,8 +103,8 @@ public final class VeyraEditHistoryManager {
     }
 
     private static class DBHelper extends SQLiteOpenHelper {
-        DBHelper() {
-            super(ApplicationLoader.applicationContext, DB_NAME, null, DB_VERSION);
+        DBHelper(String dbName) {
+            super(ApplicationLoader.applicationContext, dbName, null, DB_VERSION);
         }
 
         @Override
@@ -161,13 +170,118 @@ public final class VeyraEditHistoryManager {
         }
     }
 
-    private static DBHelper dbHelper;
+    private static final ConcurrentHashMap<Integer, DBHelper> dbHelpers = new ConcurrentHashMap<>();
+
+    private static synchronized DBHelper getHelper(int account) {
+        int acc = (account >= 0 && account < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT) ? account : legacyAccount();
+        DBHelper helper = dbHelpers.get(acc);
+        if (helper == null) {
+            String dbName = getDatabaseName(acc);
+            helper = new DBHelper(dbName);
+            dbHelpers.put(acc, helper);
+            migrateLegacyAccountRows(acc, helper);
+        }
+        return helper;
+    }
 
     private static synchronized DBHelper getHelper() {
-        if (dbHelper == null) {
-            dbHelper = new DBHelper();
+        return getHelper(legacyAccount());
+    }
+
+    private static void migrateLegacyAccountRows(int targetAccount, DBHelper targetHelper) {
+        if (targetAccount == 0 || ApplicationLoader.applicationContext == null) {
+            return;
         }
-        return dbHelper;
+        java.io.File legacyFile = ApplicationLoader.applicationContext.getDatabasePath(DB_NAME);
+        if (legacyFile == null || !legacyFile.exists()) {
+            return;
+        }
+        try {
+            SQLiteDatabase targetDb = targetHelper.getWritableDatabase();
+            Cursor countCheck = targetDb.rawQuery("SELECT 1 FROM " + TABLE_NAME + " LIMIT 1", null);
+            boolean targetHasRows = (countCheck != null && countCheck.moveToFirst());
+            if (countCheck != null) countCheck.close();
+            if (targetHasRows) {
+                return;
+            }
+
+            SQLiteDatabase legacyDb = SQLiteDatabase.openDatabase(legacyFile.getPath(), null, SQLiteDatabase.OPEN_READWRITE);
+            if (legacyDb != null) {
+                try {
+                    Cursor c = legacyDb.rawQuery("SELECT dialog_id, message_id, date, text, data FROM " + TABLE_NAME + " WHERE account = ?", new String[]{String.valueOf(targetAccount)});
+                    if (c != null) {
+                        targetDb.beginTransaction();
+                        try {
+                            while (c.moveToNext()) {
+                                ContentValues v = new ContentValues();
+                                v.put("account", targetAccount);
+                                v.put("dialog_id", c.getLong(0));
+                                v.put("message_id", c.getInt(1));
+                                v.put("date", c.getInt(2));
+                                v.put("text", c.getString(3));
+                                if (!c.isNull(4)) v.put("data", c.getBlob(4));
+                                targetDb.insert(TABLE_NAME, null, v);
+                            }
+                            targetDb.setTransactionSuccessful();
+                        } finally {
+                            targetDb.endTransaction();
+                            c.close();
+                        }
+                        legacyDb.delete(TABLE_NAME, "account = ?", new String[]{String.valueOf(targetAccount)});
+                    }
+
+                    Cursor c2 = legacyDb.rawQuery("SELECT dialog_id, message_id, date, reaction, count, user_id, action FROM " + REACTION_TABLE_NAME + " WHERE account = ?", new String[]{String.valueOf(targetAccount)});
+                    if (c2 != null) {
+                        targetDb.beginTransaction();
+                        try {
+                            while (c2.moveToNext()) {
+                                ContentValues v = new ContentValues();
+                                v.put("account", targetAccount);
+                                v.put("dialog_id", c2.getLong(0));
+                                v.put("message_id", c2.getInt(1));
+                                v.put("date", c2.getInt(2));
+                                v.put("reaction", c2.getString(3));
+                                v.put("count", c2.getInt(4));
+                                v.put("user_id", c2.getLong(5));
+                                v.put("action", c2.getString(6));
+                                targetDb.insert(REACTION_TABLE_NAME, null, v);
+                            }
+                            targetDb.setTransactionSuccessful();
+                        } finally {
+                            targetDb.endTransaction();
+                            c2.close();
+                        }
+                        legacyDb.delete(REACTION_TABLE_NAME, "account = ?", new String[]{String.valueOf(targetAccount)});
+                    }
+                } finally {
+                    legacyDb.close();
+                }
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
+    public static boolean hasAnyHistory(int account) {
+        int acc = (account >= 0 && account < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT) ? account : legacyAccount();
+        try {
+            java.io.File f = getDatabaseFile(acc);
+            if (f == null || !f.exists()) {
+                return false;
+            }
+            SQLiteDatabase db = getHelper(acc).getReadableDatabase();
+            Cursor c1 = db.rawQuery("SELECT 1 FROM " + TABLE_NAME + " LIMIT 1", null);
+            boolean has = (c1 != null && c1.moveToFirst());
+            if (c1 != null) c1.close();
+            if (has) return true;
+
+            Cursor c2 = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME + " LIMIT 1", null);
+            has = (c2 != null && c2.moveToFirst());
+            if (c2 != null) c2.close();
+            return has;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     // Writes through account-less overloads have no event account; use the selected one.
@@ -211,7 +325,7 @@ public final class VeyraEditHistoryManager {
             return;
         }
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
 
             // Store text
             String encryptedText = text != null ? text : "";
@@ -290,7 +404,7 @@ public final class VeyraEditHistoryManager {
             return list;
         }
         try {
-            SQLiteDatabase db = getHelper().getReadableDatabase();
+            SQLiteDatabase db = getHelper(account).getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT date, text, data FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?" + accountClause(account) + " ORDER BY id ASC",
                     withAccount(account, String.valueOf(dialogId), String.valueOf(messageId)));
             if (cursor != null) {
@@ -317,7 +431,7 @@ public final class VeyraEditHistoryManager {
             return false;
         }
         try {
-            SQLiteDatabase db = getHelper().getReadableDatabase();
+            SQLiteDatabase db = getHelper(account).getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT 1 FROM " + TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?" + accountClause(account) + " LIMIT 1",
                     withAccount(account, String.valueOf(dialogId), String.valueOf(messageId)));
             boolean exists = cursor != null && cursor.moveToFirst();
@@ -335,7 +449,7 @@ public final class VeyraEditHistoryManager {
 
     public static void deleteHistory(int account, long dialogId, int messageId) {
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             db.delete(TABLE_NAME, "dialog_id = ? AND message_id = ?" + accountClause(account), withAccount(account, String.valueOf(dialogId), String.valueOf(messageId)));
         } catch (Exception e) {
             FileLog.e(e);
@@ -349,7 +463,7 @@ public final class VeyraEditHistoryManager {
     public static void deleteHistoryBatch(int account, long dialogId, List<Integer> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) return;
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             db.beginTransaction();
             try {
                 for (int msgId : messageIds) {
@@ -372,11 +486,16 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void clearAll(int account) {
+        int acc = (account >= 0 && account < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT) ? account : legacyAccount();
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
-            db.delete(TABLE_NAME, accountWhere(account), accountArgs(account));
-            db.delete(REACTION_TABLE_NAME, accountWhere(account), accountArgs(account));
-            clearRemovedReactions(account);
+            SQLiteDatabase db = getHelper(acc).getWritableDatabase();
+            db.delete(TABLE_NAME, null, null);
+            db.delete(REACTION_TABLE_NAME, null, null);
+            clearRemovedReactions(acc);
+            try {
+                Cursor c = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null);
+                if (c != null) c.close();
+            } catch (Throwable ignored) {}
             db.execSQL("VACUUM");
         } catch (Exception e) {
             FileLog.e(e);
@@ -389,9 +508,15 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void clearAllEdits(int account) {
+        int acc = (account >= 0 && account < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT) ? account : legacyAccount();
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
-            db.delete(TABLE_NAME, accountWhere(account), accountArgs(account));
+            SQLiteDatabase db = getHelper(acc).getWritableDatabase();
+            db.delete(TABLE_NAME, null, null);
+            try {
+                Cursor c = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null);
+                if (c != null) c.close();
+            } catch (Throwable ignored) {}
+            db.execSQL("VACUUM");
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -403,10 +528,16 @@ public final class VeyraEditHistoryManager {
     }
 
     public static void clearAllReactions(int account) {
+        int acc = (account >= 0 && account < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT) ? account : legacyAccount();
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
-            db.delete(REACTION_TABLE_NAME, accountWhere(account), accountArgs(account));
-            clearRemovedReactions(account);
+            SQLiteDatabase db = getHelper(acc).getWritableDatabase();
+            db.delete(REACTION_TABLE_NAME, null, null);
+            clearRemovedReactions(acc);
+            try {
+                Cursor c = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null);
+                if (c != null) c.close();
+            } catch (Throwable ignored) {}
+            db.execSQL("VACUUM");
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -419,7 +550,7 @@ public final class VeyraEditHistoryManager {
 
     public static void clearDialog(int account, long dialogId) {
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             db.delete(TABLE_NAME, "(dialog_id = ? OR dialog_id = ?)" + accountClause(account), withAccount(account, String.valueOf(dialogId), String.valueOf(-dialogId)));
             db.delete(REACTION_TABLE_NAME, "(dialog_id = ? OR dialog_id = ?)" + accountClause(account), withAccount(account, String.valueOf(dialogId), String.valueOf(-dialogId)));
             clearRemovedReactions(account, dialogId);
@@ -437,7 +568,7 @@ public final class VeyraEditHistoryManager {
 
     public static void clearDialogEdits(int account, long dialogId) {
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             db.delete(TABLE_NAME, "dialog_id = ?" + accountClause(account), withAccount(account, String.valueOf(dialogId)));
         } catch (Exception e) {
             FileLog.e(e);
@@ -450,7 +581,7 @@ public final class VeyraEditHistoryManager {
 
     public static void clearDialogReactions(int account, long dialogId) {
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             db.delete(REACTION_TABLE_NAME, "dialog_id = ?" + accountClause(account), withAccount(account, String.valueOf(dialogId)));
             clearRemovedReactions(account, dialogId);
         } catch (Exception e) {
@@ -491,7 +622,7 @@ public final class VeyraEditHistoryManager {
             }
         }
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             String acc = String.valueOf(account);
 
             // Determine action: compare newCount to last logged count for this reaction
@@ -574,7 +705,7 @@ public final class VeyraEditHistoryManager {
             }
         }
         try {
-            SQLiteDatabase db = getHelper().getWritableDatabase();
+            SQLiteDatabase db = getHelper(account).getWritableDatabase();
             if (!trimReactions(db, account, dialogId, messageId)) {
                 return;
             }
@@ -694,7 +825,7 @@ public final class VeyraEditHistoryManager {
             return list;
         }
         try {
-            SQLiteDatabase db = getHelper().getReadableDatabase();
+            SQLiteDatabase db = getHelper(account).getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT date, reaction, count, user_id, COALESCE(action,'add') FROM " +
                     REACTION_TABLE_NAME + " WHERE dialog_id = ? AND message_id = ?" + accountClause(account) + " ORDER BY id ASC",
                     withAccount(account, String.valueOf(dialogId), String.valueOf(messageId)));
@@ -727,7 +858,7 @@ public final class VeyraEditHistoryManager {
             return true;
         }
         try {
-            SQLiteDatabase db = getHelper().getReadableDatabase();
+            SQLiteDatabase db = getHelper(account).getReadableDatabase();
             Cursor cursor = db.rawQuery("SELECT 1 FROM " + REACTION_TABLE_NAME +
                     " WHERE dialog_id = ? AND message_id = ? AND action = 'remove'" + accountClause(account) + " LIMIT 1",
                     withAccount(account, String.valueOf(dialogId), String.valueOf(messageId)));

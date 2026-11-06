@@ -7,6 +7,9 @@ import android.widget.TextView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
@@ -18,6 +21,8 @@ import org.veyra.client.VeyraEditHistoryManager;
 import org.veyra.client.VeyraGhost;
 import org.veyra.client.VeyraScope;
 import org.veyra.client.VeyraUIConfig;
+
+import androidx.collection.LongSparseArray;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -398,19 +403,40 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         r.add(VeyraSettingsRow.shadow());
     }
 
-    private long getVeyraDataSize(int account) {
+    public static long getVeyraDataSize(int account) {
+        try {
+            boolean hasAntiDelete = VeyraDatabase.getInstance(account).hasEntries();
+            boolean hasHistory = VeyraEditHistoryManager.hasAnyHistory(account);
+            if (!hasAntiDelete && !hasHistory) {
+                return 0L;
+            }
+        } catch (Throwable ignored) {}
+
         long size = 0;
         try {
             File filesDir = ApplicationLoader.getFilesDirFixed();
             if (account != 0) {
                 filesDir = new File(filesDir, "account" + account + "/");
             }
-            File db1 = new File(filesDir, "veyra.db");
-            if (db1.exists()) size += db1.length();
-            File db1Wal = new File(filesDir, "veyra.db-wal");
-            if (db1Wal.exists()) size += db1Wal.length();
-            File db2 = ApplicationLoader.applicationContext.getDatabasePath("veyra_edit_history.db");
-            if (db2 != null && db2.exists()) size += db2.length();
+            File[] files = new File[]{
+                    new File(filesDir, "veyra.db"),
+                    new File(filesDir, "veyra.db-wal"),
+                    new File(filesDir, "veyra.db-shm")
+            };
+            for (File f : files) {
+                if (f != null && f.exists()) {
+                    size += f.length();
+                }
+            }
+
+            File editDb = VeyraEditHistoryManager.getDatabaseFile(account);
+            if (editDb != null && editDb.exists()) {
+                size += editDb.length();
+                File wal = new File(editDb.getPath() + "-wal");
+                if (wal.exists()) size += wal.length();
+                File shm = new File(editDb.getPath() + "-shm");
+                if (shm.exists()) size += shm.length();
+            }
         } catch (Throwable ignored) {}
         return size;
     }
@@ -421,11 +447,40 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         builder.setTitle("Clear Veyra Database");
         builder.setMessage("This will permanently delete all saved anti-deleted messages, edit history logs and reaction records for this account.");
         builder.setPositiveButton("Clear", (dialog, which) -> {
+            final int account = currentAccount;
             try {
-                VeyraAntiDelete.clearAll(currentAccount);
-                VeyraDatabase.getInstance(currentAccount).clearAll();
-                VeyraEditHistoryManager.clearAll(currentAccount);
-            } catch (Throwable ignored) {}
+                // 1. Get all anti-deleted messages so we can remove them from Telegram's messages_v2
+                LongSparseArray<ArrayList<Integer>> deletedByDialog = VeyraDatabase.getInstance(account).getAllDeletedMessages();
+                if (deletedByDialog != null && deletedByDialog.size() > 0) {
+                    MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
+                        for (int a = 0; a < deletedByDialog.size(); a++) {
+                            long did = deletedByDialog.keyAt(a);
+                            ArrayList<Integer> mids = deletedByDialog.valueAt(a);
+                            try {
+                                MessagesStorage.getInstance(account).markMessagesAsDeletedInternal(did, mids, true, 0, 0);
+                                MessagesStorage.getInstance(account).updateDialogsWithDeletedMessagesInternal(did, did < 0 ? -did : 0, mids, null);
+                            } catch (Throwable ignored) {}
+                            AndroidUtilities.runOnUIThread(() -> {
+                                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.messagesDeleted, mids, 0L, false);
+                            });
+                        }
+                    });
+                }
+
+                // 2. Clear Veyra anti-delete in-memory & database
+                VeyraAntiDelete.clearAll(account);
+                VeyraDatabase.getInstance(account).clearAll();
+
+                // 3. Clear Veyra edit & reaction history
+                VeyraEditHistoryManager.clearAll(account);
+
+                // 4. Notify UI to refresh all chats
+                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+
             reloadRows();
             try {
                 BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Veyra database cleared").show();

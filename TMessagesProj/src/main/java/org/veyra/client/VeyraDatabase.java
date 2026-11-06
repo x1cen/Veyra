@@ -44,18 +44,22 @@ public final class VeyraDatabase {
         this.currentAccount = account;
     }
 
+    public static File getDbFile(int account) {
+        File filesDir = ApplicationLoader.getFilesDirFixed();
+        if (account != 0) {
+            filesDir = new File(filesDir, "account" + account + "/");
+            filesDir.mkdirs();
+        }
+        return new File(filesDir, "veyra.db");
+    }
+
     public void init(SQLiteDatabase telegramDb) {
         synchronized (lock) {
             if (database != null) {
                 return;
             }
             try {
-                File filesDir = ApplicationLoader.getFilesDirFixed();
-                if (currentAccount != 0) {
-                    filesDir = new File(filesDir, "account" + currentAccount + "/");
-                    filesDir.mkdirs();
-                }
-                File dbFile = new File(filesDir, "veyra.db");
+                File dbFile = getDbFile(currentAccount);
                 database = new SQLiteDatabase(dbFile.getPath());
                 database.executeFast("PRAGMA secure_delete = ON").stepThis().dispose();
                 database.executeFast("PRAGMA temp_store = MEMORY").stepThis().dispose();
@@ -283,15 +287,86 @@ public final class VeyraDatabase {
         }
     }
 
-    public void clearAll() {
+    public boolean hasEntries() {
         synchronized (lock) {
-            if (database == null) return;
+            if (database == null) {
+                File dbFile = getDbFile(currentAccount);
+                if (!dbFile.exists()) {
+                    return false;
+                }
+                try {
+                    init(null);
+                } catch (Throwable ignored) {}
+            }
+            if (database == null) return false;
+            SQLiteCursor cursor = null;
             try {
-                database.executeFast("DELETE FROM veyra_deleted_index").stepThis().dispose();
-                database.executeFast("DELETE FROM veyra_deleted_messages").stepThis().dispose();
-                database.executeFast("VACUUM").stepThis().dispose();
+                cursor = database.queryFinalized("SELECT 1 FROM veyra_deleted_index LIMIT 1");
+                return cursor.next();
+            } catch (Throwable ignored) {
+                return false;
+            } finally {
+                if (cursor != null) cursor.dispose();
+            }
+        }
+    }
+
+    public androidx.collection.LongSparseArray<ArrayList<Integer>> getAllDeletedMessages() {
+        androidx.collection.LongSparseArray<ArrayList<Integer>> result = new androidx.collection.LongSparseArray<>();
+        synchronized (lock) {
+            if (database == null) {
+                File dbFile = getDbFile(currentAccount);
+                if (!dbFile.exists()) {
+                    return result;
+                }
+                try {
+                    init(null);
+                } catch (Throwable ignored) {}
+            }
+            if (database == null) return result;
+            SQLiteCursor cursor = null;
+            try {
+                cursor = database.queryFinalized("SELECT uid, mid FROM veyra_deleted_index");
+                while (cursor.next()) {
+                    long uid = cursor.longValue(0);
+                    int mid = cursor.intValue(1);
+                    ArrayList<Integer> list = result.get(uid);
+                    if (list == null) {
+                        list = new ArrayList<>();
+                        result.put(uid, list);
+                    }
+                    list.add(mid);
+                }
             } catch (Throwable t) {
                 FileLog.e(t);
+            } finally {
+                if (cursor != null) cursor.dispose();
+            }
+        }
+        return result;
+    }
+
+    public void clearAll() {
+        synchronized (lock) {
+            if (database != null) {
+                try {
+                    database.executeFast("DELETE FROM veyra_deleted_index").stepThis().dispose();
+                    database.executeFast("DELETE FROM veyra_deleted_messages").stepThis().dispose();
+                    database.executeFast("PRAGMA journal_size_limit = 0").stepThis().dispose();
+                    database.executeFast("VACUUM").stepThis().dispose();
+                    database.executeFast("PRAGMA journal_size_limit = 10485760").stepThis().dispose();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            } else {
+                try {
+                    File dbFile = getDbFile(currentAccount);
+                    if (dbFile.exists()) dbFile.delete();
+                    new File(dbFile.getPath() + "-wal").delete();
+                    new File(dbFile.getPath() + "-shm").delete();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
             }
         }
     }
