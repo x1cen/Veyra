@@ -154,6 +154,7 @@ import org.telegram.tgnet.tl.TL_update;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeDescription;
@@ -185,6 +186,7 @@ import org.telegram.ui.Components.ProxyDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.RLottieImageView;
 import org.telegram.ui.Components.RadialProgressView;
+import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.SimpleThemeDescription;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
@@ -196,6 +198,9 @@ import org.telegram.ui.Components.URLSpanNoUnderline;
 import org.telegram.ui.Components.VerticalPositionAutoAnimator;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import org.telegram.ui.Stars.ExplainStarsSheet;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
 import org.telegram.ui.bots.BotWebViewSheet;
@@ -10917,21 +10922,21 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (devices.isEmpty()) return;
 
             final Context context = getParentActivity();
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setTitle("Select Device Model");
+            final BottomSheet.Builder builder = new BottomSheet.Builder(context, true);
+            builder.setTitle("Select Device Model", true);
 
-            LinearLayout dialogLayout = new LinearLayout(context);
-            dialogLayout.setOrientation(VERTICAL);
-            dialogLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), 0);
+            LinearLayout sheetLayout = new LinearLayout(context);
+            sheetLayout.setOrientation(VERTICAL);
+            sheetLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
 
             EditText searchInput = new EditText(context);
             searchInput.setHint("Search brand or model");
             searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            searchInput.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10), AndroidUtilities.dp(10));
+            searchInput.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
             searchInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
             searchInput.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
             searchInput.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_windowBackgroundGray)));
-            dialogLayout.addView(searchInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+            sheetLayout.addView(searchInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
             final String[] brands = new String[]{"All", "Samsung", "Xiaomi", "Google", "Huawei", "OnePlus", "Sony", "POCO", "Redmi", "Honor", "Motorola", "Nothing", "Realme", "Oppo", "Vivo", "Asus"};
             final String[] selectedBrand = new String[]{"All"};
@@ -10943,62 +10948,54 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             LinearLayout brandContainer = new LinearLayout(context);
             brandContainer.setOrientation(HORIZONTAL);
             brandScrollView.addView(brandContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
-            dialogLayout.addView(brandScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+            sheetLayout.addView(brandScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-            android.widget.ListView listView = new android.widget.ListView(context);
-            listView.setDivider(null);
             final ArrayList<org.veyra.client.VeyraFakeIdentity.DeviceSpec> filtered = new ArrayList<>();
+            final RecyclerListView listView = new RecyclerListView(context);
+            listView.setLayoutManager(new LinearLayoutManager(context));
+            listView.setVerticalScrollBarEnabled(true);
 
-            final android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+            final RecyclerListView.SelectionAdapter adapter = new RecyclerListView.SelectionAdapter() {
                 @Override
-                public int getCount() {
+                public boolean isEnabled(RecyclerView.ViewHolder holder) {
+                    return true;
+                }
+
+                @Override
+                public int getItemCount() {
                     return filtered.size();
                 }
 
+                @NonNull
                 @Override
-                public Object getItem(int position) {
-                    return filtered.get(position);
+                public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                    LinearLayout row = new LinearLayout(context);
+                    row.setOrientation(VERTICAL);
+                    row.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8));
+                    row.setBackground(Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_listSelector), AndroidUtilities.dp(6), AndroidUtilities.dp(6)));
+
+                    TextView title = new TextView(context);
+                    title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                    title.setTypeface(AndroidUtilities.bold());
+                    title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+                    row.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                    TextView subtitle = new TextView(context);
+                    subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+                    subtitle.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+                    row.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+                    row.setTag(new TextView[]{title, subtitle});
+                    row.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    return new RecyclerListView.Holder(row);
                 }
 
                 @Override
-                public long getItemId(int position) {
-                    return position;
-                }
-
-                @Override
-                public View getView(int position, View convertView, ViewGroup parent) {
-                    LinearLayout row;
-                    TextView title;
-                    TextView subtitle;
-                    if (convertView == null) {
-                        row = new LinearLayout(context);
-                        row.setOrientation(VERTICAL);
-                        row.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8));
-                        row.setBackground(Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_listSelector), AndroidUtilities.dp(6), AndroidUtilities.dp(6)));
-
-                        title = new TextView(context);
-                        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-                        title.setTypeface(AndroidUtilities.bold());
-                        title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-                        row.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-                        subtitle = new TextView(context);
-                        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-                        subtitle.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-                        row.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
-
-                        row.setTag(new TextView[]{title, subtitle});
-                    } else {
-                        row = (LinearLayout) convertView;
-                        TextView[] tags = (TextView[]) row.getTag();
-                        title = tags[0];
-                        subtitle = tags[1];
-                    }
-
+                public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                    TextView[] tags = (TextView[]) holder.itemView.getTag();
                     org.veyra.client.VeyraFakeIdentity.DeviceSpec spec = filtered.get(position);
-                    title.setText(spec.model);
-                    subtitle.setText(spec.manufacturer + " • " + spec.systemVersion);
-                    return row;
+                    tags[0].setText(spec.model);
+                    tags[1].setText(spec.manufacturer + " • " + spec.systemVersion);
                 }
             };
 
@@ -11051,13 +11048,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             applyFilter.run();
 
             listView.setAdapter(adapter);
-            dialogLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(340)));
+            int listHeight = Math.max(AndroidUtilities.dp(360), (int) (AndroidUtilities.displaySize.y * 0.50f));
+            sheetLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, listHeight));
 
-            builder.setView(dialogLayout);
-            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-            final AlertDialog dialog = builder.create();
+            builder.setCustomView(sheetLayout);
+            final BottomSheet sheet = builder.create();
 
-            listView.setOnItemClickListener((parent, view, position, id) -> {
+            listView.setOnItemClickListener((view, position) -> {
                 if (position >= 0 && position < filtered.size()) {
                     org.veyra.client.VeyraFakeIdentity.DeviceSpec chosen = filtered.get(position);
                     deviceModelTextView.setText(chosen.model);
@@ -11069,7 +11066,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         currentProfile.appVersion = chosen.appVersion;
                     }
                     updateAllOutlineLabels();
-                    dialog.dismiss();
+                    sheet.dismiss();
                 }
             });
 
@@ -11084,7 +11081,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 public void afterTextChanged(Editable s) {}
             });
 
-            showDialog(dialog);
+            showDialog(sheet);
         }
 
         public void regenerateProfile() {
