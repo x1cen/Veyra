@@ -549,7 +549,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         titleView.setText(UserObject.getUserName(user));
         final StringBuilder sb = new StringBuilder();
         if (user != null) {
-            sb.append(PhoneFormat.getInstance().format("+" + user.phone));
+            String formattedPhone = PhoneFormat.getInstance().format("+" + user.phone);
+            if (org.veyra.client.VeyraUIConfig.hidePhoneNumber) {
+                formattedPhone = org.veyra.client.VeyraUIConfig.maskFormattedPhone(formattedPhone);
+            }
+            sb.append(formattedPhone);
         }
         final String username = UserObject.getPublicUsername(user);
         if (username != null) {
@@ -674,8 +678,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             ));
             items.add(UItem.asShadow(null));
         } else if (suggestions.contains("VALIDATE_PHONE_NUMBER") && getUserConfig().getCurrentUser() != null) {
+            String checkPhone = PhoneFormat.getInstance().format("+" + getUserConfig().getCurrentUser().phone);
+            if (org.veyra.client.VeyraUIConfig.hidePhoneNumber) {
+                checkPhone = org.veyra.client.VeyraUIConfig.maskFormattedPhone(checkPhone);
+            }
             items.add(SuggestionCell.Factory.of(
-                formatString(R.string.CheckPhoneNumber, PhoneFormat.getInstance().format("+" + getUserConfig().getCurrentUser().phone)),
+                formatString(R.string.CheckPhoneNumber, checkPhone),
                 replaceSingleTag(getString(R.string.CheckPhoneNumberInfo), () -> {
                     Browser.openUrl(getContext(), getString(R.string.CheckPhoneNumberLearnMoreUrl));
                 }),

@@ -13626,10 +13626,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             text = PhoneFormat.getInstance().format("+" + vcardPhone);
                             phoneNumber = vcardPhone;
                         } else if (user != null && !TextUtils.isEmpty(user.phone)) {
+                            text = PhoneFormat.getInstance().format("+" + user.phone);
                             if (org.veyra.client.VeyraUIConfig.hidePhoneNumber && UserObject.isUserSelf(user)) {
-                                text = "••••••••••••";
-                            } else {
-                                text = PhoneFormat.getInstance().format("+" + user.phone);
+                                text = org.veyra.client.VeyraUIConfig.maskFormattedPhone(text);
                             }
                             phoneNumber = user.phone;
                         } else {

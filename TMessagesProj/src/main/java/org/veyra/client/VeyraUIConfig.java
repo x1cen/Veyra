@@ -96,6 +96,47 @@ public class VeyraUIConfig {
         save("hidePhoneNumber", hidePhoneNumber);
     }
 
+    public static String maskFormattedPhone(String formatted) {
+        if (formatted == null || formatted.isEmpty()) {
+            return "";
+        }
+        int totalDigits = 0;
+        for (int i = 0; i < formatted.length(); i++) {
+            if (Character.isDigit(formatted.charAt(i))) {
+                totalDigits++;
+            }
+        }
+        if (totalDigits <= 4) {
+            return formatted;
+        }
+
+        int countryCodeDigits = 2;
+        try {
+            String stripped = org.telegram.PhoneFormat.PhoneFormat.stripExceptNumbers(formatted);
+            org.telegram.PhoneFormat.CallingCodeInfo info = org.telegram.PhoneFormat.PhoneFormat.getInstance().findCallingCodeInfo(stripped);
+            if (info != null && info.callingCode != null && !info.callingCode.isEmpty()) {
+                countryCodeDigits = info.callingCode.length();
+            }
+        } catch (Throwable ignored) {}
+
+        StringBuilder sb = new StringBuilder(formatted.length());
+        int digitIndex = 0;
+        for (int i = 0; i < formatted.length(); i++) {
+            char c = formatted.charAt(i);
+            if (Character.isDigit(c)) {
+                digitIndex++;
+                if (digitIndex <= countryCodeDigits || digitIndex > totalDigits - 2) {
+                    sb.append(c);
+                } else {
+                    sb.append('•');
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
     public static boolean isAntiDeleteInScope(int account, long dialogId) {
         return VeyraScope.ANTI_DELETE.isInScope(account, dialogId, true);
     }
