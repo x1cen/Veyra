@@ -452,19 +452,15 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 // 1. Get all anti-deleted messages so we can remove them from Telegram's messages_v2
                 LongSparseArray<ArrayList<Integer>> deletedByDialog = VeyraDatabase.getInstance(account).getAllDeletedMessages();
                 if (deletedByDialog != null && deletedByDialog.size() > 0) {
-                    MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
-                        for (int a = 0; a < deletedByDialog.size(); a++) {
-                            long did = deletedByDialog.keyAt(a);
-                            ArrayList<Integer> mids = deletedByDialog.valueAt(a);
+                    for (int a = 0; a < deletedByDialog.size(); a++) {
+                        long did = deletedByDialog.keyAt(a);
+                        ArrayList<Integer> mids = deletedByDialog.valueAt(a);
+                        if (mids != null && !mids.isEmpty()) {
                             try {
-                                MessagesStorage.getInstance(account).markMessagesAsDeletedInternal(did, mids, true, 0, 0);
-                                MessagesStorage.getInstance(account).updateDialogsWithDeletedMessagesInternal(did, did < 0 ? -did : 0, mids, null);
+                                MessagesController.getInstance(account).deleteMessages(mids, null, null, did, 0, false, 0, true);
                             } catch (Throwable ignored) {}
-                            AndroidUtilities.runOnUIThread(() -> {
-                                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.messagesDeleted, mids, 0L, false);
-                            });
                         }
-                    });
+                    }
                 }
 
                 // 2. Clear Veyra anti-delete in-memory & database
