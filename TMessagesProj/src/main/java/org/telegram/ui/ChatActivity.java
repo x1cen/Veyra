@@ -7387,16 +7387,26 @@ public class ChatActivity extends BaseFragment implements
                 TLRPC.TL_document document = (TLRPC.TL_document) object;
                 Object parent = mentionContainer.getAdapter().getItemParent(position);
                 String query = MessageObject.findAnimatedEmojiEmoticon(document);
-                AlertsCreator.ensurePaidMessageConfirmation(currentAccount, getDialogId(), 1, price -> {
-                    if (chatMode == MODE_SCHEDULED) {
-                        AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), dialog_id, (notify, scheduleDate, scheduleRepeatPeriod) -> SendMessagesHelper.getInstance(currentAccount).sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, null, notify, scheduleDate, 0, false, parent, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams()), themeDelegate);
-                    } else {
-                        getSendMessagesHelper().sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, sendAnimationData, true, 0, 0, false, parent, getMessageChatSendParams(), price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
-                    }
-                    hideFieldPanel(false);
-                    chatActivityEnterView.addStickerToRecent(document);
-                    chatActivityEnterView.setFieldText("");
-                });
+                Runnable sendStickerRunnable = () -> {
+                    AlertsCreator.ensurePaidMessageConfirmation(currentAccount, getDialogId(), 1, price -> {
+                        if (chatMode == MODE_SCHEDULED) {
+                            AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), dialog_id, (notify, scheduleDate, scheduleRepeatPeriod) -> SendMessagesHelper.getInstance(currentAccount).sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, null, notify, scheduleDate, 0, false, parent, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams()), themeDelegate);
+                        } else {
+                            getSendMessagesHelper().sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, sendAnimationData, true, 0, 0, false, parent, getMessageChatSendParams(), price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                        }
+                        hideFieldPanel(false);
+                        chatActivityEnterView.addStickerToRecent(document);
+                        chatActivityEnterView.setFieldText("");
+                    });
+                };
+                if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendSticker) {
+                    org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), ChatActivity.this,
+                            "Send Sticker?",
+                            "Are you sure you want to send this sticker?",
+                            sendStickerRunnable);
+                } else {
+                    sendStickerRunnable.run();
+                }
             } else if (object instanceof TLRPC.Chat) {
                 TLRPC.Chat chat = (TLRPC.Chat) object;
                 if (searchingForUser && searchContainer != null && searchContainer.getVisibility() == View.VISIBLE) {
@@ -32884,8 +32894,18 @@ public class ChatActivity extends BaseFragment implements
             };
             updateGreetingLock();
             greetingsViewContainer.setListener((sticker) -> {
-                animatingDocuments.put(sticker, 0);
-                SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, null, dialog_id, null, null, null, replyingQuote, null, true, 0, 0, false, null, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                Runnable sendRunnable = () -> {
+                    animatingDocuments.put(sticker, 0);
+                    SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, null, dialog_id, null, null, null, replyingQuote, null, true, 0, 0, false, null, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                };
+                if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendSticker) {
+                    org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), ChatActivity.this,
+                            "Send Sticker?",
+                            "Are you sure you want to send this sticker?",
+                            sendRunnable);
+                } else {
+                    sendRunnable.run();
+                }
             });
 //            greetingsViewContainer.setBackground(Theme.createServiceDrawable(AndroidUtilities.dp(16), greetingsViewContainer, contentView, getThemedPaint(Theme.key_paint_chatActionBackground)));
             emptyViewContent = new LinearLayout(getContext());
@@ -32933,8 +32953,18 @@ public class ChatActivity extends BaseFragment implements
                     };
                     updateGreetingLock();
                     greetingsViewContainer.setListener((sticker) -> {
-                        animatingDocuments.put(sticker, 0);
-                        SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, null, dialog_id, null, null, null, replyingQuote, null, true, 0, 0, false, null, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                        Runnable sendRunnable = () -> {
+                            animatingDocuments.put(sticker, 0);
+                            SendMessagesHelper.getInstance(currentAccount).sendSticker(sticker, null, dialog_id, null, null, null, replyingQuote, null, true, 0, 0, false, null, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                        };
+                        if (org.veyra.client.VeyraUIConfig.confirmBeforeSending && org.veyra.client.VeyraUIConfig.confirmSendSticker) {
+                            org.veyra.client.VeyraMediaConfirm.showConfirm(getContext(), ChatActivity.this,
+                                    "Send Sticker?",
+                                    "Are you sure you want to send this sticker?",
+                                    sendRunnable);
+                        } else {
+                            sendRunnable.run();
+                        }
                     });
 //                    greetingsViewContainer.setBackground(Theme.createServiceDrawable(AndroidUtilities.dp(16), greetingsViewContainer, contentView, getThemedPaint(Theme.key_paint_chatActionBackground)));
                     if (userInfo != null && userInfo.business_intro != null) {
