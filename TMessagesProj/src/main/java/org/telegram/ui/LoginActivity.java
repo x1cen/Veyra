@@ -10738,7 +10738,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         private TextView subtitleView;
 
         private OutlineTextContainerView deviceModelOutlineView;
-        private TextView deviceModelTextView;
+        private EditTextBoldCursor deviceModelField;
         private OutlineTextContainerView systemVersionOutlineView;
         private EditTextBoldCursor systemVersionField;
 
@@ -10785,35 +10785,26 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText6));
             contentLayout.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 32, 8, 32, 16));
 
-            // 1. Device Model (Searchable, full Android device list)
+            // 1. Device Model (Editable)
             deviceModelOutlineView = new OutlineTextContainerView(context);
             deviceModelOutlineView.setText("Device Model");
 
-            LinearLayout deviceModelRow = new LinearLayout(context);
-            deviceModelRow.setOrientation(HORIZONTAL);
-            deviceModelRow.setGravity(Gravity.CENTER_VERTICAL);
+            deviceModelField = new EditTextBoldCursor(context);
+            deviceModelField.setCursorSize(AndroidUtilities.dp(18));
+            deviceModelField.setCursorWidth(1.5f);
+            deviceModelField.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            deviceModelField.setMaxLines(1);
+            deviceModelField.setInputType(EditorInfo.TYPE_CLASS_TEXT);
+            deviceModelField.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            deviceModelField.setHintTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteHintText));
+            deviceModelField.setCursorColor(Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated));
+            deviceModelField.setBackground(null);
+            deviceModelField.setGravity(Gravity.CENTER_VERTICAL);
+            deviceModelField.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            deviceModelField.setOnFocusChangeListener((v, hasFocus) -> deviceModelOutlineView.animateSelection(hasFocus ? 1f : 0f, 1f, true));
 
-            deviceModelTextView = new TextView(context);
-            deviceModelTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            deviceModelTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            deviceModelTextView.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(8), 0);
-            deviceModelTextView.setGravity(Gravity.CENTER_VERTICAL);
-            deviceModelTextView.setSingleLine(true);
-            deviceModelTextView.setEllipsize(TextUtils.TruncateAt.END);
-            deviceModelRow.addView(deviceModelTextView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1.0f));
-
-            ImageView searchIcon = new ImageView(context);
-            searchIcon.setImageResource(R.drawable.smiles_tab_search);
-            searchIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
-            deviceModelRow.addView(searchIcon, LayoutHelper.createLinear(20, 20, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
-
-            deviceModelOutlineView.addView(deviceModelRow, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
-
-            OnClickListener deviceClickListener = v -> showDeviceSearchDialog();
-            deviceModelOutlineView.setOnClickListener(deviceClickListener);
-            deviceModelRow.setOnClickListener(deviceClickListener);
-            deviceModelTextView.setOnClickListener(deviceClickListener);
-
+            deviceModelOutlineView.attachEditText(deviceModelField);
+            deviceModelOutlineView.addView(deviceModelField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
             contentLayout.addView(deviceModelOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 58, Gravity.CENTER_HORIZONTAL, 16, 6, 16, 6));
 
             // 2. System Version (Under Device Model, editable)
@@ -10916,178 +10907,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             regenerateProfile();
         }
 
-        private void showDeviceSearchDialog() {
-            if (getParentActivity() == null) return;
-            final List<org.veyra.client.VeyraFakeIdentity.DeviceSpec> devices = org.veyra.client.VeyraFakeIdentity.getDevices();
-            if (devices.isEmpty()) return;
-
-            final Context context = getParentActivity();
-            final BottomSheet.Builder builder = new BottomSheet.Builder(context, true);
-            builder.setTitle("Select Device Model", true);
-
-            LinearLayout sheetLayout = new LinearLayout(context);
-            sheetLayout.setOrientation(VERTICAL);
-            sheetLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
-
-            EditText searchInput = new EditText(context);
-            searchInput.setHint("Search brand or model");
-            searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            searchInput.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
-            searchInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-            searchInput.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-            searchInput.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_windowBackgroundGray)));
-            sheetLayout.addView(searchInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-            final String[] brands = new String[]{"All", "Samsung", "Xiaomi", "Google", "Huawei", "OnePlus", "Sony", "POCO", "Redmi", "Honor", "Motorola", "Nothing", "Realme", "Oppo", "Vivo", "Asus"};
-            final String[] selectedBrand = new String[]{"All"};
-            final ArrayList<TextView> chipViews = new ArrayList<>();
-
-            android.widget.HorizontalScrollView brandScrollView = new android.widget.HorizontalScrollView(context);
-            brandScrollView.setHorizontalScrollBarEnabled(false);
-            brandScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            LinearLayout brandContainer = new LinearLayout(context);
-            brandContainer.setOrientation(HORIZONTAL);
-            brandScrollView.addView(brandContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
-            sheetLayout.addView(brandScrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-            final ArrayList<org.veyra.client.VeyraFakeIdentity.DeviceSpec> filtered = new ArrayList<>();
-            final RecyclerListView listView = new RecyclerListView(context);
-            listView.setLayoutManager(new LinearLayoutManager(context));
-            listView.setVerticalScrollBarEnabled(true);
-
-            final RecyclerListView.SelectionAdapter adapter = new RecyclerListView.SelectionAdapter() {
-                @Override
-                public boolean isEnabled(RecyclerView.ViewHolder holder) {
-                    return true;
-                }
-
-                @Override
-                public int getItemCount() {
-                    return filtered.size();
-                }
-
-                @NonNull
-                @Override
-                public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                    LinearLayout row = new LinearLayout(context);
-                    row.setOrientation(VERTICAL);
-                    row.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8), AndroidUtilities.dp(8));
-                    row.setBackground(Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_listSelector), AndroidUtilities.dp(6), AndroidUtilities.dp(6)));
-
-                    TextView title = new TextView(context);
-                    title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-                    title.setTypeface(AndroidUtilities.bold());
-                    title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-                    row.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-                    TextView subtitle = new TextView(context);
-                    subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-                    subtitle.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-                    row.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
-
-                    row.setTag(new TextView[]{title, subtitle});
-                    row.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    return new RecyclerListView.Holder(row);
-                }
-
-                @Override
-                public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-                    TextView[] tags = (TextView[]) holder.itemView.getTag();
-                    org.veyra.client.VeyraFakeIdentity.DeviceSpec spec = filtered.get(position);
-                    tags[0].setText(spec.model);
-                    tags[1].setText(spec.manufacturer + " • " + spec.systemVersion);
-                }
-            };
-
-            final Runnable applyFilter = () -> {
-                filtered.clear();
-                String q = searchInput.getText() != null ? searchInput.getText().toString().trim().toLowerCase() : "";
-                String brand = selectedBrand[0];
-                for (int i = 0; i < devices.size(); i++) {
-                    org.veyra.client.VeyraFakeIdentity.DeviceSpec spec = devices.get(i);
-                    boolean matchBrand = "All".equalsIgnoreCase(brand) || spec.manufacturer.equalsIgnoreCase(brand);
-                    boolean matchQuery = q.isEmpty() || spec.model.toLowerCase().contains(q) || spec.manufacturer.toLowerCase().contains(q);
-                    if (matchBrand && matchQuery) {
-                        filtered.add(spec);
-                    }
-                }
-                adapter.notifyDataSetChanged();
-            };
-
-            final Runnable updateChips = () -> {
-                final int activeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-                final int inactiveBg = Theme.getColor(Theme.key_windowBackgroundGray);
-                final int activeText = Theme.getColor(Theme.key_featuredStickers_buttonText);
-                final int inactiveText = Theme.getColor(Theme.key_dialogTextBlack);
-
-                for (int i = 0; i < brands.length; i++) {
-                    TextView chip = chipViews.get(i);
-                    boolean isSelected = brands[i].equalsIgnoreCase(selectedBrand[0]);
-                    chip.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(14), isSelected ? activeColor : inactiveBg));
-                    chip.setTextColor(isSelected ? activeText : inactiveText);
-                }
-            };
-
-            for (int i = 0; i < brands.length; i++) {
-                final String b = brands[i];
-                TextView chip = new TextView(context);
-                chip.setText(b);
-                chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-                chip.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
-                chip.setGravity(Gravity.CENTER);
-                chip.setOnClickListener(v -> {
-                    selectedBrand[0] = b;
-                    updateChips.run();
-                    applyFilter.run();
-                });
-                chipViews.add(chip);
-                brandContainer.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 6, 0));
-            }
-
-            updateChips.run();
-            applyFilter.run();
-
-            listView.setAdapter(adapter);
-            int listHeight = Math.max(AndroidUtilities.dp(360), (int) (AndroidUtilities.displaySize.y * 0.50f));
-            sheetLayout.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, listHeight));
-
-            builder.setCustomView(sheetLayout);
-            final BottomSheet sheet = builder.create();
-
-            listView.setOnItemClickListener((view, position) -> {
-                if (position >= 0 && position < filtered.size()) {
-                    org.veyra.client.VeyraFakeIdentity.DeviceSpec chosen = filtered.get(position);
-                    deviceModelTextView.setText(chosen.model);
-                    systemVersionField.setText(chosen.systemVersion);
-                    appVersionField.setText(chosen.appVersion);
-                    if (currentProfile != null) {
-                        currentProfile.deviceModel = chosen.model;
-                        currentProfile.systemVersion = chosen.systemVersion;
-                        currentProfile.appVersion = chosen.appVersion;
-                    }
-                    updateAllOutlineLabels();
-                    sheet.dismiss();
-                }
-            });
-
-            searchInput.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    applyFilter.run();
-                }
-                @Override
-                public void afterTextChanged(Editable s) {}
-            });
-
-            showDialog(sheet);
-        }
-
         public void regenerateProfile() {
             currentProfile = org.veyra.client.VeyraFakeIdentity.generateProfile();
             if (currentProfile != null) {
-                deviceModelTextView.setText(currentProfile.deviceModel);
+                deviceModelField.setText(currentProfile.deviceModel);
                 systemVersionField.setText(currentProfile.systemVersion);
                 appVersionField.setText(currentProfile.appVersion);
                 apiIdField.setText(String.valueOf(currentProfile.apiId));
@@ -11145,7 +10968,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             String hashStr = apiHashField.getText() != null ? apiHashField.getText().toString().trim() : "";
             String sysVer = systemVersionField.getText() != null ? systemVersionField.getText().toString().trim() : "";
             String appVer = appVersionField.getText() != null ? appVersionField.getText().toString().trim() : "";
-            String devModel = deviceModelTextView.getText() != null ? deviceModelTextView.getText().toString().trim() : "";
+            String devModel = deviceModelField.getText() != null ? deviceModelField.getText().toString().trim() : "";
 
             int customId = 0;
             try {
