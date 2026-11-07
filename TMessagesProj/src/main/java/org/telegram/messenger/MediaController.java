@@ -5654,6 +5654,12 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                 document = message.qualityToSave;
                             }
                             String name = FileLoader.getDocumentFileName(document);
+                            if (TextUtils.isEmpty(name)) {
+                                name = FileLoader.getAttachFileName(document);
+                            }
+                            if (TextUtils.isEmpty(name)) {
+                                name = "video_" + (document != null ? document.id : System.currentTimeMillis()) + ".mp4";
+                            }
                             File destFile = new File(dir, name);
                             if (destFile.exists()) {
                                 int idx = name.lastIndexOf('.');
