@@ -31,6 +31,7 @@ public class VeyraUIConfig {
     public static boolean confirmSendSticker = true;
     public static boolean confirmSendDocument = true;
     public static boolean confirmSendAudio = true;
+    public static boolean roundVideoWatermark = false;
 
     // Edit History & Privacy
     public static boolean editHistoryEnabled = true;
@@ -71,6 +72,7 @@ public class VeyraUIConfig {
             confirmSendSticker = prefs.getBoolean("confirmSendSticker", true);
             confirmSendDocument = prefs.getBoolean("confirmSendDocument", true);
             confirmSendAudio = prefs.getBoolean("confirmSendAudio", true);
+            roundVideoWatermark = prefs.getBoolean("roundVideoWatermark", false);
             downloadSpeedBoost = prefs.getInt("downloadSpeedBoost", 1);
             editHistoryEnabled = prefs.getBoolean("editHistoryEnabled", true);
             editHistoryLimit = prefs.getInt("editHistoryLimit", 20);
@@ -232,6 +234,11 @@ public class VeyraUIConfig {
     public static void toggleConfirmSendAudio() {
         confirmSendAudio = !confirmSendAudio;
         save("confirmSendAudio", confirmSendAudio);
+    }
+
+    public static void toggleRoundVideoWatermark() {
+        roundVideoWatermark = !roundVideoWatermark;
+        save("roundVideoWatermark", roundVideoWatermark);
     }
 
     public static void setDownloadSpeedBoost(int val) {

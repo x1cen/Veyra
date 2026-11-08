@@ -304,6 +304,16 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 false
         ));
         r.add(VeyraSettingsRow.shadow());
+
+        r.add(VeyraSettingsRow.header("Video Messages"));
+        r.add(VeyraSettingsRow.toggle(
+                "Video Message Watermark",
+                "Add curved Veyra watermark to recorded video messages",
+                () -> VeyraUIConfig.roundVideoWatermark,
+                val -> VeyraUIConfig.toggleRoundVideoWatermark(),
+                false
+        ));
+        r.add(VeyraSettingsRow.shadow());
     }
 
     private void buildConfirmSend(List<VeyraSettingsRow> r) {
