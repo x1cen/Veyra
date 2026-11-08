@@ -1663,7 +1663,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 if (f != null && f.exists()) {
                     preparePlayer(f);
                 } else {
-                    File file = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
+                    File file = messageObject.isLivePhoto() ? FileLoader.getInstance(currentAccount).getPathToAttach(document, null, true) : FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
                     if (file == null || !file.exists()) {
                         File attach = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.getDocument());
                         if (attach != null && attach.exists()) {
