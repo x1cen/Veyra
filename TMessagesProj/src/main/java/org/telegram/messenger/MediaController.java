@@ -4001,7 +4001,21 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
 
                     @Override
                     public void onError(VideoPlayer player, Exception e) {
-
+                        FileLog.e(e);
+                        final File corruptedFile = cacheFile;
+                        final MessageObject currentMsg = messageObject;
+                        cleanupPlayer(true, true);
+                        if (corruptedFile != null && corruptedFile.exists() && exists) {
+                            try {
+                                corruptedFile.delete();
+                            } catch (Exception ex) {
+                                FileLog.e(ex);
+                            }
+                            if (currentMsg != null) {
+                                currentMsg.mediaExists = false;
+                                AndroidUtilities.runOnUIThread(() -> playMessage(currentMsg));
+                            }
+                        }
                     }
 
                     @Override

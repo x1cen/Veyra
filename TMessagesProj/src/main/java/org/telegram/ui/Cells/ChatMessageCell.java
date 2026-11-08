@@ -6203,6 +6203,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     private void cancelLoading(MessageObject messageObject) {
         if (messageObject != null && !messageObject.mediaExists && !messageObject.putInDownloadsStore && !DownloadController.getInstance(currentAccount).isDownloading(messageObject.messageOwner.id) && !PhotoViewer.getInstance().isVisible()) {
+            if (MediaController.getInstance().isSamePlayingMessage(messageObject) && MediaController.getInstance().isDownloadingCurrentMessage()) {
+                return;
+            }
             TLRPC.Document document = messageObject.getDocument();
             boolean loadDocumentFromImageReceiver = MessageObject.isStickerDocument(document) || MessageObject.isAnimatedStickerDocument(document, true) || MessageObject.isGifDocument(document) || MessageObject.isRoundVideoDocument(document);
             if (!loadDocumentFromImageReceiver) {
