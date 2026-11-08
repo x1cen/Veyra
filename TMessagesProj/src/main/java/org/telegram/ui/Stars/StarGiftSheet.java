@@ -173,6 +173,8 @@ import org.telegram.ui.Gifts.GiftMessageBottomSheet;
 import org.telegram.ui.Gifts.GiftMessageView;
 import org.telegram.ui.Gifts.GiftSheet;
 import org.telegram.ui.Gifts.ProfileGiftsContainer;
+import org.telegram.ui.JsonViewerActivity;
+import org.telegram.ui.MessageDetailsActivity;
 import org.telegram.ui.Gifts.ResaleGiftsFragment;
 import org.telegram.ui.GradientClip;
 import org.telegram.ui.LaunchActivity;
@@ -1148,6 +1150,32 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             .addIf(walletCollectible == null && canTransfer(), R.drawable.menu_transfer, getString(R.string.Gift2TransferOption), this::openTransfer)
             .addIf(walletCollectible != null, R.drawable.menu_transfer, getString(R.string.Gift2TransferOption), this::openWalletTransfer)
             .addIf(savedStarGift == null && getDialogId() != 0, R.drawable.msg_view_file, getString(R.string.Gift2ViewInProfile), this::openInProfile)
+            .add(R.drawable.msg_info, "View Raw", () -> {
+                dismiss();
+                BaseFragment lastFragment = LaunchActivity.getSafeLastFragment();
+                if (lastFragment != null) {
+                    lastFragment.presentFragment(new JsonViewerActivity(() -> {
+                        com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                        if (savedStarGift != null) {
+                            root.add("saved_star_gift", MessageDetailsActivity.gson.toJsonTree(savedStarGift));
+                        }
+                        TL_stars.StarGift g = getGift();
+                        if (g != null) {
+                            root.add("star_gift", MessageDetailsActivity.gson.toJsonTree(g));
+                        }
+                        if (slugStarGift != null && slugStarGift != g) {
+                            root.add("slug_star_gift", MessageDetailsActivity.gson.toJsonTree(slugStarGift));
+                        }
+                        if (walletCollectible != null) {
+                            root.add("wallet_collectible", MessageDetailsActivity.gson.toJsonTree(walletCollectible));
+                        }
+                        if (messageObject != null && messageObject.messageOwner != null) {
+                            root.add("message", MessageDetailsActivity.gson.toJsonTree(messageObject.messageOwner));
+                        }
+                        return MessageDetailsActivity.prettyGson.toJson(root);
+                    }, "View Raw"));
+                }
+            })
             .addIf(canDelete(), R.drawable.msg_delete, getString(R.string.Gift2DeleteOption), true, this::deleteGift)
             .setDrawScrim(false)
             .setOnTopOfScrim()
@@ -2497,9 +2525,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }
             closeView.setAlpha(Math.max(backdrop[0] != null ? p.at(PAGE_WEAR) : 0.0f, backdrop[1] != null ? p.at(PAGE_UPGRADE) : 0.0f));
             closeView.setVisibility(backdrop[0] != null && p.to == PAGE_WEAR || backdrop[1] != null && p.to == PAGE_UPGRADE ? View.VISIBLE : View.GONE);
-            final boolean hasOptions = backdrop[0] != null || showOptions;
-            optionsView.setAlpha(lerp(false, hasOptions, p.at(PAGE_INFO)));
-            optionsView.setVisibility(hasOptions && p.to == PAGE_INFO ? View.VISIBLE : View.GONE);
+            final boolean hasOptions = true;
+            optionsView.setAlpha(p.at(PAGE_INFO));
+            optionsView.setVisibility(p.to == PAGE_INFO ? View.VISIBLE : View.GONE);
             final boolean optionsLight = backdrop[0] != null;
             if (optionsViewLight == null || optionsViewLight != optionsLight) {
                 optionsViewLight = optionsLight;

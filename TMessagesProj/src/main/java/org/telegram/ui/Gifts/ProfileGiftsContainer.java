@@ -108,6 +108,8 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorPro
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PeerColorActivity;
 import org.telegram.ui.ProfileActivity;
+import org.telegram.ui.JsonViewerActivity;
+import org.telegram.ui.MessageDetailsActivity;
 import org.telegram.ui.Stars.StarGiftSheet;
 import org.telegram.ui.Stars.StarsController;
 import org.telegram.ui.Stories.recorder.ButtonWithCounterView;
@@ -1010,6 +1012,21 @@ public class ProfileGiftsContainer extends FrameLayout implements NotificationCe
                         }
                     }).makeMultiline(false).cutTextInFancyHalf();
                 }
+                o.add(R.drawable.msg_info, "View Raw", () -> {
+                    o.dismiss();
+                    if (parent.fragment != null) {
+                        parent.fragment.presentFragment(new JsonViewerActivity(() -> {
+                            com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+                            if (savedStarGift != null) {
+                                root.add("saved_star_gift", MessageDetailsActivity.gson.toJsonTree(savedStarGift));
+                                if (savedStarGift.gift != null) {
+                                    root.add("star_gift", MessageDetailsActivity.gson.toJsonTree(savedStarGift.gift));
+                                }
+                            }
+                            return MessageDetailsActivity.prettyGson.toJson(root);
+                        }, "View Raw"));
+                    }
+                });
                 if (o.getItemsCount() <= 0) {
                     return false;
                 }
