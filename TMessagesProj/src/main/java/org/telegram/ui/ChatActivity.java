@@ -46020,6 +46020,20 @@ public class ChatActivity extends BaseFragment implements
                 });
                 removeTag.setColors(Theme.getColor(Theme.key_color_red), Theme.getColor(Theme.key_color_red));
                 popupLayout.addView(removeTag);
+
+                if (reaction.reaction instanceof TLRPC.TL_reactionCustomEmoji) {
+                    final TLRPC.TL_reactionCustomEmoji customEmoji = (TLRPC.TL_reactionCustomEmoji) reaction.reaction;
+                    ActionBarMenuSubItem copyIdItem = new ActionBarMenuSubItem(getParentActivity(), false, false, themeDelegate);
+                    copyIdItem.setTextAndIcon(LocaleController.isRTL ? "کپی شناسه" : "Copy ID", R.drawable.msg_copy);
+                    copyIdItem.setMinimumWidth(160);
+                    copyIdItem.setOnClickListener(view -> {
+                        closeMenu();
+                        AndroidUtilities.addToClipboard(String.valueOf(customEmoji.document_id));
+                        BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.isRTL ? "شناسه ایموجی کپی شد" : "Emoji ID copied").show();
+                    });
+                    popupLayout.addView(copyIdItem);
+                }
+
                 scrimPopupContainerLayout.addView(popupLayout);
             } else if (messageObject != null && messageObject.messageOwner != null && messageObject.messageOwner.reactions != null && messageObject.messageOwner.reactions.can_see_list || dialog_id >= 0) {
                 final boolean canDeleteReactions = ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_DELETE_MESSAGES)
@@ -46101,12 +46115,33 @@ public class ChatActivity extends BaseFragment implements
                     linearLayout.addView(tapAndHoldView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
                 }
 
+                if (reaction.reaction instanceof TLRPC.TL_reactionCustomEmoji) {
+                    final TLRPC.TL_reactionCustomEmoji customEmoji = (TLRPC.TL_reactionCustomEmoji) reaction.reaction;
+                    final int bgColor = Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, themeDelegate), 0.06f);
+                    final ActionBarPopupWindow.GapView gapView = new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate);
+                    gapView.setColor(bgColor);
+                    linearLayout.addView(gapView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
+
+                    ActionBarMenuSubItem copyIdItem = new ActionBarMenuSubItem(getParentActivity(), false, false, themeDelegate);
+                    copyIdItem.setTextAndIcon(LocaleController.isRTL ? "کپی شناسه" : "Copy ID", R.drawable.msg_copy);
+                    copyIdItem.setMinimumWidth(240);
+                    copyIdItem.setOnClickListener(v -> {
+                        closeMenu();
+                        AndroidUtilities.addToClipboard(String.valueOf(customEmoji.document_id));
+                        BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.isRTL ? "شناسه ایموجی کپی شد" : "Emoji ID copied").show();
+                    });
+                    linearLayout.addView(copyIdItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                }
+
                 scrimPopupContainerLayout.addView(linearLayout, LayoutHelper.createFrame(240, LayoutHelper.WRAP_CONTENT));
             } else if (reaction.reaction instanceof TLRPC.TL_reactionCustomEmoji) {
-                TLRPC.TL_reactionCustomEmoji customEmoji = (TLRPC.TL_reactionCustomEmoji) reaction.reaction;
+                final TLRPC.TL_reactionCustomEmoji customEmoji = (TLRPC.TL_reactionCustomEmoji) reaction.reaction;
+                button.stopAnimation();
+                final LinearLayout linearLayout = new LinearLayout(getContext());
+                linearLayout.setOrientation(LinearLayout.VERTICAL);
+
                 TLRPC.InputStickerSet inputStickerSet = AnimatedEmojiDrawable.getDocumentFetcher(currentAccount).findStickerSet(customEmoji.document_id);
                 if (inputStickerSet != null) {
-                    button.stopAnimation();
                     ArrayList<TLRPC.InputStickerSet> arr = new ArrayList<TLRPC.InputStickerSet>();
                     arr.add(inputStickerSet);
                     MessageContainsEmojiButton setButton = new MessageContainsEmojiButton(currentAccount, getContext(), themeDelegate, arr, MessageContainsEmojiButton.SINGLE_REACTION_TYPE);
@@ -46115,11 +46150,26 @@ public class ChatActivity extends BaseFragment implements
                         new EmojiPacksAlert(ChatActivity.this, getContext(), themeDelegate, arr).show();
                         closeMenu();
                     });
-                    scrimPopupContainerLayout.addView(setButton, LayoutHelper.createFrame(240, LayoutHelper.WRAP_CONTENT));
-                    forceBottom = true;
-                } else {
-                    scrimPopupContainerLayout.setVisibility(View.GONE);
+                    linearLayout.addView(setButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                    final int bgColor = Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, themeDelegate), 0.06f);
+                    final ActionBarPopupWindow.GapView gapView = new ActionBarPopupWindow.GapView(contentView.getContext(), themeDelegate);
+                    gapView.setColor(bgColor);
+                    linearLayout.addView(gapView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
                 }
+
+                ActionBarMenuSubItem copyIdItem = new ActionBarMenuSubItem(getParentActivity(), false, false, themeDelegate);
+                copyIdItem.setTextAndIcon(LocaleController.isRTL ? "کپی شناسه" : "Copy ID", R.drawable.msg_copy);
+                copyIdItem.setMinimumWidth(240);
+                copyIdItem.setOnClickListener(v -> {
+                    closeMenu();
+                    AndroidUtilities.addToClipboard(String.valueOf(customEmoji.document_id));
+                    BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.isRTL ? "شناسه ایموجی کپی شد" : "Emoji ID copied").show();
+                });
+                linearLayout.addView(copyIdItem, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                scrimPopupContainerLayout.addView(linearLayout, LayoutHelper.createFrame(240, LayoutHelper.WRAP_CONTENT));
+                forceBottom = true;
             } else {
                 scrimPopupContainerLayout.setVisibility(View.GONE);
             }
