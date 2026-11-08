@@ -2704,7 +2704,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         goingToShowMessageObject = null;
     }
 
-    private boolean isSamePlayingMessage(MessageObject messageObject) {
+    public boolean isSamePlayingMessage(MessageObject messageObject) {
         return playingMessageObject != null && playingMessageObject.getDialogId() == messageObject.getDialogId() && playingMessageObject.getId() == messageObject.getId() && ((playingMessageObject.eventId == 0) == (messageObject.eventId == 0));
     }
 
