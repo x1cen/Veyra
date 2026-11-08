@@ -19979,7 +19979,6 @@ public class ChatActivity extends BaseFragment implements
                         if (forwardItem.getBackground() == null) {
                             ThemeBind.selectorBackground(forwardItem, Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 5), null, ThemeBind.of(Theme.key_actionBarActionModeDefaultSelector), getResourceProvider());
                         }
-                        }
                     }
                     if (actionsButtonsLayout != null) {
                         actionsButtonsLayout.setForwardButtonEnabled(true, true);
