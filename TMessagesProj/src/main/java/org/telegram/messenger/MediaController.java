@@ -4005,7 +4005,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         final File corruptedFile = cacheFile;
                         final MessageObject currentMsg = messageObject;
                         cleanupPlayer(true, true);
-                        if (corruptedFile != null && corruptedFile.exists() && exists) {
+                        if (corruptedFile != null && corruptedFile.exists()) {
                             try {
                                 corruptedFile.delete();
                             } catch (Exception ex) {
