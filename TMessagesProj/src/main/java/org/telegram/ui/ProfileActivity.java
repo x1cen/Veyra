@@ -615,6 +615,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int disable_no_forwards = 47;
     private final static int send_money = 48;
     private final static int veyra_view_details = 63;
+    private final static int veyra_clear_chat_data = 64;
+    private final static int veyra_clear_chat_cache = 65;
 
     private Rect rect = new Rect();
 
@@ -2746,6 +2748,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     presentFragment(fragment);
                 } else if (id == share) {
                     onShareClicked();
+                } else if (id == veyra_clear_chat_data) {
+                    showClearVeyraChatAlert();
+                } else if (id == veyra_clear_chat_cache) {
+                    showClearChatCacheAlert();
                 } else if (id == veyra_view_details) {
                     showDetailsJson();
                 } else if (id == add_shortcut) {
@@ -12528,6 +12534,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (otherItem != null) {
+            otherItem.addSubItem(veyra_clear_chat_data, R.drawable.msg_delete, "Clear Veyra");
+            otherItem.addSubItem(veyra_clear_chat_cache, R.drawable.msg_clear, "Clear Cache");
             otherItem.addSubItem(veyra_view_details, R.drawable.msg_info, "View Raw");
         }
 
@@ -17283,6 +17291,72 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 root.addProperty("topic_id", tid);
                 return org.telegram.ui.MessageDetailsActivity.prettyGson.toJson(root);
             }, "View Raw"));
+        }
+    }
+
+    private void showClearVeyraChatAlert() {
+        if (getParentActivity() == null) return;
+        final long did = getDialogId();
+        if (did == 0) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle("Clear Veyra Data");
+        builder.setMessage("This will permanently delete all saved anti-deleted messages and edit history logs for this chat.");
+        builder.setPositiveButton(LocaleController.getString(R.string.Clear), (dialog, which) -> {
+            final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog.setCanCancel(false);
+            progressDialog.show();
+            org.veyra.client.VeyraDatabase.purgeAntiDeletedMessages(currentAccount, did, () -> {
+                try {
+                    progressDialog.dismiss();
+                } catch (Throwable ignored) {}
+                try {
+                    BulletinFactory.of(ProfileActivity.this).createSimpleBulletin(R.raw.fire_on, "Veyra chat data cleared").show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            });
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        AlertDialog alert = builder.create();
+        showDialog(alert);
+        TextView btn = (TextView) alert.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (btn != null) {
+            btn.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
+    }
+
+    private void showClearChatCacheAlert() {
+        if (getParentActivity() == null) return;
+        final long did = getDialogId();
+        if (did == 0) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString(R.string.ClearCache));
+        builder.setMessage(LocaleController.getString(R.string.ClearCacheForChats));
+        builder.setPositiveButton(LocaleController.getString(R.string.Clear), (dialog, which) -> {
+            final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog.setCanCancel(false);
+            progressDialog.show();
+            FileLoader.getInstance(currentAccount).getFileDatabase().clearFilesForDialog(did, freedBytes -> {
+                try {
+                    progressDialog.dismiss();
+                } catch (Throwable ignored) {}
+                try {
+                    long freed = freedBytes != null ? freedBytes : 0L;
+                    BulletinFactory.of(ProfileActivity.this).createSimpleBulletin(
+                        R.raw.ic_delete,
+                        LocaleController.formatString(R.string.CacheWasCleared, AndroidUtilities.formatFileSize(freed))
+                    ).show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            });
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        AlertDialog alert = builder.create();
+        showDialog(alert);
+        TextView btn = (TextView) alert.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (btn != null) {
+            btn.setTextColor(Theme.getColor(Theme.key_text_RedBold));
         }
     }
 }

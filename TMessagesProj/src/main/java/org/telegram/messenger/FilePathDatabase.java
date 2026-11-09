@@ -551,6 +551,59 @@ public class FilePathDatabase {
         return res[0];
     }
 
+    public void clearFilesForDialog(final long dialogId, final Utilities.Callback<Long> onDone) {
+        postRunnable(() -> {
+            ensureDatabaseCreated();
+            if (database == null) {
+                if (onDone != null) {
+                    AndroidUtilities.runOnUIThread(() -> onDone.run(0L));
+                }
+                return;
+            }
+            ArrayList<File> filesToDelete = new ArrayList<>();
+            SQLiteCursor cursor = null;
+            long totalFreed = 0;
+            try {
+                cursor = database.queryFinalized("SELECT path FROM paths_by_dialog_id WHERE dialog_id = " + dialogId);
+                while (cursor.next()) {
+                    String path = cursor.stringValue(0);
+                    if (!TextUtils.isEmpty(path)) {
+                        File f = new File(path);
+                        if (f.exists()) {
+                            totalFreed += f.length();
+                            filesToDelete.add(f);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                if (cursor != null) {
+                    cursor.dispose();
+                }
+            }
+
+            try {
+                database.executeFast("DELETE FROM paths_by_dialog_id WHERE dialog_id = " + dialogId).stepThis().dispose();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+
+            for (File f : filesToDelete) {
+                try {
+                    if (f != null && f.exists()) {
+                        f.delete();
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            final long freed = totalFreed;
+            if (onDone != null) {
+                AndroidUtilities.runOnUIThread(() -> onDone.run(freed));
+            }
+        });
+    }
+
     public static class PathData {
         public final long id;
         public final int dc;
