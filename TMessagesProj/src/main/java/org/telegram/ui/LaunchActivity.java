@@ -1271,6 +1271,15 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         if (account != -1) {
             switchToAccount(account, true);
         } else {
+            SharedConfig.clearPasscode();
+            if (passcodeDialog != null) {
+                try {
+                    passcodeDialog.dismiss();
+                } catch (Throwable ignored) {}
+                passcodeDialog = null;
+            }
+            SharedConfig.appLocked = false;
+            SharedConfig.isWaitingForPasscodeEnter = false;
             RestrictedLanguagesSelectActivity.checkRestrictedLanguages(true);
             clearFragments();
             actionBarLayout.rebuildLogout();
@@ -1444,7 +1453,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     }
 
     public void showPasscodeActivity(boolean fingerprint, boolean animated, int x, int y, Runnable onShow, Runnable onStart) {
-        if (drawerLayoutContainer == null || isFinishing()) {
+        if (drawerLayoutContainer == null || isFinishing() || UserConfig.getActivatedAccountsCount() == 0) {
             return;
         }
         if (passcodeDialog == null) {
@@ -8438,6 +8447,17 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     }
 
     private void onPasscodeResume() {
+        if (UserConfig.getActivatedAccountsCount() == 0) {
+            if (passcodeDialog != null) {
+                try {
+                    passcodeDialog.dismiss();
+                } catch (Throwable ignored) {}
+                passcodeDialog = null;
+            }
+            SharedConfig.appLocked = false;
+            SharedConfig.isWaitingForPasscodeEnter = false;
+            return;
+        }
         if (lockRunnable != null) {
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d("cancel lockRunnable onPasscodeResume");

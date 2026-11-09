@@ -3555,6 +3555,9 @@ public class AndroidUtilities {
     }
 
     public static boolean needShowPasscode(boolean reset) {
+        if (UserConfig.getActivatedAccountsCount() == 0) {
+            return false;
+        }
         boolean wasInBackground = ForegroundDetector.getInstance().isWasInBackground(reset);
         if (reset) {
             ForegroundDetector.getInstance().resetBackgroundVar();
