@@ -7,10 +7,17 @@ package org.veyra.client;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.SQLite.SQLiteDatabase;
 import org.telegram.SQLite.SQLitePreparedStatement;
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.NativeByteBuffer;
+import org.telegram.tgnet.TLRPC;
+import androidx.collection.LongSparseArray;
 
 import android.text.TextUtils;
 
@@ -344,6 +351,152 @@ public final class VeyraDatabase {
             }
         }
         return result;
+    }
+
+    public SQLiteDatabase getDatabase() {
+        return database;
+    }
+
+    public ArrayList<Integer> getDeletedMessagesForDialog(long uid) {
+        ArrayList<Integer> result = new ArrayList<>();
+        synchronized (lock) {
+            if (database == null) {
+                File dbFile = getDbFile(currentAccount);
+                if (!dbFile.exists()) {
+                    return result;
+                }
+                try {
+                    init(null);
+                } catch (Throwable ignored) {}
+            }
+            if (database == null) return result;
+            SQLiteCursor cursor = null;
+            try {
+                cursor = database.queryFinalized(String.format(Locale.US, "SELECT mid FROM veyra_deleted_index WHERE uid = %d OR uid = %d", uid, -uid));
+                while (cursor.next()) {
+                    result.add(cursor.intValue(0));
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
+            } finally {
+                if (cursor != null) cursor.dispose();
+            }
+        }
+        return result;
+    }
+
+    public static void purgeAntiDeletedMessages(final int account, final long specificDialogId, final Runnable onComplete) {
+        MessagesStorage storage = MessagesStorage.getInstance(account);
+        storage.getStorageQueue().postRunnable(() -> {
+            SQLiteDatabase db = storage.getDatabase();
+            if (db == null) {
+                if (onComplete != null) AndroidUtilities.runOnUIThread(onComplete);
+                return;
+            }
+
+            VeyraDatabase vDb = VeyraDatabase.getInstance(account);
+            LongSparseArray<ArrayList<Integer>> deletedByDialog = new LongSparseArray<>();
+            if (specificDialogId != 0) {
+                ArrayList<Integer> mids = vDb.getDeletedMessagesForDialog(specificDialogId);
+                if (!mids.isEmpty()) {
+                    deletedByDialog.put(specificDialogId, mids);
+                }
+            } else {
+                deletedByDialog = vDb.getAllDeletedMessages();
+            }
+
+            ArrayList<File> filesToDelete = new ArrayList<>();
+            long currentUser = UserConfig.getInstance(account).getClientUserId();
+
+            if (deletedByDialog != null && deletedByDialog.size() > 0) {
+                for (int a = 0; a < deletedByDialog.size(); a++) {
+                    long did = deletedByDialog.keyAt(a);
+                    ArrayList<Integer> mids = deletedByDialog.valueAt(a);
+                    if (mids == null || mids.isEmpty()) continue;
+
+                    String ids = TextUtils.join(",", mids);
+                    SQLiteCursor cursor = null;
+                    try {
+                        cursor = db.queryFinalized(String.format(Locale.US, "SELECT data FROM messages_v2 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did));
+                        while (cursor.next()) {
+                            NativeByteBuffer data = cursor.byteBufferValue(0);
+                            if (data != null) {
+                                try {
+                                    TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                                    if (message != null) {
+                                        message.readAttachPath(data, currentUser);
+                                        if (message.media != null) {
+                                            if (message.media.document != null) {
+                                                File f = FileLoader.getInstance(account).getPathToAttach(message.media.document);
+                                                if (f != null && f.exists()) filesToDelete.add(f);
+                                            }
+                                            if (message.media.photo != null && message.media.photo.sizes != null) {
+                                                for (TLRPC.PhotoSize size : message.media.photo.sizes) {
+                                                    File f = FileLoader.getInstance(account).getPathToAttach(size);
+                                                    if (f != null && f.exists()) filesToDelete.add(f);
+                                                }
+                                            }
+                                        }
+                                        if (message.messageOwner != null && !TextUtils.isEmpty(message.messageOwner.attachPath)) {
+                                            File f = new File(message.messageOwner.attachPath);
+                                            if (f.exists()) filesToDelete.add(f);
+                                        }
+                                    }
+                                } catch (Throwable ignored) {}
+                                data.reuse();
+                            }
+                        }
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    } finally {
+                        if (cursor != null) cursor.dispose();
+                    }
+
+                    try {
+                        db.executeFast(String.format(Locale.US, "DELETE FROM messages_v2 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                        db.executeFast(String.format(Locale.US, "DELETE FROM messages_topics WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                        db.executeFast(String.format(Locale.US, "DELETE FROM media_v4 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                        db.executeFast(String.format(Locale.US, "DELETE FROM chat_pinned_v2 WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                        db.executeFast(String.format(Locale.US, "DELETE FROM widget_state WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                        db.executeFast(String.format(Locale.US, "DELETE FROM bot_keyboard WHERE mid IN(%s) AND (uid = %d OR uid = %d)", ids, did, -did)).stepThis().dispose();
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
+            }
+
+            for (File f : filesToDelete) {
+                try {
+                    if (f != null && f.exists()) f.delete();
+                } catch (Throwable ignored) {}
+            }
+
+            if (specificDialogId != 0) {
+                vDb.deleteForDialog(specificDialogId);
+                VeyraEditHistoryManager.clearDialog(account, specificDialogId);
+                VeyraAntiDelete.removeChatDeleted(account, specificDialogId);
+            } else {
+                vDb.clearAll();
+                VeyraEditHistoryManager.clearAll(account);
+                VeyraAntiDelete.clearAll(account);
+            }
+
+            try {
+                SQLiteDatabase vSqlite = vDb.getDatabase();
+                if (vSqlite != null) {
+                    try {
+                        vSqlite.executeFast("PRAGMA wal_checkpoint(TRUNCATE);").stepThis().dispose();
+                        vSqlite.executeFast("VACUUM;").stepThis().dispose();
+                    } catch (Throwable ignored) {}
+                }
+            } catch (Throwable ignored) {}
+
+            AndroidUtilities.runOnUIThread(() -> {
+                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
+                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
+                if (onComplete != null) onComplete.run();
+            });
+        });
     }
 
     public void clearAll() {

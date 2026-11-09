@@ -414,14 +414,6 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
     }
 
     public static long getVeyraDataSize(int account) {
-        try {
-            boolean hasAntiDelete = VeyraDatabase.getInstance(account).hasEntries();
-            boolean hasHistory = VeyraEditHistoryManager.hasAnyHistory(account);
-            if (!hasAntiDelete && !hasHistory) {
-                return 0L;
-            }
-        } catch (Throwable ignored) {}
-
         long size = 0;
         try {
             File filesDir = ApplicationLoader.getFilesDirFixed();
@@ -447,6 +439,10 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
                 File shm = new File(editDb.getPath() + "-shm");
                 if (shm.exists()) size += shm.length();
             }
+
+            if (!VeyraDatabase.getInstance(account).hasEntries() && !VeyraEditHistoryManager.hasAnyHistory(account)) {
+                return 0L;
+            }
         } catch (Throwable ignored) {}
         return size;
     }
@@ -455,44 +451,23 @@ public class VeyraSettingsActivity extends VeyraSettingsBaseActivity {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle("Clear Veyra Database");
-        builder.setMessage("This will permanently delete all saved anti-deleted messages, edit history logs and reaction records for this account.");
+        builder.setMessage("This will permanently delete all saved anti-deleted messages, media files, edit history logs and reaction records for this account.");
         builder.setPositiveButton("Clear", (dialog, which) -> {
             final int account = currentAccount;
-            try {
-                // 1. Get all anti-deleted messages so we can remove them from Telegram's messages_v2
-                LongSparseArray<ArrayList<Integer>> deletedByDialog = VeyraDatabase.getInstance(account).getAllDeletedMessages();
-                if (deletedByDialog != null && deletedByDialog.size() > 0) {
-                    for (int a = 0; a < deletedByDialog.size(); a++) {
-                        long did = deletedByDialog.keyAt(a);
-                        ArrayList<Integer> mids = deletedByDialog.valueAt(a);
-                        if (mids != null && !mids.isEmpty()) {
-                            try {
-                                MessagesController.getInstance(account).deleteMessages(mids, null, null, did, 0, false, 0, true);
-                            } catch (Throwable ignored) {}
-                        }
-                    }
+            final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog.setCanCancel(false);
+            progressDialog.show();
+            VeyraDatabase.purgeAntiDeletedMessages(account, 0, () -> {
+                try {
+                    progressDialog.dismiss();
+                } catch (Throwable ignored) {}
+                reloadRows();
+                try {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Veyra database cleared").show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
                 }
-
-                // 2. Clear Veyra anti-delete in-memory & database
-                VeyraAntiDelete.clearAll(account);
-                VeyraDatabase.getInstance(account).clearAll();
-
-                // 3. Clear Veyra edit & reaction history
-                VeyraEditHistoryManager.clearAll(account);
-
-                // 4. Notify UI to refresh all chats
-                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
-                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
-            } catch (Throwable t) {
-                FileLog.e(t);
-            }
-
-            reloadRows();
-            try {
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.fire_on, "Veyra database cleared").show();
-            } catch (Throwable t) {
-                FileLog.e(t);
-            }
+            });
         });
         builder.setNegativeButton("Cancel", null);
         AlertDialog alert = builder.create();
