@@ -437,8 +437,8 @@ public final class VeyraDatabase {
                                                 }
                                             }
                                         }
-                                        if (message.messageOwner != null && !TextUtils.isEmpty(message.messageOwner.attachPath)) {
-                                            File f = new File(message.messageOwner.attachPath);
+                                        if (!TextUtils.isEmpty(message.attachPath)) {
+                                            File f = new File(message.attachPath);
                                             if (f.exists()) filesToDelete.add(f);
                                         }
                                     }

@@ -1,6 +1,7 @@
 package org.telegram.messenger;
 
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.LongSparseArray;
 
 import org.telegram.SQLite.SQLiteCursor;

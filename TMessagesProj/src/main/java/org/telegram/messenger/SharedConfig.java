@@ -879,6 +879,21 @@ public class SharedConfig {
         return false;
     }
 
+    public static void clearPasscode() {
+        appLocked = false;
+        passcodeType = PASSCODE_TYPE_PIN;
+        passcodeLength = 8;
+        passcodeRetryInMs = 0;
+        lastUptimeMillis = 0;
+        badPasscodeTries = 0;
+        passcodeHash = "";
+        passcodeSalt = new byte[0];
+        autoLockIn = 60 * 60;
+        lastPauseTime = 0;
+        isWaitingForPasscodeEnter = false;
+        saveConfig();
+    }
+
     public static void clearConfig() {
         saveIncomingPhotos = false;
         appLocked = false;
