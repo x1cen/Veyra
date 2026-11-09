@@ -13131,14 +13131,34 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
 
                 ArrayList<File> files = new ArrayList<>();
+                long currentDate = System.currentTimeMillis();
 
                 File[] logFiles = dir.listFiles();
                 if (logFiles != null) {
                     java.util.Arrays.sort(logFiles, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+                    long totalBytesToZip = 0;
                     for (File f : logFiles) {
-                        if (f != null && !f.getName().equals("logs.zip")) {
-                            files.add(f);
+                        if (f == null || f.isDirectory() || f.getName().equals("logs.zip")) {
+                            continue;
                         }
+                        long age = currentDate - f.lastModified();
+                        if (last) {
+                            if (age > 2 * 60 * 60 * 1000L && !files.isEmpty()) {
+                                continue;
+                            }
+                            if (files.size() >= 2) {
+                                break;
+                            }
+                        } else {
+                            if (age > 12 * 60 * 60 * 1000L && !files.isEmpty()) {
+                                continue;
+                            }
+                            if (files.size() >= 4 || totalBytesToZip > 15 * 1024 * 1024L) {
+                                break;
+                            }
+                        }
+                        totalBytesToZip += f.length();
+                        files.add(f);
                     }
                 }
 
@@ -13148,39 +13168,27 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     File[] malformedDatabaseFiles = filesDir.listFiles();
                     if (malformedDatabaseFiles != null) {
                         for (File file : malformedDatabaseFiles) {
-                            files.add(file);
+                            if (files.size() < 6) {
+                                files.add(file);
+                            }
                         }
                     }
                 }
 
                 boolean[] finished = new boolean[1];
-                long currentDate = System.currentTimeMillis();
 
                 BufferedInputStream origin = null;
                 ZipOutputStream out = null;
                 try {
                     FileOutputStream dest = new FileOutputStream(zipFile);
-                    out = new ZipOutputStream(new BufferedOutputStream(dest));
-                    byte[] data = new byte[1024 * 64];
+                    out = new ZipOutputStream(new BufferedOutputStream(dest, 1024 * 128));
+                    out.setLevel(java.util.zip.Deflater.BEST_SPEED);
+                    byte[] data = new byte[1024 * 128];
 
-                    int addedCount = 0;
                     for (int i = 0; i < files.size(); i++) {
                         File file = files.get(i);
                         if (!file.exists() || file.isDirectory()) {
                             continue;
-                        }
-                        long age = currentDate - file.lastModified();
-                        if (last) {
-                            if (age > 2 * 60 * 60 * 1000L && addedCount > 0) {
-                                continue;
-                            }
-                        } else {
-                            if (age > 24 * 60 * 60 * 1000L && addedCount >= 8) {
-                                continue;
-                            }
-                        }
-                        if (addedCount >= 15) {
-                            break;
                         }
                         FileInputStream fi = new FileInputStream(file);
                         origin = new BufferedInputStream(fi, data.length);
@@ -13193,7 +13201,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                         origin.close();
                         origin = null;
-                        addedCount++;
                     }
                     finished[0] = true;
                 } catch (Exception e) {
