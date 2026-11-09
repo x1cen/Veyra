@@ -13105,7 +13105,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         AlertDialog progressDialog = new AlertDialog(activity, AlertDialog.ALERT_TYPE_SPINNER);
-        progressDialog.setCanCancel(false);
+        progressDialog.setCanCancel(true);
         progressDialog.show();
         Utilities.globalQueue.postRunnable(() -> {
             try {
@@ -13125,9 +13125,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 ArrayList<File> files = new ArrayList<>();
 
                 File[] logFiles = dir.listFiles();
-                for (File f : logFiles) {
-                    if (f != null && !f.getName().equals("logs.zip")) {
-                        files.add(f);
+                if (logFiles != null) {
+                    java.util.Arrays.sort(logFiles, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+                    for (File f : logFiles) {
+                        if (f != null && !f.getName().equals("logs.zip")) {
+                            files.add(f);
+                        }
                     }
                 }
 
@@ -13135,8 +13138,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 filesDir = new File(filesDir, "malformed_database/");
                 if (filesDir.exists() && filesDir.isDirectory()) {
                     File[] malformedDatabaseFiles = filesDir.listFiles();
-                    for (File file : malformedDatabaseFiles) {
-                        files.add(file);
+                    if (malformedDatabaseFiles != null) {
+                        for (File file : malformedDatabaseFiles) {
+                            files.add(file);
+                        }
                     }
                 }
 
@@ -13150,13 +13155,24 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     out = new ZipOutputStream(new BufferedOutputStream(dest));
                     byte[] data = new byte[1024 * 64];
 
+                    int addedCount = 0;
                     for (int i = 0; i < files.size(); i++) {
                         File file = files.get(i);
-                        if (!file.getName().contains("cache4") && (last || file.getName().contains("_mtproto")) && (currentDate - file.lastModified()) > 24 * 60 * 60 * 1000) {
-                            continue;
-                        }
                         if (!file.exists() || file.isDirectory()) {
                             continue;
+                        }
+                        long age = currentDate - file.lastModified();
+                        if (last) {
+                            if (age > 2 * 60 * 60 * 1000L && addedCount > 0) {
+                                continue;
+                            }
+                        } else {
+                            if (age > 24 * 60 * 60 * 1000L && addedCount >= 8) {
+                                continue;
+                            }
+                        }
+                        if (addedCount >= 15) {
+                            break;
                         }
                         FileInputStream fi = new FileInputStream(file);
                         origin = new BufferedInputStream(fi, data.length);
@@ -13169,16 +13185,17 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                         origin.close();
                         origin = null;
+                        addedCount++;
                     }
                     finished[0] = true;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    FileLog.e(e);
                 } finally {
                     if (origin != null) {
-                        origin.close();
+                        try { origin.close(); } catch (Exception ignored) {}
                     }
                     if (out != null) {
-                        out.close();
+                        try { out.close(); } catch (Exception ignored) {}
                     }
                 }
 
@@ -13188,7 +13205,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     } catch (Exception ignore) {
 
                     }
-                    if (finished[0]) {
+                    if (finished[0] && zipFile.exists() && zipFile.length() > 0) {
                         Uri uri;
                         if (Build.VERSION.SDK_INT >= 24) {
                             uri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", zipFile);
@@ -13200,15 +13217,20 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         if (Build.VERSION.SDK_INT >= 24) {
                             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         }
-                        i.setType("message/rfc822");
-                        i.putExtra(Intent.EXTRA_EMAIL, "");
+                        i.setType("application/zip");
                         i.putExtra(Intent.EXTRA_SUBJECT, "Logs from " + LocaleController.getInstance().getFormatterStats().format(System.currentTimeMillis()));
                         i.putExtra(Intent.EXTRA_STREAM, uri);
                         if (activity != null) {
                             try {
-                                activity.startActivityForResult(Intent.createChooser(i, "Select email application."), 500);
+                                activity.startActivity(Intent.createChooser(i, "Send Logs"));
                             } catch (Exception e) {
-                                FileLog.e(e);
+                                try {
+                                    i.setType("*/*");
+                                    activity.startActivity(Intent.createChooser(i, "Send Logs"));
+                                } catch (Exception ex) {
+                                    FileLog.e(ex);
+                                    Toast.makeText(activity, LocaleController.getString(R.string.ErrorOccurred), Toast.LENGTH_SHORT).show();
+                                }
                             }
                         }
                     } else {
@@ -13217,8 +13239,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 });
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable e) {
+                FileLog.e(e);
+                AndroidUtilities.runOnUIThread(() -> {
+                    try {
+                        progressDialog.dismiss();
+                    } catch (Exception ignored) {}
+                    if (activity != null) {
+                        Toast.makeText(activity, LocaleController.getString(R.string.ErrorOccurred), Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
