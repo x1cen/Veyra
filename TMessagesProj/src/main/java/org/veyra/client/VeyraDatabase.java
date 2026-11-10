@@ -471,6 +471,20 @@ public final class VeyraDatabase {
                 } catch (Throwable ignored) {}
             }
 
+            // Mark all deleted messages as self-deleted so ChatActivity removes them immediately
+            if (deletedByDialog != null && deletedByDialog.size() > 0) {
+                for (int a = 0; a < deletedByDialog.size(); a++) {
+                    long did = deletedByDialog.keyAt(a);
+                    ArrayList<Integer> mids = deletedByDialog.valueAt(a);
+                    if (mids != null && !mids.isEmpty()) {
+                        VeyraAntiDelete.addSelfDeletedMessages(account, did, mids);
+                        if (did != 0) {
+                            VeyraAntiDelete.addSelfDeletedMessages(account, -did, mids);
+                        }
+                    }
+                }
+            }
+
             if (specificDialogId != 0) {
                 vDb.deleteForDialog(specificDialogId);
                 VeyraEditHistoryManager.clearDialog(account, specificDialogId);
@@ -491,7 +505,30 @@ public final class VeyraDatabase {
                 }
             } catch (Throwable ignored) {}
 
+            final LongSparseArray<ArrayList<Integer>> finalDeletedByDialog = deletedByDialog;
             AndroidUtilities.runOnUIThread(() -> {
+                if (finalDeletedByDialog != null && finalDeletedByDialog.size() > 0) {
+                    for (int a = 0; a < finalDeletedByDialog.size(); a++) {
+                        long did = finalDeletedByDialog.keyAt(a);
+                        ArrayList<Integer> mids = finalDeletedByDialog.valueAt(a);
+                        if (mids != null && !mids.isEmpty()) {
+                            long channelId = 0;
+                            if (did < 0) {
+                                TLRPC.Chat chat = MessagesController.getInstance(account).getChat(-did);
+                                channelId = (chat != null && org.telegram.messenger.ChatObject.isChannel(chat)) ? chat.id : 0;
+                            }
+                            NotificationCenter.getInstance(account).postNotificationName(
+                                NotificationCenter.messagesDeleted,
+                                mids,
+                                channelId,
+                                false,
+                                false,
+                                0,
+                                0
+                            );
+                        }
+                    }
+                }
                 NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_ALL);
                 NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.dialogsNeedReload);
                 if (onComplete != null) onComplete.run();
